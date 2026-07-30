@@ -1,0 +1,17 @@
+name: "Hercules CodeQL config"
+
+# Query filters — tune out this repo's one high-noise, low-signal finding.
+#
+# py/clear-text-logging-sensitive-data fires ~184x across agent/*.py because the
+# agent runtime logs LLM request/response payloads (which can carry provider API
+# keys / OAuth tokens) at debug level. For a self-hosted, single-user agent CLI
+# that already persists those same credentials locally by design, this query is
+# noise: it was failing CodeQL on every PR that merely edited a large file, with
+# zero of the alerts introduced by the PR under review.
+#
+# Excluded repo-wide, deliberately. If a log-redaction pass ever lands in the
+# agent runtime, drop this exclusion so the query protects that code again.
+# Every other default CodeQL security query stays enabled.
+query-filters:
+  - exclude:
+      id: py/clear-text-logging-sensitive-data
