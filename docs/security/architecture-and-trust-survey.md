@@ -1,7 +1,11 @@
 # Architecture and trust survey
 
-**Scope:** static reading of the working tree at `2882a06`. Nothing was executed;
-no runtime behaviour was changed by this survey.
+**Scope:** static reading of the working tree at `2882a06`.
+
+One runtime change accompanies this document: MCP tool-definition pinning in
+`tools/mcp_tool.py` (§7.2), added because the MCP 2026-07-28 specification now
+recommends it and the gap it closes is live. It is detection-only — it logs and
+never blocks. Every other finding here is reported, not acted on.
 
 **Purpose:** a structural map of the runtime, a trust-boundary assessment, and a
 ranked recommendation ledger that separates changes worth making from changes
@@ -246,6 +250,7 @@ is currently held to a higher standard than the project's own.
 
 | Change | Why it is safe |
 | --- | --- |
+| ✅ **Done** — pin MCP tool definitions, diff on refresh (§7.2) | Detection-only, never blocks; implements the 2026-07-28 spec recommendation |
 | Default `skills.guard_agent_created` to on | Machinery exists and is tested; no human prompt; only dangerous findings block |
 | Require SHA refs for MCP git installs; echo bootstrap for confirmation | SHA handling already implemented — this promotes it from fallback to requirement |
 | Wire ESLint and vitest into CI | Both configured in three packages, run by nothing. No new tooling |
@@ -280,7 +285,94 @@ allowlists.
 
 ---
 
-## 7. Notes on repository history
+## 7. Developments since this revision
+
+External events between this tree's authorship and the survey date bear
+directly on the findings above.
+
+### 7.1 MCP 2026-07-28 specification
+
+The largest MCP revision since launch shipped on 2026-07-28: a stateless core
+that drops the `initialize`/`initialized` handshake and the `Mcp-Session-Id`
+header, response caching, an extensions framework, MCP Apps, and authorization
+aligned to OAuth 2.1 / OIDC with RFC 9207 `iss` validation against mix-up
+attacks.
+
+`tools/mcp_tool.py` targets the pre-stateless protocol — it drives
+`initialize`, tracks session identity, and treats `notifications/tools/
+list_changed` as the refresh trigger. None of that is broken today, since the
+spec keeps the older transport working, but it is a migration on the horizon
+rather than a security defect.
+
+The security-relevant part is smaller and actionable now: the specification
+recommends **pinning tool definitions on first use and diffing them on every
+reconnect**, because the protocol has no mechanism for re-approval when a tool
+definition changes. See §7.2.
+
+### 7.2 Tool-definition drift — the "rug pull"
+
+`_refresh_tools` re-fetches the tool list whenever a server sends
+`notifications/tools/list_changed` and replaces registry entries in place.
+Nothing compared the new definitions against the ones the operator originally
+connected with, and `_scan_mcp_description` is explicitly warning-only. A
+server could therefore advertise benign tools, wait for approval, and later
+swap in a description carrying different instructions — which the model reads
+at the same trust level as the reviewed one.
+
+This survey adds `_tool_definition_fingerprint` and
+`_check_tool_definition_drift` to `tools/mcp_tool.py`. A SHA-256 over each
+tool's model-visible definition (name, description, input schema) is pinned on
+first advertisement and compared on every re-registration. Drift is logged at
+WARNING and the pin is updated, so a given mutation reports once.
+
+It deliberately does not block. A legitimate server upgrade also changes
+definitions, and failing closed would break working setups — consistent with
+the existing stance on description scanning. Pins are process-scoped;
+persisting them across restarts is the natural follow-up.
+
+### 7.3 CVE-2026-25253 — and why it does not apply here
+
+In January 2026 the first CVE assigned to an agentic AI system landed against
+**OpenClaw** (CVSS 8.8): a WebSocket endpoint configurable through a URL query
+parameter, with the auth token attached to the handshake, yielding
+cross-site WebSocket hijacking and one-click RCE. The follow-on ClawHavoc
+campaign pushed 1,200+ malicious skills into the OpenClaw marketplace carrying
+the AMOS credential stealer.
+
+Hercules derives from OpenClaw, so this warranted checking directly. The
+dashboard's WebSocket upgrades are guarded: `_ws_host_origin_is_allowed` /
+`_ws_host_origin_reason` (`hercules_cli/web_server.py:14135-14188`) apply a
+Host/Origin check mirroring the HTTP layer, and the upgrade paths at `:14849`
+and `:15211` close with code 4403 when it fails. Peer-IP gating fails closed on
+an empty `client_host`, and Host-header middleware already addresses DNS
+rebinding (GHSA-ppp5-vxwm-4cf7).
+
+The specific defect is therefore not present on the surfaces examined. This is
+a targeted check of the CVE's mechanism, not a general assertion that every
+WebSocket surface in the tree is immune.
+
+### 7.4 Skill-registry integrity
+
+A crawl of the OpenClaw skill registry in early 2026 reported 49,943 listed
+skills with a declaration/behaviour mismatch in roughly 80% of them. Hercules
+consumes third-party skill catalogues and ships checked-in index caches under
+`skills/index-cache/`.
+
+That base rate is the argument for §5.3. The signing ecosystem has also moved:
+`sigstore-a2a` provides keyless signing of agent cards with SLSA provenance,
+and JFrog shipped a governed Agent Skills Registry. Hercules already honours
+one instance of this — `NVIDIA/skills` is trusted precisely because entries
+ship a signed `skill.oms.sig`.
+
+One caveat worth carrying into that work: provenance is not intent. A
+documented npm compromise carried valid SLSA Build Level 3 provenance —
+Sigstore correctly attested a build that was itself the attack. Signing
+establishes *who published*, not *what it does*, so it complements the content
+scan in §5.1 rather than replacing it.
+
+---
+
+## 8. Notes on repository history
 
 The tree presents as a single squashed commit, but the record survives in the
 code itself. Comments cite five-digit issue numbers at fix sites — fail-open
