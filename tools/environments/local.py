@@ -218,6 +218,34 @@ def _build_provider_env_blocklist() -> frozenset:
         "GATEWAY_RELAY_ID",
         "GATEWAY_RELAY_SECRET",
         "GATEWAY_RELAY_DELIVERY_KEY",
+        # Credentials the derivation above misses because their integration
+        # never declared them in OPTIONAL_ENV_VARS with a tool/messaging
+        # category. The tell is that each already has a *less* sensitive
+        # sibling on this list — CAMOFOX_URL was stripped while
+        # CAMOFOX_SESSION_KEY was not, FEISHU_APP_ID while FEISHU_ENCRYPT_KEY
+        # was not, TELEGRAM_ALLOWED_USERS while TELEGRAM_WEBHOOK_SECRET was
+        # not — so this is list drift behind the adapter roster, not a
+        # decision. Until this fix they reached terminal / execute_code
+        # children, contrary to SECURITY.md §2.3 ("provider API keys and
+        # gateway tokens are stripped by default"). Tier 2, so a skill that
+        # genuinely needs one can still declare it via ``env_passthrough``.
+        "TELEGRAM_WEBHOOK_SECRET",
+        "WHATSAPP_CLOUD_ACCESS_TOKEN",
+        "WHATSAPP_CLOUD_APP_SECRET",
+        "WHATSAPP_CLOUD_VERIFY_TOKEN",
+        "FEISHU_ENCRYPT_KEY",
+        "FEISHU_VERIFICATION_TOKEN",
+        "TEAMS_GRAPH_ACCESS_TOKEN",
+        "PHOTON_SIDECAR_TOKEN",
+        "QQ_STT_API_KEY",
+        "CAMOFOX_SESSION_KEY",
+        "WEIXIN_TOKEN",
+        "YUANBAO_APP_KEY",
+        "YUANBAO_APP_SECRET",
+        "AZURE_ANTHROPIC_KEY",
+        "CUSTOM_API_KEY",
+        "LINEAR_API_KEY",
+        "NOTION_API_KEY",
     })
     # CLAUDE_CODE_OAUTH_TOKEN is deliberately NOT stripped.  It is set and
     # owned by the user's Claude Code install (subscription OAuth), not a
@@ -229,6 +257,13 @@ def _build_provider_env_blocklist() -> frozenset:
     # It arrives via the registry loop above (anthropic api_key_env_vars),
     # so remove it explicitly.
     blocked.discard("CLAUDE_CODE_OAUTH_TOKEN")
+    # GEMINI_OAUTH_CLIENT_SECRET is likewise left alone. Despite the name it
+    # is a *published* installed-app constant that every gemini-cli install
+    # ships (see GEMINI_OAUTH_CLIENT_SECRET_SOURCE_URL in hercules_cli.auth);
+    # this repo only keeps it out of the source so secret scanners don't flag
+    # it. Stripping it would break agent-spawned ``gemini`` CLIs for no
+    # confidentiality gain — the same trade #55878 recorded for
+    # CLAUDE_CODE_OAUTH_TOKEN above.
     return frozenset(blocked)
 
 

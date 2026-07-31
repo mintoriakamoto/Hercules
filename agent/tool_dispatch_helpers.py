@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional
 from agent.tool_result_classification import (
     FILE_MUTATING_TOOL_NAMES as _FILE_MUTATING_TOOLS,
 )
-from tools.threat_patterns import scan_for_threats
+from tools.threat_patterns import INVISIBLE_CHARS, scan_for_threats
 
 logger = logging.getLogger(__name__)
 
@@ -425,7 +425,29 @@ _UNTRUSTED_WRAP_MIN_CHARS = 32
 # Matches the delimiter token in any case so attacker content can't forge or
 # prematurely close the boundary with a differently-cased variant the model
 # would still read as a tag (e.g. ``</UNTRUSTED_TOOL_RESULT>``).
-_DELIMITER_TOKEN_RE = re.compile(r"untrusted_tool_result", re.IGNORECASE)
+#
+# Case folding alone is not enough. A model still reads
+# ``</untrusted<ZWSP>tool_result>`` as a closing tag, so an exact-token regex
+# let attacker content out of the wrapper by inserting a zero-width character
+# — or by replacing the underscores with one. ``threat_patterns`` already
+# treats these codepoints as an evasion technique (see ``INVISIBLE_CHARS``);
+# the delimiter guard has to as well, or the two disagree about the same
+# attack on the same boundary.
+#
+# The pattern therefore matches the token's *letters* with any run of
+# underscores and invisible characters between them. Matching slightly more
+# than the literal token is the safe direction: over-defanging rewrites text
+# that was already going to be read as a boundary marker, while
+# under-defanging hands the attacker the boundary. U+00AD (soft hyphen) is
+# added locally because it renders as nothing here but is category Pd, so it
+# is not part of ``INVISIBLE_CHARS``.
+_DELIMITER_SEPARATOR_CHARS = "".join(sorted(INVISIBLE_CHARS | {"­", "_"}))
+_DELIMITER_TOKEN_RE = re.compile(
+    f"[{re.escape(_DELIMITER_SEPARATOR_CHARS)}]*".join(
+        re.escape(ch) for ch in "untrustedtoolresult"
+    ),
+    re.IGNORECASE,
+)
 
 
 def _is_untrusted_tool(name: Optional[str]) -> bool:

@@ -166,10 +166,30 @@ cited source.
 
 ### 5.1 Agent-created skill scanner is disabled by default
 
-`tools/skill_manager_tool.py:121,936` · `tools/skills_guard.py:55-65`
+`tools/skill_manager_tool.py:100-130,936` · `tools/skills_guard.py:55-65`
 
 The scan-and-rollback path is fully implemented and covered by tests, then gated
-behind a flag defaulting to false. See §4 for why enabling it is low-cost.
+behind `skills.guard_agent_created`, which defaults to false.
+
+**This default is deliberate, not an oversight.** `_guard_agent_created_enabled`
+documents the reasoning: *"the agent can already execute the same code paths via
+`terminal()` with no gate, so the scan adds friction without meaningful
+security."* That is consistent with `SECURITY.md` §2.4 — an in-process scanner is
+not a boundary, and one that only screens a path the agent can trivially route
+around buys little.
+
+The one thing that argument does not cover is **persistence**. It reasons about
+what the agent can do in the current turn, where it is correct. A skill written
+during an injected turn is different in kind: it executes at import on every
+later session, including sessions where nothing malicious is in context. The
+scan is worth little as a capability gate and rather more as a
+persistence gate.
+
+Whether that distinction justifies flipping the default is a maintainer call,
+not a defect to fix — so this survey does not change it. If it were flipped, the
+`agent-created` policy is `(safe → allow, caution → allow, dangerous → ask)`, and
+"ask" surfaces to the agent as a retryable error rather than a prompt to the
+operator, so the autonomous loop would keep running.
 
 ### 5.2 MCP catalog install runs unreviewed shell from a mutable ref
 
@@ -251,7 +271,9 @@ is currently held to a higher standard than the project's own.
 | Change | Why it is safe |
 | --- | --- |
 | ✅ **Done** — pin MCP tool definitions, diff on refresh (§7.2) | Detection-only, never blocks; implements the 2026-07-28 spec recommendation |
-| Default `skills.guard_agent_created` to on | Machinery exists and is tested; no human prompt; only dangerous findings block |
+| ✅ **Done** — close the invisible-character escape in the untrusted-content delimiter (§7.5) | Only ever defangs more; benign prose is untouched |
+| ✅ **Done** — strip 17 credentials the terminal path leaked (§7.6) | Tier 2, so `env_passthrough` still works; two documented carve-outs preserved |
+| Consider defaulting `skills.guard_agent_created` to on | **Maintainer call, not a defect** — the current default has a documented rationale (§5.1). The counter-argument is persistence, not capability |
 | Require SHA refs for MCP git installs; echo bootstrap for confirmation | SHA handling already implemented — this promotes it from fallback to requirement |
 | Wire ESLint and vitest into CI | Both configured in three packages, run by nothing. No new tooling |
 | Ratchet ruff one rule family at a time, per directory | Correctness families first on `agent/` and `tools/`; keeps each diff reviewable |
@@ -369,6 +391,68 @@ documented npm compromise carried valid SLSA Build Level 3 provenance —
 Sigstore correctly attested a build that was itself the attack. Signing
 establishes *who published*, not *what it does*, so it complements the content
 scan in §5.1 rather than replacing it.
+
+### 7.5 Invisible-character escape from the untrusted-content boundary
+
+`agent/tool_dispatch_helpers.py`
+
+`_neutralize_delimiters` defangs a literal `</untrusted_tool_result>` embedded in
+attacker-controlled output so it cannot close the data frame early. It matched
+the exact token case-insensitively, which a single zero-width character defeats
+— either inserted mid-token or substituted for the underscores. A model still
+reads `</untrusted<ZWSP>tool_result>` as a closing tag, so the payload after it
+landed outside the frame, where the wrapper's own instruction says only the user
+can issue directives.
+
+The tell that this was a defect rather than a limit: `tools/threat_patterns.py`
+already enumerates these codepoints as an evasion technique and NFKC-normalizes
+before matching, and this module imports it — for advisory metadata only.
+
+Fixed by matching the token's letters with any run of underscores and invisible
+characters between them. Over-matching is the safe direction: it rewrites text
+that was already going to read as a boundary marker, whereas under-matching
+hands the boundary to the attacker. Verified against all 17 codepoints in
+`INVISIBLE_CHARS` plus U+00AD, in both insertion and substitution positions,
+with benign prose (`"an untrusted source"`, `"untrusted tool result"`) left
+byte-identical.
+
+### 7.6 Credential env vars leaking to terminal children
+
+`tools/environments/local.py`
+
+`SECURITY.md` §2.3 says provider API keys and gateway tokens are stripped from
+lower-trust in-process components. Two spawn paths implement that differently:
+`execute_code` matches substrings (`KEY`/`SECRET`/`TOKEN`), while the terminal
+backend uses a name list derived from `PROVIDER_REGISTRY` and
+`OPTIONAL_ENV_VARS`. An integration that reads a credential via `os.getenv`
+without declaring it in `OPTIONAL_ENV_VARS` escapes the derivation entirely.
+
+Seventeen credentials had drifted out that way. The signal that this was drift
+rather than intent is that each already had a *less* sensitive sibling on the
+list — `CAMOFOX_URL` was stripped while `CAMOFOX_SESSION_KEY` was not,
+`FEISHU_APP_ID` while `FEISHU_ENCRYPT_KEY` was not, `TELEGRAM_ALLOWED_USERS`
+while `TELEGRAM_WEBHOOK_SECRET` was not.
+
+Added to Tier 2, so a skill that genuinely needs one can still declare it via
+`env_passthrough`. Under the local backend the practical gain is modest — a
+shell child can read `/proc/<ppid>/environ` regardless, and §3.2 puts that out
+of scope. It matters under the container, SSH, and Modal backends, where the
+sanitized environment is what actually crosses into the sandbox.
+
+**Two deliberate carve-outs were preserved and are now covered by tests**, since
+both look like secrets and are not:
+
+- `CLAUDE_CODE_OAUTH_TOKEN` — owned by the user's Claude Code install. Stripping
+  it previously made agent-spawned `claude` CLIs fall through to the shared
+  credential store and clear it on auth failure, logging the user out of
+  interactive sessions (#55878).
+- `GEMINI_OAUTH_CLIENT_SECRET` — a published installed-app constant every
+  gemini-cli install ships; kept out of the source only to avoid secret-scanner
+  noise.
+
+`HERCULES_SESSION_KEY` and `TERMINAL_SSH_KEY` were also left alone: the first is
+a routing handle (§2.6) that the approval cache scopes to, the second a path to
+a key file rather than key material.
 
 ---
 
