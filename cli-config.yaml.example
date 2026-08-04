@@ -139,6 +139,35 @@ model:
 #         stale_timeout_seconds: 1800  # Longer non-stream stale timeout for slow large-context turns
 
 # =============================================================================
+# Local-only mode (no cloud providers)
+# =============================================================================
+# When enabled, Hercules refuses to talk to any cloud provider. Every runtime
+# resolution is checked, and if the resolved endpoint is not a local inference
+# server, the agent fails fast with an actionable error instead of sending your
+# prompt to a hosted API. Use this for private / offline / self-hosted setups.
+#
+# "Local" means a loopback or LAN/Tailscale address: 127.0.0.1, ::1,
+# 192.168.x/10.x/172.16-31.x, 100.64.0.0/10 (Tailscale), *.local / *.internal,
+# or a bare hostname (e.g. "gpu-box"). A "custom" provider pointed at a public
+# URL is still rejected — the check is on the endpoint, not the provider name.
+#
+# Works with any OpenAI-compatible local server: Ollama, vLLM, llama.cpp
+# (llama-server), ExLlamaV2 via TabbyAPI, LM Studio. Example pairing:
+#
+# providers:
+#   local_only: true
+# model:
+#   provider: custom
+#   base_url: http://localhost:11434/v1   # Ollama
+#   default: qwen2.5-coder:32b
+#
+# Other backends: vLLM http://localhost:8000/v1 · llama-server
+# http://localhost:8080/v1 · TabbyAPI http://localhost:5000/v1
+#
+# providers:
+#   local_only: false   # default — cloud providers permitted
+
+# =============================================================================
 # OpenRouter Provider Routing (only applies when using OpenRouter)
 # =============================================================================
 # Control how requests are routed across providers on OpenRouter.

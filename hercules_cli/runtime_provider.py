@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import os
 import re
@@ -1477,7 +1478,148 @@ def _resolve_explicit_runtime(
     return None
 
 
+# ---------------------------------------------------------------------------
+# Local-only mode (providers.local_only)
+# ---------------------------------------------------------------------------
+#
+# When enabled, the agent may only talk to local inference servers — vLLM,
+# Ollama, llama.cpp (llama-server), ExLlamaV2 (TabbyAPI), LM Studio, or any
+# OpenAI-compatible endpoint on a loopback/LAN address. Every runtime
+# resolution funnels through resolve_runtime_provider, so gating its result is
+# a single authoritative chokepoint: it catches cloud providers AND a "custom"
+# provider whose base_url points at a cloud host. The check is on the RESOLVED
+# endpoint, not the requested provider name, precisely so the latter can't slip
+# a public URL through under a local-sounding alias.
+
+_LOCAL_DNS_SUFFIXES = (".local", ".internal", ".lan", ".home", ".localdomain")
+
+# CGNAT range used by Tailscale/headscale. Python's ``is_private`` excludes it,
+# so it is checked explicitly — a Tailscale-reachable GPU box is "local" here.
+_CGNAT_NET = ipaddress.ip_network("100.64.0.0/10")
+
+
+class LocalOnlyModeError(AuthError):
+    """Raised when providers.local_only is on but a non-local endpoint resolved.
+
+    Subclasses AuthError so existing callers that already treat an unresolved
+    provider as a fatal, user-actionable configuration problem handle this the
+    same way, while remaining distinguishable by type.
+    """
+
+
+def _config_truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on", "enabled"}
+    return False
+
+
+def local_only_mode_enabled() -> bool:
+    """Whether ``providers.local_only`` is set in config.yaml.
+
+    Behavioural config lives in config.yaml, not an env var (AGENTS.md), so
+    there is deliberately no ``HERCULES_*`` override. Fails safe to ``False``
+    (unrestricted) if config cannot be read, matching every other resolver
+    path here — the gate hardens a working setup, it must not brick one.
+    """
+    try:
+        from hercules_cli.config import cfg_get
+
+        return _config_truthy(cfg_get(load_config(), "providers", "local_only", default=False))
+    except Exception:
+        return False
+
+
+def _is_local_host(hostname: str) -> bool:
+    """True if *hostname* names a loopback / private / LAN / mDNS endpoint."""
+    h = (hostname or "").strip().lower().rstrip(".")
+    if not h:
+        return False
+    if h in {"localhost", "0.0.0.0"}:
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+        if ip.is_loopback or ip.is_private or ip.is_link_local:
+            return True
+        if isinstance(ip, ipaddress.IPv4Address) and ip in _CGNAT_NET:
+            return True
+        return False
+    except ValueError:
+        pass
+    # Not an IP literal: mDNS/LAN suffixes and bare single-label hostnames
+    # (Docker service names, "gpu-box") are local; a dotted public FQDN is not.
+    if h.endswith(_LOCAL_DNS_SUFFIXES):
+        return True
+    return "." not in h
+
+
+def _is_local_endpoint(base_url: str) -> bool:
+    """True if *base_url* addresses a local inference server."""
+    raw = (base_url or "").strip()
+    if not raw:
+        return False
+    scheme = urlparse(raw).scheme.lower()
+    # Virtual/aggregator schemes (e.g. moa://local) are not network endpoints;
+    # their member providers are resolved through this same gate individually.
+    if scheme and scheme not in {"http", "https"}:
+        return True
+    return _is_local_host(base_url_hostname(raw))
+
+
+def _enforce_local_only(runtime: Dict[str, Any]) -> Dict[str, Any]:
+    """Reject a resolved runtime whose endpoint is not local, when the mode is on."""
+    if not local_only_mode_enabled():
+        return runtime
+    base_url = str(runtime.get("base_url") or "")
+    if _is_local_endpoint(base_url):
+        return runtime
+    provider = str(
+        runtime.get("provider") or runtime.get("requested_provider") or "unknown"
+    )
+    raise LocalOnlyModeError(
+        "Local-only mode is on (providers.local_only), but the endpoint "
+        f"resolved for provider '{provider}' is not local:\n"
+        f"    {base_url or '(no endpoint)'}\n\n"
+        "In this mode Hercules only talks to local inference servers — vLLM, "
+        "Ollama, llama.cpp (llama-server), ExLlamaV2 (TabbyAPI), or LM Studio — "
+        "on a loopback or LAN address. Point it at one, e.g.:\n"
+        "    hercules config set model.provider custom\n"
+        "    hercules config set model.base_url http://localhost:11434/v1   # Ollama\n"
+        "    hercules config set model.base_url http://localhost:8000/v1    # vLLM\n"
+        "    hercules config set model.base_url http://localhost:8080/v1    # llama-server\n"
+        "    hercules config set model.base_url http://localhost:5000/v1    # TabbyAPI (ExLlamaV2)\n\n"
+        "Or lift the restriction:\n"
+        "    hercules config set providers.local_only false"
+    )
+
+
 def resolve_runtime_provider(
+    *,
+    requested: Optional[str] = None,
+    explicit_api_key: Optional[str] = None,
+    explicit_base_url: Optional[str] = None,
+    target_model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Resolve runtime provider credentials, then enforce local-only mode.
+
+    Thin wrapper over :func:`_resolve_runtime_provider_impl`. When
+    ``providers.local_only`` is set, a resolved endpoint that is not a local
+    inference server raises :class:`LocalOnlyModeError` here — the single
+    chokepoint every caller already goes through.
+    """
+    runtime = _resolve_runtime_provider_impl(
+        requested=requested,
+        explicit_api_key=explicit_api_key,
+        explicit_base_url=explicit_base_url,
+        target_model=target_model,
+    )
+    return _enforce_local_only(runtime)
+
+
+def _resolve_runtime_provider_impl(
     *,
     requested: Optional[str] = None,
     explicit_api_key: Optional[str] = None,
