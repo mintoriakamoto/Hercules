@@ -1279,10 +1279,43 @@ clone_repo() {
         else
             rm -rf "$INSTALL_DIR" 2>/dev/null  # Clean up partial SSH clone
             log_info "SSH failed, trying HTTPS..."
-            if git clone --depth 1 --branch "$BRANCH" "$REPO_URL_HTTPS" "$INSTALL_DIR"; then
+            # This repository is private, so an HTTPS clone needs credentials.
+            # Git's default is to prompt for them — fine when a human is at the
+            # keyboard, useless when there isn't one. Under `curl ... | bash`
+            # stdin is the script itself, so the prompt either consumes script
+            # text or hangs until the terminal is killed, and the user never
+            # learns why. Mirror the SSH branch's BatchMode=yes and fail fast
+            # instead. Interactive runs keep the prompt so a collaborator with
+            # a username/PAT can still authenticate.
+            _clone_https_status=0
+            if [ "$IS_INTERACTIVE" = true ] && [ "$NON_INTERACTIVE" != true ]; then
+                git clone --depth 1 --branch "$BRANCH" "$REPO_URL_HTTPS" "$INSTALL_DIR" || _clone_https_status=$?
+            else
+                GIT_TERMINAL_PROMPT=0 \
+                    git clone --depth 1 --branch "$BRANCH" "$REPO_URL_HTTPS" "$INSTALL_DIR" || _clone_https_status=$?
+            fi
+
+            if [ "$_clone_https_status" -eq 0 ]; then
                 log_success "Cloned via HTTPS"
             else
-                log_error "Failed to clone repository"
+                rm -rf "$INSTALL_DIR" 2>/dev/null  # Clean up partial HTTPS clone
+                log_error "Failed to clone $REPO_URL_HTTPS"
+                log_info ""
+                log_info "This repository is private, so cloning it requires access."
+                log_info "Neither SSH nor HTTPS could authenticate. Options:"
+                log_info ""
+                log_info "  1. SSH key with access to the repo:"
+                log_info "       ssh-keygen -t ed25519 -C \"you@example.com\""
+                log_info "       # add ~/.ssh/id_ed25519.pub at https://github.com/settings/keys"
+                log_info "       ssh -T git@github.com   # verify"
+                log_info ""
+                log_info "  2. GitHub CLI credential helper:"
+                log_info "       gh auth login   # then re-run this installer"
+                log_info ""
+                log_info "  3. Personal access token with 'repo' scope, cloning manually:"
+                log_info "       git clone https://<token>@github.com/mintoriakamoto/Hercules.git \"$INSTALL_DIR\""
+                log_info ""
+                log_info "If you do not have access, ask the repository owner to grant it."
                 exit 1
             fi
         fi
