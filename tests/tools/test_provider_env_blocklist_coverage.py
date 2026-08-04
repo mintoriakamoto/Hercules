@@ -37,8 +37,18 @@ DRIFTED_CREDENTIALS = [
     "YUANBAO_APP_SECRET",
     "AZURE_ANTHROPIC_KEY",
     "CUSTOM_API_KEY",
-    "LINEAR_API_KEY",
+]
+
+# Third-party API keys that must stay OFF the blocklist. The list has a second
+# consumer with the opposite meaning: tools/env_passthrough.py treats
+# membership as "no skill may ever register this for passthrough" (the fix for
+# GHSA-rhgp-j443-p4rf). Adding a third-party key here does not just scrub it
+# from subprocesses — it breaks every skill wrapping that API.
+THIRD_PARTY_KEYS_THAT_MUST_STAY_REGISTERABLE = [
     "NOTION_API_KEY",
+    "LINEAR_API_KEY",
+    "TENOR_API_KEY",
+    "NOTION_TOKEN",
 ]
 
 # Documented carve-outs. Both look like secrets and are not.
@@ -83,6 +93,35 @@ def test_documented_carve_outs_still_inherited(name):
     env = {name: "VALUE", "PATH": "/usr/bin"}
     assert name in _sanitize_subprocess_env(env)
     assert name not in _HERCULES_PROVIDER_ENV_BLOCKLIST
+
+
+@pytest.mark.parametrize("name", THIRD_PARTY_KEYS_THAT_MUST_STAY_REGISTERABLE)
+def test_third_party_keys_stay_off_the_blocklist(name):
+    """Guards the regression this file's own first draft introduced.
+
+    Adding NOTION_API_KEY / LINEAR_API_KEY here looked like tightening the
+    scrubber. It actually revoked skills' ability to declare them via
+    ``env_passthrough``, because env_passthrough.py reads the same list as an
+    absolute denial. A skill wrapping the Notion API stopped working.
+    """
+    assert name not in _HERCULES_PROVIDER_ENV_BLOCKLIST
+
+
+@pytest.mark.parametrize("name", THIRD_PARTY_KEYS_THAT_MUST_STAY_REGISTERABLE)
+def test_third_party_keys_remain_registerable_for_passthrough(name):
+    """The property that actually matters, asserted against the real gate."""
+    from tools.env_passthrough import _is_hercules_provider_credential
+
+    assert _is_hercules_provider_credential(name) is False
+
+
+@pytest.mark.parametrize("name", DRIFTED_CREDENTIALS)
+def test_hercules_credentials_are_not_registerable_for_passthrough(name):
+    """The other half: a skill must not be able to tunnel a Hercules
+    credential into a sandbox child (GHSA-rhgp-j443-p4rf)."""
+    from tools.env_passthrough import _is_hercules_provider_credential
+
+    assert _is_hercules_provider_credential(name) is True
 
 
 def test_session_key_is_a_routing_handle_not_a_secret():

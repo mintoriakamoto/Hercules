@@ -244,8 +244,19 @@ def _build_provider_env_blocklist() -> frozenset:
         "YUANBAO_APP_SECRET",
         "AZURE_ANTHROPIC_KEY",
         "CUSTOM_API_KEY",
-        "LINEAR_API_KEY",
-        "NOTION_API_KEY",
+        # Everything above is a Hercules-managed provider or gateway
+        # credential. Third-party API keys must NOT be added here, however
+        # much they look like they belong: this list has a second consumer
+        # with the opposite meaning. tools/env_passthrough.py treats
+        # membership as "a skill may never register this for passthrough"
+        # — the fix for GHSA-rhgp-j443-p4rf, where a malicious skill
+        # tunnelled ANTHROPIC_TOKEN into the execute_code child. That denial
+        # is absolute and env_passthrough cannot override it, so listing a
+        # key like NOTION_API_KEY or LINEAR_API_KEY here does not merely
+        # scrub it from subprocesses — it breaks every legitimate skill that
+        # wraps that third-party API. See
+        # tests/cron/test_scheduler.py::test_run_job_preserves_skill_env_
+        # passthrough_into_worker_thread.
     })
     # CLAUDE_CODE_OAUTH_TOKEN is deliberately NOT stripped.  It is set and
     # owned by the user's Claude Code install (subscription OAuth), not a
