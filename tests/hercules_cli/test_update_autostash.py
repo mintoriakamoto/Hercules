@@ -725,13 +725,34 @@ def test_cmd_update_network_error_shows_friendly_message(monkeypatch, tmp_path, 
     assert "Network error" in out
 
 
-def test_cmd_update_auth_error_shows_friendly_message(monkeypatch, tmp_path, capsys):
-    """Auth failures during fetch show a user-friendly message."""
+@pytest.mark.parametrize(
+    "fetch_stderr",
+    [
+        # Credentials rejected outright.
+        "fatal: Authentication failed for 'https://...'",
+        # What git emits under GIT_TERMINAL_PROMPT=0, which cmd_update sets so a
+        # credential prompt can never hang a fetch whose output is captured.
+        # Note it says "Password", not "Username" — matching only on the latter
+        # let this case fall through to the generic failure message.
+        "fatal: could not read Password for 'https://...': terminal prompts disabled",
+        "fatal: could not read Username for 'https://...': terminal prompts disabled",
+        # A private repo you lack access to reports as missing, not forbidden.
+        "remote: Repository not found.\nfatal: repository '...' not found",
+    ],
+)
+def test_cmd_update_auth_error_shows_friendly_message(
+    monkeypatch, tmp_path, capsys, fetch_stderr
+):
+    """Every flavour of "we could not authenticate" gets actionable guidance.
+
+    Asserts the invariant — the user is told it is an access problem and given
+    a concrete next step — rather than snapshotting the exact wording.
+    """
     _setup_update_mocks(monkeypatch, tmp_path)
 
     side_effect, _ = _make_update_side_effect(
         fetch_fails=True,
-        fetch_stderr="fatal: Authentication failed for 'https://...'",
+        fetch_stderr=fetch_stderr,
     )
     monkeypatch.setattr(hercules_main.subprocess, "run", side_effect)
 
@@ -739,7 +760,33 @@ def test_cmd_update_auth_error_shows_friendly_message(monkeypatch, tmp_path, cap
         hercules_main.cmd_update(SimpleNamespace())
 
     out = capsys.readouterr().out
-    assert "Authentication failed" in out
+    # Named as an access/authentication problem, not a generic failure.
+    assert "authenticate" in out.lower()
+    # And points at a way to fix it, rather than leaving the user stuck.
+    assert any(hint in out for hint in ("SSH key", "gh auth login", "token"))
+
+
+def test_cmd_update_fetch_disables_terminal_prompt(monkeypatch, tmp_path):
+    """The fetch must never be able to block on an invisible credential prompt.
+
+    ``cmd_update`` captures the fetch's output, so an interactive prompt would
+    be unanswerable — the user sees "Fetching updates..." and nothing more.
+    """
+    _setup_update_mocks(monkeypatch, tmp_path)
+
+    seen_env = {}
+    side_effect, _ = _make_update_side_effect()
+    original = side_effect
+
+    def _capture(cmd, *args, **kwargs):
+        if len(cmd) > 1 and cmd[1] == "fetch":
+            seen_env.update(kwargs.get("env") or {})
+        return original(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(hercules_main.subprocess, "run", _capture)
+    hercules_main.cmd_update(SimpleNamespace())
+
+    assert seen_env.get("GIT_TERMINAL_PROMPT") == "0"
 
 
 # ---------------------------------------------------------------------------

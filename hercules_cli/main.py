@@ -9595,11 +9595,21 @@ def _cmd_update_impl(args, gateway_mode: bool):
         branch = _resolve_update_branch(args)
 
         print("→ Fetching updates...")
+        # GIT_TERMINAL_PROMPT=0 so a credential prompt can never hang the
+        # update. Output here is captured, so an interactive prompt is
+        # invisible — the user sees "Fetching updates..." and nothing else,
+        # forever, with no way to answer. Refusing the prompt turns that
+        # unanswerable hang into the "could not read Username" error the
+        # handler below already knows how to explain. Credentials that are
+        # already configured (SSH agent, credential helper, token in the
+        # remote URL) are unaffected; only the interactive fallback is off.
+        fetch_env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
         fetch_result = subprocess.run(
             git_cmd + ["fetch", "origin", branch],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
+            env=fetch_env,
         )
         if fetch_result.returncode != 0:
             stderr = fetch_result.stderr.strip()
@@ -9607,11 +9617,19 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 print("✗ Network error — cannot reach the remote repository.")
                 print(f"  {stderr.splitlines()[0]}" if stderr else "")
             elif (
-                "Authentication failed" in stderr or "could not read Username" in stderr
+                "Authentication failed" in stderr
+                or "could not read Username" in stderr
+                or "terminal prompts disabled" in stderr
+                or "Repository not found" in stderr
             ):
-                print(
-                    "✗ Authentication failed — check your git credentials or SSH key."
-                )
+                print("✗ Could not authenticate to the remote repository.")
+                print("  This repository is private, so updating requires access.")
+                print("  Set up one of the following, then re-run `hercules update`:")
+                print("    • SSH key    — https://github.com/settings/keys, then: ssh -T git@github.com")
+                print("    • GitHub CLI — gh auth login")
+                print("    • Token      — git remote set-url origin \\")
+                print("                     https://<token>@github.com/mintoriakamoto/Hercules.git")
+                print("  If you do not have access, ask the repository owner to grant it.")
             else:
                 print("✗ Failed to fetch updates from origin.")
                 if stderr:

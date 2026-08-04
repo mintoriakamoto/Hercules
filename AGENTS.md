@@ -229,10 +229,11 @@ entry points you'll actually edit.
 
 ```
 hercules-agent/
-├── run_agent.py          # AIAgent class — core conversation loop (~12k LOC)
+├── run_agent.py          # AIAgent class — entry + orchestration (~5.9k LOC; the
+│                         #   turn loop itself lives in agent/conversation_loop.py)
 ├── model_tools.py        # Tool orchestration, discover_builtin_tools(), handle_function_call()
 ├── toolsets.py           # Toolset definitions, _HERCULES_CORE_TOOLS list
-├── cli.py                # HerculesCLI class — interactive CLI orchestrator (~11k LOC)
+├── cli.py                # HerculesCLI class — interactive CLI orchestrator (~15.5k LOC)
 ├── hercules_state.py       # SessionDB — SQLite session store (FTS5 search)
 ├── hercules_constants.py   # get_hercules_home(), display_hercules_home() — profile-aware paths
 ├── hercules_logging.py     # setup_logging() — agent.log / errors.log / gateway.log (profile-aware)
@@ -266,7 +267,7 @@ hercules-agent/
 ├── cron/                 # Scheduler — jobs.py, scheduler.py
 ├── scripts/              # run_tests.sh, release.py, auxiliary scripts
 ├── website/              # Docusaurus docs site
-└── tests/                # Pytest suite (~17k tests across ~900 files as of May 2026)
+└── tests/                # Pytest suite (~37k tests across ~2,000 files as of Jul 2026)
 ```
 
 **User config:** `~/.hercules/config.yaml` (settings), `~/.hercules/.env` (API keys only).

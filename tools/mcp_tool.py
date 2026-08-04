@@ -92,6 +92,7 @@ Thread safety:
 import asyncio
 import contextvars
 import concurrent.futures
+import hashlib
 import inspect
 import json
 import logging
@@ -558,6 +559,78 @@ def _scan_mcp_description(server_name: str, tool_name: str, description: str) ->
             description,
         )
     return findings
+
+
+# ---------------------------------------------------------------------------
+# MCP tool definition pinning (rug-pull detection)
+# ---------------------------------------------------------------------------
+
+# A server advertises its tools at connect time, and may re-advertise at any
+# point via ``notifications/tools/list_changed`` (see
+# MCPServerTask._refresh_tools). Nothing in the protocol requires the second
+# advertisement to resemble the first, so a server can present benign tools,
+# wait for the operator to approve the connection, and then swap in a
+# description carrying different instructions — the "rug pull". The model
+# reads the new description with the same trust as the reviewed one.
+#
+# The MCP 2026-07-28 specification's guidance is to pin tool definitions on
+# first use and diff them on every reconnect. That is what this does. Like
+# _scan_mcp_description above, it is WARNING-level and never blocks: a
+# legitimate server upgrade also changes definitions, and failing closed on
+# that would break working setups. The point is that a silent change becomes
+# a visible one.
+#
+# Fingerprints are process-scoped and deliberately survive deregistration, so
+# a tool that is removed and re-added under the same name is still compared
+# against what was originally advertised.
+_mcp_tool_fingerprints: Dict[str, str] = {}
+
+
+def _tool_definition_fingerprint(mcp_tool) -> str:
+    """Return a stable digest of an MCP tool's model-visible definition.
+
+    Covers exactly what reaches the model — name, description, and input
+    schema. Transport details and server bookkeeping are excluded so that
+    reconnects do not register as drift.
+    """
+    payload = json.dumps(
+        {
+            "name": getattr(mcp_tool, "name", "") or "",
+            "description": getattr(mcp_tool, "description", "") or "",
+            "input_schema": getattr(mcp_tool, "inputSchema", None),
+        },
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _check_tool_definition_drift(server_name: str, tool_name: str, mcp_tool) -> bool:
+    """Compare a tool definition against the first one seen for this name.
+
+    Returns True when the definition changed since it was pinned. The new
+    definition replaces the pin, so a given mutation is reported once rather
+    than on every subsequent refresh.
+    """
+    key = f"{server_name}\x00{tool_name}"
+    fingerprint = _tool_definition_fingerprint(mcp_tool)
+
+    with _lock:
+        previous = _mcp_tool_fingerprints.get(key)
+        _mcp_tool_fingerprints[key] = fingerprint
+
+    if previous is None or previous == fingerprint:
+        return False
+
+    logger.warning(
+        "MCP server '%s' tool '%s': definition changed after it was first "
+        "advertised (%s → %s). The model now reads a description it was not "
+        "originally connected with. Re-review this server if you did not "
+        "expect an update. Description: %.200s",
+        server_name, tool_name, previous[:12], fingerprint[:12],
+        getattr(mcp_tool, "description", "") or "",
+    )
+    return True
 
 
 def _prepend_path(env: dict, directory: str) -> dict:
@@ -3442,7 +3515,9 @@ _mcp_loop: Optional[asyncio.AbstractEventLoop] = None
 _mcp_thread: Optional[threading.Thread] = None
 
 # Protects _mcp_loop, _mcp_thread, _servers, MCP connection status maps,
-# _parallel_safe_servers, _mcp_tool_server_names, and _stdio_pids.
+# _parallel_safe_servers, _mcp_tool_server_names, _mcp_tool_fingerprints, and
+# _stdio_pids. Not reentrant — never call tool registration (which fingerprints
+# definitions and so takes this lock) from inside a held block.
 _lock = threading.Lock()
 
 # PIDs of stdio MCP server subprocesses.  Tracked so we can force-kill
@@ -4773,6 +4848,11 @@ def _register_server_tools(name: str, server: MCPServerTask, config: dict) -> Li
 
         # Scan tool description for prompt injection patterns
         _scan_mcp_description(name, mcp_tool.name, mcp_tool.description or "")
+
+        # Compare against the definition pinned on first advertisement. Runs
+        # here because this function serves both initial discovery and
+        # list_changed refreshes, which is exactly where a rug pull lands.
+        _check_tool_definition_drift(name, mcp_tool.name, mcp_tool)
 
         schema = _convert_mcp_schema(name, mcp_tool)
         tool_name_prefixed = schema["name"]
