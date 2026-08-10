@@ -656,8 +656,32 @@ _update_result: Optional[int] = None
 _update_check_done = threading.Event()
 
 
+def auto_update_check_enabled() -> bool:
+    """Whether Hercules may contact the network on its own to check for updates.
+
+    Default: OFF. Hercules does NOT phone home. The automatic startup
+    update-check (a ``git ls-remote`` / ``git fetch`` / PyPI request fired on
+    every launch) is disabled unless the operator explicitly opts in by setting
+    ``HERCULES_UPDATE_CHECK`` to a truthy value (``1``/``true``/``yes``/``on``).
+
+    This does not affect the user-initiated ``hercules update`` command or
+    ``hercules version --check-updates`` — those are explicit and always work.
+    """
+    val = os.environ.get("HERCULES_UPDATE_CHECK", "").strip().lower()
+    return val in {"1", "true", "yes", "on"}
+
+
 def prefetch_update_check():
-    """Kick off update check in a background daemon thread."""
+    """Kick off update check in a background daemon thread.
+
+    No-op unless the operator opted in via ``HERCULES_UPDATE_CHECK`` (see
+    ``auto_update_check_enabled``). By default Hercules performs no autonomous
+    network call at startup; the result stays ``None`` and the ``done`` event is
+    set immediately so ``get_update_result`` never blocks.
+    """
+    if not auto_update_check_enabled():
+        _update_check_done.set()
+        return
     def _run():
         global _update_result
         _update_result = check_for_updates()

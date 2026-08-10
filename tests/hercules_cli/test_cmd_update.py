@@ -872,3 +872,30 @@ termux = ["rich>=14"]
 
     assert hm._load_installable_optional_extras(group="all") == ["mcp"]
     assert hm._load_installable_optional_extras(group="termux-all") == ["termux", "mcp"]
+
+
+def test_upstream_sync_disabled_by_default(monkeypatch):
+    """_upstream_sync_enabled() defaults False; the sync is a no-op without opt-in."""
+    from hercules_cli import main as hm
+
+    monkeypatch.delenv("HERCULES_UPSTREAM_SYNC", raising=False)
+    assert hm._upstream_sync_enabled() is False
+
+    # With the flag unset, the real function must not touch git at all.
+    with patch.object(hm, "_has_upstream_remote") as has_up, \
+         patch("hercules_cli.main.subprocess.run") as run_mock:
+        hm._sync_with_upstream_if_needed(["git"], PROJECT_ROOT)
+    has_up.assert_not_called()
+    run_mock.assert_not_called()
+
+
+def test_upstream_sync_opt_in(monkeypatch):
+    """Setting HERCULES_UPSTREAM_SYNC truthy re-enables the fork-sync path."""
+    from hercules_cli import main as hm
+
+    for truthy in ("1", "true", "YES", "on"):
+        monkeypatch.setenv("HERCULES_UPSTREAM_SYNC", truthy)
+        assert hm._upstream_sync_enabled() is True
+    for falsy in ("0", "false", "no", ""):
+        monkeypatch.setenv("HERCULES_UPSTREAM_SYNC", falsy)
+        assert hm._upstream_sync_enabled() is False
