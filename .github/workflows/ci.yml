@@ -212,12 +212,18 @@ jobs:
             --summary-out ci-timings-summary.md
 
       - name: Upload HTML report
+        # The timing report is diagnostic-only telemetry. When the Actions
+        # artifact-storage quota is exhausted this upload fails with
+        # "Failed to CreateArtifact"; that must not red the CI-timings check
+        # for a run whose real work succeeded. Tolerate the failure and keep
+        # retention short to reduce storage pressure in the first place.
+        continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         id: ci-timings-artifact
         with:
           name: ci-timings-report
           path: ci-timings-report.html
-          retention-days: 14
+          retention-days: 5
           archive: false
 
       - name: Output summary

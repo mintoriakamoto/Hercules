@@ -114,6 +114,13 @@ jobs:
           NOUS_API_KEY: ""
 
       - name: Upload per-slice durations
+        # Durations are an optional timing-cache telemetry artifact used only
+        # to balance future slicing — never a correctness signal. When the
+        # account's Actions artifact-storage quota is exhausted the upload
+        # fails with "Failed to CreateArtifact", which must NOT red a slice
+        # whose tests all passed. Tolerate the upload failure so a green test
+        # run stays green; the next run just re-derives balance from scratch.
+        continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-durations-slice-${{ matrix.slice.index }}
