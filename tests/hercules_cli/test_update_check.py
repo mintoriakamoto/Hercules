@@ -313,9 +313,16 @@ def test_check_for_updates_non_docker_still_checks(tmp_path, monkeypatch):
     mock_run.assert_not_called()
 
 
-def test_prefetch_non_blocking():
-    """prefetch_update_check() should return immediately without blocking."""
+def test_prefetch_non_blocking(monkeypatch):
+    """prefetch_update_check() should return immediately without blocking.
+
+    When the operator has opted in (``HERCULES_UPDATE_CHECK``), the background
+    thread runs and populates the result.
+    """
     import hercules_cli.banner as banner
+
+    # Opt in to the (default-off) automatic update check.
+    monkeypatch.setenv("HERCULES_UPDATE_CHECK", "1")
 
     # Reset module state
     banner._update_result = None
@@ -332,6 +339,46 @@ def test_prefetch_non_blocking():
         # Wait for the background thread to finish
         banner._update_check_done.wait(timeout=5)
         assert banner._update_result == 5
+
+
+def test_prefetch_disabled_by_default_no_phone_home(monkeypatch):
+    """By default (no opt-in env) prefetch must NOT contact the network.
+
+    Regression guard: Hercules does not phone home on startup. The daemon
+    thread must not start, ``check_for_updates`` must not be called, the result
+    stays ``None``, and ``get_update_result`` returns immediately (done event
+    is set) rather than blocking.
+    """
+    import hercules_cli.banner as banner
+
+    monkeypatch.delenv("HERCULES_UPDATE_CHECK", raising=False)
+
+    banner._update_result = None
+    banner._update_check_done = threading.Event()
+
+    with patch.object(banner, "check_for_updates") as mock_check:
+        banner.prefetch_update_check()
+        # No network path invoked.
+        mock_check.assert_not_called()
+
+    # Result unset, and the done event is already set so callers never block.
+    assert banner._update_result is None
+    assert banner._update_check_done.is_set()
+    assert banner.get_update_result(timeout=0.1) is None
+
+
+def test_auto_update_check_disabled_by_default(monkeypatch):
+    """auto_update_check_enabled() defaults to False; truthy env opts in."""
+    import hercules_cli.banner as banner
+
+    monkeypatch.delenv("HERCULES_UPDATE_CHECK", raising=False)
+    assert banner.auto_update_check_enabled() is False
+    for truthy in ("1", "true", "YES", "on"):
+        monkeypatch.setenv("HERCULES_UPDATE_CHECK", truthy)
+        assert banner.auto_update_check_enabled() is True
+    for falsy in ("0", "false", "no", ""):
+        monkeypatch.setenv("HERCULES_UPDATE_CHECK", falsy)
+        assert banner.auto_update_check_enabled() is False
 
 
 def test_invalidate_update_cache_clears_all_profiles(tmp_path):

@@ -6813,6 +6813,23 @@ def _sync_fork_with_upstream(git_cmd: list[str], cwd: Path) -> bool:
         return False
 
 
+def _upstream_sync_enabled() -> bool:
+    """Whether ``hercules update`` may pull from / sync with an ``upstream`` remote.
+
+    Default: OFF. To remove any path by which an external ``upstream`` can push
+    code into this instance, the fork-sync step (adding an ``upstream`` remote,
+    fetching/pulling ``upstream/main``, and force-pushing to ``origin``) is
+    disabled unless the operator explicitly opts in by setting
+    ``HERCULES_UPSTREAM_SYNC`` to a truthy value (``1``/``true``/``yes``/``on``).
+
+    A plain user-initiated ``hercules update`` (fetch + ff-only pull / reset of
+    the user's OWN ``origin``) is unaffected — only the upstream-tracking sync is
+    gated.
+    """
+    val = os.environ.get("HERCULES_UPSTREAM_SYNC", "").strip().lower()
+    return val in {"1", "true", "yes", "on"}
+
+
 def _sync_with_upstream_if_needed(git_cmd: list[str], cwd: Path) -> None:
     """Check if fork is behind upstream and sync if safe.
 
@@ -6821,7 +6838,14 @@ def _sync_with_upstream_if_needed(git_cmd: list[str], cwd: Path) -> None:
     - Compare origin/main with upstream/main
     - If origin/main is strictly behind upstream/main, pull from upstream
     - Try to sync fork back to origin if possible
+
+    Disabled by default (see ``_upstream_sync_enabled``): Hercules will not add,
+    fetch, or pull from an ``upstream`` remote — nor force-push ``origin`` — on
+    its own. Set ``HERCULES_UPSTREAM_SYNC=1`` to restore the old behavior.
     """
+    if not _upstream_sync_enabled():
+        return
+
     has_upstream = _has_upstream_remote(git_cmd, cwd)
 
     if not has_upstream:
