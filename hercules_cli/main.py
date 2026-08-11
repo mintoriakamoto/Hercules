@@ -8475,19 +8475,16 @@ def _cmd_update_check(branch: str = "main", *, branch_explicit: bool = False):
         print(format_docker_update_message())
         sys.exit(1)
     if method == "pip":
-        from hercules_cli.config import recommended_update_command
-        from hercules_cli.banner import check_via_pypi
-        if branch_explicit and branch != "main":
-            print(f"⚠ --branch is ignored for PyPI installs (would have checked '{branch}').")
-        result = check_via_pypi()
-        if result is None:
-            print("✗ Could not reach PyPI to check for updates.")
-            sys.exit(1)
-        elif result == 0:
-            print("✓ Already up to date.")
-        else:
-            print("⚕ Update available on PyPI.")
-            print(f"  Run '{recommended_update_command()}' to install.")
+        # The PyPI update route was removed — Hercules updates only from its
+        # GitHub repo. A pip/pipx install can't be update-checked here; point
+        # the user at the supported GitHub install/update instead.
+        from hercules_cli.config import (
+            format_unsupported_install_warning,
+            recommended_update_command_for_method,
+        )
+        print(format_unsupported_install_warning("pip"))
+        print("→ Update from GitHub instead:")
+        print(f"  {recommended_update_command_for_method('pip')}")
         return
 
     git_dir = PROJECT_ROOT / ".git"
@@ -9400,64 +9397,22 @@ def cmd_update(args):
 
 
 def _cmd_update_pip(args):
-    """Update Hercules via pip (for PyPI installs)."""
+    """Handle ``hercules update`` on a pip/pipx/uv-tool install.
+
+    The PyPI update route was removed: Hercules no longer pulls upgrades of the
+    ``hercules-agent`` package from pypi.org. Updates flow only from the
+    project's GitHub repo. Point the user at the supported GitHub install.
+    """
     from hercules_cli import __version__
-    from hercules_cli.config import is_uv_tool_install
+    from hercules_cli.config import (
+        format_unsupported_install_warning,
+        recommended_update_command_for_method,
+    )
 
     print(f"→ Current version: {__version__}")
-    print("→ Checking PyPI for updates...")
-
-    from hercules_cli.managed_uv import ensure_uv, update_managed_uv
-
-    # Keep managed uv current before using it.
-    update_managed_uv()
-
-    uv = ensure_uv()
-    in_venv = sys.prefix != sys.base_prefix
-    # pipx-managed installs live under .../pipx/venvs/<name>/...
-    pipx_managed = "pipx" in sys.prefix.split(os.sep)
-    pipx = shutil.which("pipx") if pipx_managed else None
-
-    # Only the ``uv pip install`` path inside a venv needs VIRTUAL_ENV
-    # exported (uv refuses to install without it when the launcher shim
-    # didn't activate the venv). ``uv tool upgrade`` / ``pipx upgrade``
-    # operate on a named environment and ignore VIRTUAL_ENV, so we don't
-    # set it for them.
-    export_virtualenv = False
-
-    if is_uv_tool_install():
-        if not uv:
-            print("✗ Detected a uv-tool install but managed uv install failed.")
-            print("  Install uv manually: https://docs.astral.sh/uv/getting-started/installation/")
-            sys.exit(1)
-        cmd = [uv, "tool", "upgrade", "hercules-agent"]
-    elif pipx_managed and pipx:
-        # pipx owns its own venv; ``pipx upgrade`` is the only correct path.
-        # Matches scripts/auto-update.sh, which already uses pipx upgrade.
-        cmd = [pipx, "upgrade", "hercules-agent"]
-    elif uv:
-        cmd = [uv, "pip", "install", "--upgrade", "hercules-agent"]
-        if in_venv:
-            # Launcher shim runs the venv interpreter but doesn't export
-            # VIRTUAL_ENV; without it uv errors "No virtual environment found".
-            export_virtualenv = True
-        else:
-            # Outside any venv, ``--system`` lets uv target the active
-            # interpreter, matching pip's default behaviour.
-            cmd.insert(3, "--system")
-    else:
-        cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "hercules-agent"]
-
-    print(f"→ Running: {' '.join(cmd)}")
-    run_kwargs = {}
-    if export_virtualenv:
-        run_kwargs["env"] = {**os.environ, "VIRTUAL_ENV": sys.prefix}
-    result = subprocess.run(cmd, **run_kwargs)
-    if result.returncode != 0:
-        print("✗ Update failed")
-        sys.exit(1)
-
-    print("✓ Update complete! Restart hercules to use the new version.")
+    print(format_unsupported_install_warning("pip"))
+    print("→ Update from GitHub instead:")
+    print(f"  {recommended_update_command_for_method('pip')}")
 
 
 def _cmd_update_impl(args, gateway_mode: bool):

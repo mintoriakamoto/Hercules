@@ -60,13 +60,12 @@ def test_check_for_updates_invalidates_on_version_change(tmp_path, monkeypatch):
 
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
     monkeypatch.delenv("HERCULES_REVISION", raising=False)
-    with patch("hercules_cli.banner.subprocess.run") as mock_run, \
-         patch("hercules_cli.banner.check_via_pypi", return_value=0) as mock_pypi:
+    with patch("hercules_cli.banner.subprocess.run") as mock_run:
         result = banner.check_for_updates()
 
-    # Stale-version cache rejected -> fresh check ran -> up-to-date result.
-    assert result == 0
-    mock_pypi.assert_called_once()
+    # Stale-version cache rejected -> fresh no-git check ran -> None (not the
+    # cached "behind": 1, which would prove the stale cache was wrongly reused).
+    assert result is None
     mock_run.assert_not_called()
 
     # Cache rewritten with the current installed version.
@@ -223,7 +222,7 @@ def test_check_via_local_git_full_clone_keeps_exact_count(tmp_path):
 
 
 def test_check_for_updates_no_git_dir(tmp_path, monkeypatch):
-    """Falls back to PyPI check when .git directory doesn't exist anywhere."""
+    """No .git anywhere (pip/wheel install) → None; no network (PyPI route removed)."""
     import hercules_cli.banner as banner
 
     # Create a fake banner.py so the fallback path also has no .git
@@ -234,9 +233,8 @@ def test_check_for_updates_no_git_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(banner, "__file__", str(fake_banner))
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
     with patch("hercules_cli.banner.subprocess.run") as mock_run:
-        with patch("hercules_cli.banner.check_via_pypi", return_value=0):
-            result = banner.check_for_updates()
-    assert result == 0
+        result = banner.check_for_updates()
+    assert result is None
     mock_run.assert_not_called()
 
 
@@ -275,27 +273,25 @@ def test_check_for_updates_docker_returns_none(tmp_path, monkeypatch):
     cache_file = tmp_path / ".update_check"
 
     with patch("hercules_cli.config.detect_install_method", return_value="docker"), \
-         patch("hercules_cli.banner.subprocess.run") as mock_run, \
-         patch("hercules_cli.banner.check_via_pypi") as mock_pypi:
+         patch("hercules_cli.banner.subprocess.run") as mock_run:
         result = banner.check_for_updates()
 
     assert result is None
-    # Neither the git probe nor the PyPI probe should have run.
+    # The git probe must not have run.
     mock_run.assert_not_called()
-    mock_pypi.assert_not_called()
     # And no phantom "behind" count should be cached for the next 6h.
     assert not cache_file.exists()
 
 
-def test_check_for_updates_non_docker_still_checks(tmp_path, monkeypatch):
-    """The docker guard must NOT over-broaden: a pip install still version-checks.
+def test_check_for_updates_pip_install_returns_none(tmp_path, monkeypatch):
+    """A pip install (no .git) returns None with no network — PyPI route removed.
 
-    Invariant guarding against the guard firing for non-docker methods — pip
-    installs legitimately reach check_via_pypi() and surface a real update.
+    Regression guard: the removed PyPI version-check must not resurface. A
+    non-git install surfaces no update badge and makes no outbound request.
     """
     import hercules_cli.banner as banner
 
-    # No local git checkout -> the PyPI (pip-install) path is exercised.
+    # No local git checkout -> the (formerly PyPI) no-git path is exercised.
     fake_banner = tmp_path / "hercules_cli" / "banner.py"
     fake_banner.parent.mkdir(parents=True, exist_ok=True)
     fake_banner.touch()
@@ -304,13 +300,14 @@ def test_check_for_updates_non_docker_still_checks(tmp_path, monkeypatch):
     monkeypatch.delenv("HERCULES_REVISION", raising=False)
 
     with patch("hercules_cli.config.detect_install_method", return_value="pip"), \
-         patch("hercules_cli.banner.subprocess.run") as mock_run, \
-         patch("hercules_cli.banner.check_via_pypi", return_value=1) as mock_pypi:
+         patch("hercules_cli.banner.subprocess.run") as mock_run:
         result = banner.check_for_updates()
 
-    assert result == 1
-    mock_pypi.assert_called_once()
+    assert result is None
     mock_run.assert_not_called()
+    # The removed PyPI symbols must stay gone.
+    assert not hasattr(banner, "check_via_pypi")
+    assert not hasattr(banner, "_fetch_pypi_latest")
 
 
 def test_prefetch_non_blocking(monkeypatch):

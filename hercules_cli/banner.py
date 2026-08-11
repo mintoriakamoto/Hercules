@@ -378,46 +378,12 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
     return None
 
 
-def _version_tuple(v: str) -> tuple[int, ...]:
-    """Parse '0.13.0' into (0, 13, 0) for comparison. Non-numeric segments become 0."""
-    parts = []
-    for segment in v.split("."):
-        try:
-            parts.append(int(segment))
-        except ValueError:
-            parts.append(0)
-    return tuple(parts)
-
-
-def _fetch_pypi_latest(package: str = "hercules-agent") -> Optional[str]:
-    """Fetch the latest version of a package from PyPI. Returns None on failure."""
-    try:
-        import urllib.request
-        url = f"https://pypi.org/pypi/{package}/json"
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read())
-            return data.get("info", {}).get("version")
-    except Exception:
-        return None
-
-
-def check_via_pypi() -> Optional[int]:
-    """Compare installed version against PyPI latest.
-
-    Returns 0 if up-to-date, 1 if behind, None on failure.
-    """
-    latest = _fetch_pypi_latest()
-    if latest is None:
-        return None
-    if latest == VERSION:
-        return 0
-    try:
-        if _version_tuple(latest) > _version_tuple(VERSION):
-            return 1
-        return 0
-    except Exception:
-        return 1 if latest != VERSION else 0
+# The PyPI update route (fetch latest version of `hercules-agent` from
+# pypi.org) was removed: update signalling flows only through the project's
+# own GitHub repo (github.com/mintoriakamoto/Hercules). Non-git installs no
+# longer version-check over the network — see the no-git branch in
+# ``check_for_updates`` (returns None) and the unsupported-install guidance in
+# ``hercules_cli.config``.
 
 
 def check_for_updates() -> Optional[int]:
@@ -482,7 +448,10 @@ def check_for_updates() -> Optional[int]:
         if not (repo_dir / ".git").exists():
             repo_dir = hercules_home / "hercules-agent"
         if not (repo_dir / ".git").exists():
-            behind = check_via_pypi()
+            # No git checkout (pip/wheel install). The PyPI version-check route
+            # was removed — update signalling flows only through the GitHub repo
+            # — so there is nothing to check here. Return None (no badge).
+            behind = None
         else:
             behind = _check_via_local_git(repo_dir)
 

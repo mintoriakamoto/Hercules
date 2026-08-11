@@ -538,14 +538,14 @@ def recommended_update_command_for_method(method: str) -> str:
     if method == "homebrew":
         return "brew upgrade hercules-agent"
     if method == "docker":
-        return "docker pull nousresearch/hercules-agent:latest"
+        return "docker pull ghcr.io/mintoriakamoto/hercules:latest"
     if method == "pip":
-        if is_uv_tool_install():
-            return "uv tool upgrade hercules-agent"
-        import shutil
-        if shutil.which("uv"):
-            return "uv pip install --upgrade hercules-agent"
-        return "pip install --upgrade hercules-agent"
+        # The PyPI update route was removed — updates come only from GitHub.
+        # A pip/pipx/uv-tool install should reinstall from the GitHub repo.
+        return (
+            "pip install --force-reinstall "
+            "'hercules-agent @ git+https://github.com/mintoriakamoto/Hercules.git'"
+        )
     return "hercules update"
 
 
