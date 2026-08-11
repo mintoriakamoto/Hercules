@@ -1,8 +1,10 @@
 """Telegram Managed Bot onboarding client.
 
 Uses Telegram's Managed Bots feature to create a user-owned child bot without
-manual BotFather token copy-paste. Hercules talks only to the Nous onboarding
-service; the raw Telegram token is saved locally after one-time retrieval.
+manual BotFather token copy-paste. The onboarding service URL is NOT built in
+(the former Nous-hosted default was removed) — set ``TELEGRAM_ONBOARDING_URL``
+to your own onboarding service to use this flow. The raw Telegram token is
+saved locally after one-time retrieval.
 """
 
 from __future__ import annotations
@@ -18,10 +20,15 @@ from typing import Optional
 
 import httpx
 
-# Default pairing API base URL (Nous-hosted Cloudflare Worker).
-# Override for PoC/staging with TELEGRAM_ONBOARDING_URL.
-DEFAULT_API_URL = "https://setup.hercules-agent.nousresearch.com"
+# No built-in onboarding service: the former Nous-hosted default was removed so
+# nothing routes to third-party infrastructure. Set TELEGRAM_ONBOARDING_URL to
+# your own onboarding service to enable managed-bot setup.
+DEFAULT_API_URL = ""
 TELEGRAM_ONBOARDING_URL_ENV = "TELEGRAM_ONBOARDING_URL"
+
+
+class TelegramOnboardingNotConfigured(RuntimeError):
+    """Raised when managed-bot onboarding is used without a configured URL."""
 
 # The Nous-hosted manager bot username (without @). The backend returns the
 # actual deep link, so this is only used by local helpers/tests.
@@ -57,10 +64,22 @@ class TelegramBotSetupResult:
 
 
 def _api_url(api_url: str | None = None) -> str:
-    """Resolve the onboarding API URL, honoring the PoC env override."""
-    return (
+    """Resolve the onboarding API URL from an arg or ``TELEGRAM_ONBOARDING_URL``.
+
+    Raises ``TelegramOnboardingNotConfigured`` when none is set — there is no
+    built-in default (the Nous-hosted endpoint was removed).
+    """
+    resolved = (
         api_url or os.environ.get(TELEGRAM_ONBOARDING_URL_ENV) or DEFAULT_API_URL
     ).rstrip("/")
+    if not resolved:
+        raise TelegramOnboardingNotConfigured(
+            "Telegram managed-bot onboarding is not configured. The built-in "
+            "Nous-hosted onboarding service was removed. Set "
+            f"{TELEGRAM_ONBOARDING_URL_ENV}=<your onboarding service URL> to use "
+            "managed-bot setup, or configure a BotFather token directly."
+        )
+    return resolved
 
 
 def is_valid_telegram_bot_token(token: object) -> bool:

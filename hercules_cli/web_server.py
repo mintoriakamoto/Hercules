@@ -7355,7 +7355,9 @@ async def cancel_whatsapp_onboarding(pairing_id: str):
     return {"ok": True}
 
 
-_TELEGRAM_ONBOARDING_DEFAULT_URL = "https://setup.hercules-agent.nousresearch.com"
+# No built-in onboarding service: the former Nous-hosted default was removed.
+# Set TELEGRAM_ONBOARDING_URL to your own onboarding service to enable this.
+_TELEGRAM_ONBOARDING_DEFAULT_URL = ""
 _TELEGRAM_ONBOARDING_USER_AGENT = f"HerculesDashboard/{__version__}"
 _TELEGRAM_USER_ID_RE = re.compile(r"^\d+$")
 
@@ -7375,11 +7377,22 @@ _telegram_onboarding_lock = threading.RLock()
 
 
 def _telegram_onboarding_base_url() -> str:
-    return (
+    base = (
         os.getenv("TELEGRAM_ONBOARDING_URL", _TELEGRAM_ONBOARDING_DEFAULT_URL)
         .strip()
         .rstrip("/")
     )
+    if not base:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Telegram managed-bot onboarding is not configured. The built-in "
+                "Nous-hosted onboarding service was removed. Set "
+                "TELEGRAM_ONBOARDING_URL to your own onboarding service, or "
+                "configure a BotFather token directly."
+            ),
+        )
+    return base
 
 
 def _parse_expiry_ts(value: str) -> float:

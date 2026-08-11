@@ -3793,7 +3793,10 @@ def check_for_skill_updates(
 # Hercules centralized index source
 # ---------------------------------------------------------------------------
 
-HERCULES_INDEX_URL = "https://hercules-agent.nousresearch.com/docs/api/skills-index.json"
+# The centralized Hercules index source is no longer registered in
+# create_source_router (skills install only from the operator's own repo), so
+# this URL is never fetched. Emptied to remove the third-party reference.
+HERCULES_INDEX_URL = ""
 HERCULES_INDEX_TTL = 6 * 3600  # 6 hours
 
 

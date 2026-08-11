@@ -1,4 +1,10 @@
-"""Generic managed-tool gateway helpers for Nous-hosted vendor passthroughs."""
+"""Generic managed-tool gateway helpers for vendor passthroughs.
+
+No gateway domain is built in (the former ``nousresearch.com`` default was
+removed) — set ``TOOL_GATEWAY_DOMAIN`` (or a per-vendor ``*_GATEWAY_URL``) to
+your own gateway to use managed-tool passthroughs. Without one, the managed
+gateway resolves to nothing and the feature stays inert.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +20,8 @@ logger = logging.getLogger(__name__)
 from hercules_constants import get_hercules_home
 from tools.tool_backend_helpers import managed_nous_tools_enabled
 
-_DEFAULT_TOOL_GATEWAY_DOMAIN = "nousresearch.com"
+# No built-in gateway domain: the former nousresearch.com default was removed.
+_DEFAULT_TOOL_GATEWAY_DOMAIN = ""
 _DEFAULT_TOOL_GATEWAY_SCHEME = "https"
 _NOUS_ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 120
 
@@ -132,7 +139,11 @@ def build_vendor_gateway_url(vendor: str) -> str:
     if shared_domain:
         return f"{shared_scheme}://{vendor}-gateway.{shared_domain}"
 
-    return f"{shared_scheme}://{vendor}-gateway.{_DEFAULT_TOOL_GATEWAY_DOMAIN}"
+    # No built-in gateway domain (the nousresearch.com default was removed).
+    # Returning "" makes resolve_managed_tool_gateway() treat the managed
+    # gateway as unconfigured, so nothing routes to third-party infrastructure
+    # unless the operator sets TOOL_GATEWAY_DOMAIN / *_GATEWAY_URL.
+    return ""
 
 
 def resolve_managed_tool_gateway(
