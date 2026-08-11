@@ -100,13 +100,13 @@ def _ensure_uv_path() -> Optional[str]:
     target = managed_uv_path()
     target.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"  → Installing managed uv into {target.parent} ...")
-
     try:
         _install_uv(target)
     except Exception as exc:
-        logger.warning("Managed uv install failed: %s", exc)
-        print(f"  ✗ Failed to install managed uv: {exc}")
+        # Auto-install was removed (no third-party fetch-and-exec). Surface the
+        # manual-install guidance; callers fall back to a system uv / pip.
+        logger.warning("Managed uv unavailable: %s", exc)
+        print(f"  ✗ {exc}")
         return None
 
     # Verify
@@ -191,64 +191,33 @@ def update_managed_uv() -> Optional[str]:
 # Installer internals
 # ---------------------------------------------------------------------------
 
+class UvInstallerRemovedError(RuntimeError):
+    """Raised when a managed uv is missing and auto-install has been removed."""
+
+
+# Manual install guidance shown when uv is absent. We no longer fetch-and-exec
+# the astral.sh installer (curl|sh / irm|iex); the user installs uv themselves.
+_UV_MANUAL_INSTALL_MSG = (
+    "uv is not installed and Hercules no longer auto-downloads it. "
+    "Install uv yourself, e.g.:\n"
+    "  • macOS/Linux (Homebrew):  brew install uv\n"
+    "  • pipx:                     pipx install uv\n"
+    "  • pip:                      python3 -m pip install uv\n"
+    "  • Windows (winget):         winget install astral-sh.uv\n"
+    "See https://docs.astral.sh/uv/ for details, then re-run Hercules."
+)
+
+
 def _install_uv(target: Path) -> None:
-    """Bootstrap uv into *target* using the official standalone installer.
+    """Auto-install of uv was removed (no third-party curl|sh fetch-and-exec).
 
-    Uses ``UV_UNMANAGED_INSTALL`` (POSIX) or ``UV_INSTALL_DIR`` (Windows)
-    so the astral installer writes the binary directly into
-    ``$HERCULES_HOME/bin/`` instead of ``~/.local/bin/``.
+    Previously this downloaded and ran the astral.sh standalone installer. That
+    remote fetch-and-exec has been removed. Callers (``_ensure_uv_path``) catch
+    this and fall back to a system uv / pip, so bootstrap is not silently
+    broken — the user is told to install uv themselves.
     """
-    system = platform.system()
-    env = {
-        **os.environ,
-        # Tell the astral installer to drop the binary in our dir, not
-        # ~/.local/bin.  UV_UNMANAGED_INSTALL is the POSIX env var; Windows
-        # uses UV_INSTALL_DIR.
-        "UV_UNMANAGED_INSTALL": str(target.parent),
-        "UV_INSTALL_DIR": str(target.parent),
-    }
+    raise UvInstallerRemovedError(_UV_MANUAL_INSTALL_MSG)
 
-    if system == "Windows":
-        _install_uv_windows(env)
-    else:
-        _install_uv_posix(env)
-
-
-def _install_uv_posix(env: dict[str, str]) -> None:
-    """Download + sh the POSIX installer (two-stage to avoid curl|sh pitfalls)."""
-    with tempfile.NamedTemporaryFile(suffix=".sh", delete=False) as f:
-        installer_path = f.name
-
-    try:
-        subprocess.run(
-            ["curl", "-LsSf", "https://astral.sh/uv/install.sh", "-o", installer_path],
-            check=True,
-            capture_output=True,
-        )
-        subprocess.run(
-            ["sh", installer_path],
-            env=env,
-            check=True,
-            capture_output=True,
-        )
-    finally:
-        try:
-            os.unlink(installer_path)
-        except OSError:
-            pass
-
-
-def _install_uv_windows(env: dict[str, str]) -> None:
-    """Invoke the PowerShell installer."""
-    cmd = (
-        'irm https://astral.sh/uv/install.ps1 | iex'
-    )
-    subprocess.run(
-        ["powershell", "-ExecutionPolicy", "Bypass", "-c", cmd],
-        env=env,
-        check=True,
-        capture_output=True,
-    )
 
 def rebuild_venv(uv_bin: str, venv_dir: Path, python_version: str = "3.11") -> bool:
     True # dont remove me. ask ethernet

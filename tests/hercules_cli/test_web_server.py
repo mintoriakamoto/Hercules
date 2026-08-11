@@ -515,13 +515,15 @@ class TestWebServerEndpoints:
         providers = {row["name"]: row for row in resp.json()["providers"]}
 
         byterover_setup = providers["byterover"]["setup"]
-        assert byterover_setup["external_dependencies"] == [
-            {
-                "name": "brv",
-                "install": "curl -fsSL https://byterover.dev/install.sh | sh",
-                "check": "brv --version",
-            }
-        ]
+        # The third-party curl|sh auto-installer was removed: the manifest now
+        # carries only a presence check, never a fetch-and-exec install command.
+        byterover_deps = byterover_setup["external_dependencies"]
+        assert len(byterover_deps) == 1
+        brv_dep = byterover_deps[0]
+        assert brv_dep["name"] == "brv"
+        assert brv_dep["check"] == "brv --version"
+        assert not brv_dep.get("install")  # no install command
+        assert "byterover.dev" not in str(byterover_deps)
 
         retaindb_setup = providers["retaindb"]["setup"]
         assert "requests" in retaindb_setup["pip_dependencies"]
@@ -549,31 +551,24 @@ class TestWebServerEndpoints:
         assert providers["honcho"]["setup"]["dependencies_installed"] is True
         assert providers["honcho"]["status"] == "needs_config"
 
-    def test_post_memory_provider_setup_runs_declared_external_install(self, monkeypatch):
+    def test_post_memory_provider_setup_does_not_run_third_party_installer(self, monkeypatch):
+        """The curl|sh auto-installer was removed: setup never fetch-and-execs.
+
+        A missing ``brv`` is reported as missing with the manual-install hint;
+        no shell installer command is ever run.
+        """
         import subprocess
 
         import hercules_cli.web_server as web_server
 
         calls = []
-        check_count = 0
 
         def fake_run(command, **kwargs):
-            nonlocal check_count
             calls.append((command, kwargs))
             if command == ["brv", "--version"]:
-                check_count += 1
-                if check_count == 1:
-                    raise FileNotFoundError("brv")
-                return subprocess.CompletedProcess(
-                    command,
-                    0,
-                    stdout="brv 1.0.0",
-                    stderr="",
-                )
-            if command == "curl -fsSL https://byterover.dev/install.sh | sh":
-                assert kwargs["shell"] is True
-                return subprocess.CompletedProcess(command, 0, stdout="installed", stderr="")
-            raise AssertionError(f"Unexpected command: {command}")
+                raise FileNotFoundError("brv")
+            # Any non-check command here would be an installer invocation.
+            raise AssertionError(f"Unexpected (installer?) command: {command!r}")
 
         monkeypatch.setattr(web_server.subprocess, "run", fake_run)
 
@@ -582,18 +577,14 @@ class TestWebServerEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert data["provider"] == "byterover"
-        assert data["ok"] is True
-        assert [result["status"] for result in data["results"]] == [
-            "missing",
-            "installed",
-            "verified",
-        ]
-        assert [call[0] for call in calls[:3]] == [
-            ["brv", "--version"],
-            "curl -fsSL https://byterover.dev/install.sh | sh",
-            ["brv", "--version"],
-        ]
-        assert calls[-1][0] == ["brv", "--version"]
+        # brv check failed and there is no install command to auto-run, so the
+        # dep is reported failed (not auto-installed) — never "installed".
+        statuses = [result["status"] for result in data["results"]]
+        assert "failed" in statuses
+        assert "installed" not in statuses
+        # Only presence checks ran — never a shell installer, never curl|sh.
+        assert all(call[0] == ["brv", "--version"] for call in calls)
+        assert not any(kwargs.get("shell") for _cmd, kwargs in calls)
 
     def test_post_unknown_memory_provider_setup_returns_404(self):
         resp = self.client.post("/api/memory/providers/nope/setup", json={"values": {}})
