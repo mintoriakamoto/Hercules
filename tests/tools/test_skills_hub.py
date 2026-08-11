@@ -9,6 +9,8 @@ import httpx
 import pytest
 
 from tools.skills_hub import (
+    BrowseShSource,
+    ClawHubSource,
     GitHubAuth,
     GitHubSource,
     LobeHubSource,
@@ -1283,24 +1285,31 @@ class TestCheckForSkillUpdates:
 
 
 class TestCreateSourceRouter:
-    def test_includes_skills_sh_source(self):
-        sources = create_source_router(auth=MagicMock(spec=GitHubAuth))
-        assert any(isinstance(src, SkillsShSource) for src in sources)
+    """Skill sources are locked to the operator's own GitHub repo."""
 
-    def test_includes_well_known_source(self):
-        sources = create_source_router(auth=MagicMock(spec=GitHubAuth))
-        assert any(isinstance(src, WellKnownSkillSource) for src in sources)
+    def test_only_official_and_restricted_github(self):
+        from tools.skills_hub import OptionalSkillSource, OWN_SKILLS_REPO
 
-    def test_includes_url_source(self):
         sources = create_source_router(auth=MagicMock(spec=GitHubAuth))
-        assert any(isinstance(src, UrlSource) for src in sources)
+        # Exactly two sources: bundled/official (local) + own-repo GitHub.
+        assert [src.source_id() for src in sources] == ["official", "github"]
+        assert any(isinstance(src, OptionalSkillSource) for src in sources)
+        gh = next(src for src in sources if isinstance(src, GitHubSource))
+        assert gh._restrict_to == OWN_SKILLS_REPO.lower()
+        assert gh.taps == [{"repo": OWN_SKILLS_REPO, "path": "skills/"}]
 
-    def test_url_source_runs_before_github_source(self):
-        # UrlSource must win over GitHubSource when both could claim a URL.
+    def test_third_party_sources_are_not_registered(self):
         sources = create_source_router(auth=MagicMock(spec=GitHubAuth))
-        url_idx = next(i for i, src in enumerate(sources) if isinstance(src, UrlSource))
-        gh_idx = next(i for i, src in enumerate(sources) if isinstance(src, GitHubSource))
-        assert url_idx < gh_idx
+        for cls in (SkillsShSource, WellKnownSkillSource, UrlSource,
+                    ClawHubSource, LobeHubSource, BrowseShSource):
+            assert not any(isinstance(src, cls) for src in sources)
+
+    def test_restricted_github_refuses_foreign_repo(self):
+        from tools.skills_hub import OWN_SKILLS_REPO
+
+        gh = GitHubSource(auth=MagicMock(spec=GitHubAuth), restrict_to=OWN_SKILLS_REPO)
+        # An arbitrary owner/repo/path identifier must be refused outright.
+        assert gh.fetch("evil-owner/evil-repo/skills/backdoor") is None
 
 
 # ---------------------------------------------------------------------------
@@ -1832,7 +1841,7 @@ class TestOptionalSkillSourceMetadata:
         meta = src.inspect("official/finance/3-statement-model")
 
         assert meta is not None
-        assert meta.repo == "NousResearch/hercules-agent"
+        assert meta.repo == "mintoriakamoto/Hercules"
         assert meta.path == "optional-skills/finance/3-statement-model"
 
 

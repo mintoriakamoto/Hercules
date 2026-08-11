@@ -1,7 +1,7 @@
 """Tests for ``hercules debug`` CLI command and debug utilities."""
 
 import os
-import urllib.error
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -39,102 +39,6 @@ def hercules_home(tmp_path, monkeypatch):
     )
 
     return home
-
-
-# ---------------------------------------------------------------------------
-# Unit tests for upload helpers
-# ---------------------------------------------------------------------------
-
-class TestUploadPasteRs:
-    """Test paste.rs upload path."""
-
-    def test_upload_paste_rs_success(self):
-        from hercules_cli.debug import _upload_paste_rs
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = b"https://paste.rs/abc123\n"
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-
-        with patch("hercules_cli.debug.urllib.request.urlopen", return_value=mock_resp):
-            url = _upload_paste_rs("hello world")
-
-        assert url == "https://paste.rs/abc123"
-
-    def test_upload_paste_rs_bad_response(self):
-        from hercules_cli.debug import _upload_paste_rs
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = b"<html>error</html>"
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-
-        with patch("hercules_cli.debug.urllib.request.urlopen", return_value=mock_resp):
-            with pytest.raises(ValueError, match="Unexpected response"):
-                _upload_paste_rs("test")
-
-    def test_upload_paste_rs_network_error(self):
-        from hercules_cli.debug import _upload_paste_rs
-
-        with patch(
-            "hercules_cli.debug.urllib.request.urlopen",
-            side_effect=urllib.error.URLError("connection refused"),
-        ):
-            with pytest.raises(urllib.error.URLError):
-                _upload_paste_rs("test")
-
-
-class TestUploadDpasteCom:
-    """Test dpaste.com fallback upload path."""
-
-    def test_upload_dpaste_com_success(self):
-        from hercules_cli.debug import _upload_dpaste_com
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = b"https://dpaste.com/ABCDEFG\n"
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-
-        with patch("hercules_cli.debug.urllib.request.urlopen", return_value=mock_resp):
-            url = _upload_dpaste_com("hello world", expiry_days=7)
-
-        assert url == "https://dpaste.com/ABCDEFG"
-
-
-class TestUploadToPastebin:
-    """Test the combined upload with fallback."""
-
-    def test_tries_paste_rs_first(self):
-        from hercules_cli.debug import upload_to_pastebin
-
-        with patch("hercules_cli.debug._upload_paste_rs",
-                    return_value="https://paste.rs/test") as prs:
-            url = upload_to_pastebin("content")
-
-        assert url == "https://paste.rs/test"
-        prs.assert_called_once()
-
-    def test_falls_back_to_dpaste_com(self):
-        from hercules_cli.debug import upload_to_pastebin
-
-        with patch("hercules_cli.debug._upload_paste_rs",
-                    side_effect=Exception("down")), \
-             patch("hercules_cli.debug._upload_dpaste_com",
-                    return_value="https://dpaste.com/TEST") as dp:
-            url = upload_to_pastebin("content")
-
-        assert url == "https://dpaste.com/TEST"
-        dp.assert_called_once()
-
-    def test_raises_when_both_fail(self):
-        from hercules_cli.debug import upload_to_pastebin
-
-        with patch("hercules_cli.debug._upload_paste_rs",
-                    side_effect=Exception("err1")), \
-             patch("hercules_cli.debug._upload_dpaste_com",
-                    side_effect=Exception("err2")):
-            with pytest.raises(RuntimeError, match="Failed to upload"):
-                upload_to_pastebin("content")
 
 
 # ---------------------------------------------------------------------------
@@ -495,8 +399,8 @@ class TestCollectDebugReport:
 class TestRunDebugShare:
     """Test the run_debug_share CLI handler."""
 
-    def test_share_sweeps_expired_pastes(self, hercules_home, capsys):
-        """Slash-command path should sweep old pending deletes before uploading."""
+    def test_share_writes_local_files(self, hercules_home, capsys):
+        """The share flow writes local files and does NOT sweep/upload."""
         from hercules_cli.debug import run_debug_share
 
         args = MagicMock()
@@ -505,16 +409,25 @@ class TestRunDebugShare:
         args.local = False
 
         with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._sweep_expired_pastes", return_value=(0, 0)) as mock_sweep, \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                    return_value="https://paste.rs/test"):
+             patch("hercules_cli.debug._sweep_expired_pastes") as mock_sweep, \
+             patch("hercules_cli.debug._schedule_auto_delete") as mock_sched:
             run_debug_share(args)
 
-        mock_sweep.assert_called_once()
-        assert "Debug report uploaded" in capsys.readouterr().out
+        # The local-write share flow no longer sweeps pending pastes or
+        # schedules any auto-delete.
+        mock_sweep.assert_not_called()
+        mock_sched.assert_not_called()
 
-    def test_share_survives_sweep_failure(self, hercules_home, capsys):
-        """Expired-paste cleanup is best-effort and must not block sharing."""
+        out = capsys.readouterr().out
+        assert "Debug report written locally" in out
+        assert "nothing was uploaded" in out
+
+        share_dirs = list((hercules_home / "debug-shares").iterdir())
+        assert len(share_dirs) == 1
+        assert (share_dirs[0] / "report.md").exists()
+
+    def test_share_does_not_upload(self, hercules_home, capsys):
+        """No paste URL is ever printed — debug data stays on the machine."""
         from hercules_cli.debug import run_debug_share
 
         args = MagicMock()
@@ -522,16 +435,12 @@ class TestRunDebugShare:
         args.expire = 7
         args.local = False
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch(
-                 "hercules_cli.debug._sweep_expired_pastes",
-                 side_effect=RuntimeError("offline"),
-             ), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                    return_value="https://paste.rs/test"):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(args)
 
-        assert "https://paste.rs/test" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "paste.rs" not in out
+        assert "Debug report written locally" in out
 
     def test_local_flag_prints_full_logs(self, hercules_home, capsys):
         """--local prints the report plus full log contents."""
@@ -550,8 +459,8 @@ class TestRunDebugShare:
         assert "FULL agent.log" in out
         assert "FULL gateway.log" in out
 
-    def test_share_uploads_five_pastes(self, hercules_home, capsys):
-        """Successful share uploads report + agent.log + gateway.log + gui.log + desktop.log."""
+    def test_share_writes_five_files(self, hercules_home, capsys):
+        """Successful share writes report + agent.log + gateway.log + gui.log + desktop.log."""
         from hercules_cli.debug import run_debug_share
 
         args = MagicMock()
@@ -559,46 +468,36 @@ class TestRunDebugShare:
         args.expire = 7
         args.local = False
 
-        call_count = [0]
-        uploaded_content = []
-        def _mock_upload(content, expiry_days=7):
-            call_count[0] += 1
-            uploaded_content.append(content)
-            return f"https://paste.rs/paste{call_count[0]}"
-
-        with patch("hercules_cli.dump.run_dump") as mock_dump, \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                    side_effect=_mock_upload):
+        with patch("hercules_cli.dump.run_dump") as mock_dump:
             mock_dump.side_effect = lambda a: print("--- hercules dump ---\nversion: test\n--- end dump ---")
             run_debug_share(args)
 
         out = capsys.readouterr().out
-        # Should have 5 uploads: report, agent.log, gateway.log, gui.log, desktop.log
-        assert call_count[0] == 5
-        assert "paste.rs/paste1" in out  # Report
-        assert "paste.rs/paste2" in out  # agent.log
-        assert "paste.rs/paste3" in out  # gateway.log
-        assert "paste.rs/paste4" in out  # gui.log
-        assert "paste.rs/paste5" in out  # desktop.log
         assert "Report" in out
         assert "agent.log" in out
         assert "gateway.log" in out
         assert "gui.log" in out
         assert "desktop.log" in out
 
-        # Each log paste should start with the dump header
-        agent_paste = uploaded_content[1]
-        assert "--- hercules dump ---" in agent_paste
-        assert "--- full agent.log ---" in agent_paste
-        gateway_paste = uploaded_content[2]
-        assert "--- hercules dump ---" in gateway_paste
-        assert "--- full gateway.log ---" in gateway_paste
-        gui_paste = uploaded_content[3]
-        assert "--- hercules dump ---" in gui_paste
-        assert "--- full gui.log ---" in gui_paste
-        desktop_paste = uploaded_content[4]
-        assert "--- hercules dump ---" in desktop_paste
-        assert "--- full desktop.log ---" in desktop_paste
+        share_dirs = list((hercules_home / "debug-shares").iterdir())
+        assert len(share_dirs) == 1
+        share_dir = share_dirs[0]
+
+        # All five files should have been written to disk.
+        assert (share_dir / "report.md").exists()
+        for label in ("agent.log", "gateway.log", "gui.log", "desktop.log"):
+            assert (share_dir / label).exists()
+
+        # Each full log file should carry the dump header and its own section.
+        agent_text = (share_dir / "agent.log").read_text()
+        assert "--- hercules dump ---" in agent_text
+        assert "--- full agent.log ---" in agent_text
+        gateway_text = (share_dir / "gateway.log").read_text()
+        assert "--- full gateway.log ---" in gateway_text
+        gui_text = (share_dir / "gui.log").read_text()
+        assert "--- full gui.log ---" in gui_text
+        desktop_text = (share_dir / "desktop.log").read_text()
+        assert "--- full desktop.log ---" in desktop_text
 
     def test_share_keeps_report_and_full_log_on_same_snapshot(self, hercules_home, capsys):
         """A mid-run rotation must not make full agent.log older than the report."""
@@ -617,12 +516,6 @@ class TestRunDebugShare:
         args.expire = 7
         args.local = False
 
-        uploaded_content = []
-
-        def _mock_upload(content, expiry_days=7):
-            uploaded_content.append(content)
-            return f"https://paste.rs/paste{len(uploaded_content)}"
-
         def _wrapped_collect_debug_report(*, log_lines=200, dump_text="", log_snapshots=None):
             report = real_collect_debug_report(
                 log_lines=log_lines,
@@ -631,7 +524,7 @@ class TestRunDebugShare:
             )
             # Simulate the live log rotating after the report is built but
             # before the old implementation would have re-read agent.log for
-            # standalone upload.
+            # the standalone log file.
             (logs_dir / "agent.log").write_text("")
             (logs_dir / "agent.log.1").write_text(
                 "2026-04-10 12:00:00 INFO agent: old rotated line\n"
@@ -639,18 +532,18 @@ class TestRunDebugShare:
             return report
 
         with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.collect_debug_report", side_effect=_wrapped_collect_debug_report), \
-             patch("hercules_cli.debug.upload_to_pastebin", side_effect=_mock_upload):
+             patch("hercules_cli.debug.collect_debug_report", side_effect=_wrapped_collect_debug_report):
             run_debug_share(args)
 
-        report_paste = uploaded_content[0]
-        agent_paste = uploaded_content[1]
-        assert "2026-04-22 12:00:00 INFO agent: newest line" in report_paste
-        assert "2026-04-22 12:00:00 INFO agent: newest line" in agent_paste
-        assert "old rotated line" not in agent_paste
+        share_dir = next((hercules_home / "debug-shares").iterdir())
+        report_text = (share_dir / "report.md").read_text()
+        agent_text = (share_dir / "agent.log").read_text()
+        assert "2026-04-22 12:00:00 INFO agent: newest line" in report_text
+        assert "2026-04-22 12:00:00 INFO agent: newest line" in agent_text
+        assert "old rotated line" not in agent_text
 
     def test_share_skips_missing_logs(self, tmp_path, monkeypatch, capsys):
-        """Only uploads logs that exist."""
+        """Only writes files for logs that exist."""
         home = tmp_path / ".hercules"
         home.mkdir()
         monkeypatch.setenv("HERCULES_HOME", str(home))
@@ -662,65 +555,16 @@ class TestRunDebugShare:
         args.expire = 7
         args.local = False
 
-        call_count = [0]
-        def _mock_upload(content, expiry_days=7):
-            call_count[0] += 1
-            return f"https://paste.rs/paste{call_count[0]}"
-
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                    side_effect=_mock_upload):
-            run_debug_share(args)
-
-        out = capsys.readouterr().out
-        # Only the report should be uploaded (no log files exist)
-        assert call_count[0] == 1
-        assert "Report" in out
-
-    def test_share_continues_on_log_upload_failure(self, hercules_home, capsys):
-        """Log upload failure doesn't stop the report from being shared."""
-        from hercules_cli.debug import run_debug_share
-
-        args = MagicMock()
-        args.lines = 50
-        args.expire = 7
-        args.local = False
-
-        call_count = [0]
-        def _mock_upload(content, expiry_days=7):
-            call_count[0] += 1
-            if call_count[0] > 1:
-                raise RuntimeError("upload failed")
-            return "https://paste.rs/report"
-
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                    side_effect=_mock_upload):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(args)
 
         out = capsys.readouterr().out
         assert "Report" in out
-        assert "paste.rs/report" in out
-        assert "failed to upload" in out
 
-    def test_share_exits_on_report_upload_failure(self, hercules_home, capsys):
-        """If the main report fails to upload, exit with code 1."""
-        from hercules_cli.debug import run_debug_share
-
-        args = MagicMock()
-        args.lines = 50
-        args.expire = 7
-        args.local = False
-
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                    side_effect=RuntimeError("all failed")):
-            with pytest.raises(SystemExit) as exc_info:
-                run_debug_share(args)
-
-        assert exc_info.value.code == 1
-        out = capsys.readouterr()
-        assert "all failed" in out.err
+        share_dir = next((home / "debug-shares").iterdir())
+        # Only the report should be written (no log files exist).
+        written = sorted(p.name for p in share_dir.iterdir())
+        assert written == ["report.md"]
 
 
 # ---------------------------------------------------------------------------
@@ -749,10 +593,15 @@ class TestRunDebugShareRedaction:
         )
         return home
 
-    def test_default_share_redacts_uploaded_content(
+    @staticmethod
+    def _written_files(home):
+        share_dir = next((home / "debug-shares").iterdir())
+        return {p.name: p.read_text() for p in share_dir.iterdir()}
+
+    def test_default_share_redacts_written_content(
         self, hercules_home_with_secret, capsys
     ):
-        """The uploaded report and full-log pastes do not contain the raw token."""
+        """The report and full-log files written do not contain the raw token."""
         from hercules_cli.debug import run_debug_share
 
         args = MagicMock()
@@ -761,28 +610,21 @@ class TestRunDebugShareRedaction:
         args.local = False
         args.no_redact = False
 
-        captured: list[str] = []
-
-        def fake_upload(content, expiry_days=7):
-            captured.append(content)
-            return f"https://paste.rs/{len(captured)}"
-
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._sweep_expired_pastes", return_value=(0, 0)), \
-             patch("hercules_cli.debug.upload_to_pastebin", side_effect=fake_upload):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(args)
 
-        # At least the report plus one full log paste reached the upload path.
-        assert len(captured) >= 2
-        for content in captured:
+        files = self._written_files(hercules_home_with_secret)
+        # At least the report plus one full log file were written.
+        assert len(files) >= 2
+        for content in files.values():
             assert _REDACT_FIXTURE_TOKEN not in content, (
-                "raw token leaked into upload-bound content"
+                "raw token leaked into written content"
             )
 
     def test_default_share_includes_redaction_banner(
         self, hercules_home_with_secret, capsys
     ):
-        """Each upload-bound paste carries the visible redaction banner."""
+        """Each written file carries the visible redaction banner."""
         from hercules_cli.debug import run_debug_share
 
         args = MagicMock()
@@ -791,20 +633,13 @@ class TestRunDebugShareRedaction:
         args.local = False
         args.no_redact = False
 
-        captured: list[str] = []
-
-        def fake_upload(content, expiry_days=7):
-            captured.append(content)
-            return f"https://paste.rs/{len(captured)}"
-
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._sweep_expired_pastes", return_value=(0, 0)), \
-             patch("hercules_cli.debug.upload_to_pastebin", side_effect=fake_upload):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(args)
 
-        for content in captured:
+        files = self._written_files(hercules_home_with_secret)
+        for content in files.values():
             assert "redacted at upload time" in content, (
-                "redaction banner missing from upload-bound content"
+                "redaction banner missing from written content"
             )
 
     def test_no_redact_flag_disables_redaction_and_banner(
@@ -819,23 +654,16 @@ class TestRunDebugShareRedaction:
         args.local = False
         args.no_redact = True
 
-        captured: list[str] = []
-
-        def fake_upload(content, expiry_days=7):
-            captured.append(content)
-            return f"https://paste.rs/{len(captured)}"
-
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._sweep_expired_pastes", return_value=(0, 0)), \
-             patch("hercules_cli.debug.upload_to_pastebin", side_effect=fake_upload):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(args)
 
-        # The agent.log paste should now contain the raw token.
-        assert any(_REDACT_FIXTURE_TOKEN in c for c in captured), (
-            "expected raw token in --no-redact upload"
+        files = self._written_files(hercules_home_with_secret)
+        # The agent.log file should now contain the raw token.
+        assert any(_REDACT_FIXTURE_TOKEN in c for c in files.values()), (
+            "expected raw token in --no-redact output"
         )
         # No banner anywhere when redaction is disabled.
-        for content in captured:
+        for content in files.values():
             assert "redacted at upload time" not in content, (
                 "banner present with --no-redact"
             )
@@ -1236,29 +1064,7 @@ class TestRunDebugDelete:
 
 
 class TestShareIncludesAutoDelete:
-    """Verify that run_debug_share schedules auto-deletion and prints TTL."""
-
-    def test_share_schedules_auto_delete(self, hercules_home, capsys):
-        from hercules_cli.debug import run_debug_share
-
-        args = MagicMock()
-        args.lines = 50
-        args.expire = 7
-        args.local = False
-
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                    return_value="https://paste.rs/test1"), \
-             patch("hercules_cli.debug._schedule_auto_delete") as mock_sched:
-            run_debug_share(args)
-
-        # auto-delete was scheduled with the uploaded URLs
-        mock_sched.assert_called_once()
-        urls_arg = mock_sched.call_args[0][0]
-        assert "https://paste.rs/test1" in urls_arg
-
-        out = capsys.readouterr().out
-        assert "auto-delete" in out
+    """Verify the privacy notice is still shown before writing local files."""
 
     def test_share_shows_privacy_notice(self, hercules_home, capsys):
         from hercules_cli.debug import run_debug_share
@@ -1268,14 +1074,12 @@ class TestShareIncludesAutoDelete:
         args.expire = 7
         args.local = False
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                    return_value="https://paste.rs/test"), \
-             patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(args)
 
         out = capsys.readouterr().out
-        assert "PUBLIC paste service" in out
+        assert "LOCAL files" in out
+        assert "Nothing is uploaded" in out
         assert "NOT redacted" in out
 
     def test_local_no_privacy_notice(self, hercules_home, capsys):
@@ -1306,46 +1110,40 @@ class TestBuildDebugShare:
     contract here is the return value, not stdout.
     """
 
-    def test_returns_structured_urls(self, hercules_home):
+    def test_returns_structured_paths(self, hercules_home):
         from hercules_cli.debug import build_debug_share, DebugShareResult
 
-        count = [0]
-
-        def _upload(content, expiry_days=7):
-            count[0] += 1
-            return f"https://paste.rs/p{count[0]}"
-
-        with patch("hercules_cli.dump.run_dump"), patch(
-            "hercules_cli.debug.upload_to_pastebin", side_effect=_upload
-        ), patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"):
             result = build_debug_share(log_lines=50, redact=True)
 
         assert isinstance(result, DebugShareResult)
-        # All four seeded logs (agent/gateway/desktop) + the summary report.
+        # All four seeded logs (agent/gateway/gui/desktop) + the summary report.
         assert "Report" in result.urls
         assert "agent.log" in result.urls
         assert "gateway.log" in result.urls
         assert "desktop.log" in result.urls
         assert result.failures == []
         assert result.redacted is True
-        assert result.auto_delete_seconds == 21600
+        # Local files are not auto-deleted.
+        assert result.auto_delete_seconds == 0
+
+        # Every returned value is a real local file path that exists.
+        for path in result.urls.values():
+            assert Path(path).exists()
 
     def test_skips_missing_logs_without_failure(self, hercules_home):
         from hercules_cli.debug import build_debug_share
 
-        # Remove desktop.log so it should be neither uploaded nor reported failed.
+        # Remove desktop.log so it should be neither written nor reported failed.
         (hercules_home / "logs" / "desktop.log").unlink()
 
-        with patch("hercules_cli.dump.run_dump"), patch(
-            "hercules_cli.debug.upload_to_pastebin",
-            side_effect=lambda c, expiry_days=7: "https://paste.rs/x",
-        ), patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"):
             result = build_debug_share(log_lines=50, redact=True)
 
         assert "desktop.log" not in result.urls
         assert result.failures == []
 
-    def test_redaction_keeps_secrets_out_of_payload(self, hercules_home):
+    def test_redaction_keeps_secrets_out_of_files(self, hercules_home):
         from hercules_cli.debug import build_debug_share
 
         secret = "sk-proj-SUPERSECRETtoken1234567890"
@@ -1353,51 +1151,34 @@ class TestBuildDebugShare:
             f"line one\nauthorization token={secret}\nline three\n"
         )
 
-        uploaded = []
-
-        def _upload(content, expiry_days=7):
-            uploaded.append(content)
-            return "https://paste.rs/x"
-
-        with patch("hercules_cli.dump.run_dump"), patch(
-            "hercules_cli.debug.upload_to_pastebin", side_effect=_upload
-        ), patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"):
             result = build_debug_share(log_lines=50, redact=True)
 
         assert result.redacted is True
-        joined = "\n".join(uploaded)
-        assert secret not in joined, "secret leaked into upload payload"
+        joined = "\n".join(Path(p).read_text() for p in result.urls.values())
+        assert secret not in joined, "secret leaked into written files"
 
     def test_optional_log_failure_is_collected_not_raised(self, hercules_home):
         from hercules_cli.debug import build_debug_share
 
-        count = [0]
+        real_write_text = Path.write_text
 
-        def _upload(content, expiry_days=7):
-            count[0] += 1
-            # First call (the required Report) succeeds; a later one fails.
-            if count[0] == 2:
-                raise RuntimeError("paste service hiccup")
-            return f"https://paste.rs/p{count[0]}"
+        def _write_text(self, data, *a, **k):
+            # The required report writes fine; one optional log write fails.
+            if self.name == "gateway.log":
+                raise OSError("disk full")
+            return real_write_text(self, data, *a, **k)
 
-        with patch("hercules_cli.dump.run_dump"), patch(
-            "hercules_cli.debug.upload_to_pastebin", side_effect=_upload
-        ), patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"), patch.object(
+            Path, "write_text", _write_text
+        ):
             result = build_debug_share(log_lines=50, redact=True)
 
         assert "Report" in result.urls
+        assert "gateway.log" not in result.urls
         assert len(result.failures) == 1
-        assert "paste service hiccup" in result.failures[0]
-
-    def test_required_report_failure_raises(self, hercules_home):
-        from hercules_cli.debug import build_debug_share
-
-        with patch("hercules_cli.dump.run_dump"), patch(
-            "hercules_cli.debug.upload_to_pastebin",
-            side_effect=RuntimeError("all paste services down"),
-        ), patch("hercules_cli.debug._schedule_auto_delete"):
-            with pytest.raises(RuntimeError, match="all paste services down"):
-                build_debug_share(log_lines=50, redact=True)
+        assert "gateway.log" in result.failures[0]
+        assert "disk full" in result.failures[0]
 
 
 # ---------------------------------------------------------------------------
@@ -1445,27 +1226,20 @@ class TestCollectShareBundle:
 
 
     def test_build_debug_share_uses_collector(self, hercules_home):
-        # build_debug_share must produce the same report text the collector does
-        # (i.e. the refactor preserved paste.rs behaviour).
+        # build_debug_share must write the same report text the collector produces
+        # (i.e. the refactor preserved the report content).
         from hercules_cli.debug import build_debug_share, collect_share_bundle
 
         with patch("hercules_cli.dump.run_dump"):
             expected = collect_share_bundle(log_lines=50, redact=True)["report"]
 
-        uploaded = []
-
-        def _upload(content, expiry_days=7):
-            uploaded.append(content)
-            return "https://paste.rs/x"
-
-        with patch("hercules_cli.dump.run_dump"), patch(
-            "hercules_cli.debug.upload_to_pastebin", side_effect=_upload
-        ), patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"):
             result = build_debug_share(log_lines=50, redact=True)
 
-        assert result.urls["Report"] == "https://paste.rs/x"
-        # The report uploaded should match the collector's report.
-        assert uploaded[0] == expected
+        report_path = Path(result.urls["Report"])
+        assert report_path.name == "report.md"
+        # The written report should match the collector's report.
+        assert report_path.read_text() == expected
 
 
 class TestDebugSlashCommand:
@@ -1538,39 +1312,35 @@ class TestShareConsentGate:
         return SimpleNamespace(**base)
 
     def test_aborts_on_user_decline(self, hercules_home, capsys, monkeypatch):
-        """Interactive user typing anything but y/yes → no upload."""
+        """Interactive user typing anything but y/yes → nothing is written."""
         from hercules_cli.debug import run_debug_share
 
         monkeypatch.setattr("sys.stdin.isatty", lambda: True)
         monkeypatch.setattr("builtins.input", lambda _: "n")
 
         with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.upload_to_pastebin") as mock_upload:
+             patch("hercules_cli.debug.build_debug_share") as mock_build:
             run_debug_share(self._args())
 
-        mock_upload.assert_not_called()
+        mock_build.assert_not_called()
         assert "Aborted" in capsys.readouterr().out
 
     def test_proceeds_on_user_accept(self, hercules_home, capsys, monkeypatch):
-        """Interactive user typing 'y' → upload proceeds."""
+        """Interactive user typing 'y' → the share is written locally."""
         from hercules_cli.debug import run_debug_share
 
         monkeypatch.setattr("sys.stdin.isatty", lambda: True)
         monkeypatch.setattr("builtins.input", lambda _: "y")
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._sweep_expired_pastes", return_value=(0, 0)), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                   return_value="https://paste.rs/test"), \
-             patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(self._args())
 
         out = capsys.readouterr().out
-        assert "Debug report uploaded" in out
+        assert "Debug report written locally" in out
         assert "Aborted" not in out
 
     def test_yes_flag_skips_prompt(self, hercules_home, capsys, monkeypatch):
-        """--yes uploads without ever calling input()."""
+        """--yes proceeds without ever calling input()."""
         from hercules_cli.debug import run_debug_share
 
         def _boom(_):
@@ -1578,49 +1348,41 @@ class TestShareConsentGate:
 
         monkeypatch.setattr("builtins.input", _boom)
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._sweep_expired_pastes", return_value=(0, 0)), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                   return_value="https://paste.rs/test"), \
-             patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(self._args(yes=True))
 
-        assert "Debug report uploaded" in capsys.readouterr().out
+        assert "Debug report written locally" in capsys.readouterr().out
 
     def test_non_interactive_requires_yes(self, hercules_home, capsys, monkeypatch):
-        """No TTY + no --yes → exit(1), never upload silently."""
+        """No TTY + no --yes → exit(1), never write silently."""
         from hercules_cli.debug import run_debug_share
 
         monkeypatch.setattr("sys.stdin.isatty", lambda: False)
 
         with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.upload_to_pastebin") as mock_upload:
+             patch("hercules_cli.debug.build_debug_share") as mock_build:
             with pytest.raises(SystemExit) as exc:
                 run_debug_share(self._args())
 
         assert exc.value.code == 1
-        mock_upload.assert_not_called()
+        mock_build.assert_not_called()
         err = capsys.readouterr().err
         assert "Non-interactive mode requires --yes" in err
         assert "personal data" in err
 
     def test_non_interactive_with_yes_succeeds(self, hercules_home, capsys, monkeypatch):
-        """No TTY but --yes present → upload proceeds."""
+        """No TTY but --yes present → the share is written locally."""
         from hercules_cli.debug import run_debug_share
 
         monkeypatch.setattr("sys.stdin.isatty", lambda: False)
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._sweep_expired_pastes", return_value=(0, 0)), \
-             patch("hercules_cli.debug.upload_to_pastebin",
-                   return_value="https://paste.rs/test"), \
-             patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.dump.run_dump"):
             run_debug_share(self._args(yes=True))
 
-        assert "https://paste.rs/test" in capsys.readouterr().out
+        assert "Debug report written locally" in capsys.readouterr().out
 
     def test_local_never_prompts(self, hercules_home, capsys, monkeypatch):
-        """--local renders to stdout and must not prompt or upload."""
+        """--local renders to stdout and must not prompt or write a share dir."""
         from hercules_cli.debug import run_debug_share
 
         def _boom(_):
@@ -1629,9 +1391,9 @@ class TestShareConsentGate:
         monkeypatch.setattr("builtins.input", _boom)
 
         with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.upload_to_pastebin") as mock_upload:
+             patch("hercules_cli.debug.build_debug_share") as mock_build:
             run_debug_share(self._args(local=True))
 
-        mock_upload.assert_not_called()
+        mock_build.assert_not_called()
         assert "Aborted" not in capsys.readouterr().out
 

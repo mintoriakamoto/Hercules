@@ -4396,48 +4396,46 @@ class GatewaySlashCommandsMixin:
         return t("gateway.deny.denied_singular")
 
     async def _handle_debug_command(self, event: MessageEvent) -> str:
-        """Handle /debug — upload debug report (summary only) and return paste URLs.
+        """Handle /debug — write a debug report (summary only) to a LOCAL file.
 
-        Gateway uploads ONLY the summary report (system info + log tails),
-        NOT full log files, to protect conversation privacy.  Users who need
-        full log uploads should use ``hercules debug share`` from the CLI.
+        The pastebin upload route was removed: the report never leaves the agent
+        host. The gateway collects ONLY the summary report (system info + log
+        tails), NOT full log files, and writes it locally, returning the path.
+        Users who need full logs should use ``hercules debug share`` from the CLI.
         """
         import asyncio
+        import time
+
         from hercules_cli.debug import (
-            _capture_dump, collect_debug_report,
-            upload_to_pastebin, _schedule_auto_delete,
-            _GATEWAY_PRIVACY_NOTICE, _best_effort_sweep_expired_pastes,
+            _capture_dump, collect_debug_report, _GATEWAY_PRIVACY_NOTICE,
         )
+        from hercules_constants import get_hercules_home
 
         loop = asyncio.get_running_loop()
 
-        # Run blocking I/O (dump capture, log reads, uploads) in a thread.
-        def _collect_and_upload():
-            _best_effort_sweep_expired_pastes()
+        # Run blocking I/O (dump capture, log reads, file write) in a thread.
+        def _collect_and_write():
             dump_text = _capture_dump()
             report = collect_debug_report(log_lines=200, dump_text=dump_text)
 
-            urls = {}
+            share_dir = (
+                get_hercules_home() / "debug-shares" / time.strftime("%Y%m%d-%H%M%S")
+            )
             try:
-                urls["Report"] = upload_to_pastebin(report)
-            except Exception as exc:
+                share_dir.mkdir(parents=True, exist_ok=True)
+                report_path = share_dir / "report.md"
+                report_path.write_text(report, encoding="utf-8")
+            except OSError as exc:
                 return t("gateway.debug.upload_failed", error=exc)
 
-            # Schedule auto-deletion after 6 hours
-            _schedule_auto_delete(list(urls.values()))
-
             lines = [_GATEWAY_PRIVACY_NOTICE, "", t("gateway.debug.header"), ""]
-            label_width = max(len(k) for k in urls)
-            for label, url in urls.items():
-                lines.append(f"`{label:<{label_width}}`  {url}")
-
+            lines.append(f"`Report`  {report_path}")
             lines.append("")
-            lines.append(t("gateway.debug.auto_delete"))
+            lines.append("Saved locally on the agent host — nothing was uploaded.")
             lines.append(t("gateway.debug.full_logs_hint"))
-            lines.append(t("gateway.debug.share_hint"))
             return "\n".join(lines)
 
-        return await loop.run_in_executor(None, _collect_and_upload)
+        return await loop.run_in_executor(None, _collect_and_write)
 
     async def _handle_update_command(self, event: MessageEvent) -> str:
         """Handle /update command — update Hercules Agent to the latest version.

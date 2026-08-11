@@ -234,22 +234,28 @@ class TestUpdateManagedUv:
 # _install_uv internals
 # ---------------------------------------------------------------------------
 
-class TestInstallUvInternals:
-    def test_posix_sets_uv_unmanaged_install(self, tmp_path):
-        target = tmp_path / "bin" / "uv"
-        with patch("hercules_cli.managed_uv._install_uv_posix") as mock_posix:
-            from hercules_cli.managed_uv import _install_uv
-            _install_uv(target)
-            mock_posix.assert_called_once()
-            call_env = mock_posix.call_args[0][0]
-            assert call_env["UV_UNMANAGED_INSTALL"] == str(tmp_path / "bin")
+class TestInstallUvRemoved:
+    """The astral.sh curl|sh auto-installer was removed; _install_uv refuses."""
 
-    def test_windows_sets_uv_install_dir(self, tmp_path):
-        target = tmp_path / "bin" / "uv.exe"
-        with patch("hercules_cli.managed_uv.platform.system", return_value="Windows"), \
-             patch("hercules_cli.managed_uv._install_uv_windows") as mock_windows:
-            from hercules_cli.managed_uv import _install_uv
-            _install_uv(target)
-            mock_windows.assert_called_once()
-            call_env = mock_windows.call_args[0][0]
-            assert call_env["UV_INSTALL_DIR"] == str(tmp_path / "bin")
+    def test_install_uv_raises_with_manual_instructions(self, tmp_path):
+        import hercules_cli.managed_uv as mu
+
+        # The old curl|sh helpers must be gone entirely.
+        assert not hasattr(mu, "_install_uv_posix")
+        assert not hasattr(mu, "_install_uv_windows")
+
+        # _install_uv no longer fetches+execs — it raises with guidance and
+        # runs no subprocess.
+        with patch("hercules_cli.managed_uv.subprocess.run") as mock_run:
+            with pytest.raises(RuntimeError) as exc:
+                mu._install_uv(tmp_path / "bin" / "uv")
+        mock_run.assert_not_called()
+        assert "install uv" in str(exc.value).lower()
+
+    def test_ensure_uv_path_falls_back_to_none(self, tmp_path, monkeypatch):
+        """When no uv exists, _ensure_uv_path degrades to None (callers use pip)."""
+        import hercules_cli.managed_uv as mu
+
+        monkeypatch.setattr(mu, "resolve_uv", lambda: None)
+        monkeypatch.setattr(mu, "managed_uv_path", lambda: tmp_path / "bin" / "uv")
+        assert mu._ensure_uv_path() is None

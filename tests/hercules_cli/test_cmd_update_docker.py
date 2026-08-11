@@ -144,15 +144,14 @@ def test_cmd_update_on_git_install_does_not_print_docker_message(
 
 
 @patch("hercules_cli.config.detect_install_method", return_value="pip")
-@patch("hercules_cli.banner.check_via_pypi", return_value=0)
-def test_cmd_update_check_on_pip_install_still_uses_pypi(
-    _mock_pypi, _mock_method, capsys
+def test_cmd_update_check_on_pip_install_points_at_github(
+    _mock_method, capsys
 ):
-    """PyPI installs route to PyPI check, not the Docker bail-out."""
+    """PyPI route removed: pip installs get GitHub guidance, not the Docker bail-out."""
     _cmd_update_check()
 
     out = capsys.readouterr().out
-    assert "Already up to date" in out
+    assert "github.com/mintoriakamoto/Hercules" in out
     assert "doesn't apply inside the Docker container" not in out
 
 

@@ -31,30 +31,44 @@ def _make_runner():
 
 class TestHandleDebugCommand:
     @pytest.mark.asyncio
-    async def test_debug_sweeps_expired_pastes_before_upload(self):
+    async def test_debug_writes_local_report_and_does_not_upload(self, tmp_path, monkeypatch):
+        """The pastebin upload route was removed: /debug writes a local file."""
+        monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
         runner = _make_runner()
         event = _make_event()
 
-        with patch("hercules_cli.debug._sweep_expired_pastes", return_value=(0, 0)) as mock_sweep, \
-             patch("hercules_cli.debug._capture_dump", return_value="dump"), \
-             patch("hercules_cli.debug.collect_debug_report", return_value="report"), \
-             patch("hercules_cli.debug.upload_to_pastebin", return_value="https://paste.rs/report"), \
-             patch("hercules_cli.debug._schedule_auto_delete"):
+        # upload_to_pastebin no longer exists; if the handler tried to import or
+        # call it the test would error. Assert no such symbol is used.
+        import hercules_cli.debug as debug_mod
+        assert not hasattr(debug_mod, "upload_to_pastebin")
+
+        with patch("hercules_cli.debug._capture_dump", return_value="dump"), \
+             patch("hercules_cli.debug.collect_debug_report", return_value="report-body"):
             result = await runner._handle_debug_command(event)
 
-        mock_sweep.assert_called_once()
-        assert "https://paste.rs/report" in result
+        # A local report file was written under HERCULES_HOME/debug-shares/.
+        written = list((tmp_path / "debug-shares").rglob("report.md"))
+        assert len(written) == 1
+        assert written[0].read_text(encoding="utf-8") == "report-body"
+
+        # The reply points at the local path and states nothing was uploaded.
+        assert str(written[0]) in result
+        assert "nothing was uploaded" in result.lower()
+        # No paste URL anywhere.
+        assert "paste.rs" not in result and "dpaste" not in result
 
     @pytest.mark.asyncio
-    async def test_debug_survives_sweep_failure(self):
+    async def test_debug_reports_write_failure(self, tmp_path, monkeypatch):
+        """A local write failure is surfaced, not silently swallowed."""
+        monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
         runner = _make_runner()
         event = _make_event()
 
-        with patch("hercules_cli.debug._sweep_expired_pastes", side_effect=RuntimeError("offline")), \
-             patch("hercules_cli.debug._capture_dump", return_value="dump"), \
-             patch("hercules_cli.debug.collect_debug_report", return_value="report"), \
-             patch("hercules_cli.debug.upload_to_pastebin", return_value="https://paste.rs/report"), \
-             patch("hercules_cli.debug._schedule_auto_delete"):
+        with patch("hercules_cli.debug._capture_dump", return_value="dump"), \
+             patch("hercules_cli.debug.collect_debug_report", return_value="report-body"), \
+             patch("pathlib.Path.write_text", side_effect=OSError("disk full")):
             result = await runner._handle_debug_command(event)
 
-        assert "https://paste.rs/report" in result
+        assert "paste.rs" not in result
+        # Some error/notice is returned (the gateway.debug.upload_failed key).
+        assert isinstance(result, str) and result
