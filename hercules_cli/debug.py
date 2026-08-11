@@ -45,14 +45,14 @@ _EMAIL_ADDRESS_RE = re.compile(
 
 
 # ---------------------------------------------------------------------------
-# Paste services — try paste.rs first, dpaste.com as fallback.
+# Legacy paste service — retained ONLY so ``hercules debug delete`` can still
+# remove pastes created by older versions. ``debug share`` no longer uploads
+# anywhere; it writes local files (see build_debug_share).
 # ---------------------------------------------------------------------------
 
 _PASTE_RS_URL = "https://paste.rs/"
-_DPASTE_COM_URL = "https://dpaste.com/api/"
 
-# Maximum bytes to read from a single log file for upload.
-# paste.rs caps at ~1 MB; we stay under that with headroom.
+# Maximum bytes to read from a single log file.
 _MAX_LOG_BYTES = 512_000
 
 # Auto-delete pastes after this many seconds (6 hours).
@@ -190,27 +190,25 @@ def _best_effort_sweep_expired_pastes() -> None:
 # ---------------------------------------------------------------------------
 
 _PRIVACY_NOTICE = """\
-⚠️  This will upload system info + logs to a PUBLIC paste service.
+⚠️  This writes a debug report (system info + logs) to LOCAL files on this
+machine. Nothing is uploaded anywhere.
 
-Cryptographic secrets (API keys, tokens, passwords) are redacted before
-upload, but the following personal data is NOT redacted and will be public:
+Cryptographic secrets (API keys, tokens, passwords) are redacted, but the
+following personal data is NOT redacted and will be present in the files:
   • Your display name and persistent platform user ID
   • Verbatim content of your recent messages (prompts, responses, tool output)
   • Local filesystem paths
   • Any other PII present in the logs
 
-The resulting URL is public to anyone who has the link. Pastes auto-delete
-after 6 hours, but may be archived by third parties in the meantime.
-
-Use --local to view the report without uploading.
+The files stay on this machine — review them before sharing them yourself.
+Use --local to print the report to the terminal instead of writing files.
 """
 
 _GATEWAY_PRIVACY_NOTICE = (
-    "⚠️ **Privacy notice:** This uploads system info + recent log tails "
-    "(may contain conversation fragments) to a public paste service. "
-    "Full logs are NOT included from the gateway — use `hercules debug share` "
-    "from the CLI for full log uploads.\n"
-    "Pastes auto-delete after 6 hours."
+    "⚠️ **Privacy notice:** This writes system info + recent log tails "
+    "(may contain conversation fragments) to a LOCAL file on the agent host — "
+    "nothing is uploaded. Full logs are NOT included from the gateway — use "
+    "`hercules debug share` from the CLI for a full local report."
 )
 
 
@@ -263,85 +261,6 @@ def _schedule_auto_delete(urls: list[str], delay_seconds: int = _AUTO_DELETE_SEC
     """
     _record_pending(urls, delay_seconds=delay_seconds)
 
-
-def _upload_paste_rs(content: str) -> str:
-    """Upload to paste.rs.  Returns the paste URL.
-
-    paste.rs accepts a plain POST body and returns the URL directly.
-    """
-    data = content.encode("utf-8")
-    req = urllib.request.Request(
-        _PASTE_RS_URL, data=data, method="POST",
-        headers={
-            "Content-Type": "text/plain; charset=utf-8",
-            "User-Agent": "hercules-agent/debug-share",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        url = resp.read().decode("utf-8").strip()
-    if not url.startswith("http"):
-        raise ValueError(f"Unexpected response from paste.rs: {url[:200]}")
-    return url
-
-
-def _upload_dpaste_com(content: str, expiry_days: int = 7) -> str:
-    """Upload to dpaste.com.  Returns the paste URL.
-
-    dpaste.com uses multipart form data.
-    """
-    boundary = "----HerculesDebugBoundary9f3c"
-
-    def _field(name: str, value: str) -> str:
-        return (
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="{name}"\r\n'
-            f"\r\n"
-            f"{value}\r\n"
-        )
-
-    body = (
-        _field("content", content)
-        + _field("syntax", "text")
-        + _field("expiry_days", str(expiry_days))
-        + f"--{boundary}--\r\n"
-    ).encode("utf-8")
-
-    req = urllib.request.Request(
-        _DPASTE_COM_URL, data=body, method="POST",
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            "User-Agent": "hercules-agent/debug-share",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        url = resp.read().decode("utf-8").strip()
-    if not url.startswith("http"):
-        raise ValueError(f"Unexpected response from dpaste.com: {url[:200]}")
-    return url
-
-
-def upload_to_pastebin(content: str, expiry_days: int = 7) -> str:
-    """Upload *content* to a paste service, trying paste.rs then dpaste.com.
-
-    Returns the paste URL on success, raises on total failure.
-    """
-    errors: list[str] = []
-
-    # Try paste.rs first (simple, fast)
-    try:
-        return _upload_paste_rs(content)
-    except Exception as exc:
-        errors.append(f"paste.rs: {exc}")
-
-    # Fallback: dpaste.com (supports expiry)
-    try:
-        return _upload_dpaste_com(content, expiry_days=expiry_days)
-    except Exception as exc:
-        errors.append(f"dpaste.com: {exc}")
-
-    raise RuntimeError(
-        "Failed to upload to any paste service:\n  " + "\n  ".join(errors)
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -703,8 +622,6 @@ def build_debug_share(
     ``RuntimeError``. Full-log uploads are best-effort; their errors are
     collected into ``failures`` rather than raised.
     """
-    _best_effort_sweep_expired_pastes()
-
     # Collect the report + full logs (force-redacted when redact=True) via the
     # shared collector. The dump header + redaction banner are applied inside
     # collect_share_bundle.
@@ -712,35 +629,41 @@ def build_debug_share(
 
     if redact:
         logger.info(
-            "hercules debug share: applied force-mode redaction to log snapshots before upload"
+            "hercules debug share: applied force-mode redaction to log snapshots"
         )
 
     report = bundle["report"]
 
-    urls: dict[str, str] = {}
+    # The pastebin upload route (paste.rs / dpaste.com) was removed: debug data
+    # never leaves the machine. Write the report + full logs to LOCAL files
+    # under $HERCULES_HOME/debug-shares/<timestamp>/ and return their paths.
+    share_dir = (
+        get_hercules_home() / "debug-shares" / time.strftime("%Y%m%d-%H%M%S")
+    )
+    share_dir.mkdir(parents=True, exist_ok=True)
+
+    paths: dict[str, str] = {}
+    report_path = share_dir / "report.md"
+    report_path.write_text(report, encoding="utf-8")
+    paths["Report"] = str(report_path)
+
     failures: list[str] = []
-
-    # 1. Summary report (required — raises on failure so callers can fall back)
-    urls["Report"] = upload_to_pastebin(report, expiry_days=expiry)
-
-    # 2-5. Full logs (optional — failures are collected, not raised)
     for label in ("agent.log", "gateway.log", "gui.log", "desktop.log"):
         content = bundle.get(label)
         if not content:
             continue
         try:
-            urls[label] = upload_to_pastebin(content, expiry_days=expiry)
-        except Exception as exc:
+            log_path = share_dir / label
+            log_path.write_text(content, encoding="utf-8")
+            paths[label] = str(log_path)
+        except OSError as exc:
             failures.append(f"{label}: {exc}")
 
-    # Schedule auto-deletion after 6 hours.
-    _schedule_auto_delete(list(urls.values()))
-
     return DebugShareResult(
-        urls=urls,
+        urls=paths,
         failures=failures,
         redacted=redact,
-        auto_delete_seconds=_AUTO_DELETE_SECONDS,
+        auto_delete_seconds=0,  # local files are not auto-deleted
         report=report,
     )
 
@@ -823,22 +746,17 @@ def run_debug_share(args):
         print("\nRun `hercules debug share --local` to print the report instead.\n")
         sys.exit(1)
 
-    # Print results
+    # Print results — local file paths (the pastebin upload route was removed).
     label_width = max(len(k) for k in result.urls)
-    print("\nDebug report uploaded:")
-    for label, url in result.urls.items():
-        print(f"  {label:<{label_width}}  {url}")
+    print("\nDebug report written locally:")
+    for label, path in result.urls.items():
+        print(f"  {label:<{label_width}}  {path}")
 
     if result.failures:
-        print(f"\n  (failed to upload: {', '.join(result.failures)})")
+        print(f"\n  (failed to write: {', '.join(result.failures)})")
 
-    hours = result.auto_delete_seconds // 3600
-    print(f"\n⏱  Pastes will auto-delete in {hours} hours.")
-
-    # Manual delete fallback
-    print("To delete now:  hercules debug delete <url>")
-
-    print("\nShare these links with the Hercules team for support.")
+    print("\nThese files stay on your machine. Attach them yourself if you want")
+    print("to share them for support — nothing was uploaded anywhere.")
 
 
 def run_debug_delete(args):
