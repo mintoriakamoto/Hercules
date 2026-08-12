@@ -872,29 +872,199 @@ def _clear_stale_cua_install_lock() -> None:
 
 
 def _run_cua_driver_installer(label: str = "Installing", verbose: bool = True) -> bool:
-    """Auto-install of the cua-driver was removed (no third-party fetch-and-exec).
+    """Run the upstream cua-driver installer for this platform.
 
-    Previously this downloaded and ran the upstream trycua/cua ``install.sh`` /
-    ``install.ps1`` from raw.githubusercontent.com. That remote fetch-and-exec
-    has been removed. We now print the manual install instructions and return
-    False, so callers report the driver as unavailable instead of silently
-    pulling and executing a third-party installer.
+    The scripts are idempotent: they always download the latest release, so
+    re-running on an already-installed system performs an upgrade.
+
+    * macOS / Linux → ``curl -fsSL …/install.sh | /bin/bash``.
+    * Windows       → ``powershell -NoProfile -ExecutionPolicy Bypass -Command
+      "irm …/install.ps1 | iex"``.
     """
-    try:
-        from tools.computer_use.cua_backend import cua_driver_install_hint
-        hint = cua_driver_install_hint()
-    except Exception:
-        hint = (
-            "See https://github.com/trycua/cua/blob/main/libs/cua-driver/README.md"
-        )
+    import platform as _plat
+    import shutil
+    import subprocess
 
-    _print_warning(
-        f"    Automatic cua-driver install is disabled ({label.lower()} skipped)."
-    )
-    _print_info("    Install the cua-driver manually to use computer-use:")
-    for _line in hint.splitlines():
-        _print_info(f"      {_line}")
-    return False
+    system = _plat.system()
+    is_windows = system == "Windows"
+    is_linux = system == "Linux"
+
+    if is_windows:
+        # Mirror the one-liner printed by cua_driver_install_hint().
+        ps_oneliner = (
+            "irm https://raw.githubusercontent.com/trycua/cua/main/"
+            "libs/cua-driver/scripts/install.ps1 | iex"
+        )
+        install_cmd = [
+            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-Command", ps_oneliner,
+        ]
+        manual_hint = (
+            'powershell -NoProfile -ExecutionPolicy Bypass -Command '
+            f'"{ps_oneliner}"'
+        )
+        script_path = None
+    else:
+        # Download-then-exec instead of `bash -c "$(curl …)"`: no shell=True,
+        # no command substitution, and the script lands in a mkstemp file
+        # (unpredictable name, 0600) rather than a fixed /tmp path — avoiding
+        # both the shell-injection surface and a symlink/TOCTOU race on
+        # multi-user machines. The manual hint stays the upstream one-liner
+        # since that's what the docs/README teach.
+        import tempfile as _tempfile
+
+        install_url = (
+            "https://raw.githubusercontent.com/trycua/cua/main/"
+            "libs/cua-driver/scripts/install.sh"
+        )
+        manual_hint = f'/bin/bash -c "$(curl -fsSL {install_url})"'
+        fd, script_path = _tempfile.mkstemp(prefix="cua-driver-install-", suffix=".sh")
+        os.close(fd)
+        try:
+            dl = subprocess.run(
+                ["curl", "-fsSL", "-o", script_path, install_url],
+                capture_output=True, text=True, timeout=120,
+            )
+        except (subprocess.TimeoutExpired, OSError) as e:
+            _print_warning(f"    cua-driver installer download failed: {e}")
+            try:
+                os.remove(script_path)
+            except OSError:
+                pass
+            return False
+        if dl.returncode != 0:
+            _print_warning(
+                "    cua-driver installer download failed: "
+                f"{(dl.stderr or '').strip()[:200]}"
+            )
+            try:
+                os.remove(script_path)
+            except OSError:
+                pass
+            return False
+        install_cmd = ["/bin/bash", script_path]
+    use_shell = False
+
+    if verbose:
+        _print_info(f"    {label} cua-driver (background computer-use)...")
+    else:
+        _print_info(f"    {label} cua-driver...")
+    driver_cmd = _cua_driver_cmd()
+
+    # A previous timed-out install can leave the upstream installer's
+    # concurrent-install lock behind; clear it when provably stale so the
+    # refresh doesn't wedge waiting on a dead holder (issue #58762).
+    _clear_stale_cua_install_lock()
+
+    # POSIX: run the installer in its own process group so a timeout kill
+    # takes out the whole `curl | bash` pipeline (and the exec'd
+    # _install-rust.sh), not just the outer shell. Otherwise the surviving
+    # grandchildren keep holding the install lock, wedging every later run.
+    popen_kwargs = {}
+    if not is_windows:
+        popen_kwargs["start_new_session"] = True
+
+    def _kill_installer_tree(proc):
+        import signal as _signal
+        try:
+            if not is_windows:
+                os.killpg(os.getpgid(proc.pid), _signal.SIGKILL)  # windows-footgun: ok — POSIX branch only
+            else:
+                proc.kill()
+        except (OSError, ProcessLookupError):
+            proc.kill()
+
+    try:
+        # When not verbose (e.g. `hercules update`'s refresh), capture the
+        # installer's chatty "Next steps" wall instead of dumping it to the
+        # terminal. The combined output is logged so a failure stays
+        # debuggable. Verbose installs (interactive `computer-use install`)
+        # keep streaming live.
+        if verbose:
+            proc = subprocess.Popen(
+                install_cmd, shell=use_shell, env=_cua_driver_env(), **popen_kwargs
+            )
+            try:
+                proc.communicate(timeout=_CUA_INSTALLER_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                _kill_installer_tree(proc)
+                proc.communicate()
+                raise
+            result = subprocess.CompletedProcess(
+                install_cmd, proc.returncode, stdout=None, stderr=None
+            )
+        else:
+            proc = subprocess.Popen(
+                install_cmd, shell=use_shell, env=_cua_driver_env(),
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding="utf-8", errors="replace", **popen_kwargs
+            )
+            try:
+                out, _ = proc.communicate(timeout=_CUA_INSTALLER_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                _kill_installer_tree(proc)
+                proc.communicate()
+                raise
+            result = subprocess.CompletedProcess(
+                install_cmd, proc.returncode, stdout=out, stderr=None
+            )
+            # Preserve the full installer output. During `hercules update`,
+            # sys.stdout is the mirroring _UpdateOutputStream whose `_log`
+            # handle is ~/.hercules/logs/update.log — write straight to it so
+            # the captured "Next steps" wall is kept in full (success AND
+            # failure), without echoing it to the terminal.
+            if result.stdout:
+                _update_log = getattr(sys.stdout, "_log", None)
+                if _update_log is not None:
+                    try:
+                        _update_log.write(
+                            "\n--- cua-driver installer output ---\n"
+                            + result.stdout
+                            + "\n"
+                        )
+                        _update_log.flush()
+                    except Exception:
+                        pass
+                if result.returncode != 0:
+                    logger.debug("cua-driver installer output:\n%s", result.stdout)
+        if result.returncode == 0 and shutil.which(driver_cmd):
+            if verbose:
+                _print_success(f"    {driver_cmd} installed.")
+                if is_windows:
+                    _print_info("    cua-driver may spawn a UIAccess worker (cua-driver-uia.exe);")
+                    _print_info("    Windows/SmartScreen may prompt the first time it runs.")
+                elif is_linux:
+                    _print_warning("    Linux support is alpha.")
+                else:
+                    _print_info("    IMPORTANT — grant macOS permissions now:")
+                    _print_info("      System Settings > Privacy & Security > Accessibility")
+                    _print_info("      System Settings > Privacy & Security > Screen Recording")
+                    _print_info("    Both must allow the terminal / Hercules process.")
+            return True
+        _print_warning(f"    cua-driver {label.lower()} did not complete. Re-run manually:")
+        _print_info(f"      {manual_hint}")
+        return False
+    except subprocess.TimeoutExpired:
+        _print_warning(
+            f"    cua-driver {label.lower()} timed out after "
+            f"{_CUA_INSTALLER_TIMEOUT}s."
+        )
+        if not is_windows:
+            _print_info(
+                "    If this repeats, a stale installer lock may be present — "
+                f"check {_cua_install_lock_dir()}"
+            )
+        _print_info(f"    Re-run manually:  {manual_hint}")
+        return False
+    except Exception as e:
+        _print_warning(f"    cua-driver {label.lower()} failed: {e}")
+        return False
+    finally:
+        if script_path:
+            try:
+                os.remove(script_path)
+            except OSError:
+                pass
 
 
 def _run_post_setup(post_setup_key: str):
