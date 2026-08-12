@@ -920,9 +920,10 @@ class TestDebugShareEndpoint:
         (logs / "gateway.log").write_text("gw line\n")
 
     def test_returns_structured_local_paths(self, monkeypatch):
-        # No upload: build_debug_share writes local files; the endpoint returns
-        # their paths with auto_delete_seconds == 0.
+        # No GitHub token: build_debug_share writes local files; the endpoint
+        # returns their paths with auto_delete_seconds == 0.
         monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
 
         r = self.client.post("/api/ops/debug-share", json={"redact": True})
         assert r.status_code == 200
@@ -936,8 +937,25 @@ class TestDebugShareEndpoint:
         assert body["auto_delete_seconds"] == 0
         assert isinstance(body["failures"], list)
 
+    def test_routes_to_gist_with_token(self, monkeypatch):
+        # With a token the endpoint returns the secret-gist URL, not a path.
+        monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: "ghp_test")
+        gist_url = "https://gist.github.com/mintoriakamoto/abc123"
+        monkeypatch.setattr(
+            "hercules_cli.debug._upload_to_github_gist",
+            lambda files, description, token, public=False: gist_url,
+        )
+
+        r = self.client.post("/api/ops/debug-share", json={"redact": True})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["ok"] is True
+        assert body["urls"] == {"Gist": gist_url}
+
     def test_redact_false_is_honored(self, monkeypatch):
         monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
 
         r = self.client.post("/api/ops/debug-share", json={"redact": False})
         assert r.status_code == 200
@@ -945,6 +963,7 @@ class TestDebugShareEndpoint:
 
     def test_default_body_redacts(self, monkeypatch):
         monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
 
         # No JSON body at all — should default redact=True.
         r = self.client.post("/api/ops/debug-share")
@@ -953,6 +972,7 @@ class TestDebugShareEndpoint:
 
     def test_local_write_failure_returns_500(self, monkeypatch):
         monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
         monkeypatch.setattr(
             "pathlib.Path.write_text",
             lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")),
