@@ -31,19 +31,19 @@ def _make_runner():
 
 class TestHandleDebugCommand:
     @pytest.mark.asyncio
-    async def test_debug_writes_local_report_and_does_not_upload(self, tmp_path, monkeypatch):
-        """The pastebin upload route was removed: /debug writes a local file."""
+    async def test_debug_writes_local_report_without_token(self, tmp_path, monkeypatch):
+        """No GitHub token: /debug writes a local file (no paste service)."""
         monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
         runner = _make_runner()
         event = _make_event()
 
-        # upload_to_pastebin no longer exists; if the handler tried to import or
-        # call it the test would error. Assert no such symbol is used.
+        # The pastebin symbol is gone entirely.
         import hercules_cli.debug as debug_mod
         assert not hasattr(debug_mod, "upload_to_pastebin")
 
         with patch("hercules_cli.debug._capture_dump", return_value="dump"), \
-             patch("hercules_cli.debug.collect_debug_report", return_value="report-body"):
+             patch("hercules_cli.debug.collect_debug_report", return_value="report-body"), \
+             patch("hercules_cli.debug._github_token", return_value=None):
             result = await runner._handle_debug_command(event)
 
         # A local report file was written under HERCULES_HOME/debug-shares/.
@@ -51,11 +51,29 @@ class TestHandleDebugCommand:
         assert len(written) == 1
         assert written[0].read_text(encoding="utf-8") == "report-body"
 
-        # The reply points at the local path and states nothing was uploaded.
         assert str(written[0]) in result
-        assert "nothing was uploaded" in result.lower()
         # No paste URL anywhere.
         assert "paste.rs" not in result and "dpaste" not in result
+
+    @pytest.mark.asyncio
+    async def test_debug_routes_to_gist_with_token(self, tmp_path, monkeypatch):
+        """With a GitHub token, /debug uploads a secret gist and returns its link."""
+        monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
+        runner = _make_runner()
+        event = _make_event()
+
+        gist_url = "https://gist.github.com/mintoriakamoto/cafef00d"
+        with patch("hercules_cli.debug._capture_dump", return_value="dump"), \
+             patch("hercules_cli.debug.collect_debug_report", return_value="report-body"), \
+             patch("hercules_cli.debug._github_token", return_value="ghp_test"), \
+             patch("hercules_cli.debug._upload_to_github_gist", return_value=gist_url) as mock_gist:
+            result = await runner._handle_debug_command(event)
+
+        mock_gist.assert_called_once()
+        assert gist_url in result
+        # No local file written when the gist succeeds.
+        assert not (tmp_path / "debug-shares").exists()
+        assert "paste.rs" not in result
 
     @pytest.mark.asyncio
     async def test_debug_reports_write_failure(self, tmp_path, monkeypatch):
@@ -66,6 +84,7 @@ class TestHandleDebugCommand:
 
         with patch("hercules_cli.debug._capture_dump", return_value="dump"), \
              patch("hercules_cli.debug.collect_debug_report", return_value="report-body"), \
+             patch("hercules_cli.debug._github_token", return_value=None), \
              patch("pathlib.Path.write_text", side_effect=OSError("disk full")):
             result = await runner._handle_debug_command(event)
 

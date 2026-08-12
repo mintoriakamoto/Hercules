@@ -3067,13 +3067,15 @@ class DebugShareRequest(BaseModel):
 
 @app.post("/api/ops/debug-share")
 async def run_debug_share_endpoint(body: DebugShareRequest | None = None):
-    """Upload a redacted debug report + full logs and return the paste URLs.
+    """Collect a redacted debug report + full logs and return where they went.
 
     Unlike the other diagnostics actions (doctor, dump, prompt-size) this is
-    *synchronous*: ``debug share`` writes the report to LOCAL files (the
-    pastebin upload route was removed), so we run the blocking write in a worker
-    thread and return the structured ``{urls, failures, redacted, ...}`` payload
-    directly, where ``urls`` are local filesystem paths. Nothing is uploaded.
+    *synchronous*: ``debug share`` routes the report to a SECRET GitHub Gist
+    under the operator's account when a token is configured, else writes LOCAL
+    files (the third-party paste-service route was removed). We run the blocking
+    I/O in a worker thread and return the structured
+    ``{urls, failures, redacted, ...}`` payload — ``urls`` is ``{"Gist": url}``
+    or ``{"Report": path, ...}`` accordingly.
     """
     from hercules_cli.debug import build_debug_share
 

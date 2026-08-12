@@ -4396,27 +4396,49 @@ class GatewaySlashCommandsMixin:
         return t("gateway.deny.denied_singular")
 
     async def _handle_debug_command(self, event: MessageEvent) -> str:
-        """Handle /debug — write a debug report (summary only) to a LOCAL file.
+        """Handle /debug — route a summary-only debug report to your GitHub.
 
-        The pastebin upload route was removed: the report never leaves the agent
-        host. The gateway collects ONLY the summary report (system info + log
-        tails), NOT full log files, and writes it locally, returning the path.
-        Users who need full logs should use ``hercules debug share`` from the CLI.
+        Collects ONLY the summary report (system info + log tails), NOT full log
+        files. With a GitHub token configured it uploads a secret Gist under
+        your account and returns the gist link; otherwise it writes the report
+        to a local file on the agent host. Users who need full logs should use
+        ``hercules debug share`` from the CLI.
         """
         import asyncio
         import time
 
         from hercules_cli.debug import (
             _capture_dump, collect_debug_report, _GATEWAY_PRIVACY_NOTICE,
+            _github_token, _upload_to_github_gist,
         )
         from hercules_constants import get_hercules_home
 
         loop = asyncio.get_running_loop()
 
-        # Run blocking I/O (dump capture, log reads, file write) in a thread.
-        def _collect_and_write():
+        # Run blocking I/O (dump capture, log reads, gist/file write) in a thread.
+        def _collect_and_route():
             dump_text = _capture_dump()
             report = collect_debug_report(log_lines=200, dump_text=dump_text)
+
+            lines = [_GATEWAY_PRIVACY_NOTICE, "", t("gateway.debug.header"), ""]
+
+            token = _github_token()
+            if token:
+                try:
+                    gist_url = _upload_to_github_gist(
+                        {"report.md": report},
+                        description="Hercules gateway debug report",
+                        token=token,
+                    )
+                    lines.append(f"`Gist`  {gist_url}")
+                    lines.append("")
+                    lines.append(
+                        "Secret gist under your GitHub account — delete it when done."
+                    )
+                    lines.append(t("gateway.debug.full_logs_hint"))
+                    return "\n".join(lines)
+                except Exception:
+                    pass  # fall back to a local file
 
             share_dir = (
                 get_hercules_home() / "debug-shares" / time.strftime("%Y%m%d-%H%M%S")
@@ -4428,14 +4450,13 @@ class GatewaySlashCommandsMixin:
             except OSError as exc:
                 return t("gateway.debug.upload_failed", error=exc)
 
-            lines = [_GATEWAY_PRIVACY_NOTICE, "", t("gateway.debug.header"), ""]
             lines.append(f"`Report`  {report_path}")
             lines.append("")
-            lines.append("Saved locally on the agent host — nothing was uploaded.")
+            lines.append("Saved locally on the agent host (no GitHub token configured).")
             lines.append(t("gateway.debug.full_logs_hint"))
             return "\n".join(lines)
 
-        return await loop.run_in_executor(None, _collect_and_write)
+        return await loop.run_in_executor(None, _collect_and_route)
 
     async def _handle_update_command(self, event: MessageEvent) -> str:
         """Handle /update command — update Hercules Agent to the latest version.

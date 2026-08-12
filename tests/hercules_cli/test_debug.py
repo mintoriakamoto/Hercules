@@ -10,6 +10,17 @@ import pytest
 # Fixtures
 # ---------------------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def _no_github_token_by_default(monkeypatch):
+    """Default debug-share tests to the LOCAL-file path (no gist upload).
+
+    CI (GitHub Actions) sets ``GITHUB_TOKEN`` in the environment, which would
+    otherwise make ``build_debug_share`` attempt a real gist API call. Tests
+    that exercise the gist path override this with their own patch.
+    """
+    monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
+
+
 @pytest.fixture
 def hercules_home(tmp_path, monkeypatch):
     """Set up an isolated HERCULES_HOME with minimal logs."""
@@ -399,8 +410,8 @@ class TestCollectDebugReport:
 class TestRunDebugShare:
     """Test the run_debug_share CLI handler."""
 
-    def test_share_writes_local_files(self, hercules_home, capsys):
-        """The share flow writes local files and does NOT sweep/upload."""
+    def test_share_writes_local_files_without_token(self, hercules_home, capsys):
+        """With no GitHub token the share flow writes local files (no sweep/upload)."""
         from hercules_cli.debug import run_debug_share
 
         args = MagicMock()
@@ -409,6 +420,7 @@ class TestRunDebugShare:
         args.local = False
 
         with patch("hercules_cli.dump.run_dump"), \
+             patch("hercules_cli.debug._github_token", return_value=None), \
              patch("hercules_cli.debug._sweep_expired_pastes") as mock_sweep, \
              patch("hercules_cli.debug._schedule_auto_delete") as mock_sched:
             run_debug_share(args)
@@ -420,14 +432,14 @@ class TestRunDebugShare:
 
         out = capsys.readouterr().out
         assert "Debug report written locally" in out
-        assert "nothing was uploaded" in out
+        assert "no github token configured" in out.lower()
 
         share_dirs = list((hercules_home / "debug-shares").iterdir())
         assert len(share_dirs) == 1
         assert (share_dirs[0] / "report.md").exists()
 
-    def test_share_does_not_upload(self, hercules_home, capsys):
-        """No paste URL is ever printed — debug data stays on the machine."""
+    def test_share_uploads_to_secret_gist_with_token(self, hercules_home, capsys):
+        """With a token the report is routed to a secret GitHub Gist."""
         from hercules_cli.debug import run_debug_share
 
         args = MagicMock()
@@ -435,11 +447,36 @@ class TestRunDebugShare:
         args.expire = 7
         args.local = False
 
-        with patch("hercules_cli.dump.run_dump"):
+        gist_url = "https://gist.github.com/mintoriakamoto/deadbeef"
+        with patch("hercules_cli.dump.run_dump"), \
+             patch("hercules_cli.debug._github_token", return_value="ghp_test"), \
+             patch("hercules_cli.debug._upload_to_github_gist", return_value=gist_url) as mock_gist:
+            run_debug_share(args)
+
+        mock_gist.assert_called_once()
+        # report.md must be among the uploaded files.
+        assert "report.md" in mock_gist.call_args.args[0]
+        out = capsys.readouterr().out
+        assert gist_url in out
+        assert "secret github gist" in out.lower()
+        # No local files written when the gist succeeds.
+        assert not (hercules_home / "debug-shares").exists()
+
+    def test_share_does_not_use_paste_service(self, hercules_home, capsys):
+        """No paste.rs/dpaste URL is ever printed — routing is gist-or-local."""
+        from hercules_cli.debug import run_debug_share
+
+        args = MagicMock()
+        args.lines = 50
+        args.expire = 7
+        args.local = False
+
+        with patch("hercules_cli.dump.run_dump"), \
+             patch("hercules_cli.debug._github_token", return_value=None):
             run_debug_share(args)
 
         out = capsys.readouterr().out
-        assert "paste.rs" not in out
+        assert "paste.rs" not in out and "dpaste" not in out
         assert "Debug report written locally" in out
 
     def test_local_flag_prints_full_logs(self, hercules_home, capsys):
@@ -1074,12 +1111,13 @@ class TestShareIncludesAutoDelete:
         args.expire = 7
         args.local = False
 
-        with patch("hercules_cli.dump.run_dump"):
+        with patch("hercules_cli.dump.run_dump"), \
+             patch("hercules_cli.debug._github_token", return_value=None):
             run_debug_share(args)
 
         out = capsys.readouterr().out
+        assert "SECRET Gist" in out
         assert "LOCAL files" in out
-        assert "Nothing is uploaded" in out
         assert "NOT redacted" in out
 
     def test_local_no_privacy_notice(self, hercules_home, capsys):

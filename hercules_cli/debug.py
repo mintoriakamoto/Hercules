@@ -16,6 +16,7 @@ import gzip
 import io
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -190,25 +191,27 @@ def _best_effort_sweep_expired_pastes() -> None:
 # ---------------------------------------------------------------------------
 
 _PRIVACY_NOTICE = """\
-⚠️  This writes a debug report (system info + logs) to LOCAL files on this
-machine. Nothing is uploaded anywhere.
+⚠️  This collects a debug report (system info + logs). With a GitHub token
+configured it is uploaded to a SECRET Gist under YOUR GitHub account (unlisted,
+but anyone with the link can view it); otherwise it is written to LOCAL files.
 
 Cryptographic secrets (API keys, tokens, passwords) are redacted, but the
-following personal data is NOT redacted and will be present in the files:
+following personal data is NOT redacted and will be present in the report:
   • Your display name and persistent platform user ID
   • Verbatim content of your recent messages (prompts, responses, tool output)
   • Local filesystem paths
   • Any other PII present in the logs
 
-The files stay on this machine — review them before sharing them yourself.
-Use --local to print the report to the terminal instead of writing files.
+Review it before sharing the link, and delete the gist when you're done.
+Use --local to print the report to the terminal instead.
 """
 
 _GATEWAY_PRIVACY_NOTICE = (
-    "⚠️ **Privacy notice:** This writes system info + recent log tails "
-    "(may contain conversation fragments) to a LOCAL file on the agent host — "
-    "nothing is uploaded. Full logs are NOT included from the gateway — use "
-    "`hercules debug share` from the CLI for a full local report."
+    "⚠️ **Privacy notice:** This collects system info + recent log tails "
+    "(may contain conversation fragments). With a GitHub token configured it "
+    "goes to a SECRET Gist under your GitHub account; otherwise it is written "
+    "to a LOCAL file on the agent host. Full logs are NOT included from the "
+    "gateway — use `hercules debug share` from the CLI for the full report."
 )
 
 
@@ -605,22 +608,86 @@ class DebugShareResult:
     report: str = ""  # the summary report text (kept for local fallback)
 
 
+# GitHub Gist is the "route to our GitHub" destination for debug reports: a
+# secret Gist under the operator's account, created with a configured token.
+GITHUB_GIST_API = "https://api.github.com/gists"
+
+
+def _github_token() -> Optional[str]:
+    """Return a GitHub token for gist creation, or None.
+
+    Checked in order: HERCULES_GITHUB_TOKEN, GITHUB_TOKEN, GH_TOKEN env vars,
+    then a ``github`` provider entry in ``$HERCULES_HOME/auth.json``. The token
+    needs the ``gist`` scope. When absent, ``debug share`` falls back to writing
+    local files.
+    """
+    for env in ("HERCULES_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"):
+        val = os.environ.get(env, "").strip()
+        if val:
+            return val
+    try:
+        path = get_hercules_home() / "auth.json"
+        if path.is_file():
+            providers = json.loads(path.read_text()).get("providers", {})
+            gh = providers.get("github", {})
+            if isinstance(gh, dict):
+                tok = gh.get("token") or gh.get("access_token")
+                if isinstance(tok, str) and tok.strip():
+                    return tok.strip()
+    except Exception:
+        pass
+    return None
+
+
+def _upload_to_github_gist(
+    files: dict[str, str], description: str, token: str, public: bool = False
+) -> str:
+    """Create a Gist under the token's account and return its html_url.
+
+    ``public=False`` creates a *secret* gist (unlisted; anyone with the link can
+    still view it — GitHub has no truly private gists). Raises on failure.
+    """
+    payload = {
+        "description": description,
+        "public": public,
+        # A gist file may not be empty — substitute a single space.
+        "files": {name: {"content": (content or " ")} for name, content in files.items()},
+    }
+    req = urllib.request.Request(
+        GITHUB_GIST_API,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+            "User-Agent": "hercules-agent/debug-share",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        body = json.loads(resp.read())
+    url = body.get("html_url")
+    if not url:
+        raise ValueError("GitHub gist API returned no html_url")
+    return url
+
+
 def build_debug_share(
     *,
     log_lines: int = 200,
     expiry: int = 7,
     redact: bool = True,
 ) -> DebugShareResult:
-    """Collect the debug report + full logs, upload each, return the URLs.
+    """Collect the debug report + full logs and route them to your GitHub.
 
-    This is the shared core behind ``hercules debug share`` (CLI) and the
-    dashboard ``POST /api/ops/debug-share`` endpoint. It performs blocking
-    network I/O (paste uploads) — callers inside an event loop must run it in
-    a worker thread.
-
-    The summary report upload is required: on failure this raises
-    ``RuntimeError``. Full-log uploads are best-effort; their errors are
-    collected into ``failures`` rather than raised.
+    Shared core behind ``hercules debug share`` (CLI) and the dashboard
+    ``POST /api/ops/debug-share`` endpoint. When a GitHub token is configured
+    (see ``_github_token``) the report + logs are uploaded as a SECRET Gist
+    under that account and the gist URL is returned. Without a token it falls
+    back to writing local files under
+    ``$HERCULES_HOME/debug-shares/<timestamp>/``. Performs blocking network /
+    disk I/O — callers inside an event loop must run it in a worker thread.
     """
     # Collect the report + full logs (force-redacted when redact=True) via the
     # shared collector. The dump header + redaction banner are applied inside
@@ -634,9 +701,33 @@ def build_debug_share(
 
     report = bundle["report"]
 
-    # The pastebin upload route (paste.rs / dpaste.com) was removed: debug data
-    # never leaves the machine. Write the report + full logs to LOCAL files
-    # under $HERCULES_HOME/debug-shares/<timestamp>/ and return their paths.
+    # Assemble the shareable file set (report + any present full logs).
+    files: dict[str, str] = {"report.md": report}
+    for label in ("agent.log", "gateway.log", "gui.log", "desktop.log"):
+        content = bundle.get(label)
+        if content:
+            files[label] = content
+
+    # Preferred route: a secret Gist under the operator's own GitHub account.
+    gist_failure: Optional[str] = None
+    token = _github_token()
+    if token:
+        try:
+            gist_url = _upload_to_github_gist(
+                files, description="Hercules debug report", token=token
+            )
+            return DebugShareResult(
+                urls={"Gist": gist_url},
+                failures=[],
+                redacted=redact,
+                auto_delete_seconds=0,
+                report=report,
+            )
+        except Exception as exc:
+            # Record and fall back to local files rather than failing outright.
+            gist_failure = f"GitHub gist upload failed: {exc}"
+
+    # Fallback: write local files (no token, or the gist upload failed).
     share_dir = (
         get_hercules_home() / "debug-shares" / time.strftime("%Y%m%d-%H%M%S")
     )
@@ -648,6 +739,8 @@ def build_debug_share(
     paths["Report"] = str(report_path)
 
     failures: list[str] = []
+    if gist_failure:
+        failures.append(gist_failure)
     for label in ("agent.log", "gateway.log", "gui.log", "desktop.log"):
         content = bundle.get(label)
         if not content:
@@ -746,17 +839,24 @@ def run_debug_share(args):
         print("\nRun `hercules debug share --local` to print the report instead.\n")
         sys.exit(1)
 
-    # Print results — local file paths (the pastebin upload route was removed).
+    # Print results. A "Gist" key means it went to a secret GitHub Gist under
+    # your account; otherwise these are local file paths (no token configured).
+    is_gist = "Gist" in result.urls
     label_width = max(len(k) for k in result.urls)
-    print("\nDebug report written locally:")
-    for label, path in result.urls.items():
-        print(f"  {label:<{label_width}}  {path}")
+    print("\nDebug report uploaded to a secret GitHub Gist:" if is_gist
+          else "\nDebug report written locally:")
+    for label, target in result.urls.items():
+        print(f"  {label:<{label_width}}  {target}")
 
     if result.failures:
-        print(f"\n  (failed to write: {', '.join(result.failures)})")
+        print(f"\n  (notes: {', '.join(result.failures)})")
 
-    print("\nThese files stay on your machine. Attach them yourself if you want")
-    print("to share them for support — nothing was uploaded anywhere.")
+    if is_gist:
+        print("\nShare the gist link for support. It's a *secret* gist (unlisted,")
+        print("not private) under your GitHub account — delete it when you're done.")
+    else:
+        print("\nNo GitHub token configured (set HERCULES_GITHUB_TOKEN with 'gist'")
+        print("scope to upload to a gist). These files stay on your machine.")
 
 
 def run_debug_delete(args):
