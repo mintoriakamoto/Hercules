@@ -254,3 +254,170 @@ class TestStaleInstallLockClear:
         os.environ["CUA_DRIVER_RS_HOME"] = str(tmp_path / ".cua-driver")
         from hercules_cli import tools_config
         tools_config._clear_stale_cua_install_lock()  # must not raise
+
+
+class TestInstallerTimeoutKillsProcessGroup:
+    """On timeout the whole installer process group must be killed, so the
+    `curl | bash` grandchildren can't survive holding the install lock."""
+
+    def test_timeout_kills_process_group_and_returns_false(self, tmp_path):
+        import os
+        import signal
+        import subprocess
+        import sys as _sys
+        from unittest.mock import MagicMock
+        from hercules_cli import tools_config
+
+        killed = {}
+
+        fake_proc = MagicMock()
+        fake_proc.pid = 12345
+        # First communicate() raises TimeoutExpired, second (post-kill) returns.
+        fake_proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd="x", timeout=1),
+            ("", None),
+        ]
+
+        def fake_killpg(pgid, sig):
+            killed["pgid"] = pgid
+            killed["sig"] = sig
+
+        with patch("platform.system", return_value="Linux"), \
+             patch("subprocess.run", return_value=MagicMock(returncode=0, stderr="")), \
+             patch("subprocess.Popen", return_value=fake_proc), \
+             patch.object(tools_config.os, "getpgid", return_value=99999), \
+             patch.object(tools_config.os, "killpg", side_effect=fake_killpg), \
+             patch.object(tools_config, "_clear_stale_cua_install_lock"), \
+             patch.object(tools_config, "_print_warning"), \
+             patch.object(tools_config, "_print_info"):
+            ok = tools_config._run_cua_driver_installer(label="Refreshing", verbose=False)
+
+        assert ok is False
+        assert killed.get("pgid") == 99999
+        assert killed.get("sig") == signal.SIGKILL
+        # Post-kill reap happened.
+        assert fake_proc.communicate.call_count == 2
+
+    def test_timeout_ceiling_exceeds_upstream_lock_window(self):
+        from hercules_cli import tools_config
+        # The upstream installer waits up to 600s before reclaiming a stale
+        # lock; our ceiling must give that window room to complete.
+        assert tools_config._CUA_INSTALLER_TIMEOUT > tools_config._CUA_LOCK_STALE_AFTER
+
+    def test_installer_runs_in_new_session_on_posix(self, tmp_path):
+        import subprocess
+        from unittest.mock import MagicMock
+        from hercules_cli import tools_config
+
+        captured = {}
+        fake_proc = MagicMock()
+        fake_proc.pid = 1
+        fake_proc.returncode = 1
+        fake_proc.communicate.return_value = ("", None)
+
+        def fake_popen(*args, **kwargs):
+            captured.update(kwargs)
+            return fake_proc
+
+        with patch("platform.system", return_value="Linux"), \
+             patch("subprocess.run", return_value=MagicMock(returncode=0, stderr="")), \
+             patch("subprocess.Popen", side_effect=fake_popen), \
+             patch.object(tools_config, "_clear_stale_cua_install_lock"), \
+             patch.object(tools_config, "_print_warning"), \
+             patch.object(tools_config, "_print_info"):
+            tools_config._run_cua_driver_installer(label="Refreshing", verbose=False)
+
+        assert captured.get("start_new_session") is True
+
+
+class TestInstallerNoShell:
+    """The POSIX installer path must not use shell=True or command
+    substitution: the script is downloaded to a mkstemp file and exec'd
+    as a plain argv list (salvage of #34974's intent, without the fixed
+    /tmp path TOCTOU that PR introduced)."""
+
+    def _run(self, download_rc=0):
+        import subprocess
+        from unittest.mock import MagicMock
+        from hercules_cli import tools_config
+
+        calls = []
+        fake_proc = MagicMock()
+        fake_proc.pid = 1
+        fake_proc.returncode = 0
+        fake_proc.communicate.return_value = ("", None)
+
+        def fake_run(cmd, **kw):
+            calls.append(("run", cmd, kw))
+            m = MagicMock()
+            m.returncode = download_rc
+            m.stderr = "curl: (6) could not resolve" if download_rc else ""
+            return m
+
+        def fake_popen(cmd, **kw):
+            calls.append(("popen", cmd, kw))
+            return fake_proc
+
+        with patch("platform.system", return_value="Linux"), \
+             patch("subprocess.run", side_effect=fake_run), \
+             patch("subprocess.Popen", side_effect=fake_popen), \
+             patch.object(tools_config.shutil, "which", return_value="/usr/local/bin/cua-driver"), \
+             patch.object(tools_config, "_clear_stale_cua_install_lock"), \
+             patch.object(tools_config, "_print_warning"), \
+             patch.object(tools_config, "_print_info"), \
+             patch.object(tools_config, "_print_success"):
+            ok = tools_config._run_cua_driver_installer(label="Refreshing", verbose=False)
+        return ok, calls
+
+    def test_posix_path_downloads_then_execs_argv_list(self):
+        ok, calls = self._run()
+        assert ok is True
+        run_calls = [c for c in calls if c[0] == "run"]
+        popen_calls = [c for c in calls if c[0] == "popen"]
+        assert len(run_calls) == 1 and len(popen_calls) == 1
+        # Download: plain argv curl, no shell.
+        dl_cmd = run_calls[0][1]
+        assert isinstance(dl_cmd, list) and dl_cmd[0] == "curl"
+        # Exec: argv list ["/bin/bash", <mkstemp path>], shell=False.
+        exec_cmd, exec_kw = popen_calls[0][1], popen_calls[0][2]
+        assert isinstance(exec_cmd, list) and exec_cmd[0] == "/bin/bash"
+        assert "cua-driver-install-" in exec_cmd[1]
+        assert exec_kw.get("shell") is False
+
+    def test_download_failure_returns_false_without_exec(self):
+        ok, calls = self._run(download_rc=6)
+        assert ok is False
+        assert not [c for c in calls if c[0] == "popen"]
+
+    def test_temp_script_removed_after_run(self, tmp_path):
+        import os
+        captured = {}
+        import subprocess
+        from unittest.mock import MagicMock
+        from hercules_cli import tools_config
+
+        fake_proc = MagicMock()
+        fake_proc.pid = 1
+        fake_proc.returncode = 0
+        fake_proc.communicate.return_value = ("", None)
+
+        def fake_run(cmd, **kw):
+            m = MagicMock(); m.returncode = 0; m.stderr = ""
+            return m
+
+        def fake_popen(cmd, **kw):
+            captured["script"] = cmd[1]
+            return fake_proc
+
+        with patch("platform.system", return_value="Linux"), \
+             patch("subprocess.run", side_effect=fake_run), \
+             patch("subprocess.Popen", side_effect=fake_popen), \
+             patch.object(tools_config.shutil, "which", return_value="/usr/local/bin/cua-driver"), \
+             patch.object(tools_config, "_clear_stale_cua_install_lock"), \
+             patch.object(tools_config, "_print_warning"), \
+             patch.object(tools_config, "_print_info"), \
+             patch.object(tools_config, "_print_success"):
+            tools_config._run_cua_driver_installer(label="Refreshing", verbose=False)
+
+        assert "script" in captured
+        assert not os.path.exists(captured["script"])
