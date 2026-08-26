@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # ANSI building blocks for conversation display
 # =========================================================================
 
-_GOLD = "\033[1;38;2;255;215;0m"  # True-color #FFD700 bold
+_ACCENT = "\033[1;38;2;247;178;59m"  # True-color #F7B23B (molten amber) bold
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
 _RST = "\033[0m"
@@ -61,56 +61,61 @@ def _skin_color(key: str, fallback: str) -> str:
 
 from hercules_cli import __version__ as VERSION, __release_date__ as RELEASE_DATE
 
-HERCULES_AGENT_LOGO = """[bold #FFD700]██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗       █████╗  ██████╗ ███████╗███╗   ██╗████████╗[/]
-[bold #FFD700]██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝[/]
-[#FFBF00]███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║[/]
-[#FFBF00]██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║[/]
-[#CD7F32]██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║[/]
-[#CD7F32]╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝[/]"""
+HERCULES_AGENT_LOGO = """[bold #F7B23B]██   ██ ███████ ██████   ██████ ██    ██ ██      ███████ ███████[/]
+[bold #F7B23B]██   ██ ██      ██   ██ ██      ██    ██ ██      ██      ██[/]
+[#E8712E]███████ █████   ██████  ██      ██    ██ ██      █████   ███████[/]
+[#E8712E]██   ██ ██      ██   ██ ██      ██    ██ ██      ██           ██[/]
+[#C73E3A]██   ██ ███████ ██   ██  ██████  ██████  ███████ ███████ ███████[/]"""
 
-HERCULES_CADUCEUS = """[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣇⠸⣿⣿⠇⣸⣿⣿⣷⣦⣄⡀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⢀⣠⣴⣶⠿⠋⣩⡿⣿⡿⠻⣿⡇⢠⡄⢸⣿⠟⢿⣿⢿⣍⠙⠿⣶⣦⣄⡀⠀[/]
-[#FFBF00]⠀⠀⠉⠉⠁⠶⠟⠋⠀⠉⠀⢀⣈⣁⡈⢁⣈⣁⡀⠀⠉⠀⠙⠻⠶⠈⠉⠉⠀⠀[/]
-[#FFD700]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡿⠛⢁⡈⠛⢿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFD700]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿⣿⣦⣤⣈⠁⢠⣴⣿⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠻⢿⣿⣦⡉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣦⣈⠛⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣴⠦⠈⠙⠿⣦⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣤⡈⠁⢤⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠷⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⠑⢶⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠁⢰⡆⠈⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⠈⣡⠞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]"""
+# Hero mark: the Pillars of Hercules.
+#
+# This replaces the inherited winged-caduceus art — the caduceus is *Hermes'*
+# staff, carried over from the upstream project and never our own emblem. The
+# twin pillars are unmistakably Herculean (the promontories he raised at the
+# strait) and render cleanly in any terminal that already draws the wordmark,
+# since they reuse the same box-drawing and block glyphs.
+HERCULES_PILLARS = """[#F7B23B]   ╔═══════╗   ╔═══════╗[/]
+[#F7B23B]   ╚═╗███╔═╝   ╚═╗███╔═╝[/]
+[#E8712E]     ║███║       ║███║[/]
+[#E8712E]     ║███║       ║███║[/]
+[#E8712E]     ║███║       ║███║[/]
+[#C73E3A]     ║███║       ║███║[/]
+[#C73E3A]   ╔═╝███╚═╗   ╔═╝███╚═╗[/]
+[#8E2B3F]   ╚═══════╝   ╚═══════╝[/]"""
 
 
-# Raw HERCULES-AGENT glyphs (no markup) — fed to the true-color gradient
-# renderer below so every column gets its own hue instead of the old 3-tier
-# per-row banding.
+# Raw HERCULES glyphs (no markup) — fed to the true-color gradient renderer
+# below so every column gets its own hue instead of flat per-row banding.
+#
+# The previous art was drawn in a shadowed outline face and — despite the
+# variable name — actually spelled "HERMES-AGENT", a leftover from the upstream
+# project. This is our own wordmark: a solid, unshadowed block face, five rows
+# instead of six, and 65 columns so it fits an 80-column terminal without wrap.
 HERCULES_AGENT_LOGO_RAW = (
-    "██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗       █████╗  ██████╗ ███████╗███╗   ██╗████████╗\n"
-    "██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝\n"
-    "███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║\n"
-    "██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║\n"
-    "██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║\n"
-    "╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝"
+    "██   ██ ███████ ██████   ██████ ██    ██ ██      ███████ ███████\n"
+    "██   ██ ██      ██   ██ ██      ██    ██ ██      ██      ██\n"
+    "███████ █████   ██████  ██      ██    ██ ██      █████   ███████\n"
+    "██   ██ ██      ██   ██ ██      ██    ██ ██      ██           ██\n"
+    "██   ██ ███████ ██   ██  ██████  ██████  ███████ ███████ ███████"
 )
 
-# Gold-spectrum gradient anchors (pale gold → gold → amber → orange-bronze →
-# bronze). Interpolated horizontally, with a small per-row phase shift so the
-# logo reads as a smooth diagonal shimmer rather than flat bands.
+# "Forge" gradient anchors (forge glow → molten amber → ember → forge crimson →
+# quenched iron). Interpolated horizontally with a small per-row phase shift so
+# the logo reads as a smooth diagonal shimmer rather than flat bands.
+#
+# Replaces the inherited gold spectrum: gold was the upstream project's colour,
+# and a heated-metal ramp suits a project named for strength and labour.
 _GRADIENT_ANCHORS = (
-    (0xFF, 0xF6, 0xC2),
-    (0xFF, 0xD7, 0x00),
-    (0xFF, 0xB0, 0x00),
-    (0xE8, 0x89, 0x2B),
-    (0xCD, 0x7F, 0x32),
+    (0xFF, 0xE8, 0xB8),
+    (0xF7, 0xB2, 0x3B),
+    (0xE8, 0x71, 0x2E),
+    (0xC7, 0x3E, 0x3A),
+    (0x8E, 0x2B, 0x3F),
 )
 
 
 def _gradient_rgb(t: float) -> tuple[int, int, int]:
-    """Map t in [0,1] onto the gold anchor palette (piecewise-linear)."""
+    """Map t in [0,1] onto the forge anchor palette (piecewise-linear)."""
     if t <= 0:
         return _GRADIENT_ANCHORS[0]
     if t >= 1:
@@ -128,7 +133,7 @@ def _gradient_rgb(t: float) -> tuple[int, int, int]:
 
 
 def _gradient_line_markup(line: str, row: int, nrows: int) -> str:
-    """Return rich markup for one logo line with a per-column gold gradient.
+    """Return rich markup for one logo line with a per-column forge gradient.
 
     Consecutive characters that quantize to the same hue are coalesced into a
     single ``[#rrggbb]run[/]`` span to keep the markup small; blank columns are
@@ -183,7 +188,7 @@ def _should_animate_banner() -> bool:
 
 
 def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
-    """Print the true-color gradient HERCULES-AGENT logo + mintoriakamoto subtitle.
+    """Print the true-color gradient HERCULES wordmark + mintoriakamoto subtitle.
 
     When *animate* is None the decision is made by :func:`_should_animate_banner`.
     The animation is a fast top-to-bottom reveal (~0.3s total) and is a no-op on
@@ -198,7 +203,7 @@ def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
         skin_logo = None
     if skin_logo:
         console.print(skin_logo)
-        console.print("[dim #CD7F32]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
+        console.print("[dim #C73E3A]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
         return
 
     if animate is None:
@@ -209,7 +214,7 @@ def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
         console.print(_gradient_line_markup(line, row, nrows))
         if animate:
             time.sleep(0.045)
-    console.print("[dim #CD7F32]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
+    console.print("[dim #C73E3A]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
 
 
 # =========================================================================
@@ -704,7 +709,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
                          get_toolset_for_tool=None,
                          context_length: int = None,
                          provider: str = None):
-    """Build and print a welcome banner with caduceus on left and info on right.
+    """Build and print a welcome banner with the pillars on left and info on right.
 
     Args:
         console: Rich Console instance.
@@ -760,19 +765,19 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     layout_table.add_column("right", justify="left")
 
     # Resolve skin colors once for the entire banner
-    accent = _skin_color("banner_accent", "#FFBF00")
-    dim = _skin_color("banner_dim", "#B8860B")
+    accent = _skin_color("banner_accent", "#E8712E")
+    dim = _skin_color("banner_dim", "#8E2B3F")
     text = _skin_color("banner_text", "#FFF8DC")
     session_color = _skin_color("session_border", "#8B8682")
 
-    # Use skin's custom caduceus art if provided
+    # Use skin's custom hero art if provided
     try:
         from hercules_cli.skin_engine import get_active_skin
         _bskin = get_active_skin()
-        _hero = _bskin.banner_hero if hasattr(_bskin, 'banner_hero') and _bskin.banner_hero else HERCULES_CADUCEUS
+        _hero = _bskin.banner_hero if hasattr(_bskin, 'banner_hero') and _bskin.banner_hero else HERCULES_PILLARS
     except Exception:
         _bskin = None
-        _hero = HERCULES_CADUCEUS
+        _hero = HERCULES_PILLARS
     left_lines = ["", _hero, ""]
     if (provider or "").strip().lower() == "moa":
         # MoA virtual provider: ``model`` is a preset name. Show the preset and
@@ -1032,8 +1037,8 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     right_content = "\n".join(right_lines)
     layout_table.add_row(left_content, right_content)
 
-    title_color = _skin_color("banner_title", "#FFD700")
-    border_color = _skin_color("banner_border", "#CD7F32")
+    title_color = _skin_color("banner_title", "#F7B23B")
+    border_color = _skin_color("banner_border", "#C73E3A")
     version_label = format_banner_version_label()
     release_info = get_latest_release_tag()
     if release_info:

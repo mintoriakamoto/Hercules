@@ -2,12 +2,12 @@
   <img src="assets/banner.png" alt="Hercules Agent" width="100%">
 </p>
 
-# Hercules Agent ☤
+# Hercules Agent 🦁
 <p align="center">
   <a href="https://github.com/mintoriakamoto/Hercules/">Hercules Agent</a> | <a href="https://github.com/mintoriakamoto/Hercules/">Hercules Desktop</a>
 </p>
 <p align="center">
-  <a href="website/docs/"><img src="https://img.shields.io/badge/Docs-website%2Fdocs-FFD700?style=for-the-badge" alt="Documentación"></a>
+  <a href="website/docs/"><img src="https://img.shields.io/badge/Docs-website%2Fdocs-F7B23B?style=for-the-badge" alt="Documentación"></a>
   <a href="https://github.com/mintoriakamoto/Hercules/blob/main/LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-green?style=for-the-badge" alt="Licencia: MIT"></a>
   <a href="README.md"><img src="https://img.shields.io/badge/Lang-English-blue?style=for-the-badge" alt="English"></a>
   <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/Lang-中文-red?style=for-the-badge" alt="中文"></a>

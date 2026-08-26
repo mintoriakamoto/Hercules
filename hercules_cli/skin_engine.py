@@ -17,25 +17,25 @@ All fields are optional. Missing values inherit from the ``default`` skin.
 
     # Colors: hex values for Rich markup (banner, UI, response box)
     colors:
-      banner_border: "#CD7F32"            # Panel border color
-      banner_title: "#FFD700"             # Panel title text color
-      banner_accent: "#FFBF00"            # Section headers (Available Tools, etc.)
-      banner_dim: "#B8860B"               # Dim/muted text (separators, labels)
+      banner_border: "#C73E3A"            # Panel border color
+      banner_title: "#F7B23B"             # Panel title text color
+      banner_accent: "#E8712E"            # Section headers (Available Tools, etc.)
+      banner_dim: "#8E2B3F"               # Dim/muted text (separators, labels)
       banner_text: "#FFF8DC"              # Body text (tool names, skill names)
-      ui_accent: "#FFBF00"               # General UI accent
+      ui_accent: "#E8712E"               # General UI accent
       ui_label: "#DAA520"                # UI labels (warm gold; teal clashed w/ default banner gold)
       ui_ok: "#4caf50"                   # Success indicators
       ui_error: "#ef5350"                # Error indicators
       ui_warn: "#ffa726"                 # Warning indicators
       prompt: "#FFF8DC"                  # Prompt text color
-      input_rule: "#CD7F32"              # Input area horizontal rule
-      response_border: "#FFD700"         # Response box border (ANSI)
+      input_rule: "#C73E3A"              # Input area horizontal rule
+      response_border: "#F7B23B"         # Response box border (ANSI)
       status_bar_bg: "#1a1a2e"           # Status bar background
       status_bar_text: "#C0C0C0"         # Status bar default text
-      status_bar_strong: "#FFD700"       # Status bar highlighted text
+      status_bar_strong: "#F7B23B"       # Status bar highlighted text
       status_bar_dim: "#8B8682"          # Status bar separators/muted text
       status_bar_good: "#8FBC8F"         # Healthy context usage
-      status_bar_warn: "#FFD700"         # Warning context usage
+      status_bar_warn: "#F7B23B"         # Warning context usage
       status_bar_bad: "#FF8C00"          # High context usage
       status_bar_critical: "#FF6B6B"     # Critical context usage
       session_label: "#DAA520"           # Session label color
@@ -89,7 +89,7 @@ USAGE
     from hercules_cli.skin_engine import get_active_skin, list_skins, set_active_skin
 
     skin = get_active_skin()
-    print(skin.colors["banner_title"])    # "#FFD700"
+    print(skin.colors["banner_title"])    # "#F7B23B"
     print(skin.get_branding("agent_name"))  # "Hercules Agent"
 
     set_active_skin("ares")               # Switch to built-in ares skin
@@ -137,7 +137,7 @@ class SkinConfig:
     tool_prefix: str = "┊"
     tool_emojis: Dict[str, str] = field(default_factory=dict)  # per-tool emoji overrides
     banner_logo: str = ""    # Rich-markup ASCII art logo (replaces HERCULES_AGENT_LOGO)
-    banner_hero: str = ""    # Rich-markup hero art (replaces HERCULES_CADUCEUS)
+    banner_hero: str = ""    # Rich-markup hero art (replaces HERCULES_PILLARS)
 
     def get_color(self, key: str, fallback: str = "") -> str:
         """Get a color value with fallback."""
@@ -166,19 +166,19 @@ _BUILTIN_SKINS: Dict[str, Dict[str, Any]] = {
         "name": "default",
         "description": "Classic Hercules — gold and kawaii",
         "colors": {
-            "banner_border": "#CD7F32",
-            "banner_title": "#FFD700",
-            "banner_accent": "#FFBF00",
-            "banner_dim": "#B8860B",
+            "banner_border": "#C73E3A",
+            "banner_title": "#F7B23B",
+            "banner_accent": "#E8712E",
+            "banner_dim": "#8E2B3F",
             "banner_text": "#FFF8DC",
-            "ui_accent": "#FFBF00",
+            "ui_accent": "#E8712E",
             "ui_label": "#DAA520",
             "ui_ok": "#4caf50",
             "ui_error": "#ef5350",
             "ui_warn": "#ffa726",
             "prompt": "#FFF8DC",
-            "input_rule": "#CD7F32",
-            "response_border": "#FFD700",
+            "input_rule": "#C73E3A",
+            "response_border": "#F7B23B",
             "status_bar_bg": "#1a1a2e",
             "session_label": "#DAA520",
             "session_border": "#8B8682",
@@ -859,8 +859,8 @@ def get_prompt_toolkit_style_overrides() -> Dict[str, str]:
     # color schemes).  Skins can opt into a colored prompt by setting
     # `prompt` explicitly in their YAML.
     prompt = skin.get_color("prompt", "")
-    input_rule = skin.get_color("input_rule", "#CD7F32")
-    title = skin.get_color("banner_title", "#FFD700")
+    input_rule = skin.get_color("input_rule", "#C73E3A")
+    title = skin.get_color("banner_title", "#F7B23B")
     text = skin.get_color("banner_text", "#FFF8DC")
     dim = skin.get_color("banner_dim", "#555555")
     label = skin.get_color("ui_label", title)

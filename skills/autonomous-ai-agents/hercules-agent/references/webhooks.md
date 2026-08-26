@@ -81,7 +81,7 @@ hercules webhook subscribe todoist-hercules \
   --deliver telegram --deliver-chat-id "12345"
 ```
 
-Full filter syntax: https://hercules-agent.nousresearch.com/docs/user-guide/messaging/webhooks#payload-filters
+Full filter syntax: https://github.com/mintoriakamoto/Hercules/tree/main/website/docs/user-guide/messaging/webhooks#payload-filters
 
 ### List subscriptions
 ```bash
