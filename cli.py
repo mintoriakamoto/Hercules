@@ -2028,15 +2028,16 @@ def _prune_orphaned_branches(repo_root: str) -> None:
 # ASCII Art & Branding
 # ============================================================================
 
-# Color palette (hex colors for Rich markup):
-# - Gold: #FFD700 (headers, highlights)
-# - Amber: #FFBF00 (secondary highlights)
-# - Bronze: #CD7F32 (tertiary elements)
-# - Light: #FFF8DC (text)
-# - Dim: #B8860B (muted text)
+# Color palette — "Forge" (hex colors for Rich markup).
+# Replaces the inherited gold spectrum with a heated-metal ramp:
+# - Molten amber:  #F7B23B (headers, highlights, primary accent)
+# - Ember orange:  #E8712E (secondary highlights)
+# - Forge crimson: #C73E3A (tertiary elements, borders)
+# - Light:         #FFF8DC (text)
+# - Quenched iron: #8E2B3F (muted text)
 
 # ANSI building blocks for conversation display
-_ACCENT_ANSI_DEFAULT = "\033[1;38;2;255;215;0m"  # True-color #FFD700 bold — fallback
+_ACCENT_ANSI_DEFAULT = "\033[1;38;2;247;178;59m"  # True-color #F7B23B (molten amber) bold — fallback
 _BOLD = "\033[1m"
 _RST = "\033[0m"
 _STREAM_PAD = "    "  # 4-space indent for streamed response text (matches Panel padding)
@@ -2064,7 +2065,7 @@ def _hex_to_ansi(hex_color: str, *, bold: bool = False) -> str:
 # Light/dark terminal mode detection.
 #
 # Mirrors ui-tui/src/theme.ts detectLightMode().  Used to decide whether
-# to remap "near-white" skin colors (e.g. #FFF8DC banner_text, #B8860B
+# to remap "near-white" skin colors (e.g. #FFF8DC banner_text, #8E2B3F
 # banner_dim) to darker equivalents that are readable on a light
 # Terminal.app / iTerm2 background.
 #
@@ -2244,16 +2245,16 @@ def _detect_light_mode() -> bool:
 _LIGHT_MODE_REMAP: dict[str, str] = {
     # Original (dark-mode) -> Light-mode replacement (darker, readable)
     "#FFF8DC": "#1A1A1A",   # cornsilk -> near-black
-    "#FFD700": "#9A6B00",   # gold -> dark goldenrod (readable on cream)
-    "#FFBF00": "#8A5A00",   # amber -> dark amber
-    "#B8860B": "#5C4500",   # dark goldenrod -> deeper brown (more contrast)
+    "#F7B23B": "#8A5300",   # molten amber -> dark amber (readable on cream)
+    "#E8712E": "#8A3A00",   # ember orange -> dark ember
+    "#8E2B3F": "#5C1622",   # quenched iron -> deep wine (more contrast)
     "#DAA520": "#6B4F00",   # goldenrod -> dark olive
     "#F1E6CF": "#1A1A1A",   # cream -> near-black
     "#c9d1d9": "#24292F",   # github-light fg
     "#EAF7FF": "#0F1B26",   # ice
     "#F5F5F5": "#1A1A1A",
     "#FFF0D4": "#1A1A1A",
-    "#CD7F32": "#8A4F1A",   # bronze -> darker bronze
+    "#C73E3A": "#8E1F1C",   # forge crimson -> dark crimson
     "#FFEFB5": "#3A2A00",
     # NOTE: skipping #C0C0C0/#888888/#555555/#8B8682 — those are
     # status-bar foregrounds paired with dark navy bg, where dark
@@ -2322,7 +2323,7 @@ class _SkinAwareAnsi:
     force re-resolution after a ``/skin`` switch.
     """
 
-    def __init__(self, skin_key: str, fallback_hex: str = "#FFD700", *, bold: bool = False):
+    def __init__(self, skin_key: str, fallback_hex: str = "#F7B23B", *, bold: bool = False):
         self._skin_key = skin_key
         self._fallback_hex = fallback_hex
         self._bold = bold
@@ -2351,11 +2352,11 @@ class _SkinAwareAnsi:
         self._cached = None
 
 
-_ACCENT = _SkinAwareAnsi("response_border", "#FFD700", bold=True)
+_ACCENT = _SkinAwareAnsi("response_border", "#F7B23B", bold=True)
 # Use ANSI dim+italic attributes (\x1b[2;3m) instead of a hardcoded
 # hex color so dim/thinking text inherits the terminal's default
 # foreground color and stays readable in both light and dark
-# Terminal.app modes.  Hardcoded skin colors like #B8860B
+# Terminal.app modes.  Hardcoded skin colors like #8E2B3F
 # (dark goldenrod) become invisible against light cream backgrounds.
 _DIM = "\x1b[2;3m"
 
@@ -2382,9 +2383,9 @@ def _accent_hex() -> str:
     """Return the active skin accent color for legacy CLI output lines."""
     try:
         from hercules_cli.skin_engine import get_active_skin
-        return get_active_skin().get_color("ui_accent", "#FFBF00")
+        return get_active_skin().get_color("ui_accent", "#E8712E")
     except Exception:
-        return "#FFBF00"
+        return "#E8712E"
 
 
 def _rich_text_from_ansi(text: str) -> _RichText:
@@ -3447,30 +3448,26 @@ class ChatConsole:
         """
         yield self
 
-# ASCII Art - HERCULES-AGENT logo (full width, single line - requires ~95 char terminal)
-HERCULES_AGENT_LOGO = """[bold #FFD700]██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗       █████╗  ██████╗ ███████╗███╗   ██╗████████╗[/]
-[bold #FFD700]██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝[/]
-[#FFBF00]███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║[/]
-[#FFBF00]██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║[/]
-[#CD7F32]██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║[/]
-[#CD7F32]╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝[/]"""
+# ASCII Art — HERCULES wordmark (solid block face, 64 cols: fits an 80-col term).
+# The previous art was an inherited shadowed face that actually spelled
+# "HERMES-AGENT"; this is our own wordmark.
+HERCULES_AGENT_LOGO = """[bold #F7B23B]██   ██ ███████ ██████   ██████ ██    ██ ██      ███████ ███████[/]
+[bold #F7B23B]██   ██ ██      ██   ██ ██      ██    ██ ██      ██      ██[/]
+[#E8712E]███████ █████   ██████  ██      ██    ██ ██      █████   ███████[/]
+[#E8712E]██   ██ ██      ██   ██ ██      ██    ██ ██      ██           ██[/]
+[#C73E3A]██   ██ ███████ ██   ██  ██████  ██████  ███████ ███████ ███████[/]"""
 
-# ASCII Art - Hercules Caduceus (compact, fits in left panel)
-HERCULES_CADUCEUS = """[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣇⠸⣿⣿⠇⣸⣿⣿⣷⣦⣄⡀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⢀⣠⣴⣶⠿⠋⣩⡿⣿⡿⠻⣿⡇⢠⡄⢸⣿⠟⢿⣿⢿⣍⠙⠿⣶⣦⣄⡀⠀[/]
-[#FFBF00]⠀⠀⠉⠉⠁⠶⠟⠋⠀⠉⠀⢀⣈⣁⡈⢁⣈⣁⡀⠀⠉⠀⠙⠻⠶⠈⠉⠉⠀⠀[/]
-[#FFD700]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡿⠛⢁⡈⠛⢿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFD700]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿⣿⣦⣤⣈⠁⢠⣴⣿⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠻⢿⣿⣦⡉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣦⣈⠛⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣴⠦⠈⠙⠿⣦⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣤⡈⠁⢤⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠷⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⠑⢶⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠁⢰⡆⠈⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⠈⣡⠞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]"""
+# ASCII Art — Pillars of Hercules (compact, fits in left panel).
+# Replaces the inherited winged-caduceus art: the caduceus is *Hermes'* staff,
+# never our emblem.
+HERCULES_PILLARS = """[#F7B23B]   ╔═══════╗   ╔═══════╗[/]
+[#F7B23B]   ╚═╗███╔═╝   ╚═╗███╔═╝[/]
+[#E8712E]     ║███║       ║███║[/]
+[#E8712E]     ║███║       ║███║[/]
+[#E8712E]     ║███║       ║███║[/]
+[#C73E3A]     ║███║       ║███║[/]
+[#C73E3A]   ╔═╝███╚═╗   ╔═╝███╚═╗[/]
+[#8E2B3F]   ╚═══════╝   ╚═══════╝[/]"""
 
 
 
@@ -3483,9 +3480,9 @@ def _build_compact_banner() -> str:
         _skin = None
 
     skin_name = getattr(_skin, "name", "default") if _skin else "default"
-    border_color = _skin.get_color("banner_border", "#FFD700") if _skin else "#FFD700"
-    title_color = _skin.get_color("banner_title", "#FFBF00") if _skin else "#FFBF00"
-    dim_color = _skin.get_color("banner_dim", "#B8860B") if _skin else "#B8860B"
+    border_color = _skin.get_color("banner_border", "#F7B23B") if _skin else "#F7B23B"
+    title_color = _skin.get_color("banner_title", "#E8712E") if _skin else "#E8712E"
+    dim_color = _skin.get_color("banner_dim", "#8E2B3F") if _skin else "#8E2B3F"
 
     if skin_name == "default":
         line1 = "⚕ NOUS HERCULES - AI Agent Framework"
@@ -6170,7 +6167,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'context_compressor'):
             ctx_len = self.agent.context_compressor.context_length
         
-        # Auto-compact for narrow terminals — the full banner with caduceus
+        # Auto-compact for narrow terminals — the full banner with the pillars
         # + tool list needs ~80 columns minimum to render without wrapping.
         term_width = shutil.get_terminal_size().columns
         use_compact = self.compact or term_width < 80
@@ -6520,11 +6517,11 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         try:
             from hercules_cli.skin_engine import get_active_skin
             skin = get_active_skin()
-            separator_color = skin.get_color("banner_dim", "#B8860B")
-            accent_color = skin.get_color("ui_accent", "#FFBF00")
+            separator_color = skin.get_color("banner_dim", "#8E2B3F")
+            accent_color = skin.get_color("ui_accent", "#E8712E")
             label_color = skin.get_color("ui_label", "#DAA520")
         except Exception:
-            separator_color, accent_color, label_color = "#B8860B", "#FFBF00", "cyan"
+            separator_color, accent_color, label_color = "#8E2B3F", "#E8712E", "cyan"
         toolsets_info = ""
         if self.enabled_toolsets and "all" not in self.enabled_toolsets:
             toolsets_info = f" [dim {separator_color}]·[/] [{label_color}]toolsets: {', '.join(self.enabled_toolsets)}[/]"
@@ -8539,9 +8536,9 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     _tip = get_random_tip()
                     try:
                         from hercules_cli.skin_engine import get_active_skin
-                        _tip_color = get_active_skin().get_color("banner_dim", "#B8860B")
+                        _tip_color = get_active_skin().get_color("banner_dim", "#8E2B3F")
                     except Exception:
-                        _tip_color = "#B8860B"
+                        _tip_color = "#8E2B3F"
                     cc.print(f"[dim {_tip_color}]✦ Tip: {_tip}[/]")
                 except Exception:
                     pass
@@ -8554,9 +8551,9 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     _tip = get_random_tip()
                     try:
                         from hercules_cli.skin_engine import get_active_skin
-                        _tip_color = get_active_skin().get_color("banner_dim", "#B8860B")
+                        _tip_color = get_active_skin().get_color("banner_dim", "#8E2B3F")
                     except Exception:
-                        _tip_color = "#B8860B"
+                        _tip_color = "#8E2B3F"
                     self._console_print(f"[dim {_tip_color}]✦ Tip: {_tip}[/]")
                 except Exception:
                     pass
@@ -11922,11 +11919,11 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     from hercules_cli.skin_engine import get_active_skin
                     _skin = get_active_skin()
                     label = _skin.get_branding("response_label", "⚕ Hercules")
-                    _resp_color = _maybe_remap_for_light_mode(_skin.get_color("response_border", "#CD7F32"))
+                    _resp_color = _maybe_remap_for_light_mode(_skin.get_color("response_border", "#C73E3A"))
                     _resp_text = _maybe_remap_for_light_mode(_skin.get_color("banner_text", "#FFF8DC"))
                 except Exception:
                     label = "⚕ Hercules"
-                    _resp_color = _maybe_remap_for_light_mode("#CD7F32")
+                    _resp_color = _maybe_remap_for_light_mode("#C73E3A")
                     _resp_text = _maybe_remap_for_light_mode("#FFF8DC")
 
                 is_error_response = result and (result.get("failed") or result.get("partial"))
@@ -12494,9 +12491,9 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             )
             if not is_seen(self.config, OPENCLAW_RESIDUE_FLAG) and detect_openclaw_residue():
                 try:
-                    _resid_color = _welcome_skin.get_color("banner_dim", "#B8860B")
+                    _resid_color = _welcome_skin.get_color("banner_dim", "#8E2B3F")
                 except Exception:
-                    _resid_color = "#B8860B"
+                    _resid_color = "#8E2B3F"
                 self._console_print(f"[{_resid_color}]{openclaw_residue_hint_cli()}[/]")
                 try:
                     from hercules_cli.config import get_config_path as _get_cfg_path_resid
@@ -12510,9 +12507,9 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from hercules_cli.tips import get_random_tip
             _tip = get_random_tip()
             try:
-                _tip_color = _welcome_skin.get_color("banner_dim", "#B8860B")
+                _tip_color = _welcome_skin.get_color("banner_dim", "#8E2B3F")
             except Exception:
-                _tip_color = "#B8860B"
+                _tip_color = "#8E2B3F"
             self._console_print(f"[dim {_tip_color}]✦ Tip: {_tip}[/]")
         except Exception:
             pass  # Tips are non-critical — never break startup
@@ -14233,42 +14230,42 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             'prompt-working': '#888888 italic',
             'hint': '#888888 italic',
             'status-bar': 'bg:#1a1a2e #C0C0C0',
-            'status-bar-strong': 'bg:#1a1a2e #FFD700 bold',
+            'status-bar-strong': 'bg:#1a1a2e #F7B23B bold',
             'status-bar-dim': 'bg:#1a1a2e #8B8682',
             'status-bar-good': 'bg:#1a1a2e #8FBC8F bold',
-            'status-bar-warn': 'bg:#1a1a2e #FFD700 bold',
+            'status-bar-warn': 'bg:#1a1a2e #F7B23B bold',
             'status-bar-bad': 'bg:#1a1a2e #FF8C00 bold',
             'status-bar-critical': 'bg:#1a1a2e #FF6B6B bold',
             'status-bar-yolo': 'bg:#1a1a2e #FF4444 bold',
             # Bronze horizontal rules around the input area
-            'input-rule': '#CD7F32',
+            'input-rule': '#C73E3A',
             # Clipboard image attachment badges
             'image-badge': '#87CEEB bold',
             'completion-menu': 'bg:#1a1a2e #FFF8DC',
             'completion-menu.completion': 'bg:#1a1a2e #FFF8DC',
-            'completion-menu.completion.current': 'bg:#333355 #FFD700',
+            'completion-menu.completion.current': 'bg:#333355 #F7B23B',
             'completion-menu.meta.completion': 'bg:#1a1a2e #888888',
-            'completion-menu.meta.completion.current': 'bg:#333355 #FFBF00',
+            'completion-menu.meta.completion.current': 'bg:#333355 #E8712E',
             # Clarify question panel
-            'clarify-border': '#CD7F32',
-            'clarify-title': '#FFD700 bold',
+            'clarify-border': '#C73E3A',
+            'clarify-title': '#F7B23B bold',
             'clarify-question': '#FFF8DC bold',
             'clarify-choice': '#AAAAAA',
-            'clarify-selected': '#FFD700 bold',
-            'clarify-active-other': '#FFD700 italic',
-            'clarify-countdown': '#CD7F32',
+            'clarify-selected': '#F7B23B bold',
+            'clarify-active-other': '#F7B23B italic',
+            'clarify-countdown': '#C73E3A',
             # Sudo password panel
             'sudo-prompt': '#FF6B6B bold',
-            'sudo-border': '#CD7F32',
+            'sudo-border': '#C73E3A',
             'sudo-title': '#FF6B6B bold',
             'sudo-text': '#FFF8DC',
             # Dangerous command approval panel
-            'approval-border': '#CD7F32',
+            'approval-border': '#C73E3A',
             'approval-title': '#FF8C00 bold',
             'approval-desc': '#FFF8DC bold',
             'approval-cmd': '#AAAAAA italic',
             'approval-choice': '#AAAAAA',
-            'approval-selected': '#FFD700 bold',
+            'approval-selected': '#F7B23B bold',
             # Voice mode
             'voice-prompt': '#87CEEB',
             'voice-recording': '#FF4444 bold',

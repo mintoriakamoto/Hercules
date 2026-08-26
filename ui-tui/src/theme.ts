@@ -253,12 +253,12 @@ const cleanPromptSymbol = (s: string | undefined, fallback: string) => {
 
 export const DARK_THEME: Theme = {
   color: {
-    primary: '#FFD700',
-    accent: '#FFBF00',
-    border: '#CD7F32',
+    primary: '#F7B23B',
+    accent: '#E8712E',
+    border: '#C73E3A',
     text: '#FFF8DC',
     muted: '#CC9B1F',
-    // Bumped from the old `#B8860B` darkgoldenrod (~53% luminance) which
+    // Bumped from the old `#8E2B3F` darkgoldenrod (~53% luminance) which
     // read as barely-visible on dark terminals for long body text.  The
     // new value sits ~60% luminance — readable without losing the "muted /
     // secondary" semantic.  Field labels still use `label` (65%) which
@@ -283,7 +283,7 @@ export const DARK_THEME: Theme = {
     statusBg: '#1a1a2e',
     statusFg: '#C0C0C0',
     statusGood: '#8FBC8F',
-    statusWarn: '#FFD700',
+    statusWarn: '#F7B23B',
     statusBad: '#FF8C00',
     statusCritical: '#FF6B6B',
     selectionBg: '#3a3a55',

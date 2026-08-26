@@ -149,9 +149,9 @@ hercules webhook subscribe pr-review \
   --deliver github_comment
 ```
 
-Full automation blueprints gallery: [hercules-agent.nousresearch.com/docs/reference/automation-blueprints-catalog](https://github.com/mintoriakamoto/Hercules/blob/main/website/docs/reference/automation-blueprints-catalog)
+Full automation blueprints gallery: [github.com/mintoriakamoto/Hercules/docs/reference/automation-blueprints-catalog](https://github.com/mintoriakamoto/Hercules/blob/main/website/docs/reference/automation-blueprints-catalog)
 
-Documentation: [hercules-agent.nousresearch.com](https://hercules-agent.nousresearch.com)
+Documentation: [github.com/mintoriakamoto/Hercules](https://github.com/mintoriakamoto/Hercules)
 
 GitHub: [github.com/mintoriakamoto/Hercules](https://github.com/mintoriakamoto/Hercules)
 

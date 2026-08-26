@@ -15,7 +15,7 @@
 
 [Unit]
 Description=Hercules Kanban dispatcher (DEPRECATED standalone daemon — prefer gateway-embedded dispatch)
-Documentation=https://hercules-agent.nousresearch.com/docs/user-guide/features/kanban
+Documentation=https://github.com/mintoriakamoto/Hercules/tree/main/website/docs/user-guide/features/kanban
 After=network.target
 
 [Service]

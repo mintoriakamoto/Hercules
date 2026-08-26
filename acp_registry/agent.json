@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Self-improving open-source AI agent by Nous Research with ACP editor integration, persistent memory, skills, and rich tool support.",
   "repository": "https://github.com/NousResearch/hercules-agent",
-  "website": "https://hercules-agent.nousresearch.com/docs/user-guide/features/acp",
+  "website": "https://github.com/mintoriakamoto/Hercules/tree/main/website/docs/user-guide/features/acp",
   "authors": ["Nous Research"],
   "license": "MIT",
   "distribution": {

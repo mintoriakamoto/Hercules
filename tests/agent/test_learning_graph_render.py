@@ -176,7 +176,7 @@ def test_format_date_handles_missing():
 
 
 def test_derive_palette_distinct_memory_hue():
-    pal = render.derive_palette("#FFD700", dark=True)
+    pal = render.derive_palette("#F7B23B", dark=True)
     assert pal["skill"].startswith("#") and pal["memory"].startswith("#")
     # Skills wear the muted complement, memories the primary ink → distinct.
     assert pal["memory"].lower() != pal["skill"].lower()
