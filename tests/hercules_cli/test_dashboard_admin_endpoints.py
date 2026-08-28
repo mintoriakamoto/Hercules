@@ -905,8 +905,8 @@ class TestUpdateCheckEndpoint:
 
 
 class TestDebugShareEndpoint:
-    """POST /api/ops/debug-share returns the paste URLs synchronously so the
-    dashboard can render them as copyable links (not a backgrounded log tail)."""
+    """POST /api/ops/debug-share writes the report to LOCAL files (no upload)
+    and returns their paths synchronously."""
 
     @pytest.fixture(autouse=True)
     def _setup(self, _isolate_hercules_home):
@@ -919,72 +919,67 @@ class TestDebugShareEndpoint:
         (logs / "errors.log").write_text("err line\n")
         (logs / "gateway.log").write_text("gw line\n")
 
-    def test_returns_structured_urls(self, monkeypatch):
-        import hercules_cli.debug as dbg
-
-        count = [0]
-
-        def _upload(content, expiry_days=7):
-            count[0] += 1
-            return f"https://paste.rs/p{count[0]}"
-
-        monkeypatch.setattr(dbg, "upload_to_pastebin", _upload)
-        monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
-        monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
+    def test_returns_structured_local_paths(self, monkeypatch):
+        # No GitHub token: build_debug_share writes local files; the endpoint
+        # returns their paths with auto_delete_seconds == 0.
         monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
 
         r = self.client.post("/api/ops/debug-share", json={"redact": True})
         assert r.status_code == 200
         body = r.json()
         assert body["ok"] is True
         assert "Report" in body["urls"]
+        # Value is a local filesystem path, not a paste URL.
+        assert "paste.rs" not in body["urls"]["Report"]
+        assert body["urls"]["Report"].endswith("report.md")
         assert body["redacted"] is True
-        assert body["auto_delete_seconds"] == 21600
+        assert body["auto_delete_seconds"] == 0
         assert isinstance(body["failures"], list)
 
-    def test_redact_false_is_honored(self, monkeypatch):
-        import hercules_cli.debug as dbg
-
-        monkeypatch.setattr(
-            dbg, "upload_to_pastebin", lambda c, expiry_days=7: "https://paste.rs/x"
-        )
-        monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
-        monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
+    def test_routes_to_gist_with_token(self, monkeypatch):
+        # With a token the endpoint returns the secret-gist URL, not a path.
         monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: "ghp_test")
+        gist_url = "https://gist.github.com/mintoriakamoto/abc123"
+        monkeypatch.setattr(
+            "hercules_cli.debug._upload_to_github_gist",
+            lambda files, description, token, public=False: gist_url,
+        )
+
+        r = self.client.post("/api/ops/debug-share", json={"redact": True})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["ok"] is True
+        assert body["urls"] == {"Gist": gist_url}
+
+    def test_redact_false_is_honored(self, monkeypatch):
+        monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
 
         r = self.client.post("/api/ops/debug-share", json={"redact": False})
         assert r.status_code == 200
         assert r.json()["redacted"] is False
 
     def test_default_body_redacts(self, monkeypatch):
-        import hercules_cli.debug as dbg
-
-        monkeypatch.setattr(
-            dbg, "upload_to_pastebin", lambda c, expiry_days=7: "https://paste.rs/x"
-        )
-        monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
-        monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
         monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
 
         # No JSON body at all — should default redact=True.
         r = self.client.post("/api/ops/debug-share")
         assert r.status_code == 200
         assert r.json()["redacted"] is True
 
-    def test_upload_failure_returns_502(self, monkeypatch):
-        import hercules_cli.debug as dbg
-
-        monkeypatch.setattr(
-            dbg,
-            "upload_to_pastebin",
-            lambda c, expiry_days=7: (_ for _ in ()).throw(RuntimeError("down")),
-        )
-        monkeypatch.setattr(dbg, "_schedule_auto_delete", lambda *a, **k: None)
-        monkeypatch.setattr(dbg, "_best_effort_sweep_expired_pastes", lambda: None)
+    def test_local_write_failure_returns_500(self, monkeypatch):
         monkeypatch.setattr("hercules_cli.dump.run_dump", lambda a: None)
+        monkeypatch.setattr("hercules_cli.debug._github_token", lambda: None)
+        monkeypatch.setattr(
+            "pathlib.Path.write_text",
+            lambda *a, **k: (_ for _ in ()).throw(OSError("disk full")),
+        )
 
         r = self.client.post("/api/ops/debug-share", json={"redact": True})
-        assert r.status_code == 502
+        assert r.status_code == 500
 
     def test_requires_session_token(self):
         # Drop the token header and confirm the global auth gate rejects it.

@@ -3067,14 +3067,15 @@ class DebugShareRequest(BaseModel):
 
 @app.post("/api/ops/debug-share")
 async def run_debug_share_endpoint(body: DebugShareRequest | None = None):
-    """Upload a redacted debug report + full logs and return the paste URLs.
+    """Collect a redacted debug report + full logs and return where they went.
 
     Unlike the other diagnostics actions (doctor, dump, prompt-size) this is
-    *synchronous*: the whole point of ``debug share`` is the set of shareable
-    URLs it produces, so we run the upload in a worker thread and return the
-    structured ``{urls, failures, redacted, ...}`` payload directly. The
-    dashboard renders those as real, copyable links instead of scraping a log
-    tail. Pastes auto-delete after 6 hours (handled inside the share core).
+    *synchronous*: ``debug share`` routes the report to a SECRET GitHub Gist
+    under the operator's account when a token is configured, else writes LOCAL
+    files (the third-party paste-service route was removed). We run the blocking
+    I/O in a worker thread and return the structured
+    ``{urls, failures, redacted, ...}`` payload — ``urls`` is ``{"Gist": url}``
+    or ``{"Report": path, ...}`` accordingly.
     """
     from hercules_cli.debug import build_debug_share
 
@@ -3085,9 +3086,6 @@ async def run_debug_share_endpoint(body: DebugShareRequest | None = None):
             log_lines=max(1, min(int(req.lines), 5000)),
             redact=bool(req.redact),
         )
-    except RuntimeError as exc:
-        # Required summary-report upload failed (offline / paste service down).
-        raise HTTPException(status_code=502, detail=f"Upload failed: {exc}")
     except Exception as exc:
         _log.exception("debug share failed")
         raise HTTPException(status_code=500, detail=f"Failed: {exc}")
@@ -7359,7 +7357,9 @@ async def cancel_whatsapp_onboarding(pairing_id: str):
     return {"ok": True}
 
 
-_TELEGRAM_ONBOARDING_DEFAULT_URL = "https://setup.hercules-agent.nousresearch.com"
+# No built-in onboarding service: the former Nous-hosted default was removed.
+# Set TELEGRAM_ONBOARDING_URL to your own onboarding service to enable this.
+_TELEGRAM_ONBOARDING_DEFAULT_URL = ""
 _TELEGRAM_ONBOARDING_USER_AGENT = f"HerculesDashboard/{__version__}"
 _TELEGRAM_USER_ID_RE = re.compile(r"^\d+$")
 
@@ -7379,11 +7379,22 @@ _telegram_onboarding_lock = threading.RLock()
 
 
 def _telegram_onboarding_base_url() -> str:
-    return (
+    base = (
         os.getenv("TELEGRAM_ONBOARDING_URL", _TELEGRAM_ONBOARDING_DEFAULT_URL)
         .strip()
         .rstrip("/")
     )
+    if not base:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Telegram managed-bot onboarding is not configured. The built-in "
+                "Nous-hosted onboarding service was removed. Set "
+                "TELEGRAM_ONBOARDING_URL to your own onboarding service, or "
+                "configure a BotFather token directly."
+            ),
+        )
+    return base
 
 
 def _parse_expiry_ts(value: str) -> float:
@@ -14363,7 +14374,7 @@ def _resolve_chat_argv(
     # SERVER process env — and hosted/cloud deploys run the dashboard under
     # a process manager (container init, systemd) with no COLORTERM, so
     # chalk downgrades every hex color to the xterm 256 palette. The skin's
-    # bronze border #CD7F32 snaps to palette 173 (#D7875F, salmon-red) and
+    # bronze border #C73E3A snaps to palette 173 (#D7875F, salmon-red) and
     # the banner reads red/yellow instead of gold. Local launches dodge
     # this only because the operator's interactive terminal leaks
     # COLORTERM=truecolor into os.environ. Backfill it for the PTY child;

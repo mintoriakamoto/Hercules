@@ -544,6 +544,10 @@ def _filter_results_by_provider(
     ]
 
 
+# The operator's own GitHub repo — the sole permitted remote skill source.
+OWN_SKILLS_REPO = "mintoriakamoto/Hercules"
+
+
 class GitHubSource(SkillSource):
     """Fetch skills from GitHub repos via the Contents API."""
 
@@ -567,11 +571,24 @@ class GitHubSource(SkillSource):
         {"repo": "garrytan/gstack", "path": ""},
     ]
 
-    def __init__(self, auth: GitHubAuth, extra_taps: Optional[List[Dict]] = None):
+    def __init__(
+        self,
+        auth: GitHubAuth,
+        extra_taps: Optional[List[Dict]] = None,
+        restrict_to: Optional[str] = None,
+    ):
         self.auth = auth
-        self.taps = list(self.DEFAULT_TAPS)
-        if extra_taps:
-            self.taps.extend(extra_taps)
+        # When ``restrict_to`` is set (e.g. "mintoriakamoto/Hercules"), this
+        # source will ONLY ever read from that one repo — the default taps and
+        # any extra taps are ignored, and ``fetch`` refuses any other repo.
+        # This is how skill installs are locked to the operator's own GitHub.
+        self._restrict_to = restrict_to.lower() if restrict_to else None
+        if restrict_to:
+            self.taps = [{"repo": restrict_to, "path": "skills/"}]
+        else:
+            self.taps = list(self.DEFAULT_TAPS)
+            if extra_taps:
+                self.taps.extend(extra_taps)
         # Per-instance cache: repo -> (default_branch, tree_entries)
         # Survives within a single search/install flow, avoiding redundant API calls.
         self._tree_cache: Dict[str, Tuple[str, List[dict]]] = {}
@@ -641,6 +658,12 @@ class GitHubSource(SkillSource):
 
         repo = f"{parts[0]}/{parts[1]}"
         skill_path = parts[2]
+
+        # Allowlist guard: when restricted to the operator's own repo, refuse to
+        # fetch from any other GitHub repo even if an arbitrary owner/repo/path
+        # identifier is passed in directly.
+        if self._restrict_to and repo.lower() != self._restrict_to:
+            return None
 
         skill_md = self._fetch_file_content(repo, f"{skill_path.rstrip('/')}/SKILL.md")
         if skill_md is None:
@@ -3165,7 +3188,7 @@ class OptionalSkillSource(SkillSource):
     (search / install / inspect) and labelled "official" with "builtin" trust.
     """
 
-    OFFICIAL_REPO = "NousResearch/hercules-agent"
+    OFFICIAL_REPO = OWN_SKILLS_REPO
 
     def __init__(self):
         from hercules_constants import get_optional_skills_dir
@@ -3770,7 +3793,10 @@ def check_for_skill_updates(
 # Hercules centralized index source
 # ---------------------------------------------------------------------------
 
-HERCULES_INDEX_URL = "https://hercules-agent.nousresearch.com/docs/api/skills-index.json"
+# The centralized Hercules index source is no longer registered in
+# create_source_router (skills install only from the operator's own repo), so
+# this URL is never fetched. Emptied to remove the third-party reference.
+HERCULES_INDEX_URL = ""
 HERCULES_INDEX_TTL = 6 * 3600  # 6 hours
 
 
@@ -4060,20 +4086,14 @@ def create_source_router(auth: Optional[GitHubAuth] = None) -> List[SkillSource]
     if auth is None:
         auth = GitHubAuth()
 
-    taps_mgr = TapsManager()
-    extra_taps = taps_mgr.list_taps()
-
+    # Skill installs are locked to the operator's own GitHub repo. The former
+    # third-party/arbitrary sources (hercules-index, skills.sh, well-known
+    # domains, arbitrary HTTP(S) URLs, arbitrary GitHub repos, clawhub, the
+    # Claude marketplace, lobehub, and browse.sh) have been removed so nothing
+    # pulls skill code from a source the operator doesn't control.
     sources: List[SkillSource] = [
-        OptionalSkillSource(),        # Official optional skills (highest priority)
-        HerculesIndexSource(auth=auth), # Centralized index (search + resolved install paths)
-        SkillsShSource(auth=auth),
-        WellKnownSkillSource(),
-        UrlSource(),                  # Direct HTTP(S) URL to a SKILL.md file
-        GitHubSource(auth=auth, extra_taps=extra_taps),
-        ClawHubSource(),
-        ClaudeMarketplaceSource(auth=auth),
-        LobeHubSource(),
-        BrowseShSource(),   # browse.sh: 169+ site-specific browser automation skills
+        OptionalSkillSource(),  # Official optional skills (local, bundled)
+        GitHubSource(auth=auth, restrict_to=OWN_SKILLS_REPO),  # own repo only
     ]
 
     return sources

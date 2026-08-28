@@ -16,6 +16,7 @@ import gzip
 import io
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -45,14 +46,14 @@ _EMAIL_ADDRESS_RE = re.compile(
 
 
 # ---------------------------------------------------------------------------
-# Paste services — try paste.rs first, dpaste.com as fallback.
+# Legacy paste service — retained ONLY so ``hercules debug delete`` can still
+# remove pastes created by older versions. ``debug share`` no longer uploads
+# anywhere; it writes local files (see build_debug_share).
 # ---------------------------------------------------------------------------
 
 _PASTE_RS_URL = "https://paste.rs/"
-_DPASTE_COM_URL = "https://dpaste.com/api/"
 
-# Maximum bytes to read from a single log file for upload.
-# paste.rs caps at ~1 MB; we stay under that with headroom.
+# Maximum bytes to read from a single log file.
 _MAX_LOG_BYTES = 512_000
 
 # Auto-delete pastes after this many seconds (6 hours).
@@ -190,27 +191,27 @@ def _best_effort_sweep_expired_pastes() -> None:
 # ---------------------------------------------------------------------------
 
 _PRIVACY_NOTICE = """\
-⚠️  This will upload system info + logs to a PUBLIC paste service.
+⚠️  This collects a debug report (system info + logs). With a GitHub token
+configured it is uploaded to a SECRET Gist under YOUR GitHub account (unlisted,
+but anyone with the link can view it); otherwise it is written to LOCAL files.
 
-Cryptographic secrets (API keys, tokens, passwords) are redacted before
-upload, but the following personal data is NOT redacted and will be public:
+Cryptographic secrets (API keys, tokens, passwords) are redacted, but the
+following personal data is NOT redacted and will be present in the report:
   • Your display name and persistent platform user ID
   • Verbatim content of your recent messages (prompts, responses, tool output)
   • Local filesystem paths
   • Any other PII present in the logs
 
-The resulting URL is public to anyone who has the link. Pastes auto-delete
-after 6 hours, but may be archived by third parties in the meantime.
-
-Use --local to view the report without uploading.
+Review it before sharing the link, and delete the gist when you're done.
+Use --local to print the report to the terminal instead.
 """
 
 _GATEWAY_PRIVACY_NOTICE = (
-    "⚠️ **Privacy notice:** This uploads system info + recent log tails "
-    "(may contain conversation fragments) to a public paste service. "
-    "Full logs are NOT included from the gateway — use `hercules debug share` "
-    "from the CLI for full log uploads.\n"
-    "Pastes auto-delete after 6 hours."
+    "⚠️ **Privacy notice:** This collects system info + recent log tails "
+    "(may contain conversation fragments). With a GitHub token configured it "
+    "goes to a SECRET Gist under your GitHub account; otherwise it is written "
+    "to a LOCAL file on the agent host. Full logs are NOT included from the "
+    "gateway — use `hercules debug share` from the CLI for the full report."
 )
 
 
@@ -263,85 +264,6 @@ def _schedule_auto_delete(urls: list[str], delay_seconds: int = _AUTO_DELETE_SEC
     """
     _record_pending(urls, delay_seconds=delay_seconds)
 
-
-def _upload_paste_rs(content: str) -> str:
-    """Upload to paste.rs.  Returns the paste URL.
-
-    paste.rs accepts a plain POST body and returns the URL directly.
-    """
-    data = content.encode("utf-8")
-    req = urllib.request.Request(
-        _PASTE_RS_URL, data=data, method="POST",
-        headers={
-            "Content-Type": "text/plain; charset=utf-8",
-            "User-Agent": "hercules-agent/debug-share",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        url = resp.read().decode("utf-8").strip()
-    if not url.startswith("http"):
-        raise ValueError(f"Unexpected response from paste.rs: {url[:200]}")
-    return url
-
-
-def _upload_dpaste_com(content: str, expiry_days: int = 7) -> str:
-    """Upload to dpaste.com.  Returns the paste URL.
-
-    dpaste.com uses multipart form data.
-    """
-    boundary = "----HerculesDebugBoundary9f3c"
-
-    def _field(name: str, value: str) -> str:
-        return (
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="{name}"\r\n'
-            f"\r\n"
-            f"{value}\r\n"
-        )
-
-    body = (
-        _field("content", content)
-        + _field("syntax", "text")
-        + _field("expiry_days", str(expiry_days))
-        + f"--{boundary}--\r\n"
-    ).encode("utf-8")
-
-    req = urllib.request.Request(
-        _DPASTE_COM_URL, data=body, method="POST",
-        headers={
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-            "User-Agent": "hercules-agent/debug-share",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        url = resp.read().decode("utf-8").strip()
-    if not url.startswith("http"):
-        raise ValueError(f"Unexpected response from dpaste.com: {url[:200]}")
-    return url
-
-
-def upload_to_pastebin(content: str, expiry_days: int = 7) -> str:
-    """Upload *content* to a paste service, trying paste.rs then dpaste.com.
-
-    Returns the paste URL on success, raises on total failure.
-    """
-    errors: list[str] = []
-
-    # Try paste.rs first (simple, fast)
-    try:
-        return _upload_paste_rs(content)
-    except Exception as exc:
-        errors.append(f"paste.rs: {exc}")
-
-    # Fallback: dpaste.com (supports expiry)
-    try:
-        return _upload_dpaste_com(content, expiry_days=expiry_days)
-    except Exception as exc:
-        errors.append(f"dpaste.com: {exc}")
-
-    raise RuntimeError(
-        "Failed to upload to any paste service:\n  " + "\n  ".join(errors)
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -686,25 +608,87 @@ class DebugShareResult:
     report: str = ""  # the summary report text (kept for local fallback)
 
 
+# GitHub Gist is the "route to our GitHub" destination for debug reports: a
+# secret Gist under the operator's account, created with a configured token.
+GITHUB_GIST_API = "https://api.github.com/gists"
+
+
+def _github_token() -> Optional[str]:
+    """Return a GitHub token for gist creation, or None.
+
+    Checked in order: HERCULES_GITHUB_TOKEN, GITHUB_TOKEN, GH_TOKEN env vars,
+    then a ``github`` provider entry in ``$HERCULES_HOME/auth.json``. The token
+    needs the ``gist`` scope. When absent, ``debug share`` falls back to writing
+    local files.
+    """
+    for env in ("HERCULES_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"):
+        val = os.environ.get(env, "").strip()
+        if val:
+            return val
+    try:
+        path = get_hercules_home() / "auth.json"
+        if path.is_file():
+            providers = json.loads(path.read_text()).get("providers", {})
+            gh = providers.get("github", {})
+            if isinstance(gh, dict):
+                tok = gh.get("token") or gh.get("access_token")
+                if isinstance(tok, str) and tok.strip():
+                    return tok.strip()
+    except Exception:
+        pass
+    return None
+
+
+def _upload_to_github_gist(
+    files: dict[str, str], description: str, token: str, public: bool = False
+) -> str:
+    """Create a Gist under the token's account and return its html_url.
+
+    ``public=False`` creates a *secret* gist (unlisted; anyone with the link can
+    still view it — GitHub has no truly private gists). Raises on failure.
+    """
+    payload = {
+        "description": description,
+        "public": public,
+        # A gist file may not be empty — substitute a single space.
+        "files": {name: {"content": (content or " ")} for name, content in files.items()},
+    }
+    req = urllib.request.Request(
+        GITHUB_GIST_API,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json",
+            "User-Agent": "hercules-agent/debug-share",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        body = json.loads(resp.read())
+    url = body.get("html_url")
+    if not url:
+        raise ValueError("GitHub gist API returned no html_url")
+    return url
+
+
 def build_debug_share(
     *,
     log_lines: int = 200,
     expiry: int = 7,
     redact: bool = True,
 ) -> DebugShareResult:
-    """Collect the debug report + full logs, upload each, return the URLs.
+    """Collect the debug report + full logs and route them to your GitHub.
 
-    This is the shared core behind ``hercules debug share`` (CLI) and the
-    dashboard ``POST /api/ops/debug-share`` endpoint. It performs blocking
-    network I/O (paste uploads) — callers inside an event loop must run it in
-    a worker thread.
-
-    The summary report upload is required: on failure this raises
-    ``RuntimeError``. Full-log uploads are best-effort; their errors are
-    collected into ``failures`` rather than raised.
+    Shared core behind ``hercules debug share`` (CLI) and the dashboard
+    ``POST /api/ops/debug-share`` endpoint. When a GitHub token is configured
+    (see ``_github_token``) the report + logs are uploaded as a SECRET Gist
+    under that account and the gist URL is returned. Without a token it falls
+    back to writing local files under
+    ``$HERCULES_HOME/debug-shares/<timestamp>/``. Performs blocking network /
+    disk I/O — callers inside an event loop must run it in a worker thread.
     """
-    _best_effort_sweep_expired_pastes()
-
     # Collect the report + full logs (force-redacted when redact=True) via the
     # shared collector. The dump header + redaction banner are applied inside
     # collect_share_bundle.
@@ -712,35 +696,67 @@ def build_debug_share(
 
     if redact:
         logger.info(
-            "hercules debug share: applied force-mode redaction to log snapshots before upload"
+            "hercules debug share: applied force-mode redaction to log snapshots"
         )
 
     report = bundle["report"]
 
-    urls: dict[str, str] = {}
+    # Assemble the shareable file set (report + any present full logs).
+    files: dict[str, str] = {"report.md": report}
+    for label in ("agent.log", "gateway.log", "gui.log", "desktop.log"):
+        content = bundle.get(label)
+        if content:
+            files[label] = content
+
+    # Preferred route: a secret Gist under the operator's own GitHub account.
+    gist_failure: Optional[str] = None
+    token = _github_token()
+    if token:
+        try:
+            gist_url = _upload_to_github_gist(
+                files, description="Hercules debug report", token=token
+            )
+            return DebugShareResult(
+                urls={"Gist": gist_url},
+                failures=[],
+                redacted=redact,
+                auto_delete_seconds=0,
+                report=report,
+            )
+        except Exception as exc:
+            # Record and fall back to local files rather than failing outright.
+            gist_failure = f"GitHub gist upload failed: {exc}"
+
+    # Fallback: write local files (no token, or the gist upload failed).
+    share_dir = (
+        get_hercules_home() / "debug-shares" / time.strftime("%Y%m%d-%H%M%S")
+    )
+    share_dir.mkdir(parents=True, exist_ok=True)
+
+    paths: dict[str, str] = {}
+    report_path = share_dir / "report.md"
+    report_path.write_text(report, encoding="utf-8")
+    paths["Report"] = str(report_path)
+
     failures: list[str] = []
-
-    # 1. Summary report (required — raises on failure so callers can fall back)
-    urls["Report"] = upload_to_pastebin(report, expiry_days=expiry)
-
-    # 2-5. Full logs (optional — failures are collected, not raised)
+    if gist_failure:
+        failures.append(gist_failure)
     for label in ("agent.log", "gateway.log", "gui.log", "desktop.log"):
         content = bundle.get(label)
         if not content:
             continue
         try:
-            urls[label] = upload_to_pastebin(content, expiry_days=expiry)
-        except Exception as exc:
+            log_path = share_dir / label
+            log_path.write_text(content, encoding="utf-8")
+            paths[label] = str(log_path)
+        except OSError as exc:
             failures.append(f"{label}: {exc}")
 
-    # Schedule auto-deletion after 6 hours.
-    _schedule_auto_delete(list(urls.values()))
-
     return DebugShareResult(
-        urls=urls,
+        urls=paths,
         failures=failures,
         redacted=redact,
-        auto_delete_seconds=_AUTO_DELETE_SECONDS,
+        auto_delete_seconds=0,  # local files are not auto-deleted
         report=report,
     )
 
@@ -823,22 +839,24 @@ def run_debug_share(args):
         print("\nRun `hercules debug share --local` to print the report instead.\n")
         sys.exit(1)
 
-    # Print results
+    # Print results. A "Gist" key means it went to a secret GitHub Gist under
+    # your account; otherwise these are local file paths (no token configured).
+    is_gist = "Gist" in result.urls
     label_width = max(len(k) for k in result.urls)
-    print("\nDebug report uploaded:")
-    for label, url in result.urls.items():
-        print(f"  {label:<{label_width}}  {url}")
+    print("\nDebug report uploaded to a secret GitHub Gist:" if is_gist
+          else "\nDebug report written locally:")
+    for label, target in result.urls.items():
+        print(f"  {label:<{label_width}}  {target}")
 
     if result.failures:
-        print(f"\n  (failed to upload: {', '.join(result.failures)})")
+        print(f"\n  (notes: {', '.join(result.failures)})")
 
-    hours = result.auto_delete_seconds // 3600
-    print(f"\n⏱  Pastes will auto-delete in {hours} hours.")
-
-    # Manual delete fallback
-    print("To delete now:  hercules debug delete <url>")
-
-    print("\nShare these links with the Hercules team for support.")
+    if is_gist:
+        print("\nShare the gist link for support. It's a *secret* gist (unlisted,")
+        print("not private) under your GitHub account — delete it when you're done.")
+    else:
+        print("\nNo GitHub token configured (set HERCULES_GITHUB_TOKEN with 'gist'")
+        print("scope to upload to a gist). These files stay on your machine.")
 
 
 def run_debug_delete(args):

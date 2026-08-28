@@ -420,7 +420,7 @@ def detect_install_method(project_root: Optional[Path] = None) -> str:
     The supported installs self-identify via the code-scoped stamp:
       - the curl installer (scripts/install.sh, the README/website install
         command) git-clones the repo and stamps ``git`` next to the code;
-      - the published ``nousresearch/hercules-agent`` image bakes a ``docker``
+      - the published ``ghcr.io/mintoriakamoto/hercules`` image bakes a ``docker``
         stamp into ``/opt/hercules`` at build time.
     An unsupported manual install dropped into a container (no stamp) falls
     through to the ``.git``/pip checks and behaves like any off-path install.
@@ -538,14 +538,14 @@ def recommended_update_command_for_method(method: str) -> str:
     if method == "homebrew":
         return "brew upgrade hercules-agent"
     if method == "docker":
-        return "docker pull nousresearch/hercules-agent:latest"
+        return "docker pull ghcr.io/mintoriakamoto/hercules:latest"
     if method == "pip":
-        if is_uv_tool_install():
-            return "uv tool upgrade hercules-agent"
-        import shutil
-        if shutil.which("uv"):
-            return "uv pip install --upgrade hercules-agent"
-        return "pip install --upgrade hercules-agent"
+        # The PyPI update route was removed — updates come only from GitHub.
+        # A pip/pipx/uv-tool install should reinstall from the GitHub repo.
+        return (
+            "pip install --force-reinstall "
+            "'hercules-agent @ git+https://github.com/mintoriakamoto/Hercules.git'"
+        )
     return "hercules update"
 
 
@@ -620,23 +620,23 @@ def format_unsupported_install_warning(method: str) -> str:
 _DOCKER_UPDATE_MESSAGE = """\
 ✗ ``hercules update`` doesn't apply inside the Docker container.
 
-Hercules Agent runs as a published image (nousresearch/hercules-agent), not a
+Hercules Agent runs as a published image (ghcr.io/mintoriakamoto/hercules), not a
 git checkout — the container has no working tree to pull into.  Update by
 pulling a fresh image and restarting your container instead:
 
-  docker pull nousresearch/hercules-agent:latest
+  docker pull ghcr.io/mintoriakamoto/hercules:latest
   # then restart whatever started the container, e.g.:
   docker compose up -d --force-recreate hercules-agent
   # or, for ad-hoc runs, exit the current container and `docker run` again
 
 Verify the new version after restart:
-  docker run --rm nousresearch/hercules-agent:latest --version
+  docker run --rm ghcr.io/mintoriakamoto/hercules:latest --version
 
 Notes:
   • If you pinned a specific tag (e.g. ``:v0.14.0``) the ``:latest`` tag
     won't move your container — pull the newer tag you actually want, or
     switch to ``:latest`` / ``:main`` for rolling updates.  See available
-    tags at https://hub.docker.com/r/nousresearch/hercules-agent/tags
+    tags at https://github.com/mintoriakamoto/Hercules/pkgs/container/hercules
   • Your config and session history live under ``$HERCULES_HOME`` (``/opt/data``
     in the container, typically bind-mounted from the host) and persist
     across image upgrades — re-pulling doesn't lose any state.
@@ -3744,7 +3744,7 @@ OPTIONAL_ENV_VARS = {
         "advanced": True,
     },
     "FIRECRAWL_GATEWAY_URL": {
-        "description": "Exact Firecrawl tool-gateway origin override for Nous Subscribers only (optional)",
+        "description": "Exact Firecrawl tool-gateway origin override (optional)",
         "prompt": "Firecrawl gateway URL (leave empty to derive from domain)",
         "url": None,
         "password": False,
@@ -3752,7 +3752,7 @@ OPTIONAL_ENV_VARS = {
         "advanced": True,
     },
     "TOOL_GATEWAY_DOMAIN": {
-        "description": "Shared tool-gateway domain suffix for Nous Subscribers only, used to derive vendor hosts, e.g. nousresearch.com -> firecrawl-gateway.nousresearch.com",
+        "description": "Shared tool-gateway domain suffix, used to derive vendor hosts, e.g. example.com -> firecrawl-gateway.example.com",
         "prompt": "Tool-gateway domain suffix",
         "url": None,
         "password": False,
@@ -3760,7 +3760,7 @@ OPTIONAL_ENV_VARS = {
         "advanced": True,
     },
     "TOOL_GATEWAY_SCHEME": {
-        "description": "Shared tool-gateway URL scheme for Nous Subscribers only, used to derive vendor hosts (`https` by default, set `http` for local gateway testing)",
+        "description": "Shared tool-gateway URL scheme, used to derive vendor hosts (`https` by default, set `http` for local gateway testing)",
         "prompt": "Tool-gateway URL scheme",
         "url": None,
         "password": False,
@@ -3768,7 +3768,7 @@ OPTIONAL_ENV_VARS = {
         "advanced": True,
     },
     "TOOL_GATEWAY_USER_TOKEN": {
-        "description": "Explicit Nous Subscriber access token for tool-gateway requests (optional; otherwise read from the Hercules auth store)",
+        "description": "Explicit tool-gateway access token (optional; otherwise read from the Hercules auth store)",
         "prompt": "Tool-gateway user token",
         "url": None,
         "password": True,

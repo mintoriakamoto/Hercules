@@ -32,7 +32,7 @@ display:
 
 | Skin | Description | Agent branding | Visual character |
 |------|-------------|----------------|------------------|
-| `default` | Classic Hercules — gold and kawaii | `Hercules Agent` | Warm gold borders, cornsilk text, kawaii faces in spinners. The familiar caduceus banner. Clean and inviting. |
+| `default` | Classic Hercules — forge and kawaii | `Hercules Agent` | Molten-amber borders, cornsilk text, kawaii faces in spinners. The Pillars of Hercules banner. Clean and inviting. |
 | `ares` | War-god theme — crimson and bronze | `Ares Agent` | Deep crimson borders with bronze accents. Aggressive spinner verbs ("forging", "marching", "tempering steel"). Custom sword-and-shield ASCII art banner. |
 | `mono` | Monochrome — clean grayscale | `Hercules Agent` | All grays — no color. Borders are `#555555`, text is `#c9d1d9`. Ideal for minimal terminal setups or screen recordings. |
 | `slate` | Cool blue — developer-focused | `Hercules Agent` | Royal blue borders (`#4169e1`), soft blue text. Calm and professional. No custom spinner — uses default faces. |
@@ -50,19 +50,19 @@ Controls all color values throughout the CLI. Values are hex color strings.
 
 | Key | Description | Default (`default` skin) |
 |-----|-------------|--------------------------|
-| `banner_border` | Panel border around the startup banner | `#CD7F32` (bronze) |
-| `banner_title` | Title text color in the banner | `#FFD700` (gold) |
-| `banner_accent` | Section headers in the banner (Available Tools, etc.) | `#FFBF00` (amber) |
-| `banner_dim` | Muted text in the banner (separators, secondary labels) | `#B8860B` (dark goldenrod) |
+| `banner_border` | Panel border around the startup banner | `#C73E3A` (bronze) |
+| `banner_title` | Title text color in the banner | `#F7B23B` (gold) |
+| `banner_accent` | Section headers in the banner (Available Tools, etc.) | `#E8712E` (amber) |
+| `banner_dim` | Muted text in the banner (separators, secondary labels) | `#8E2B3F` (dark goldenrod) |
 | `banner_text` | Body text in the banner (tool names, skill names) | `#FFF8DC` (cornsilk) |
-| `ui_accent` | General UI accent color (highlights, active elements) | `#FFBF00` |
+| `ui_accent` | General UI accent color (highlights, active elements) | `#E8712E` |
 | `ui_label` | UI labels and tags | `#4dd0e1` (teal) |
 | `ui_ok` | Success indicators (checkmarks, completion) | `#4caf50` (green) |
 | `ui_error` | Error indicators (failures, blocked) | `#ef5350` (red) |
 | `ui_warn` | Warning indicators (caution, approval prompts) | `#ffa726` (orange) |
 | `prompt` | Interactive prompt text color | `#FFF8DC` |
-| `input_rule` | Horizontal rule above the input area | `#CD7F32` |
-| `response_border` | Border around the agent's response box (ANSI escape) | `#FFD700` |
+| `input_rule` | Horizontal rule above the input area | `#C73E3A` |
+| `response_border` | Border around the agent's response box (ANSI escape) | `#F7B23B` |
 | `session_label` | Session label color | `#DAA520` |
 | `session_border` | Session ID dim border color | `#8B8682` |
 | `status_bar_bg` | Background color for the TUI status / usage bar | `#1a1a2e` |
@@ -106,7 +106,7 @@ Text strings used throughout the CLI interface.
 | `tool_prefix` | string | Character prefixed to tool output lines in the CLI | `┊` |
 | `tool_emojis` | dict | Per-tool emoji overrides for spinners and progress (`{tool_name: emoji}`) | `{}` |
 | `banner_logo` | string | Rich-markup ASCII art logo (replaces the default HERCULES_AGENT banner) | `""` |
-| `banner_hero` | string | Rich-markup hero art (replaces the default caduceus art) | `""` |
+| `banner_hero` | string | Rich-markup hero art (replaces the default Pillars of Hercules art) | `""` |
 
 ## Custom skins
 
@@ -123,19 +123,19 @@ name: mytheme
 description: My custom theme
 
 colors:
-  banner_border: "#CD7F32"
-  banner_title: "#FFD700"
-  banner_accent: "#FFBF00"
-  banner_dim: "#B8860B"
+  banner_border: "#C73E3A"
+  banner_title: "#F7B23B"
+  banner_accent: "#E8712E"
+  banner_dim: "#8E2B3F"
   banner_text: "#FFF8DC"
-  ui_accent: "#FFBF00"
+  ui_accent: "#E8712E"
   ui_label: "#4dd0e1"
   ui_ok: "#4caf50"
   ui_error: "#ef5350"
   ui_warn: "#ffa726"
   prompt: "#FFF8DC"
-  input_rule: "#CD7F32"
-  response_border: "#FFD700"
+  input_rule: "#C73E3A"
+  response_border: "#F7B23B"
   session_label: "#DAA520"
   session_border: "#8B8682"
   status_bar_bg: "#1a1a2e"
@@ -182,9 +182,9 @@ tool_emojis:
 
 # Custom ASCII art banners (optional, Rich markup supported)
 # banner_logo: |
-#   [bold #FFD700] MY AGENT [/]
+#   [bold #F7B23B] MY AGENT [/]
 # banner_hero: |
-#   [#FFD700]  Custom art here  [/]
+#   [#F7B23B]  Custom art here  [/]
 ```
 
 ### Minimal custom skin example

@@ -1,8 +1,8 @@
-# Hercules Desktop ☤
+# Hercules Desktop 🦁
 
 <p align="center">
-  <a href="https://github.com/mintoriakamoto/Hercules/releases"><img src="https://img.shields.io/badge/Download-macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-FFD700?style=for-the-badge" alt="Download"></a>
-  <a href="https://hercules-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-hercules--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
+  <a href="https://github.com/mintoriakamoto/Hercules/releases"><img src="https://img.shields.io/badge/Download-macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-F7B23B?style=for-the-badge" alt="Download"></a>
+  <a href="https://github.com/mintoriakamoto/Hercules/tree/main/website/docs/"><img src="https://img.shields.io/badge/Docs-hercules--agent.nousresearch.com-F7B23B?style=for-the-badge" alt="Documentation"></a>
   <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://github.com/mintoriakamoto/Hercules/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
 </p>
@@ -34,7 +34,7 @@ It builds and launches the GUI against your existing install — same config, ke
 
 ### Prebuilt installers
 
-Prebuilt installers are built and distributed via [the Hercules Desktop website.](https://hercules-agent.nousresearch.com/).
+Prebuilt installers are built and distributed via [the Hercules Desktop website.](https://github.com/mintoriakamoto/Hercules/).
 
 ---
 
@@ -191,7 +191,7 @@ Remove-Item -Recurse -Force "$env:LOCALAPPDATA\hercules\hercules-agent\venv"
 ## Community
 
 - 💬 [Discord](https://discord.gg/NousResearch)
-- 📖 [Documentation](https://hercules-agent.nousresearch.com/docs/)
+- 📖 [Documentation](https://github.com/mintoriakamoto/Hercules/tree/main/website/docs/)
 - 🐛 [Issues](https://github.com/mintoriakamoto/Hercules/issues)
 
 ---

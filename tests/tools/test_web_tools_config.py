@@ -126,16 +126,30 @@ class TestFirecrawlClientConfig:
                         api_url="https://firecrawl-gateway.localhost:3009",
                     )
 
-    def test_default_gateway_domain_targets_nous_production_origin(self):
-        """Default gateway origin should point at the Firecrawl vendor hostname."""
-        with patch("tools.web_tools._read_nous_access_token", return_value="nous-token"):
-            with patch("tools.web_tools.Firecrawl") as mock_fc:
-                from tools.web_tools import _get_firecrawl_client
-                _get_firecrawl_client()
-                mock_fc.assert_called_once_with(
-                    api_key="nous-token",
-                    api_url="https://firecrawl-gateway.nousresearch.com",
-                )
+    def test_gateway_domain_uses_operator_configured_domain(self):
+        """With TOOL_GATEWAY_DOMAIN set the gateway targets that domain.
+
+        There is no built-in Nous default anymore — the domain must be
+        configured by the operator.
+        """
+        with patch.dict(os.environ, {"TOOL_GATEWAY_DOMAIN": "example.com"}, clear=False):
+            with patch("tools.web_tools._read_nous_access_token", return_value="nous-token"):
+                with patch("tools.web_tools.Firecrawl") as mock_fc:
+                    from tools.web_tools import _get_firecrawl_client
+                    _get_firecrawl_client()
+                    mock_fc.assert_called_once_with(
+                        api_key="nous-token",
+                        api_url="https://firecrawl-gateway.example.com",
+                    )
+
+    def test_no_builtin_nous_gateway_default(self):
+        """Without a configured domain there is no gateway origin (no Nous route)."""
+        from tools.managed_tool_gateway import build_vendor_gateway_url
+
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("TOOL_GATEWAY_DOMAIN", None)
+            os.environ.pop("FIRECRAWL_GATEWAY_URL", None)
+            assert build_vendor_gateway_url("firecrawl") == ""
 
     def test_nous_auth_token_respects_hercules_home_override(self, tmp_path):
         """Auth lookup should read from HERCULES_HOME/auth.json, not ~/.hercules/auth.json."""
@@ -630,9 +644,12 @@ class TestCheckWebApiKey:
             assert check_web_api_key() is True
 
     def test_tool_gateway_returns_true(self):
-        with patch("tools.web_tools._peek_nous_access_token", return_value="nous-token"):
-            from tools.web_tools import check_web_api_key
-            assert check_web_api_key() is True
+        # The managed gateway now requires an operator-configured domain (no
+        # built-in Nous default), so set one for the gateway to resolve.
+        with patch.dict(os.environ, {"TOOL_GATEWAY_DOMAIN": "example.com"}, clear=False):
+            with patch("tools.web_tools._peek_nous_access_token", return_value="nous-token"):
+                from tools.web_tools import check_web_api_key
+                assert check_web_api_key() is True
 
     def test_configured_backend_must_match_available_provider(self):
         with patch("tools.web_tools._load_web_config", return_value={"backend": "parallel"}):

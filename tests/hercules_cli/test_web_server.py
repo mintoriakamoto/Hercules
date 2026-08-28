@@ -532,6 +532,7 @@ class TestWebServerEndpoints:
         assert config_resp.status_code == 200
         assert config_resp.json()["setup"]["external_dependencies"] == byterover_setup["external_dependencies"]
 
+
     def test_memory_status_reports_honcho_needs_config_after_dependency_setup(self, monkeypatch):
         import hercules_cli.web_server as web_server
 
@@ -594,6 +595,7 @@ class TestWebServerEndpoints:
             ["brv", "--version"],
         ]
         assert calls[-1][0] == ["brv", "--version"]
+
 
     def test_post_unknown_memory_provider_setup_returns_404(self):
         resp = self.client.post("/api/memory/providers/nope/setup", json={"values": {}})

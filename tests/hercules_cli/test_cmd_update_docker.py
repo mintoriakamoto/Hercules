@@ -42,7 +42,7 @@ def test_cmd_update_in_docker_prints_guidance_and_exits(
     # Spot-check the key guidance — exhaustive wording is locked in by the
     # config-module test below to keep these CLI tests resilient to copy edits.
     assert "doesn't apply inside the Docker container" in out
-    assert "docker pull nousresearch/hercules-agent:latest" in out
+    assert "docker pull ghcr.io/mintoriakamoto/hercules:latest" in out
 
     # No git invocations — the early-return must beat every git command.
     git_calls = [c for c in mock_run.call_args_list if c.args and c.args[0] and "git" in str(c.args[0][0])]
@@ -62,7 +62,7 @@ def test_cmd_update_check_in_docker_prints_guidance_and_exits(
     assert excinfo.value.code == 1
     out = capsys.readouterr().out
     assert "doesn't apply inside the Docker container" in out
-    assert "docker pull nousresearch/hercules-agent:latest" in out
+    assert "docker pull ghcr.io/mintoriakamoto/hercules:latest" in out
 
     git_calls = [c for c in mock_run.call_args_list if c.args and c.args[0] and "git" in str(c.args[0][0])]
     assert git_calls == [], f"expected no git calls, got: {git_calls}"
@@ -144,15 +144,14 @@ def test_cmd_update_on_git_install_does_not_print_docker_message(
 
 
 @patch("hercules_cli.config.detect_install_method", return_value="pip")
-@patch("hercules_cli.banner.check_via_pypi", return_value=0)
-def test_cmd_update_check_on_pip_install_still_uses_pypi(
-    _mock_pypi, _mock_method, capsys
+def test_cmd_update_check_on_pip_install_points_at_github(
+    _mock_method, capsys
 ):
-    """PyPI installs route to PyPI check, not the Docker bail-out."""
+    """PyPI route removed: pip installs get GitHub guidance, not the Docker bail-out."""
     _cmd_update_check()
 
     out = capsys.readouterr().out
-    assert "Already up to date" in out
+    assert "github.com/mintoriakamoto/Hercules" in out
     assert "doesn't apply inside the Docker container" not in out
 
 
@@ -171,7 +170,7 @@ def test_format_docker_update_message_contents():
     msg = format_docker_update_message()
 
     # Primary command — the entire reason this message exists.
-    assert "docker pull nousresearch/hercules-agent:latest" in msg
+    assert "docker pull ghcr.io/mintoriakamoto/hercules:latest" in msg
 
     # The four key concepts the message must cover:
     assert "restart" in msg.lower(), "must explain that a restart is required"

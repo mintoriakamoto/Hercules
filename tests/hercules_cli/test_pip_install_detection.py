@@ -31,12 +31,12 @@ def test_managed_install_takes_precedence(tmp_path):
 
 
 def test_recommended_update_command_pip():
-    """Pip installs recommend pip install --upgrade."""
+    """PyPI route removed: pip installs are pointed at the GitHub repo."""
     from hercules_cli.config import recommended_update_command_for_method
     cmd = recommended_update_command_for_method("pip")
-    assert "pip install" in cmd or "uv pip install" in cmd
-    assert "--upgrade" in cmd
-    assert "hercules-agent" in cmd
+    assert "github.com/mintoriakamoto/Hercules" in cmd
+    # Must NOT recommend pulling from PyPI anymore.
+    assert "pypi" not in cmd.lower()
 
 
 def test_stamp_file_takes_precedence(tmp_path):

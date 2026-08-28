@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # ANSI building blocks for conversation display
 # =========================================================================
 
-_GOLD = "\033[1;38;2;255;215;0m"  # True-color #FFD700 bold
+_ACCENT = "\033[1;38;2;247;178;59m"  # True-color #F7B23B (molten amber) bold
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
 _RST = "\033[0m"
@@ -61,56 +61,61 @@ def _skin_color(key: str, fallback: str) -> str:
 
 from hercules_cli import __version__ as VERSION, __release_date__ as RELEASE_DATE
 
-HERCULES_AGENT_LOGO = """[bold #FFD700]██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗       █████╗  ██████╗ ███████╗███╗   ██╗████████╗[/]
-[bold #FFD700]██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝[/]
-[#FFBF00]███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║[/]
-[#FFBF00]██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║[/]
-[#CD7F32]██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║[/]
-[#CD7F32]╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝[/]"""
+HERCULES_AGENT_LOGO = """[bold #F7B23B]██   ██ ███████ ██████   ██████ ██    ██ ██      ███████ ███████[/]
+[bold #F7B23B]██   ██ ██      ██   ██ ██      ██    ██ ██      ██      ██[/]
+[#E8712E]███████ █████   ██████  ██      ██    ██ ██      █████   ███████[/]
+[#E8712E]██   ██ ██      ██   ██ ██      ██    ██ ██      ██           ██[/]
+[#C73E3A]██   ██ ███████ ██   ██  ██████  ██████  ███████ ███████ ███████[/]"""
 
-HERCULES_CADUCEUS = """[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⡀⠀⣀⣀⠀⢀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣇⠸⣿⣿⠇⣸⣿⣿⣷⣦⣄⡀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⢀⣠⣴⣶⠿⠋⣩⡿⣿⡿⠻⣿⡇⢠⡄⢸⣿⠟⢿⣿⢿⣍⠙⠿⣶⣦⣄⡀⠀[/]
-[#FFBF00]⠀⠀⠉⠉⠁⠶⠟⠋⠀⠉⠀⢀⣈⣁⡈⢁⣈⣁⡀⠀⠉⠀⠙⠻⠶⠈⠉⠉⠀⠀[/]
-[#FFD700]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣿⡿⠛⢁⡈⠛⢿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFD700]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠿⣿⣦⣤⣈⠁⢠⣴⣿⠿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠻⢿⣿⣦⡉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#FFBF00]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣦⣈⠛⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣴⠦⠈⠙⠿⣦⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#CD7F32]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣤⡈⠁⢤⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠷⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⠑⢶⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠁⢰⡆⠈⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⠈⣡⠞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
-[#B8860B]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]"""
+# Hero mark: the Pillars of Hercules.
+#
+# This replaces the inherited winged-caduceus art — the caduceus is *Hermes'*
+# staff, carried over from the upstream project and never our own emblem. The
+# twin pillars are unmistakably Herculean (the promontories he raised at the
+# strait) and render cleanly in any terminal that already draws the wordmark,
+# since they reuse the same box-drawing and block glyphs.
+HERCULES_PILLARS = """[#F7B23B]   ╔═══════╗   ╔═══════╗[/]
+[#F7B23B]   ╚═╗███╔═╝   ╚═╗███╔═╝[/]
+[#E8712E]     ║███║       ║███║[/]
+[#E8712E]     ║███║       ║███║[/]
+[#E8712E]     ║███║       ║███║[/]
+[#C73E3A]     ║███║       ║███║[/]
+[#C73E3A]   ╔═╝███╚═╗   ╔═╝███╚═╗[/]
+[#8E2B3F]   ╚═══════╝   ╚═══════╝[/]"""
 
 
-# Raw HERCULES-AGENT glyphs (no markup) — fed to the true-color gradient
-# renderer below so every column gets its own hue instead of the old 3-tier
-# per-row banding.
+# Raw HERCULES glyphs (no markup) — fed to the true-color gradient renderer
+# below so every column gets its own hue instead of flat per-row banding.
+#
+# The previous art was drawn in a shadowed outline face and — despite the
+# variable name — actually spelled "HERMES-AGENT", a leftover from the upstream
+# project. This is our own wordmark: a solid, unshadowed block face, five rows
+# instead of six, and 65 columns so it fits an 80-column terminal without wrap.
 HERCULES_AGENT_LOGO_RAW = (
-    "██╗  ██╗███████╗██████╗ ███╗   ███╗███████╗███████╗       █████╗  ██████╗ ███████╗███╗   ██╗████████╗\n"
-    "██║  ██║██╔════╝██╔══██╗████╗ ████║██╔════╝██╔════╝      ██╔══██╗██╔════╝ ██╔════╝████╗  ██║╚══██╔══╝\n"
-    "███████║█████╗  ██████╔╝██╔████╔██║█████╗  ███████╗█████╗███████║██║  ███╗█████╗  ██╔██╗ ██║   ██║\n"
-    "██╔══██║██╔══╝  ██╔══██╗██║╚██╔╝██║██╔══╝  ╚════██║╚════╝██╔══██║██║   ██║██╔══╝  ██║╚██╗██║   ██║\n"
-    "██║  ██║███████╗██║  ██║██║ ╚═╝ ██║███████╗███████║      ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║\n"
-    "╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝      ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝"
+    "██   ██ ███████ ██████   ██████ ██    ██ ██      ███████ ███████\n"
+    "██   ██ ██      ██   ██ ██      ██    ██ ██      ██      ██\n"
+    "███████ █████   ██████  ██      ██    ██ ██      █████   ███████\n"
+    "██   ██ ██      ██   ██ ██      ██    ██ ██      ██           ██\n"
+    "██   ██ ███████ ██   ██  ██████  ██████  ███████ ███████ ███████"
 )
 
-# Gold-spectrum gradient anchors (pale gold → gold → amber → orange-bronze →
-# bronze). Interpolated horizontally, with a small per-row phase shift so the
-# logo reads as a smooth diagonal shimmer rather than flat bands.
+# "Forge" gradient anchors (forge glow → molten amber → ember → forge crimson →
+# quenched iron). Interpolated horizontally with a small per-row phase shift so
+# the logo reads as a smooth diagonal shimmer rather than flat bands.
+#
+# Replaces the inherited gold spectrum: gold was the upstream project's colour,
+# and a heated-metal ramp suits a project named for strength and labour.
 _GRADIENT_ANCHORS = (
-    (0xFF, 0xF6, 0xC2),
-    (0xFF, 0xD7, 0x00),
-    (0xFF, 0xB0, 0x00),
-    (0xE8, 0x89, 0x2B),
-    (0xCD, 0x7F, 0x32),
+    (0xFF, 0xE8, 0xB8),
+    (0xF7, 0xB2, 0x3B),
+    (0xE8, 0x71, 0x2E),
+    (0xC7, 0x3E, 0x3A),
+    (0x8E, 0x2B, 0x3F),
 )
 
 
 def _gradient_rgb(t: float) -> tuple[int, int, int]:
-    """Map t in [0,1] onto the gold anchor palette (piecewise-linear)."""
+    """Map t in [0,1] onto the forge anchor palette (piecewise-linear)."""
     if t <= 0:
         return _GRADIENT_ANCHORS[0]
     if t >= 1:
@@ -128,7 +133,7 @@ def _gradient_rgb(t: float) -> tuple[int, int, int]:
 
 
 def _gradient_line_markup(line: str, row: int, nrows: int) -> str:
-    """Return rich markup for one logo line with a per-column gold gradient.
+    """Return rich markup for one logo line with a per-column forge gradient.
 
     Consecutive characters that quantize to the same hue are coalesced into a
     single ``[#rrggbb]run[/]`` span to keep the markup small; blank columns are
@@ -183,7 +188,7 @@ def _should_animate_banner() -> bool:
 
 
 def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
-    """Print the true-color gradient HERCULES-AGENT logo + mintoriakamoto subtitle.
+    """Print the true-color gradient HERCULES wordmark + mintoriakamoto subtitle.
 
     When *animate* is None the decision is made by :func:`_should_animate_banner`.
     The animation is a fast top-to-bottom reveal (~0.3s total) and is a no-op on
@@ -198,7 +203,7 @@ def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
         skin_logo = None
     if skin_logo:
         console.print(skin_logo)
-        console.print("[dim #CD7F32]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
+        console.print("[dim #C73E3A]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
         return
 
     if animate is None:
@@ -209,7 +214,7 @@ def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
         console.print(_gradient_line_markup(line, row, nrows))
         if animate:
             time.sleep(0.045)
-    console.print("[dim #CD7F32]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
+    console.print("[dim #C73E3A]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
 
 
 # =========================================================================
@@ -378,46 +383,12 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
     return None
 
 
-def _version_tuple(v: str) -> tuple[int, ...]:
-    """Parse '0.13.0' into (0, 13, 0) for comparison. Non-numeric segments become 0."""
-    parts = []
-    for segment in v.split("."):
-        try:
-            parts.append(int(segment))
-        except ValueError:
-            parts.append(0)
-    return tuple(parts)
-
-
-def _fetch_pypi_latest(package: str = "hercules-agent") -> Optional[str]:
-    """Fetch the latest version of a package from PyPI. Returns None on failure."""
-    try:
-        import urllib.request
-        url = f"https://pypi.org/pypi/{package}/json"
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read())
-            return data.get("info", {}).get("version")
-    except Exception:
-        return None
-
-
-def check_via_pypi() -> Optional[int]:
-    """Compare installed version against PyPI latest.
-
-    Returns 0 if up-to-date, 1 if behind, None on failure.
-    """
-    latest = _fetch_pypi_latest()
-    if latest is None:
-        return None
-    if latest == VERSION:
-        return 0
-    try:
-        if _version_tuple(latest) > _version_tuple(VERSION):
-            return 1
-        return 0
-    except Exception:
-        return 1 if latest != VERSION else 0
+# The PyPI update route (fetch latest version of `hercules-agent` from
+# pypi.org) was removed: update signalling flows only through the project's
+# own GitHub repo (github.com/mintoriakamoto/Hercules). Non-git installs no
+# longer version-check over the network — see the no-git branch in
+# ``check_for_updates`` (returns None) and the unsupported-install guidance in
+# ``hercules_cli.config``.
 
 
 def check_for_updates() -> Optional[int]:
@@ -482,7 +453,10 @@ def check_for_updates() -> Optional[int]:
         if not (repo_dir / ".git").exists():
             repo_dir = hercules_home / "hercules-agent"
         if not (repo_dir / ".git").exists():
-            behind = check_via_pypi()
+            # No git checkout (pip/wheel install). The PyPI version-check route
+            # was removed — update signalling flows only through the GitHub repo
+            # — so there is nothing to check here. Return None (no badge).
+            behind = None
         else:
             behind = _check_via_local_git(repo_dir)
 
@@ -656,8 +630,32 @@ _update_result: Optional[int] = None
 _update_check_done = threading.Event()
 
 
+def auto_update_check_enabled() -> bool:
+    """Whether Hercules may contact the network on its own to check for updates.
+
+    Default: OFF. Hercules does NOT phone home. The automatic startup
+    update-check (a ``git ls-remote`` / ``git fetch`` / PyPI request fired on
+    every launch) is disabled unless the operator explicitly opts in by setting
+    ``HERCULES_UPDATE_CHECK`` to a truthy value (``1``/``true``/``yes``/``on``).
+
+    This does not affect the user-initiated ``hercules update`` command or
+    ``hercules version --check-updates`` — those are explicit and always work.
+    """
+    val = os.environ.get("HERCULES_UPDATE_CHECK", "").strip().lower()
+    return val in {"1", "true", "yes", "on"}
+
+
 def prefetch_update_check():
-    """Kick off update check in a background daemon thread."""
+    """Kick off update check in a background daemon thread.
+
+    No-op unless the operator opted in via ``HERCULES_UPDATE_CHECK`` (see
+    ``auto_update_check_enabled``). By default Hercules performs no autonomous
+    network call at startup; the result stays ``None`` and the ``done`` event is
+    set immediately so ``get_update_result`` never blocks.
+    """
+    if not auto_update_check_enabled():
+        _update_check_done.set()
+        return
     def _run():
         global _update_result
         _update_result = check_for_updates()
@@ -711,7 +709,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
                          get_toolset_for_tool=None,
                          context_length: int = None,
                          provider: str = None):
-    """Build and print a welcome banner with caduceus on left and info on right.
+    """Build and print a welcome banner with the pillars on left and info on right.
 
     Args:
         console: Rich Console instance.
@@ -767,19 +765,19 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     layout_table.add_column("right", justify="left")
 
     # Resolve skin colors once for the entire banner
-    accent = _skin_color("banner_accent", "#FFBF00")
-    dim = _skin_color("banner_dim", "#B8860B")
+    accent = _skin_color("banner_accent", "#E8712E")
+    dim = _skin_color("banner_dim", "#8E2B3F")
     text = _skin_color("banner_text", "#FFF8DC")
     session_color = _skin_color("session_border", "#8B8682")
 
-    # Use skin's custom caduceus art if provided
+    # Use skin's custom hero art if provided
     try:
         from hercules_cli.skin_engine import get_active_skin
         _bskin = get_active_skin()
-        _hero = _bskin.banner_hero if hasattr(_bskin, 'banner_hero') and _bskin.banner_hero else HERCULES_CADUCEUS
+        _hero = _bskin.banner_hero if hasattr(_bskin, 'banner_hero') and _bskin.banner_hero else HERCULES_PILLARS
     except Exception:
         _bskin = None
-        _hero = HERCULES_CADUCEUS
+        _hero = HERCULES_PILLARS
     left_lines = ["", _hero, ""]
     if (provider or "").strip().lower() == "moa":
         # MoA virtual provider: ``model`` is a preset name. Show the preset and
@@ -1039,8 +1037,8 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     right_content = "\n".join(right_lines)
     layout_table.add_row(left_content, right_content)
 
-    title_color = _skin_color("banner_title", "#FFD700")
-    border_color = _skin_color("banner_border", "#CD7F32")
+    title_color = _skin_color("banner_title", "#F7B23B")
+    border_color = _skin_color("banner_border", "#C73E3A")
     version_label = format_banner_version_label()
     release_info = get_latest_release_tag()
     if release_info:

@@ -51,7 +51,7 @@ describe('DEFAULT_THEME', () => {
   it('has color palette', async () => {
     const { DEFAULT_THEME } = await importThemeWithCleanEnv()
 
-    expect(DEFAULT_THEME.color.primary).toBe('#FFD700')
+    expect(DEFAULT_THEME.color.primary).toBe('#F7B23B')
     expect(DEFAULT_THEME.color.error).toBe('#ef5350')
   })
 })
@@ -60,10 +60,10 @@ describe('LIGHT_THEME', () => {
   it('avoids bright-yellow accents unreadable on white backgrounds (#11300)', async () => {
     const { LIGHT_THEME } = await importThemeWithCleanEnv()
 
-    expect(LIGHT_THEME.color.primary).not.toBe('#FFD700')
-    expect(LIGHT_THEME.color.accent).not.toBe('#FFBF00')
-    expect(LIGHT_THEME.color.muted).not.toBe('#B8860B')
-    expect(LIGHT_THEME.color.statusWarn).not.toBe('#FFD700')
+    expect(LIGHT_THEME.color.primary).not.toBe('#F7B23B')
+    expect(LIGHT_THEME.color.accent).not.toBe('#E8712E')
+    expect(LIGHT_THEME.color.muted).not.toBe('#8E2B3F')
+    expect(LIGHT_THEME.color.statusWarn).not.toBe('#F7B23B')
   })
 
   it('keeps the same shape as DARK_THEME', async () => {
@@ -268,19 +268,19 @@ describe('fromSkin', () => {
 
     const theme = fromSkin(
       {
-        banner_accent: '#FFBF00',
-        banner_border: '#CD7F32',
-        banner_dim: '#B8860B',
+        banner_accent: '#E8712E',
+        banner_border: '#C73E3A',
+        banner_dim: '#8E2B3F',
         banner_text: '#FFF8DC',
-        banner_title: '#FFD700',
+        banner_title: '#F7B23B',
         prompt: '#FFF8DC'
       },
       {}
     )
 
-    expect(theme.color.primary).toBe('#FFD700')
-    expect(theme.color.accent).toBe('#FFBF00')
-    expect(theme.color.border).toBe('#CD7F32')
+    expect(theme.color.primary).toBe('#F7B23B')
+    expect(theme.color.accent).toBe('#E8712E')
+    expect(theme.color.border).toBe('#C73E3A')
     expect(theme.color.muted).toBe('ansi256(245)')
     expect(theme.color.text).toBe('ansi256(136)')
     expect(theme.color.prompt).toBe('ansi256(136)')
