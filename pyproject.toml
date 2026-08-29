@@ -306,7 +306,13 @@ all = [
 
 [project.scripts]
 hercules = "hercules_cli.main:main"
+# `hermes` is a full alias for `hercules` (same entry point). The project was
+# renamed Hermes -> Hercules; keeping the old command means `hermes update`
+# still connects, pulls, and updates from this GitHub repo for anyone who
+# learned the tool under its former name.
+hermes = "hercules_cli.main:main"
 hercules-agent = "run_agent:main"
+hermes-agent = "run_agent:main"
 hercules-acp = "acp_adapter.entry:main"
 
 [tool.setuptools]

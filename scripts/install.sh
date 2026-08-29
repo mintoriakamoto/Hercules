@@ -1678,6 +1678,20 @@ EOF
     chmod +x "$command_link_dir/hercules"
     log_success "Installed hercules launcher → $command_link_display_dir/hercules"
 
+    # `hermes` is the pre-rename command name (Hermes -> Hercules). Install an
+    # identical shim so `hermes update` (and every other subcommand) keeps
+    # working wherever Hercules is installed — it execs the same binary, so it
+    # connects, pulls, and updates from this repo exactly like `hercules`.
+    rm -f "$command_link_dir/hermes"
+    cat > "$command_link_dir/hermes" <<EOF
+#!/usr/bin/env bash
+unset PYTHONPATH
+unset PYTHONHOME
+exec "$HERCULES_BIN" "\$@"
+EOF
+    chmod +x "$command_link_dir/hermes"
+    log_success "Installed hermes alias → $command_link_display_dir/hermes"
+
     if [ "$DISTRO" = "termux" ]; then
         export PATH="$command_link_dir:$PATH"
         log_info "$command_link_display_dir is the native Termux command path"
