@@ -29,26 +29,11 @@ class CustomProfile(ProviderProfile):
         extra_body: dict[str, Any] = {}
         top_level: dict[str, Any] = {}
 
-        # Ollama context window
         if ollama_num_ctx:
             options = extra_body.get("options", {})
             options["num_ctx"] = ollama_num_ctx
             extra_body["options"] = options
 
-        # Reasoning / thinking control for custom OpenAI-compatible endpoints
-        # (GLM-5.2 on Volcengine ARK, vLLM, Ollama, llama.cpp, …).
-        #
-        #   - disabled  → extra_body.think = False (Ollama's thinking-off flag)
-        #   - enabled + effort set → TOP-LEVEL reasoning_effort string, the
-        #     format GLM-5.2/ARK and other OpenAI-compatible reasoning APIs
-        #     expect (GLM documents "high" and "max"; "max" is its default).
-        #   - enabled + no effort  → omit both, so the endpoint applies its own
-        #     server-side default (do NOT force a level the user didn't pick).
-        #
-        # We deliberately do NOT emit ``think=True`` on enable: it is an
-        # Ollama-only flag and thinking is already server-default-on for these
-        # backends, so forcing it risks a 400 on GLM/vLLM endpoints that don't
-        # recognize it. Mirrors the DeepSeek/Zai profile precedent.
         if reasoning_config and isinstance(reasoning_config, dict):
             _effort = (reasoning_config.get("effort") or "").strip().lower()
             _enabled = reasoning_config.get("enabled", True)
@@ -66,7 +51,6 @@ class CustomProfile(ProviderProfile):
         base_url: str | None = None,
         timeout: float = 8.0,
     ) -> list[str] | None:
-        """Custom/Ollama: base_url is user-configured; fetch if set."""
         if not (base_url or self.base_url):
             return None
         return super().fetch_models(api_key=api_key, base_url=base_url, timeout=timeout)
@@ -82,12 +66,8 @@ custom = CustomProfile(
         "llama.cpp",
         "llama-cpp",
     ),
-    env_vars=(),  # No fixed key — custom endpoint
-    base_url="",  # User-configured
-    # Without this, no max_tokens is sent and Ollama falls back to its internal
-    # num_predict=128, truncating responses after a few tokens (#39281). This is
-    # only a floor used when the user hasn't set model.max_tokens — they can
-    # override per-model — so we set it generously rather than lowballing it.
+    env_vars=(),
+    base_url="",
     default_max_tokens=65536,
 )
 
