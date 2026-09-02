@@ -1,26 +1,25 @@
-from hercules_cli.cooklabs_gateway import CONTROL_GATEWAY, INFERENCE_GATEWAY, apply_env, format_status, status
+from hercules_cli.cooklabs_gateway import (
+    BLOCKED_DEFAULT_DOMAINS,
+    TENSELERATE_BASE,
+    apply_env,
+    current,
+    tool_gateway_domain,
+)
 
 
-def test_defaults_are_loopback_not_nous():
-    assert CONTROL_GATEWAY.startswith("http://127.0.0.1")
-    assert ":8645" in CONTROL_GATEWAY
-    assert INFERENCE_GATEWAY.startswith("http://127.0.0.1")
-    assert "8080" in INFERENCE_GATEWAY
-    assert "nousresearch" not in CONTROL_GATEWAY
-    assert "nousresearch" not in INFERENCE_GATEWAY
-
-
-def test_apply_env_strips_nous_domain(monkeypatch):
+def test_nous_domains_blocked(monkeypatch):
     monkeypatch.setenv("TOOL_GATEWAY_DOMAIN", "nousresearch.com")
-    apply_env()
-    import os
-
-    assert os.environ.get("TOOL_GATEWAY_DOMAIN", "") != "nousresearch.com"
+    assert tool_gateway_domain() == ""
+    assert "nousresearch.com" in BLOCKED_DEFAULT_DOMAINS
 
 
-def test_status_shape():
-    data = status()
-    assert data["owner"] == "cooklabs"
-    assert data["nous_tool_gateway"] is False
-    text = format_status(data)
-    assert "not Nous" in text
+def test_default_inference_is_tenselerate(monkeypatch):
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("TENSELERATE_BASE_URL", raising=False)
+    assert current().inference == TENSELERATE_BASE.rstrip("/")
+
+
+def test_apply_clears_nous_tool_domain(monkeypatch):
+    monkeypatch.setenv("TOOL_GATEWAY_DOMAIN", "portal.nousresearch.com")
+    gw = apply_env()
+    assert gw.tool_domain == ""
