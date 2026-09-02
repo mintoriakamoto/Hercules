@@ -1,3 +1,11 @@
+---
+name: cooklabs-personas
+description: Cooklabs Read/Coder/Developer conversation modes for first-party Hercules work. Use when auditing repos (read), patching code (coder), or running install/doctor/E2E (developer).
+version: 1.0.0
+author: Cooklabs
+license: MIT
+---
+
 # Cooklabs personas
 
 Use as conversation mode, not separate repos.
