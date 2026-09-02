@@ -1,0 +1,5 @@
+name: tenselerate-provider
+kind: model-provider
+version: 1.0.0
+description: Cooklabs TENSELERATE — local llama-server SVMI on :8080
+author: Cooklabs
