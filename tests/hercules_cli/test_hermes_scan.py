@@ -1,5 +1,4 @@
-from hercules_cli.hermes import format_report, is_cooklabs_placeholder, scan
-from hercules_cli.hermes import canonical_not_nous, MARKERS
+from hercules_cli.hermes import MARKERS, format_report, scan
 
 
 def test_markers_include_requested_trees():

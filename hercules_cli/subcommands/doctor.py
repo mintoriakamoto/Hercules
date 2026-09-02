@@ -11,13 +11,10 @@ from typing import Callable
 
 def build_doctor_parser(subparsers, *, cmd_doctor: Callable) -> None:
     """Attach the ``doctor`` subcommand to ``subparsers``."""
-    # =========================================================================
-    # doctor command
-    # =========================================================================
     doctor_parser = subparsers.add_parser(
         "doctor",
-        help="Check configuration and dependencies",
-        description="Diagnose issues with Hercules Agent setup",
+        help="Check configuration, dependencies, and Hermes mesh",
+        description="Diagnose issues with Cooklabs Hercules and list local agents",
     )
     doctor_parser.add_argument(
         "--fix", action="store_true", help="Attempt to fix issues automatically"
@@ -32,4 +29,15 @@ def build_doctor_parser(subparsers, *, cmd_doctor: Callable) -> None:
             "doctor` first to see active advisories and their IDs."
         ),
     )
-    doctor_parser.set_defaults(func=cmd_doctor)
+
+    def _doctor_with_hermes(args):
+        try:
+            from hercules_cli.hermes import format_report, scan
+
+            print(format_report(scan()))
+            print()
+        except Exception as exc:  # mesh must never block doctor
+            print(f"Hermes mesh skipped: {exc}")
+        return cmd_doctor(args)
+
+    doctor_parser.set_defaults(func=_doctor_with_hermes)
