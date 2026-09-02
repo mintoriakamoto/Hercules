@@ -21,7 +21,7 @@ import {
 import { ListRow, SectionHeading, SettingsContent } from './primitives'
 import { UninstallSection } from './uninstall-section'
 
-const RELEASE_NOTES_URL = 'https://github.com/NousResearch/hercules-agent/releases'
+const RELEASE_NOTES_URL = 'https://github.com/mintoriakamoto/Hercules/releases'
 
 function relativeTime(ms: number | undefined, a: Translations['settings']['about']) {
   if (!ms) {
@@ -54,10 +54,6 @@ export function AboutSettings() {
   const checking = useStore($updateChecking)
   const [justChecked, setJustChecked] = useState(false)
 
-  // The version atom is loaded once at app boot, which makes About show a
-  // stale number after a self-update (the running binary is current, the
-  // displayed string is not). Re-read on mount so opening About always
-  // reflects the running build.
   useEffect(() => {
     void refreshDesktopVersion()
   }, [])
