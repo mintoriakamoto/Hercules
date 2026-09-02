@@ -1,8 +1,4 @@
-"""Cooklabs update remote: `hercules update` / `/update` pull from this GitHub repo.
-
-If origin still points at NousResearch (or anything else), retarget it to
-https://github.com/mintoriakamoto/Hercules.git so fetch/pull stay first-party.
-"""
+"""Cooklabs update remote: `hercules update` / `/update` pull from this GitHub repo."""
 
 from __future__ import annotations
 
@@ -36,24 +32,19 @@ def is_cooklabs_remote(url: Optional[str]) -> bool:
     return canonical_github_remote(url) == COOKLABS_CANONICAL
 
 
+def is_ssh(url: Optional[str]) -> bool:
+    value = (url or "").strip().lower()
+    return value.startswith("git@") or value.startswith("ssh://")
+
+
 def preferred_remote_url(current: Optional[str]) -> str:
     if current and is_ssh(current):
         return COOKLABS_SSH
     return COOKLABS_HTTPS
 
 
-def is_ssh(url: Optional[str]) -> bool:
-    value = (url or "").strip().lower()
-    return value.startswith("git@") or value.startswith("ssh://")
-
-
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        capture_output=True,
-        text=True,
-    )
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
 
 
 def origin_url(cwd: Path) -> Optional[str]:
@@ -64,7 +55,6 @@ def origin_url(cwd: Path) -> Optional[str]:
 
 
 def ensure_cooklabs_origin(cwd: Path | None = None) -> str:
-    """Make origin the Cooklabs Hercules repo. Returns the URL in use."""
     if cwd is None:
         from hercules_constants import PROJECT_ROOT
 
@@ -75,16 +65,8 @@ def ensure_cooklabs_origin(cwd: Path | None = None) -> str:
     if is_cooklabs_remote(current):
         return current or target
     if current is None:
-        added = _git(cwd, "remote", "add", "origin", target)
-        if added.returncode != 0:
-            _git(cwd, "remote", "set-url", "origin", target)
-        print(f"→ origin set to {target}")
-        return target
-    _git(cwd, "remote", "rename", "origin", "upstream-old")
-    set_url = _git(cwd, "remote", "set-url", "origin", target)
-    if set_url.returncode != 0:
         _git(cwd, "remote", "add", "origin", target)
+    else:
         _git(cwd, "remote", "set-url", "origin", target)
-    print(f"→ origin was {current}")
-    print(f"→ origin now {target} (Cooklabs)")
+    print(f"→ origin → {target}")
     return target
