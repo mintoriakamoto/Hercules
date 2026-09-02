@@ -2,10 +2,10 @@
   "id": "hercules-agent",
   "name": "Hercules Agent",
   "version": "1.0.0",
-  "description": "Self-improving open-source AI agent by Nous Research with ACP editor integration, persistent memory, skills, and rich tool support.",
-  "repository": "https://github.com/NousResearch/hercules-agent",
-  "website": "https://github.com/mintoriakamoto/Hercules/tree/main/website/docs/user-guide/features/acp",
-  "authors": ["Nous Research"],
+  "description": "Cooklabs Hercules — first-party agent harness. Derived from MIT Hercules Agent. Local default is TENSELERATE.",
+  "repository": "https://github.com/mintoriakamoto/Hercules",
+  "website": "https://github.com/mintoriakamoto/Hercules",
+  "authors": ["Cooklabs"],
   "license": "MIT",
   "distribution": {
     "uvx": {
