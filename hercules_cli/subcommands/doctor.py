@@ -13,7 +13,7 @@ def build_doctor_parser(subparsers, *, cmd_doctor: Callable) -> None:
     """Attach the ``doctor`` subcommand to ``subparsers``."""
     doctor_parser = subparsers.add_parser(
         "doctor",
-        help="Check configuration, dependencies, and Hermes mesh",
+        help="Check configuration, dependencies, Hermes mesh, Cooklabs gateway",
         description="Diagnose issues with Cooklabs Hercules and list local agents",
     )
     doctor_parser.add_argument(
@@ -30,14 +30,22 @@ def build_doctor_parser(subparsers, *, cmd_doctor: Callable) -> None:
         ),
     )
 
-    def _doctor_with_hermes(args):
+    def _doctor_with_cooklabs(args):
+        try:
+            from hercules_cli.cooklabs_gateway import apply_env, format_status
+
+            apply_env()
+            print(format_status())
+            print()
+        except Exception as exc:
+            print(f"Cooklabs gateway skipped: {exc}")
         try:
             from hercules_cli.hermes import format_report, scan
 
             print(format_report(scan()))
             print()
-        except Exception as exc:  # mesh must never block doctor
+        except Exception as exc:
             print(f"Hermes mesh skipped: {exc}")
         return cmd_doctor(args)
 
-    doctor_parser.set_defaults(func=_doctor_with_hermes)
+    doctor_parser.set_defaults(func=_doctor_with_cooklabs)
