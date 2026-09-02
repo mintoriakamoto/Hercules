@@ -14,6 +14,8 @@ ICON = ROOT / "acp_registry" / "icon.svg"
 FORBIDDEN_MANIFEST_KEYS = {"schema_version", "display_name"}
 ALLOWED_DISTRIBUTIONS = {"binary", "npx", "uvx"}
 
+COOKLABS_REPO = "https://github.com/mintoriakamoto/Hercules"
+
 
 def _manifest() -> dict:
     return json.loads(MANIFEST.read_text(encoding="utf-8"))
@@ -24,7 +26,7 @@ def _pyproject_version() -> str:
     return data["project"]["version"]
 
 
-def test_agent_json_matches_official_registry_required_fields():
+def test_agent_json_matches_cooklabs_identity():
     data = _manifest()
 
     assert FORBIDDEN_MANIFEST_KEYS.isdisjoint(data)
@@ -32,9 +34,11 @@ def test_agent_json_matches_official_registry_required_fields():
     assert re.fullmatch(r"[a-z][a-z0-9-]*", data["id"])
     assert data["name"] == "Hercules Agent"
     assert data["description"]
-    assert data["repository"] == "https://github.com/NousResearch/hercules-agent"
-    assert data["website"].startswith("https://hercules-agent.nousresearch.com/")
-    assert data["authors"] == ["Nous Research"]
+    assert "Nous Research" not in data["description"]
+    assert data["repository"] == COOKLABS_REPO
+    assert data["website"].startswith("https://github.com/mintoriakamoto/")
+    assert "nousresearch.com" not in data["website"].lower()
+    assert data["authors"] == ["Cooklabs"]
     assert data["license"] == "MIT"
     assert set(data["distribution"]) <= ALLOWED_DISTRIBUTIONS
 
@@ -44,12 +48,10 @@ def test_agent_json_uses_uvx_distribution_without_local_command_fields():
 
     assert set(data["distribution"]) == {"uvx"}
     uvx = data["distribution"]["uvx"]
-    # Schema allows {package, args, env}; we use {package, args}.
     assert set(uvx) <= {"package", "args", "env"}
     assert "package" in uvx
     assert uvx["package"] == f"hercules-agent[acp]=={data['version']}"
     assert uvx["args"] == ["hercules-acp"]
-    # Old command-shape fields must not leak back in.
     assert "type" not in data["distribution"]
     assert "command" not in data["distribution"]
 
@@ -59,8 +61,6 @@ def test_agent_json_version_matches_pyproject():
 
 
 def test_agent_json_pins_uvx_package_to_pyproject_version():
-    """The registry CI rejects ``@latest`` and floating pins; the manifest must
-    always reference the exact PyPI version listed in pyproject.toml."""
     assert _manifest()["distribution"]["uvx"]["package"] == (
         f"hercules-agent[acp]=={_pyproject_version()}"
     )
