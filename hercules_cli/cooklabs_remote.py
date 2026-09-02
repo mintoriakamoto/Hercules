@@ -10,6 +10,9 @@ COOKLABS_HTTPS = "https://github.com/mintoriakamoto/Hercules.git"
 COOKLABS_SSH = "git@github.com:mintoriakamoto/Hercules.git"
 COOKLABS_CANONICAL = "github.com/mintoriakamoto/hercules"
 
+# hercules_cli/ is one level under the checkout root (same as main.PROJECT_ROOT).
+CHECKOUT_ROOT = Path(__file__).resolve().parent.parent
+
 
 def canonical_github_remote(url: Optional[str]) -> str:
     if not url:
@@ -55,11 +58,7 @@ def origin_url(cwd: Path) -> Optional[str]:
 
 
 def ensure_cooklabs_origin(cwd: Path | None = None) -> str:
-    if cwd is None:
-        from hercules_constants import PROJECT_ROOT
-
-        cwd = PROJECT_ROOT
-    cwd = Path(cwd)
+    cwd = Path(cwd) if cwd is not None else CHECKOUT_ROOT
     current = origin_url(cwd)
     target = preferred_remote_url(current)
     if is_cooklabs_remote(current):
