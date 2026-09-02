@@ -11,13 +11,10 @@ from typing import Callable
 
 def build_update_parser(subparsers, *, cmd_update: Callable) -> None:
     """Attach the ``update`` subcommand to ``subparsers``."""
-    # =========================================================================
-    # update command
-    # =========================================================================
     update_parser = subparsers.add_parser(
         "update",
-        help="Update Hercules Agent to the latest version",
-        description="Pull the latest changes from git and reinstall dependencies",
+        help="Update Hercules Agent from github.com/mintoriakamoto/Hercules",
+        description="Pull the latest changes from the Cooklabs GitHub repo and reinstall dependencies",
     )
     update_parser.add_argument(
         "--gateway",
@@ -65,12 +62,19 @@ def build_update_parser(subparsers, *, cmd_update: Callable) -> None:
         "--force",
         action="store_true",
         default=False,
-        help="Windows: proceed with the update even when another hercules.exe is detected. The concurrent process will likely cause WinError 32 warnings and may leave a reboot-deferred .exe replacement. Does NOT bypass the venv-process guard (see --force-venv).",
+        help="Windows: proceed with the update even when another hercules.exe is detected.",
     )
     update_parser.add_argument(
         "--force-venv",
         action="store_true",
         default=False,
-        help="Windows: mutate the venv even while other processes are running from its interpreter (desktop backend, gateway, terminals). Those processes keep native .pyd files locked, so the dependency sync will likely fail partway and strand the install half-updated. Use only if you know the detected holders are false positives.",
+        help="Windows: mutate the venv even while other processes are running from its interpreter.",
     )
-    update_parser.set_defaults(func=cmd_update)
+
+    def _cooklabs_update(args):
+        from hercules_cli.cooklabs_remote import ensure_cooklabs_origin
+
+        ensure_cooklabs_origin()
+        return cmd_update(args)
+
+    update_parser.set_defaults(func=_cooklabs_update)
