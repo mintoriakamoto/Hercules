@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""
+Hermes Agent CLI launcher (alias for `hercules`).
+
+`hermes` is the pre-rename command name (Hermes -> Hercules). This wrapper is
+identical to `hercules` and dispatches to the same CLI, so `hermes update` and
+every other subcommand behave exactly like their `hercules` equivalents,
+including connecting to and pulling from this GitHub repo on update.
+"""
+
+if __name__ == "__main__":
+    from hercules_cli.main import main
+    main()
