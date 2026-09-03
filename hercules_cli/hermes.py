@@ -1,7 +1,8 @@
-"""Hermes — local agent/framework mesh under Cooklabs Hercules.
+"""Cooklabs mesh — Hermes-shaped, Hercules-owned.
 
-Scans the home machine for Claude, OpenCode, OpenClaw, LangChain, pip/venv
-installs and other agent trees. Does not walk the entire disk.
+Nous Hermes Agent layout we honor as a sidecar:
+  ~/.hermes, HERMES_HOME, ~/.hermes/hermes-agent, hermes on PATH
+We do not update from github.com/NousResearch/hermes-agent.
 """
 
 from __future__ import annotations
@@ -12,17 +13,17 @@ import shutil
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable
 
 HOME = Path.home()
+OFFICIAL = "https://github.com/mintoriakamoto/Hercules"
 
-# Name, relative markers under HOME (and cwd), how Hercules talks to it.
 MARKERS: tuple[tuple[str, tuple[str, ...], str], ...] = (
+    ("hermes-home", (".hermes",), "python -m hercules_cli.hermes_migrate"),
+    ("hercules", (".hercules",), "this process"),
     ("claude", (".claude", ".config/claude"), "skills + CLAUDE.md + MCP"),
     ("opencode", (".opencode", ".config/opencode"), "MCP / CLI sidecar"),
     ("openclaw", (".openclaw", ".config/openclaw"), "hercules claw migrate"),
     ("langchain", (".langchain", ".config/langchain"), "import + venv site-packages"),
-    ("hercules", (".hercules",), "this process"),
     ("cursor", (".cursor",), "rules / MCP"),
     ("continue", (".continue",), "config.yaml"),
     ("aider", (".aider",), "CLI sidecar"),
@@ -30,8 +31,25 @@ MARKERS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     ("windsurf", (".codeium", ".windsurf"), "rules sidecar"),
 )
 
+HERMES_NESTED = (
+    "config.yaml",
+    ".env",
+    "state.db",
+    "skills",
+    "hermes-agent",
+    "venvs",
+)
+
 VENV_NAMES = (".venv", "venv", "env", ".env-venv")
-PIP_HINTS = ("langchain", "langgraph", "openai", "anthropic", "claude-agent", "hercules")
+PIP_HINTS = (
+    "langchain",
+    "langgraph",
+    "openai",
+    "anthropic",
+    "claude-agent",
+    "hercules",
+    "hermes-agent",
+)
 
 
 @dataclass
@@ -53,10 +71,13 @@ def _home_hits() -> list[Hit]:
     found: list[Hit] = []
     seen: set[str] = set()
     roots = [HOME, Path.cwd()]
+    extra = os.environ.get("HERMES_HOME", "").strip()
+    if extra:
+        roots.append(Path(extra))
     for kind, rels, how in MARKERS:
         for root in roots:
             for rel in rels:
-                path = root / rel
+                path = (root / rel) if rel else root
                 if not _exists(path):
                     continue
                 key = f"{kind}:{path.resolve()}"
@@ -64,11 +85,25 @@ def _home_hits() -> list[Hit]:
                     continue
                 seen.add(key)
                 found.append(Hit(kind, str(path), "dotdir", how))
+                if kind == "hermes-home" and path.is_dir():
+                    for nest in HERMES_NESTED:
+                        child = path / nest
+                        if _exists(child):
+                            found.append(
+                                Hit(
+                                    f"hermes-{nest}",
+                                    str(child),
+                                    "dotdir",
+                                    "migrate or leave as sidecar",
+                                )
+                            )
     return found
 
 
 def _which_hits() -> list[Hit]:
     bins = {
+        "hermes": "hermes",
+        "hercules": "hercules",
         "claude": "claude",
         "opencode": "opencode",
         "openclaw": "openclaw",
@@ -80,18 +115,11 @@ def _which_hits() -> list[Hit]:
         "pip3": "pip3",
         "uv": "uv",
         "poetry": "poetry",
-        "hercules": "hercules",
     }
     how = {
-        "claude": "CLI sidecar",
-        "opencode": "CLI sidecar",
+        "hermes": "sidecar CLI — do not hermes update (that hits Nous)",
+        "hercules": "this process; hercules update → mintoriakamoto/Hercules",
         "openclaw": "hercules claw migrate",
-        "langchain": "venv import",
-        "pip": "package index",
-        "pip3": "package index",
-        "uv": "package index",
-        "poetry": "package index",
-        "hercules": "this process",
     }
     out: list[Hit] = []
     for kind, name in bins.items():
@@ -103,7 +131,16 @@ def _which_hits() -> list[Hit]:
 
 def _venv_hits(limit: int = 24) -> list[Hit]:
     out: list[Hit] = []
-    search_roots = [Path.cwd(), HOME, HOME / "src", HOME / "dev", HOME / "code", HOME / "projects"]
+    search_roots = [
+        Path.cwd(),
+        HOME,
+        HOME / ".hermes" / "venvs",
+        HOME / ".hercules",
+        HOME / "src",
+        HOME / "dev",
+        HOME / "code",
+        HOME / "projects",
+    ]
     seen: set[str] = set()
     for root in search_roots:
         if not _exists(root) or not root.is_dir():
@@ -131,13 +168,16 @@ def _venv_hits(limit: int = 24) -> list[Hit]:
     return out
 
 
-def _pip_show(venv_python: Path | None = None) -> list[str]:
+def _pip_show() -> list[str]:
     import subprocess
 
-    cmd = [str(venv_python)] if venv_python else [sys.executable]
-    cmd += ["-m", "pip", "freeze"]
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
+        proc = subprocess.run(
+            [sys.executable, "-m", "pip", "freeze"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
     except (OSError, subprocess.TimeoutExpired):
         return []
     if proc.returncode != 0:
@@ -152,13 +192,12 @@ def _pip_show(venv_python: Path | None = None) -> list[str]:
 
 def scan() -> dict:
     hits = _home_hits() + _which_hits() + _venv_hits()
-    pip_hits = [Hit("pip-pkg", n, "freeze", "import from active interpreter") for n in _pip_show()]
-    hits.extend(pip_hits)
+    hits.extend(Hit("pip-pkg", n, "freeze", "import from active interpreter") for n in _pip_show())
     kinds = sorted({h.kind for h in hits})
     return {
         "home": str(HOME),
         "cwd": str(Path.cwd()),
-        "official": "https://github.com/mintoriakamoto/Hercules",
+        "official": OFFICIAL,
         "mesh": "hermes",
         "kinds": kinds,
         "hits": [asdict(h) for h in hits],
@@ -167,26 +206,32 @@ def scan() -> dict:
 
 def format_report(data: dict) -> str:
     lines = [
-        "Hermes mesh (Cooklabs Hercules)",
+        "Hermes mesh (Cooklabs Hercules — Hermes-shaped, not Nous-owned)",
         f"official: {data['official']}",
         f"home: {data['home']}",
         f"kinds: {', '.join(data['kinds']) or '(none)'}",
         "",
     ]
     for h in data["hits"]:
-        lines.append(f"  [{h['kind']:12}] {h['via']:8} {h['path']}")
-        lines.append(f"               hermes: {h['hermes']}")
+        lines.append(f"  [{h['kind']:16}] {h['via']:8} {h['path']}")
+        lines.append(f"                   {h['hermes']}")
     if not data["hits"]:
         lines.append("  (no local agent trees found under HOME / cwd / PATH)")
     lines.append("")
     lines.append("Together: Hercules owns the loop; sidecars stay CLI/MCP.")
+    lines.append("Hermes Agent install → python -m hercules_cli.hermes_migrate")
     lines.append("OpenClaw → hercules claw migrate")
     lines.append("TENSELERATE → http://127.0.0.1:8080/v1")
+    lines.append("update → hercules update (mintoriakamoto/Hercules only)")
     return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in {"migrate", "--migrate"}:
+        from hercules_cli.hermes_migrate import main as migrate_main
+
+        return migrate_main(argv[1:])
     data = scan()
     if argv and argv[0] in {"--json", "json"}:
         print(json.dumps(data, indent=2))
