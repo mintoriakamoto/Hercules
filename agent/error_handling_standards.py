@@ -263,7 +263,7 @@ class RetryableError(RecoverableError):
     pass
 
 
-class TimeoutError(RecoverableError):
+class OperationTimeoutError(RecoverableError):
     """Operation timed out."""
 
     pass

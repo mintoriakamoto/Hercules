@@ -201,7 +201,7 @@ def validate_path(
         raise ValidationError(field, f"invalid path: {e}", path_str) from e
 
     # Validate path constraints
-    if not allow_relative and path.is_relative_to(Path(".")):
+    if not allow_relative and not path.is_absolute():
         raise ValidationError(field, "relative paths not allowed", path_str)
 
     if must_exist and not path.exists():
