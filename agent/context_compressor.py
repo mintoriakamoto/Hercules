@@ -832,7 +832,15 @@ class ContextCompressor(ContextEngine):
         except sqlite3.Error as exc:
             logger.debug("compression failure cooldown lookup failed: %s", exc)
             return None
-        except Exception:
+        except (TypeError, KeyError, AttributeError) as exc:
+            logger.warning(
+                "unexpected error retrieving compression failure cooldown: %s", exc
+            )
+            return None
+        except Exception as exc:
+            logger.exception(
+                "unexpected error retrieving compression failure cooldown: %s", exc
+            )
             return None
         if not state:
             return None

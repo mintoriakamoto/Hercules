@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 from datetime import datetime, timezone
 import base64
 import contextvars
@@ -88,6 +89,19 @@ except Exception:
 
 # Thread pool for running AIAgent (synchronous) in parallel.
 _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="acp-agent")
+
+
+def _shutdown_executor() -> None:
+    """Gracefully shutdown the thread pool executor on process exit."""
+    try:
+        _executor.shutdown(wait=True, timeout=5)
+        logger.debug("ACP thread pool executor shut down gracefully")
+    except Exception as e:
+        logger.warning("error shutting down ACP executor: %s", e)
+
+
+# Register cleanup handler to ensure thread pool is properly shut down
+atexit.register(_shutdown_executor)
 
 # Server-side page size for list_sessions. The ACP ListSessionsRequest schema
 # does not expose a client-side limit, so this is a fixed cap that clients
