@@ -297,7 +297,7 @@ def example_safe_operation():
     @safe_operation("json_load", fallback={})
     def load_config(path: str) -> dict:
         import json
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
 
     result = load_config("config.json")
