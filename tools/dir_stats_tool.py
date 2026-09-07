@@ -131,7 +131,7 @@ def directory_stats_tool(
     # Top 10 largest files
     all_files.sort(key=lambda x: x[1], reverse=True)
     largest_files = [
-        {"path": str(p.relative_to(base_path)), "size_bytes": s}
+        {"path": str(Path(p).relative_to(base_path)), "size_bytes": s}
         for p, s in all_files[:10]
     ]
 
