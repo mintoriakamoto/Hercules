@@ -1,0 +1,253 @@
+# Hercules Unrestricted Mode Configuration
+# Maximizes functionality with all safety checks disabled
+# Use only in isolated or development environments
+#
+# Usage:
+#   cp config.unrestricted.yaml ~/.hercules/config.yaml
+#   hercules run --auto-approve
+
+# ============================================================================
+# AGENT CONFIGURATION
+# ============================================================================
+agent:
+  # Disable all approval gates and prompts
+  approvals:
+    require_confirmation: false
+    require_user_approval: false
+    auto_approve_all: true
+    auto_approve_exec: true
+    auto_approve_patch: true
+    auto_approve_file_operations: true
+    auto_approve_deletion: true
+    auto_approve_network_operations: true
+
+  # Disable output processing and redaction
+  output:
+    redact_credentials: false
+    redact_secrets: false
+    redact_sensitive_data: false
+    redact_api_keys: false
+    redact_passwords: false
+    redact_tokens: false
+    hide_internal_details: false
+
+  # Enable all tools without restriction
+  tools:
+    enable_all: true
+    enabled_toolsets: null  # null means all available
+    skip_capability_validation: true
+    auto_install_tools: true
+
+  # Maximize context and memory
+  context:
+    auto_trim: false
+    compress_history: false
+    max_history_size: unlimited
+    auto_summarize: false
+    keep_full_conversation: true
+
+  # Skills configuration
+  skills:
+    auto_improve: true
+    auto_create: true
+    auto_install: true
+    skip_verification: true
+    disable_skills_guard: true
+    allow_unsigned_skills: true
+    trust_all_skills: true
+
+  # Memory configuration
+  memory:
+    compress_history: false
+    auto_delete_old_sessions: false
+    keep_all_memories: true
+    unlimited_history: true
+
+  # Debug and logging
+  debug: true
+  verbose: true
+  log_level: DEBUG
+  enable_trace_logging: true
+  log_all_operations: true
+
+# ============================================================================
+# TERMINAL BACKEND CONFIGURATION
+# ============================================================================
+terminal:
+  backend: local  # No isolation
+  disable_sandbox: true
+  disable_container_isolation: true
+  force_local_execution: true
+  allow_direct_host_access: true
+
+# ============================================================================
+# GATEWAY CONFIGURATION
+# ============================================================================
+gateway:
+  # Disable authentication and access control
+  security:
+    enforce_allowlist: false
+    require_authentication: false
+    require_authorization: false
+    allow_unauthenticated_access: true
+    disable_access_control: true
+
+  # Disable rate limiting and throttling
+  rate_limiting:
+    disabled: true
+    max_requests: unlimited
+    burst_size: unlimited
+
+  # Enable all platforms without restriction
+  platforms:
+    telegram:
+      enabled: true
+      auto_approve: true
+    discord:
+      enabled: true
+      auto_approve: true
+    slack:
+      enabled: true
+      auto_approve: true
+    matrix:
+      enabled: true
+      auto_approve: true
+
+# ============================================================================
+# SESSION CONFIGURATION
+# ============================================================================
+sessions:
+  # Allow concurrent sessions
+  allow_concurrent: true
+  disable_locking: true
+  skip_lock_validation: true
+  max_concurrent_sessions: unlimited
+
+  # Keep all session data
+  auto_cleanup: false
+  keep_all_sessions: true
+  session_retention: unlimited
+
+# ============================================================================
+# STORAGE CONFIGURATION
+# ============================================================================
+storage:
+  # Keep all data, never delete
+  retention_policy: keep_all
+  auto_delete_logs: false
+  auto_delete_history: false
+  auto_cleanup: false
+  compression: disabled
+
+  # Logging
+  log_rotation: disabled
+  log_retention: unlimited
+
+# ============================================================================
+# NETWORK CONFIGURATION
+# ============================================================================
+network:
+  # Disable security checks
+  verify_ssl: false  # WARNING: Enable for production
+  allow_insecure_transport: true
+  skip_certificate_validation: true
+  allow_self_signed_certs: true
+
+  # Disable timeouts
+  connection_timeout: 3600
+  request_timeout: 3600
+  idle_timeout: 3600
+
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
+features:
+  enable_experimental: true
+  enable_beta: true
+  enable_unstable: true
+  enable_alpha: true
+  experimental_features:
+    unrestricted_mode: true
+    bypass_safety_checks: true
+    developer_mode: true
+    unsafe_operations: true
+
+# ============================================================================
+# PROVIDER CONFIGURATION
+# ============================================================================
+providers:
+  # Unlimited usage of all providers
+  rate_limiting: disabled
+  quota_enforcement: disabled
+  usage_tracking: disabled
+  auto_retry: true
+  max_retries: unlimited
+  retry_backoff: linear
+
+  tenselerate:
+    auto_approve: true
+    unlimited_tokens: true
+
+  anthropic:
+    auto_approve: true
+    unlimited_tokens: true
+
+  openai:
+    auto_approve: true
+    unlimited_tokens: true
+
+# ============================================================================
+# PLUGIN CONFIGURATION
+# ============================================================================
+plugins:
+  auto_load: true
+  auto_install: true
+  skip_verification: true
+  allow_unsigned: true
+  trust_all: true
+  enable_all: true
+
+# ============================================================================
+# RESOURCE LIMITS
+# ============================================================================
+resources:
+  max_tokens: unlimited
+  max_memory: unlimited
+  max_cpu: unlimited
+  max_disk: unlimited
+  max_concurrent_operations: unlimited
+
+  # Disable all constraints
+  enforce_limits: false
+  enforce_quotas: false
+  enforce_throttling: false
+
+# ============================================================================
+# ADVANCED SETTINGS
+# ============================================================================
+advanced:
+  unsafe_mode: true
+  developer_mode: true
+  bypass_safety_checks: true
+  allow_unsafe_operations: true
+  disable_validation: true
+  skip_checks: true
+  allow_dangerous_operations: true
+
+  # Performance optimization (max speed)
+  optimize_for_speed: true
+  disable_logging_overhead: true
+  disable_validation_overhead: true
+  disable_safety_overhead: true
+
+# ============================================================================
+# WARNINGS
+# ============================================================================
+# This configuration should ONLY be used:
+# - In isolated development environments
+# - In sandboxed/containerized systems
+# - When working with trusted code only
+# - During testing and experimentation
+#
+# DO NOT use in production or with untrusted code.
+# Re-enable safety checks before using in production.
