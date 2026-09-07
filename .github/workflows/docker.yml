@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
   workflow_call:
+    secrets:
+      GITHUB_TOKEN:
+        required: false
 
 permissions:
   contents: read
