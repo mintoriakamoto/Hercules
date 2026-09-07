@@ -105,7 +105,7 @@ def _fire_approval_hook(hook_name: str, **kwargs) -> None:
     """
     try:
         from hercules_cli.plugins import invoke_hook
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Plugin system not available in this execution context
         # (e.g. bare tool-only imports, minimal test environments).
         return
@@ -113,13 +113,10 @@ def _fire_approval_hook(hook_name: str, **kwargs) -> None:
         kwargs.setdefault("turn_id", _approval_turn_id.get())
         kwargs.setdefault("tool_call_id", _approval_tool_call_id.get())
         invoke_hook(hook_name, **kwargs)
-    except BaseException as exc:
+    except Exception as exc:
         # invoke_hook() already swallows per-callback errors, so reaching here
         # means the dispatch layer itself failed. Log and move on -- approval
         # flow is safety-critical, plugin observability is not.
-        # Re-raise control flow exceptions (KeyboardInterrupt, SystemExit)
-        if isinstance(exc, (KeyboardInterrupt, SystemExit)):
-            raise
         logger.debug("Approval hook %s dispatch failed: %s", hook_name, exc)
 
 
@@ -176,7 +173,7 @@ def _get_session_platform() -> str:
         from gateway.session_context import get_session_env
 
         return get_session_env("HERCULES_SESSION_PLATFORM", "") or ""
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return os.getenv("HERCULES_SESSION_PLATFORM", "") or ""
 
 
@@ -483,7 +480,7 @@ def _match_user_deny_rule(command: str) -> str | None:
     """
     try:
         deny_patterns = _get_approval_config().get("deny") or []
-    except (OSError, ValueError, KeyError, AttributeError):
+    except Exception:
         return None
     if not deny_patterns:
         return None
@@ -936,7 +933,7 @@ def _rewrite_resolved_user_home(command: str) -> str:
             os.path.realpath(home),
             os.environ.get("HOME", ""),
         ]
-    except (OSError, ValueError):
+    except Exception:
         return command
     return _fold_home_prefixes(command, candidates, "~")
 
@@ -960,7 +957,7 @@ def _rewrite_resolved_hercules_home(command: str) -> str:
             str(home),
             str(home.resolve(strict=False)),
         ]
-    except (ImportError, ModuleNotFoundError, OSError, ValueError):
+    except Exception:
         return command
     return _fold_home_prefixes(command, candidates, "~/.hercules")
 
@@ -1668,7 +1665,7 @@ def load_permanent_allowlist() -> set:
         if patterns:
             load_permanent(patterns)
         return patterns
-    except (ImportError, ModuleNotFoundError, OSError, ValueError, KeyError, AttributeError, TypeError) as e:
+    except Exception as e:
         logger.warning("Failed to load permanent allowlist: %s", e)
         return set()
 
@@ -1680,7 +1677,7 @@ def save_permanent_allowlist(patterns: set):
         config = load_config()
         config["command_allowlist"] = list(patterns)
         save_config(config)
-    except (ImportError, ModuleNotFoundError, OSError, ValueError, KeyError, AttributeError, TypeError) as e:
+    except Exception as e:
         logger.warning("Could not save allowlist: %s", e)
 
 
@@ -1719,10 +1716,7 @@ def prompt_dangerous_approval(command: str, description: str,
         try:
             return approval_callback(display_command, display_description,
                                      allow_permanent=allow_permanent)
-        except BaseException as e:
-            # Callback may raise any exception; re-raise control flow exceptions
-            if isinstance(e, (KeyboardInterrupt, SystemExit)):
-                raise
+        except Exception as e:
             logger.error("Approval callback failed: %s", e, exc_info=True)
             return "deny"
 
@@ -1747,7 +1741,7 @@ def prompt_dangerous_approval(command: str, description: str,
                 command, description,
             )
             return "deny"
-    except (ImportError, ModuleNotFoundError, AttributeError, RuntimeError):
+    except Exception:
         # prompt_toolkit not installed, or detection failed -- fall through
         # to the legacy input() path (safe in non-TUI contexts: scripts,
         # tests, sshd, etc.).
@@ -1850,7 +1844,7 @@ def _get_approval_config() -> dict:
         from hercules_cli.config import load_config
         config = load_config()
         return config.get("approvals", {}) or {}
-    except (ImportError, ModuleNotFoundError, OSError, ValueError, KeyError, AttributeError) as e:
+    except Exception as e:
         logger.warning("Failed to load approval config: %s", e)
         return {}
 
@@ -1899,7 +1893,7 @@ def _get_cron_approval_mode() -> str:
         if mode in {"approve", "off", "allow", "yes"}:
             return "approve"
         return "deny"
-    except (ImportError, ModuleNotFoundError, OSError, ValueError, KeyError, AttributeError, TypeError):
+    except Exception:
         return "deny"
 
 
@@ -2022,11 +2016,7 @@ def _smart_approve(command: str, description: str) -> str:
         else:
             return "escalate"
 
-    except BaseException as e:
-        # LLM calls may fail for various reasons (network, API, etc.).
-        # Re-raise control flow exceptions, degrade gracefully on others.
-        if isinstance(e, (KeyboardInterrupt, SystemExit)):
-            raise
+    except Exception as e:
         logger.debug("Smart approvals: LLM call failed (%s), escalating", e)
         return "escalate"
 
@@ -2096,7 +2086,7 @@ def _run_approval_gate(
         try:
             from tools.terminal_tool import _get_approval_callback
             approval_callback = _get_approval_callback()
-        except (ImportError, ModuleNotFoundError, AttributeError):
+        except Exception:
             approval_callback = None
 
     is_cli = _is_interactive_cli()
@@ -2498,10 +2488,7 @@ def _await_gateway_decision(session_key: str, notify_cb, approval_data: dict,
     # Notify the user (bridges sync agent thread → async gateway)
     try:
         notify_cb(approval_data)
-    except BaseException as exc:
-        # Callback may raise any exception; re-raise control flow exceptions
-        if isinstance(exc, (KeyboardInterrupt, SystemExit)):
-            raise
+    except Exception as exc:
         logger.warning("Gateway approval notify failed: %s", exc)
         _drop_entry()
         return {"resolved": False, "choice": None, "notify_failed": True}
@@ -2518,7 +2505,7 @@ def _await_gateway_decision(session_key: str, notify_cb, approval_data: dict,
 
     try:
         from tools.environments.base import touch_activity_if_due
-    except (ImportError, ModuleNotFoundError, AttributeError):  # pragma: no cover
+    except Exception:  # pragma: no cover
         touch_activity_if_due = None
 
     _now = time.monotonic()
@@ -2684,7 +2671,7 @@ def check_all_command_guards(command: str, env_type: str,
                         _sec = (_load_cfg() or {}).get("security", {}) or {}
                         if _sec.get("tirith_enabled", True):
                             _cron_fail_open = _sec.get("tirith_fail_open", True)
-                    except (ImportError, ModuleNotFoundError, OSError, ValueError, KeyError, AttributeError):
+                    except Exception:
                         pass
                     if not _cron_fail_open:
                         return {
@@ -2723,7 +2710,7 @@ def check_all_command_guards(command: str, env_type: str,
             _tirith_enabled = _sec.get("tirith_enabled", True)
             if _tirith_enabled:
                 _tirith_fail_open = _sec.get("tirith_fail_open", True)
-        except (ImportError, ModuleNotFoundError, OSError, ValueError, KeyError, AttributeError):
+        except Exception:
             pass
         if not _tirith_fail_open:
             tirith_result = {
@@ -3216,7 +3203,7 @@ def request_elicitation_consent(
     """
     try:
         session_key = get_current_session_key()
-    except (OSError, ValueError, KeyError, AttributeError) as exc:  # pragma: no cover -- defensive
+    except Exception as exc:  # pragma: no cover -- defensive
         logger.warning("Elicitation consent: session lookup failed: %s", exc)
         return "decline"
 
@@ -3241,10 +3228,7 @@ def request_elicitation_consent(
             decision = _await_gateway_decision(
                 session_key, notify_cb, approval_data, surface=surface,
             )
-        except BaseException as exc:
-            # Gateway dispatch may fail for various reasons; re-raise control flow exceptions
-            if isinstance(exc, (KeyboardInterrupt, SystemExit)):
-                raise
+        except Exception as exc:
             logger.error(
                 "Elicitation gateway dispatch failed: %s", exc, exc_info=True,
             )
@@ -3268,10 +3252,7 @@ def request_elicitation_consent(
             timeout_seconds=timeout_seconds,
             allow_permanent=False,
         )
-    except BaseException as exc:
-        # Approval prompting may fail; re-raise control flow exceptions
-        if isinstance(exc, (KeyboardInterrupt, SystemExit)):
-            raise
+    except Exception as exc:
         logger.error(
             "Elicitation CLI prompt failed: %s", exc, exc_info=True,
         )
