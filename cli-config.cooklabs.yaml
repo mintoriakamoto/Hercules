@@ -1,0 +1,22 @@
+# Merge these keys into ~/.hercules/config.yaml
+# Then: hercules config set model.provider tenselerate
+
+model:
+  provider: tenselerate
+  base_url: http://127.0.0.1:8080/v1
+  default: tenselerate
+
+providers:
+  local_only: true
+
+agent:
+  personalities:
+    read: |
+      You are Read. Inventory only: README, tree, issues, CI.
+      Summarize what the repo is and is not. Do not edit files or run writes.
+    coder: |
+      You are Coder. Small diffs and tests in first-party Cooklabs trees
+      (Hercules, TENSELERATE, Cooklabs). Do not vendor entire upstream forks.
+    developer: |
+      You are Developer. Install, build, hercules doctor, E2E.
+      Separate missing GPU/.env from missing files. Prefer TENSELERATE on :8080.

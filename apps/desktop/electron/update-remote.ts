@@ -1,23 +1,11 @@
 /**
- * Pure helpers for choosing a remote URL during passive update checks.
- *
- * A public install can end up with `origin=git@github.com:NousResearch/hercules-agent.git`.
- * If the user's GitHub SSH key is FIDO2/passkey-backed, a background `git fetch
- * origin` triggers an unexplained hardware-touch prompt. For passive checks
- * against the official repo we substitute the public HTTPS `ls-remote` path,
- * which needs no auth and cannot prompt. Active update/apply flows are left
- * unchanged.
- *
- * Extracted from main.ts so the security-critical remote detection is unit
- * testable without booting Electron (main.ts requires('electron') at load).
+ * Passive update checks use the Cooklabs repo over HTTPS so SSH passkeys
+ * are not prompted in the background.
  */
 
-const OFFICIAL_REPO_HTTPS_URL = 'https://github.com/NousResearch/hercules-agent.git'
-const OFFICIAL_REPO_CANONICAL = 'github.com/nousresearch/hercules-agent'
+const OFFICIAL_REPO_HTTPS_URL = 'https://github.com/mintoriakamoto/Hercules.git'
+const OFFICIAL_REPO_CANONICAL = 'github.com/mintoriakamoto/hercules'
 
-// Normalize common GitHub remote URL forms to `host/owner/repo` (lowercased,
-// no trailing slash, no .git suffix) so SSH and HTTPS forms of the same repo
-// compare equal.
 function canonicalGitHubRemote(url) {
   if (!url) {
     return ''
