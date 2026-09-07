@@ -1,0 +1,141 @@
+# Pre-commit hooks configuration
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+# See https://pre-commit.com for more information
+
+repos:
+  # Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+        stages: [commit]
+      - id: ruff-format
+        stages: [commit]
+
+  # Type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-requests
+          - types-PyYAML
+          - types-setuptools
+        args: [--ignore-missing-imports]
+        stages: [commit]
+
+  # YAML validation
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        args: [--unsafe]
+        stages: [commit]
+      - id: check-json
+        stages: [commit]
+      - id: check-toml
+        stages: [commit]
+      - id: check-merge-conflict
+        stages: [commit]
+      - id: end-of-file-fixer
+        stages: [commit]
+      - id: trailing-whitespace
+        args: [--markdown-template='']
+        stages: [commit]
+      - id: debug-statements
+        stages: [commit]
+
+  # Secrets scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        stages: [commit]
+
+  # Markdown linting (optional, disabled by default)
+  # - repo: https://github.com/igorshubovych/markdownlint-cli
+  #   rev: v0.38.0
+  #   hooks:
+  #     - id: markdownlint
+  #       args: [--config, .markdownlint.json]
+  #       stages: [commit]
+
+  # JavaScript/TypeScript (if applicable)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.57.0
+    hooks:
+      - id: eslint
+        types: [javascript, jsx, typescript, tsx]
+        additional_dependencies:
+          - eslint
+          - eslint-config-prettier
+          - eslint-plugin-prettier
+          - prettier
+        stages: [commit]
+        pass_filenames: true
+
+  # Prettier for code formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.1
+    hooks:
+      - id: prettier
+        types_or:
+          - javascript
+          - jsx
+          - typescript
+          - tsx
+          - markdown
+          - yaml
+          - json
+        stages: [commit]
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.7
+    hooks:
+      - id: shellcheck
+        types: [shell]
+        stages: [commit]
+
+  # Commit message linting (commitlint style)
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v2.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          - --force-scope
+          - --scope-regex=^(feat|fix|docs|refactor|test|chore|ci|perf)(\(.+\))?:
+
+# Configuration options
+default_language_version:
+  python: python3.11
+
+# Global settings
+exclude: |
+  (?x)^(
+    hercules_agent\.egg-info/|
+    \.venv/|
+    venv/|
+    __pycache__/|
+    \.pytest_cache/|
+    \.mypy_cache/|
+    dist/|
+    build/|
+    node_modules/
+  )
+
+ci:
+  autofix_commit_msg: |
+    chore: auto-fix code style issues
+
+    - Run pre-commit hooks
+    - Fix linting, formatting, and type issues
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: 'chore: update pre-commit hooks'
+  skip: [shellcheck, detect-secrets]  # Skip on CI due to differences
+  stages: [commit, commit-msg]
