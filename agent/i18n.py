@@ -34,6 +34,7 @@ import logging
 import os
 import sysconfig
 import threading
+import yaml
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -181,11 +182,26 @@ def _load_catalog(lang: str) -> dict[str, str]:
         return {}
 
     try:
-        import yaml  # PyYAML is already a hercules dependency
+        # PyYAML is already a hercules dependency
         with path.open("r", encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
-    except Exception as exc:
-        logger.warning("Failed to load i18n catalog %s: %s", path, exc)
+    except FileNotFoundError:
+        logger.debug("i18n catalog file not found: %s (lang=%s)", path, lang)
+        with _catalog_lock:
+            _catalog_cache[lang] = {}
+        return {}
+    except (OSError, IOError) as exc:
+        logger.warning("i18n catalog file I/O error: %s (lang=%s, path=%s)", exc, lang, path)
+        with _catalog_lock:
+            _catalog_cache[lang] = {}
+        return {}
+    except yaml.YAMLError as exc:
+        logger.warning("i18n catalog YAML parse error: %s (lang=%s, path=%s)", exc, lang, path)
+        with _catalog_lock:
+            _catalog_cache[lang] = {}
+        return {}
+    except (ValueError, UnicodeDecodeError) as exc:
+        logger.warning("i18n catalog encoding/value error: %s (lang=%s, path=%s)", exc, lang, path)
         with _catalog_lock:
             _catalog_cache[lang] = {}
         return {}
@@ -222,8 +238,12 @@ def _config_language_cached() -> str | None:
         lang = (cfg.get("display") or {}).get("language")
         if lang:
             return _normalize_lang(lang)
+    except (ImportError, ModuleNotFoundError) as exc:
+        logger.debug("Could not import config module: %s", exc)
+    except (OSError, IOError) as exc:
+        logger.debug("Could not read config file: %s", exc)
     except Exception as exc:
-        logger.debug("Could not read display.language from config: %s", exc)
+        logger.debug("Could not read display.language from config: %s (type=%s)", exc, type(exc).__name__)
     return None
 
 
