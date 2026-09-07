@@ -1,382 +1,145 @@
-# Hercules Agent - Strategic Roadmap
+# Hercules Roadmap
 
-## Executive Vision
-
-Hercules is evolving into a comprehensive AI agent ecosystem that anticipates user needs, learns from patterns, and operates autonomously across every digital touchpoint. Over the next 24 months, Hercules will become:
-
-1. **The most intelligent personal AI agent** - With deep contextual learning and multi-session memory integration
-2. **Truly multi-platform** - Seamless experience across desktop, mobile, cloud, and embedded systems
-3. **Enterprise-ready** - With governance, security, and scalability for team and organizational use
-4. **Developer-first** - With open APIs, SDK excellence, and a thriving plugin ecosystem
+> **Status:** This document describes direction and intent, not commitments.
+> Dates and features are aspirational and will change. Anything marked
+> **Done** is present in the repository today and can be verified in the code;
+> everything else is planned or exploratory.
 
 ---
 
-## Phase 1: Foundation & Polish (Q4 2024 - Q1 2025)
+## Vision
 
-### Core Capabilities
-- ✅ Self-improving agent with built-in learning loop
-- ✅ Multi-platform messaging (Telegram, Discord, Slack, WhatsApp, Signal)
-- ✅ Production-grade error handling and resilience
-- ✅ Dual-GPU acceleration (CMP170HX 40GB + RTX 3060 12GB)
-- ✅ Comprehensive documentation and branding
-- ✅ Security-first architecture with centralized validation
+Hercules is a self-improving AI agent. The goal is an agent that learns from
+use, remembers across sessions, runs wherever you want it to, and never locks
+you into a single model, platform, or vendor.
 
-### Deliverables
-- [x] Complete error handling standards (317 lines)
-- [x] Production validator and recovery patterns (363 lines)
-- [x] Centralized input validation framework (439 lines)
-- [x] Hardware optimization guide (Ryzen 9950X configuration)
-- [x] Docker multi-service orchestration with GPU support
-- [x] Branding guidelines and visual identity
-- [x] Strategic roadmap and vision statement
+Three principles drive the roadmap:
 
-### Success Metrics
-- Zero unhandled exceptions in production
-- Sub-100ms response time for 95th percentile queries
-- <0.1% error rate in critical paths
-- Full Ryzen 9950X + dual-GPU resource utilization
+### 1. Intelligence through learning
 
----
+Most agents are stateless — they answer the current question and forget the
+context. Hercules is built around a closed learning loop: it creates skills
+from experience, improves them during use, persists knowledge deliberately,
+and searches its own past conversations.
 
-## Phase 2: Intelligence & Learning (Q2 2025)
+### 2. Autonomy and portability
 
-### Contextual Understanding
-- **Deep Memory Integration**
-  - Full-text search across 10,000+ conversations with LLM summarization
-  - Semantic memory for cross-session pattern recognition
-  - User modeling with Honcho dialectic approach
-  - Skill auto-generation from complex task trajectories
+You choose the model, the host, and the storage. Switching providers is a
+config change, not a migration. Your conversations are yours — exportable and
+deletable on demand.
 
-- **Adaptive Personality**
-  - Learn individual communication preferences
-  - Develop custom response styles per user
-  - Build contextual tone/formality awareness
-  - Remember personal facts and preferences
+### 3. Present where you work
 
-### New Capabilities
-- **Proactive Assistance**
-  - Suggest actions based on learned patterns
-  - Predict user needs before they ask
-  - Auto-queue tasks based on availability
-  - Smart notification timing and delivery
-
-- **Conversation Intelligence**
-  - Real-time sentiment analysis
-  - Conversation health metrics
-  - Auto-generated summaries and action items
-  - Multi-turn context compression
-
-### Technical Enhancements
-- Knowledge base embedding with hybrid search
-- Vector database integration (Pinecone, Weaviate, Qdrant)
-- Fine-tuning pipeline for personal model adaptation
-- Trajectory compression for training datasets
-
-### Launch Targets
-- **Q2 Early Access:** Semantic search + memory integration
-- **Q2 General Release:** Full adaptive learning system
-- **Metric Goals:** 50% improvement in task efficiency for power users
+One agent, reachable from the terminal, Telegram, Discord, Slack, WhatsApp,
+and Signal, with conversation continuity across all of them.
 
 ---
 
-## Phase 3: Multi-Platform Expansion (Q3 2025)
+## Done
 
-### Mobile Native
-- **iOS App**
-  - Native SwiftUI interface
-  - Voice input with on-device transcription
-  - Background sync with server
-  - Share sheet integration
+These are implemented and verifiable in the repository:
 
-- **Android App**
-  - Native Compose UI
-  - Voice input with local processing option
-  - Foreground service for always-on capability
-  - Deep links to other apps
-
-### Web Platform
-- **Hercules Web Console**
-  - Real-time agent monitoring dashboard
-  - Conversation management and search
-  - Settings and integrations panel
-  - Team collaboration tools (if team plan enabled)
-
-### Desktop Enhancements
-- **Native System Integration**
-  - Window/dock integration with quick launch
-  - System tray with status indicators
-  - Keyboard shortcuts for quick access
-  - Clipboard history integration
-
-- **Cross-Platform Sync**
-  - Real-time conversation sync across all devices
-  - Unified notification center
-  - Session continuity (start on phone, continue on desktop)
-  - Encrypted sync with end-to-end encryption option
-
-### Platform Roadmap
-- Q3 Early: Web console beta
-- Q3 Mid: iOS and Android native apps
-- Q3 Late: Full cross-platform sync
-- **Success Metric:** 40% of daily active users on mobile or web
+- **Structured error handling** — typed exception hierarchy with severity
+  levels (`agent/error_handling_standards.py`)
+- **Error recovery patterns** — retry with exponential backoff, circuit
+  breaker, fallback chains (`agent/error_recovery_patterns.py`)
+- **Centralized input validation** — validators guarding against path
+  traversal, command injection, and type confusion (`agent/input_validation.py`)
+- **Production pre-flight validator** — startup checks for imports, file
+  access, and environment (`agent/production_validator.py`)
+- **Multi-platform gateway** — Telegram, Discord, Slack, WhatsApp, Signal, CLI
+- **Six terminal backends** — local, Docker, SSH, Singularity, Modal, Daytona
+- **Learning loop** — skill creation from experience, self-improvement during
+  use, FTS5 session search, Honcho user modeling
+- **Scheduled automations** — built-in cron with delivery to any platform
+- **Hardware tuning guide** — dual-GPU and multi-core configuration
+  (`docs/HARDWARE_CONFIGURATION.md`)
 
 ---
 
-## Phase 4: Enterprise & Scaling (Q4 2025)
+## Near term
 
-### Team Collaboration
-- **Shared Agents**
-  - Multiple users can share one agent instance
-  - Role-based access control (read-only, editor, owner)
-  - Audit logs for all actions
-  - Shared knowledge bases
+### Memory and recall
+- Semantic search over past sessions alongside the existing FTS5 index
+- Better cross-session context compression
+- More reliable memory persistence nudges
 
-- **Team Workspaces**
-  - Organize conversations and skills by project
-  - Team communication integration
-  - Shared automation and scheduled tasks
-  - Cross-team knowledge sharing (optional)
+### Skills
+- Higher-quality autonomous skill generation from task trajectories
+- Skill performance feedback so weak skills get revised rather than reused
+- Broader compatibility with the [agentskills.io](https://agentskills.io) standard
 
-### Enterprise Features
-- **Compliance & Governance**
-  - SOC 2 Type II certification path
-  - HIPAA compliance option
-  - GDPR data deletion automation
-  - Data residency options (US, EU, APAC)
-
-- **Security Hardening**
-  - OAuth 2.0 / SAML 2.0 SSO
-  - IP whitelisting
-  - Advanced audit logging
-  - Encryption at rest and in transit
-
-- **High Availability**
-  - Multi-region deployment
-  - Automated failover
-  - 99.99% uptime SLA
-  - Database replication and backup
-
-### Scalability Improvements
-- Horizontal scaling with Kubernetes
-- Database sharding for multi-tenant support
-- Rate limiting and quota management
-- Cost optimization for large-scale deployments
-
-### Enterprise Launch
-- **Q4 Early Access:** Beta team features
-- **Q4 General Release:** Full enterprise suite
-- **Target:** 50+ enterprise customers by EOY
+### Model routing
+- Automatic model selection by task type
+- Cost-aware routing across configured providers
+- Graceful degradation when a provider is unavailable
 
 ---
 
-## Phase 5: Intelligence Amplification (2026 H1)
+## Medium term
 
-### Advanced AI Features
-- **Multi-Model Orchestration**
-  - Automatically select best model for task type
-  - Ensemble predictions for critical decisions
-  - Fine-tuned models for domain-specific tasks
-  - Cost-optimized model selection
+### Reach
+- Web console for conversation history, search, and settings
+- Native mobile clients
+- Real-time sync so a session started on one surface continues on another
 
-- **Tool Calling Enhancements**
-  - Autonomous tool composition (build complex workflows)
-  - Tool learning from usage patterns
-  - Tool performance optimization
-  - Custom tool SDK improvements
+### Multimodal
+- Image understanding and OCR in the tool loop
+- Improved voice transcription and voice conversation continuity
+- Document ingestion as a first-class input
 
-### Research-Grade Capabilities
-- **Trajectory Generation & Analysis**
-  - Batch generation for model training datasets
-  - Trajectory compression techniques
-  - Preference learning from trajectories
-  - Reinforcement learning integration
-
-- **Agentic Benchmarking**
-  - Built-in evaluation framework
-  - Comparison against baseline models
-  - Performance regression detection
-  - Custom benchmark creation
-
-### Innovation Labs
-- Experimental features channel
-- Community-driven research projects
-- Open-source model integration
-- Paper-to-implementation pipeline
+### Collaboration
+- Shared agent instances with role-based access
+- Team workspaces grouping conversations, skills, and automations
+- Audit logging for shared deployments
 
 ---
 
-## Phase 6: Global & Autonomous (2026 H2+)
+## Exploratory
 
-### Global Expansion
-- **Language Support**
-  - Native support for 20+ languages
-  - Culturally-aware response generation
-  - Localized integrations (regional messaging apps, services)
-  - Multi-language conversation support
+Ideas under consideration. No timeline, and some will be dropped.
 
-- **Regional Deployment**
-  - Data centers in 6+ continents
-  - Compliance with local regulations
-  - Local payment methods
-  - Regional partner integrations
-
-### Autonomous Agents
-- **Fully Autonomous Mode**
-  - Run complex tasks without user intervention
-  - Self-validation and error recovery
-  - Human-in-the-loop for sensitive decisions
-  - Result notifications and summaries
-
-- **Agent Swarms**
-  - Spawn multiple sub-agents for parallel work
-  - Inter-agent communication and coordination
-  - Shared memory and context pools
-  - Orchestration frameworks
-
-### Long-term Capabilities
-- Real-time video understanding
-- Custom fine-tuned models per user
-- Persistent agent instances (always online)
-- Complete workflow automation
+- Vector store integration as an alternative memory backend
+- Local fine-tuning for per-user model adaptation
+- Federated learning so model improvements do not require sharing raw data
+- Multi-agent coordination beyond the current subagent spawning
+- Knowledge-graph reasoning over accumulated memory
+- Deeper trajectory compression for training tool-calling models
 
 ---
 
-## Innovation Pipeline
+## Non-goals
 
-### Near-term Experiments (Next 6 months)
-- [ ] Vision capabilities (image understanding, OCR)
-- [ ] Voice conversation continuity
-- [ ] Code generation for complex workflows
-- [ ] Real-time data integration (APIs, webhooks)
-- [ ] Advanced scheduling and cron patterns
+Stating these explicitly so the scope stays honest:
 
-### Medium-term Research (6-12 months)
-- [ ] Multimodal learning (text + image + voice)
-- [ ] Federated learning for privacy
-- [ ] Model distillation for faster inference
-- [ ] Custom tokenization for domain-specific tasks
-- [ ] Streaming token predictions
-
-### Long-term Moonshots (12+ months)
-- [ ] Embodied agents (physical robot control)
-- [ ] Brain-computer interfaces (if applicable)
-- [ ] Quantum computing integration
-- [ ] Artificial general intelligence (AGI) foundations
-- [ ] Self-modifying code execution (safely)
+- **Not** a hosted-only product — self-hosting stays a first-class path
+- **Not** locked to one model vendor
+- **Not** a closed ecosystem — skills and plugins stay portable
+- **Not** collecting user conversations for training
 
 ---
 
-## Growth Strategy
+## Quality bar
 
-### User Acquisition
-1. **Developer Community**
-   - GitHub stars and adoption
-   - Stack Overflow and community support
-   - Developer conferences and speaking
-   - Technical blog and tutorials
+Targets the project holds itself to, measured in CI and production use:
 
-2. **Enterprise Sales**
-   - Direct sales to Fortune 500 companies
-   - System integrator partnerships
-   - Consulting services
-   - White-label offerings
-
-3. **Consumer Growth**
-   - App store optimization
-   - Content marketing
-   - Influencer partnerships
-   - Viral features and moments
-
-### Monetization Model
-- **Freemium:** Basic agent + 1 platform (14 day free trial)
-- **Pro:** $20/month - all platforms, advanced analytics, 10 skill limit
-- **Professional:** $60/month - team support, 50 skills, custom models
-- **Enterprise:** Custom pricing - unlimited features, SLA, dedicated support
-
-### Community Building
-- Open-source plugin marketplace
-- User conference (annual)
-- Certification program (advanced users)
-- Ambassador program
-- Academic partnerships
+| Area | Target |
+|---|---|
+| Unhandled exceptions | Zero in critical paths |
+| Test coverage | High coverage on error handling, validation, gateway |
+| Startup validation | Pre-flight checks pass before any service starts |
+| Dependency security | Lockfile hash verification, scanned in CI |
+| Input validation | All external input passes centralized validators |
 
 ---
 
-## Technical Roadmap
+## Contributing to the roadmap
 
-### Infrastructure
-- [ ] Kubernetes migration (Q1 2025)
-- [ ] Multi-region deployment (Q2 2025)
-- [ ] Distributed training (Q3 2025)
-- [ ] 100-node GPU cluster (Q4 2025)
+The roadmap is shaped by what people actually need.
 
-### AI/ML
-- [ ] Multi-modal model integration (Q2 2025)
-- [ ] Preference learning pipeline (Q3 2025)
-- [ ] Custom model fine-tuning (Q4 2025)
-- [ ] Knowledge distillation (2026)
+- **Propose something:** open a [discussion](https://github.com/mintoriakamoto/Hercules/discussions)
+- **Report a gap:** open an [issue](https://github.com/mintoriakamoto/Hercules/issues)
+- **Build something:** see [CONTRIBUTING.md](CONTRIBUTING.md)
 
-### Developer Experience
-- [ ] SDK v2.0 release (Q1 2025)
-- [ ] Plugin SDK improvements (Q2 2025)
-- [ ] Dev tool integration (VSCode extension, etc.) (Q3 2025)
-- [ ] AI dev assistance (self-dogfooding) (Q4 2025)
-
-### Platform Expansion
-- [ ] Native iOS app (Q3 2025)
-- [ ] Native Android app (Q3 2025)
-- [ ] Web console (Q3 2025)
-- [ ] ChatGPT plugin (Q1 2025)
-
----
-
-## Success Metrics & KPIs
-
-### Adoption
-- **Q4 2024:** 10,000 active users
-- **Q2 2025:** 50,000 active users
-- **Q4 2025:** 250,000 active users
-- **Q4 2026:** 1,000,000+ active users
-
-### Performance
-- **Agent response time:** <500ms (p95)
-- **System uptime:** 99.99%
-- **Error rate:** <0.01%
-- **Model quality:** +50% task success vs. baseline
-
-### Business
-- **MRR (Monthly Recurring Revenue):** $100k by end of 2025
-- **Enterprise customers:** 50+ by end of 2025
-- **Developer ecosystem:** 1000+ plugins/skills
-- **Community size:** 50,000+ GitHub stars
-
----
-
-## Risk Mitigation
-
-### Technical Risks
-- **AI Safety:** Implement oversight and control mechanisms
-- **Scalability:** Load testing and capacity planning
-- **Security:** Regular audits, penetration testing, bug bounties
-- **Data Privacy:** Strong encryption and compliance programs
-
-### Business Risks
-- **Competition:** Focus on differentiation and network effects
-- **Market Adoption:** Community engagement and developer relations
-- **Regulatory:** Proactive compliance and legal counsel
-- **Talent:** Competitive compensation and learning opportunities
-
----
-
-## Call to Action
-
-Join the Hercules community and help us build the future of AI agents:
-
-- **Contribute:** [GitHub Repository](https://github.com/mintoriakamoto/Hercules)
-- **Discuss:** [GitHub Discussions](https://github.com/mintoriakamoto/Hercules/discussions)
-- **Report Issues:** [GitHub Issues](https://github.com/mintoriakamoto/Hercules/issues)
-- **Share Feedback:** [Community Channels](website/docs/community.md)
-
-**The future of AI is not one-size-fits-all. It's personal, it's intelligent, and it's forever learning.**
-
-**🦁 Hercules - AI That Learns. AI That Grows. AI That Remembers.**
+Items move from *Exploratory* to *Near term* when someone commits to building
+them — including you.
