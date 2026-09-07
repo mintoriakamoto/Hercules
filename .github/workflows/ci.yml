@@ -113,7 +113,8 @@ jobs:
     with:
       event_name: ${{ needs.detect.outputs.event_name }}
       ref: ${{ github.ref }}
-    secrets: inherit
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: read
       packages: write # docker.yml pushes images to GHCR on main pushes/releases

@@ -15,6 +15,9 @@ on:
         required: false
         default: ''
         description: 'The git ref being built'
+    secrets:
+      GITHUB_TOKEN:
+        required: false
 
 permissions:
   contents: read
