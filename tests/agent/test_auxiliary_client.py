@@ -97,7 +97,7 @@ def codex_auth_dir(tmp_path, monkeypatch):
     return codex_dir
 
 
-class TestAuxiliaryMaxTokensParam:
+class TestAuxiliaryMaxTokensParamCopilot:
     def test_uses_max_completion_tokens_for_github_copilot_custom_base(self):
         with patch("agent.auxiliary_client._resolve_custom_runtime", return_value=("https://api.githubcopilot.com", "key", None)):
             assert auxiliary_max_tokens_param(2048) == {"max_completion_tokens": 2048}

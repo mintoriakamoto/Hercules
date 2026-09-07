@@ -272,7 +272,7 @@ class ExtendedReasoningEngine:
         # Tool capability matching
         if self._matches_task_type(tool_name, task_description):
             relevance_score += 0.2
-            factors.append(f"Tool capability match")
+            factors.append("Tool capability match")
 
         # Previous success rate (if available)
         if "success_rate" in context:
@@ -346,7 +346,7 @@ class ExtendedReasoningEngine:
         trace_file = self.reasoning_dir / f"{trace_id}.json"
 
         try:
-            with open(trace_file, 'w') as f:
+            with open(trace_file, "w", encoding="utf-8") as f:
                 json.dump(reasoning.to_dict(), f, indent=2)
         except Exception:
             pass

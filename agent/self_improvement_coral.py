@@ -312,7 +312,7 @@ class SelfImprovementEngine:
             return candidates
 
         try:
-            with open(profiles_path, 'r') as f:
+            with open(profiles_path, "r", encoding="utf-8") as f:
                 for line in f:
                     if not line.strip():
                         continue
@@ -350,7 +350,7 @@ class SelfImprovementEngine:
             improvement_ratios = []
             confidences = []
 
-            with open(profiles_path, 'r') as f:
+            with open(profiles_path, "r", encoding="utf-8") as f:
                 for line in f:
                     if not line.strip():
                         continue
@@ -388,7 +388,7 @@ class SelfImprovementEngine:
 
         if profiles_path.exists():
             try:
-                with open(profiles_path, 'r') as f:
+                with open(profiles_path, "r", encoding="utf-8") as f:
                     for line in f:
                         if not line.strip():
                             continue
@@ -417,7 +417,7 @@ class SelfImprovementEngine:
         profiles = {}
         if profiles_path.exists():
             try:
-                with open(profiles_path, 'r') as f:
+                with open(profiles_path, "r", encoding="utf-8") as f:
                     for line in f:
                         if not line.strip():
                             continue
@@ -433,7 +433,7 @@ class SelfImprovementEngine:
 
         # Write back
         try:
-            with open(profiles_path, 'w') as f:
+            with open(profiles_path, "w", encoding="utf-8") as f:
                 for name, data in profiles.items():
                     f.write(json.dumps(data) + '\n')
         except Exception:

@@ -173,6 +173,7 @@ class TestExtractText:
         from plugins.platforms.dingtalk.adapter import DingTalkAdapter
         msg = MagicMock()
         msg.text = ""
+        msg.rich_text_content = None
         msg.rich_text = [{"text": "part1"}, {"text": "part2"}, {"image": "url"}]
         assert DingTalkAdapter._extract_text(msg) == "part1 part2"
 
@@ -491,7 +492,7 @@ class TestHandlerProcessIsAsync:
         assert asyncio.iscoroutinefunction(_IncomingHandler.process)
 
 
-class TestExtractText:
+class TestExtractTextSdkShapes:
     """_extract_text must handle both legacy and current SDK payload shapes.
 
     Before SDK 0.20 ``message.text`` was a ``dict`` with a ``content`` key.
