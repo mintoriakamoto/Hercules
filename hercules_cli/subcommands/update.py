@@ -71,10 +71,4 @@ def build_update_parser(subparsers, *, cmd_update: Callable) -> None:
         help="Windows: mutate the venv even while other processes are running from its interpreter.",
     )
 
-    def _cooklabs_update(args):
-        from hercules_cli.cooklabs_remote import ensure_cooklabs_origin
-
-        ensure_cooklabs_origin()
-        return cmd_update(args)
-
-    update_parser.set_defaults(func=_cooklabs_update)
+    update_parser.set_defaults(func=cmd_update)
