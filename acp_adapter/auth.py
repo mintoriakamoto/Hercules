@@ -28,7 +28,20 @@ def detect_provider() -> Optional[str]:
         is_callable_provider = callable(api_key) and not isinstance(api_key, str)
         if is_string_key or is_callable_provider:
             return provider.strip().lower()
-    except Exception:
+    except ImportError as e:
+        # Runtime provider module not available
+        import logging as _logging
+        _logging.debug("could not import runtime_provider: %s", e)
+        return None
+    except (AttributeError, TypeError, ValueError) as e:
+        # Runtime provider data structure unexpected
+        import logging as _logging
+        _logging.debug("error resolving runtime provider: %s", e)
+        return None
+    except Exception as e:
+        # Unexpected error
+        import logging as _logging
+        _logging.exception("unexpected error detecting provider: %s", e)
         return None
     return None
 

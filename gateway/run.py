@@ -1125,7 +1125,10 @@ def _collect_auto_append_media_tags(
         if tool_name == "image_generate" and "MEDIA:" not in content:
             try:
                 payload = json.loads(content)
-            except Exception:
+            except json.JSONDecodeError:
+                payload = None
+            except (TypeError, ValueError) as e:
+                logger.debug("error parsing image_generate output: %s", e)
                 payload = None
             if isinstance(payload, dict) and payload.get("success"):
                 for field in _JSON_MEDIA_TOOL_PATH_FIELDS:

@@ -129,8 +129,26 @@ def prefers_gateway(config_section: str) -> bool:
         section = (load_config() or {}).get(config_section)
         if isinstance(section, dict):
             return is_truthy_value(section.get("use_gateway"), default=False)
-    except Exception:
-        pass
+    except ImportError as e:
+        # Configuration module not available in this context
+        import logging as _logging
+        _logging.debug("could not load config module for gateway preference: %s", e)
+    except (OSError, ValueError) as e:
+        # Configuration file read error
+        import logging as _logging
+        _logging.debug(
+            "error reading config for gateway preference in %s: %s",
+            config_section,
+            e,
+        )
+    except Exception as e:
+        # Unexpected error
+        import logging as _logging
+        _logging.exception(
+            "unexpected error checking gateway preference for %s: %s",
+            config_section,
+            e,
+        )
     return False
 
 

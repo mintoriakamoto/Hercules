@@ -54,11 +54,13 @@ logger = logging.getLogger(__name__)
 
 try:
     import fcntl
-except Exception:
+except ImportError as e:
+    logger.debug("fcntl not available (expected on Windows): %s", e)
     fcntl = None
 try:
     import msvcrt
-except Exception:
+except ImportError as e:
+    logger.debug("msvcrt not available (expected on Unix): %s", e)
     msvcrt = None
 
 # =============================================================================
