@@ -197,7 +197,7 @@ class CircuitBreaker:
                 logger.info("Circuit breaker entering half-open state")
             else:
                 raise RuntimeError(
-                    f"Circuit breaker open (recovery in {self._time_until_recovery():.1f}s)"
+                    f"Circuit breaker open (recovery in {self._time_until_recovery():.1f}s)"  # windows-footgun: ok
                 )
 
         try:
