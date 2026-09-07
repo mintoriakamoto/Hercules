@@ -100,3 +100,6 @@ g.reputation(root.agent_id, bob.agent_id)    # lower — one hop further out
   claim) but the economic accounting on top of it is not built here.
 - This is the data model and its verification. Wiring it into the agent loop
   and choosing a gossip transport are the next steps, not this primitive's job.
+
+Those next steps — and the harder question of how a peer decides a verdict at
+all — are worked through in [verifiable-work.md](verifiable-work.md).
