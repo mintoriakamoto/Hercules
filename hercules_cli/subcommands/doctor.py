@@ -21,22 +21,4 @@ def build_doctor_parser(subparsers, *, cmd_doctor: Callable) -> None:
         help="Acknowledge a security advisory by ID and exit.",
     )
 
-    def _doctor_with_cooklabs(args):
-        try:
-            from hercules_cli.cooklabs_gateway import apply_env, report
-
-            apply_env()
-            print(report())
-            print()
-        except Exception as exc:
-            print(f"Cooklabs gateway skipped: {exc}")
-        try:
-            from hercules_cli.hermes import format_report, scan
-
-            print(format_report(scan()))
-            print()
-        except Exception as exc:
-            print(f"Hermes mesh skipped: {exc}")
-        return cmd_doctor(args)
-
-    doctor_parser.set_defaults(func=_doctor_with_cooklabs)
+    doctor_parser.set_defaults(func=cmd_doctor)
