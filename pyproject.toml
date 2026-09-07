@@ -372,8 +372,8 @@ markers = [
 ]
 # integration tests take way too long to run in the normal CI environments
 # Hardware optimization: Ryzen 9950X (16 cores/32 threads), RTX 3060 (12GB VRAM)
-# Parallel workers tuned for 16 physical cores with headroom for system tasks
-addopts = "-m 'not integration' -n auto --max-workers=14 --tb=short"
+# Optional: pytest-xdist for parallel execution (14 workers): pytest -n auto --max-workers=14
+addopts = "-m 'not integration'"
 
 [tool.ty.environment]
 python-version = "3.13"
