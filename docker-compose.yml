@@ -33,6 +33,19 @@ services:
     container_name: hercules
     restart: unless-stopped
     network_mode: host
+    # Hardware: AMD Ryzen 9950X (16 cores), RTX 3060 (12GB VRAM)
+    deploy:
+      resources:
+        limits:
+          cpus: '14'      # Leave 2 cores for system (16 total)
+          memory: 48G     # Leave headroom for system
+        reservations:
+          cpus: '8'       # Minimum CPU allocation
+          memory: 32G
+          devices:
+            - driver: nvidia
+              count: 1    # RTX 3060 with CUDA support
+              capabilities: [gpu, compute, utility]
     volumes:
       - ~/.hercules:/opt/data
     environment:
@@ -67,6 +80,14 @@ services:
     network_mode: host
     depends_on:
       - gateway
+    deploy:
+      resources:
+        limits:
+          cpus: '2'       # Dashboard uses minimal CPU
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
     volumes:
       - ~/.hercules:/opt/data
     environment:

@@ -371,7 +371,9 @@ markers = [
     "real_concurrent_gate: opt out of the autouse stub that disables _detect_concurrent_hercules_instances",
 ]
 # integration tests take way too long to run in the normal CI environments
-addopts = "-m 'not integration'"
+# Hardware optimization: Ryzen 9950X (16 cores/32 threads), RTX 3060 (12GB VRAM)
+# Parallel workers tuned for 16 physical cores with headroom for system tasks
+addopts = "-m 'not integration' -n auto --max-workers=14 --tb=short"
 
 [tool.ty.environment]
 python-version = "3.13"
