@@ -1,0 +1,34 @@
+# Automatic code review assignment for Hercules repository
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners - default reviewers for all files
+* @mintoriakamoto
+
+# CLI core
+/hercules_cli/ @mintoriakamoto
+
+# Plugin system and model providers
+/plugins/ @mintoriakamoto
+/plugins/model-providers/ @mintoriakamoto
+
+# Gateway and platform adapters
+/gateway/ @mintoriakamoto
+/gateway/platforms/ @mintoriakamoto
+
+# Skills and optional features
+/optional-skills/ @mintoriakamoto
+
+# Web and desktop applications
+/apps/ @mintoriakamoto
+
+# Documentation
+*.md @mintoriakamoto
+/docs/ @mintoriakamoto
+
+# CI/CD and infrastructure
+/.github/ @mintoriakamoto
+.pre-commit-config.yaml @mintoriakamoto
+
+# Configuration and build
+pyproject.toml @mintoriakamoto
+package.json @mintoriakamoto

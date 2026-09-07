@@ -8544,6 +8544,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
 
         # Record served profiles in runtime status for `hercules status`.
         try:
+            from gateway.pairing import PairingStore
             from gateway.status import write_runtime_status
             served = [active] + sorted(self._profile_adapters.keys())
             # Per-profile PairingStores so authz_mixin can route pairing
