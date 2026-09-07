@@ -33,18 +33,18 @@ services:
     container_name: hercules
     restart: unless-stopped
     network_mode: host
-    # Hardware: AMD Ryzen 9950X (16 cores), RTX 3060 (12GB VRAM)
+    # Hardware: Ryzen 9950X, CMP170HX (40GB) + RTX 3060 (12GB), 32GB DDR5 B650E
     deploy:
       resources:
         limits:
           cpus: '14'      # Leave 2 cores for system (16 total)
-          memory: 48G     # Leave headroom for system
+          memory: 28G     # Leave 4GB for system from 32GB DDR5
         reservations:
           cpus: '8'       # Minimum CPU allocation
-          memory: 32G
+          memory: 20G
           devices:
             - driver: nvidia
-              count: 1    # RTX 3060 with CUDA support
+              count: 2    # Dual GPU: CMP170HX + RTX 3060
               capabilities: [gpu, compute, utility]
     volumes:
       - ~/.hercules:/opt/data

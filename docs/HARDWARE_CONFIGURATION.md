@@ -7,9 +7,10 @@ This configuration targets high-performance systems with the following hardware:
 | Component | Specification | Details |
 |-----------|---------------|---------|
 | **CPU** | AMD Ryzen 9950X | 16 cores / 32 threads, high single-thread performance |
-| **GPU** | NVIDIA RTX 3060 | 12GB VRAM, CUDA compute capability 8.6 |
-| **Mobile CPU** | Intel CMP170HX | High-performance mobile processor (secondary/fallback) |
-| **RAM** | 48GB+ | Recommended minimum; 64GB+ for optimal performance |
+| **GPU Primary** | NVIDIA CMP170HX | 40GB VRAM (unlocked), enterprise data center GPU |
+| **GPU Secondary** | NVIDIA RTX 3060 | 12GB VRAM, CUDA compute capability 8.6 |
+| **RAM** | 32GB DDR5 | High-speed memory for multi-GPU operations |
+| **Motherboard** | B650E | PCIe 5.0 support, dual GPU capable |
 | **Storage** | NVMe SSD | Minimum 256GB for /opt/data volume |
 
 ## Performance Tuning
@@ -70,20 +71,29 @@ deploy:
 
 ## GPU Acceleration
 
-### NVIDIA CUDA Setup
+### Dual-GPU CUDA Setup
 
-The RTX 3060 with 12GB VRAM supports:
+**GPU 1 - NVIDIA CMP170HX (40GB):**
+1. **CUDA Compute Capability**: 8.6 (enterprise data center)
+2. **Primary Use**: Large model inference, batch processing
+3. **Memory**: 40GB VRAM for large language models
+4. **Unlocked**: Full compute performance without mining restrictions
 
+**GPU 2 - NVIDIA RTX 3060 (12GB):**
 1. **CUDA Compute Capability**: 8.6
-2. **Supported Frameworks**:
-   - PyTorch with CUDA 12.x support
-   - TensorFlow with CUDA backend
-   - ONNX Runtime with CUDA execution provider
+2. **Primary Use**: Auxiliary inference, fallback/distributed processing
+3. **Memory**: 12GB VRAM for standard models
 
-3. **Memory Usage**:
-   - Base framework: ~2-3GB
-   - Model inference: Varies by model size
-   - Recommended model size: Up to 7-8GB for 12GB VRAM
+**Supported Frameworks (Both GPUs):**
+- PyTorch with CUDA 12.x support
+- TensorFlow with CUDA backend
+- ONNX Runtime with CUDA execution provider
+- Multi-GPU data parallelism for distributed inference
+
+**Memory Allocation Strategy:**
+- CMP170HX: 30-35GB for model weights, 5-8GB for compute
+- RTX 3060: 8-10GB for model weights, 2GB for compute
+- CPU-GPU sync: 2GB system reserve
 
 ### Docker GPU Support
 
