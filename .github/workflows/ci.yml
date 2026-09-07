@@ -110,8 +110,7 @@ jobs:
     needs: detect
     if: needs.detect.outputs.python == 'true' || needs.detect.outputs.frontend == 'true' || needs.detect.outputs.docker_meta == 'true'
     uses: ./.github/workflows/docker.yml
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
     permissions:
       contents: read
       packages: write # docker.yml pushes images to GHCR on main pushes/releases
