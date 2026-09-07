@@ -110,9 +110,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.python == 'true' || needs.detect.outputs.frontend == 'true' || needs.detect.outputs.docker_meta == 'true'
     uses: ./.github/workflows/docker.yml
-    with:
-      event_name: ${{ needs.detect.outputs.event_name }}
-      ref: ${{ github.ref }}
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
