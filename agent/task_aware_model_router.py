@@ -12,35 +12,15 @@ capability matching (using more capable models for complex reasoning).
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
 from agent.extended_reasoning import (
     ReasoningComplexity,
     get_reasoning_engine,
 )
+from agent.routing_types import ModelTier, TaskCategory
 
 logger = logging.getLogger(__name__)
-
-
-class ModelTier(str, Enum):
-    """Model capability tiers for task routing."""
-
-    FAST_CHEAP = "fast_cheap"  # e.g., GPT-4o mini, Claude Haiku — speed/cost focused
-    BALANCED = "balanced"  # e.g., Claude Sonnet, GPT-4o — general purpose
-    CAPABLE = "capable"  # e.g., Claude Opus, o1 — advanced reasoning
-    EXTENDED = "extended"  # e.g., o1-pro — extended thinking, research
-
-
-class TaskCategory(str, Enum):
-    """Task categories for routing decisions."""
-
-    READ = "read"  # Information retrieval, file reading
-    ANALYZE = "analyze"  # Analysis, summarization, simple classification
-    CODE = "code"  # Programming, code generation, debugging
-    REASONING = "reasoning"  # Complex reasoning, planning, design
-    RESEARCH = "research"  # Deep research, exploration, comprehensive analysis
-    SECURITY = "security"  # Security testing, vulnerability analysis
 
 
 @dataclass
@@ -259,6 +239,19 @@ class TaskAwareModelRouter:
                 complexity.value,
             )
 
+        # Enforce security constraints for task category
+        from agent.routing_security import RoutingSecurityValidator
+        original_tier = tier
+        tier = RoutingSecurityValidator.enforce_category_tier_constraints(category, tier)
+        if tier != original_tier:
+            reasoning += f" (security constraint: {original_tier.value} → {tier.value})"
+            logger.info(
+                "Security constraint applied: category=%s enforces tier %s (was: %s)",
+                category.value if category else "none",
+                tier.value,
+                original_tier.value,
+            )
+
         # Select specific model from tier if available
         recommended_model = self._select_model_from_tier(tier)
 
@@ -320,17 +313,31 @@ class TaskAwareModelRouter:
         In production, this would prefer based on availability, cost, and user config.
         For now, returns the first available model in the tier.
         """
+        from agent.routing_security import RoutingSecurityValidator
+
         models = self.model_tier_mapping.get(tier, [])
         if models:
-            selected = models[0]
-            logger.debug(
-                "Model selected from tier: tier=%s, model=%s, available=%d",
+            # Find first valid model (security check)
+            for model in models:
+                if RoutingSecurityValidator.validate_model_name(model):
+                    logger.debug(
+                        "Model selected from tier: tier=%s, model=%s, available=%d",
+                        tier.value,
+                        model,
+                        len(models),
+                    )
+                    return model
+                else:
+                    logger.warning("Skipping invalid model %s from tier %s", model, tier.value)
+
+            # If no valid models found, log warning
+            logger.error(
+                "No valid models available for tier %s (checked %d models)",
                 tier.value,
-                selected,
                 len(models),
             )
-            return selected
-        logger.warning("No models available for tier: %s", tier.value)
+        else:
+            logger.warning("No models available for tier: %s", tier.value)
         return None
 
     def _estimate_cost_savings(
@@ -444,6 +451,9 @@ def route_task_to_model(
     Raises:
         No exceptions — always returns a valid fallback result.
     """
+    # Import here to avoid circular dependency at module load time
+    from agent.routing_security import RoutingSecurityValidator
+
     try:
         # Validate input
         if not task_description or not isinstance(task_description, str):
@@ -458,6 +468,19 @@ def route_task_to_model(
                 complexity=ReasoningComplexity.MODERATE,
                 confidence=0.5,
                 reasoning="Invalid task description; using fallback",
+            )
+
+        # Security validation on task description
+        if not RoutingSecurityValidator.validate_task_description(task_description):
+            logger.warning(
+                "Task description failed security validation; using fallback model"
+            )
+            return _FALLBACK_MODEL, RoutingDecision(
+                recommended_tier=ModelTier.BALANCED,
+                recommended_model=_FALLBACK_MODEL,
+                complexity=ReasoningComplexity.MODERATE,
+                confidence=0.3,
+                reasoning="Task failed security validation; using fallback",
             )
 
         if available_tools < 0:
