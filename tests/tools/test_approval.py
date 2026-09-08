@@ -2472,7 +2472,12 @@ class TestHomePrefixFoldGuard:
         folded = rx.sub(lambda m: "~" + m.group("tail"), "tee /root/.bashrc")
         assert folded == "tee ~/.bashrc"
 
-    def test_tee_root_bashrc_detected_end_to_end(self):
+    def test_tee_root_bashrc_detected_end_to_end(self, monkeypatch):
+        # The property under test is "when the running user's home is /root,
+        # tee /root/.bashrc is caught". The detector resolves the home at
+        # detection time from HOME, so pin it here: without this the test only
+        # holds when actually run as root and fails on CI (HOME=/home/runner).
+        monkeypatch.setenv("HOME", "/root")
         dangerous, key, _desc = detect_dangerous_command("echo x | tee /root/.bashrc")
         assert dangerous is True
         assert key is not None
