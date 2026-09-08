@@ -7,8 +7,8 @@ enabling cost-aware and capability-aware delegation.
 import logging
 from typing import Any, Dict
 
+from agent.routing_types import ModelTier
 from agent.task_aware_model_router import (
-    ModelTier,
     get_model_router,
     route_task_to_model,
 )
