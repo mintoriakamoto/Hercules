@@ -163,20 +163,33 @@ class TaskAwareModelRouter:
         Returns:
             RoutingDecision with recommended model tier and optional specific model
         """
+        logger.debug("Analyzing task for routing: %s (tools=%d)", task_description[:80], available_tools)
+
         # Determine task complexity using extended reasoning engine
-        complexity = self.reasoning_engine.analyze_task_complexity(
-            task_description,
-            available_tools=available_tools,
-            time_budget_seconds=30.0,
-        )
+        try:
+            complexity = self.reasoning_engine.analyze_task_complexity(
+                task_description,
+                available_tools=available_tools,
+                time_budget_seconds=30.0,
+            )
+            logger.debug("Task complexity analyzed: %s", complexity.value)
+        except Exception as e:
+            logger.warning(
+                "Complexity analysis failed; using moderate complexity fallback: %s",
+                str(e)[:100],
+            )
+            complexity = ReasoningComplexity.MODERATE
 
         # Determine task category by keyword matching
         category = self._categorize_task(task_description)
+        logger.debug("Task category identified: %s", category.value if category else "none")
 
         # Find best matching routing rule
         # Security rules get highest priority to override complexity-based routing
         best_rule: Optional[ModelRoutingRule] = None
         best_match_score = 0.0
+
+        logger.debug("Evaluating %d routing rules for task", len(self.routing_rules))
 
         for rule in self.routing_rules:
             # Score based on complexity match
@@ -202,10 +215,23 @@ class TaskAwareModelRouter:
                     is_security_rule = rule.category == TaskCategory.SECURITY
                     boost = 0.15 if is_security_rule else 0.1
                     match_score *= 1.0 + (boost * min(keyword_matches, 3))
+                    logger.debug(
+                        "Rule keyword match: category=%s, keywords_matched=%d, boost=%.2f%%",
+                        rule.category.value if rule.category else "any",
+                        keyword_matches,
+                        (boost * min(keyword_matches, 3) * 100),
+                    )
 
             if match_score > best_match_score:
                 best_match_score = match_score
                 best_rule = rule
+                logger.debug(
+                    "New best rule: complexity=%s, category=%s, tier=%s, score=%.3f",
+                    rule.complexity.value,
+                    rule.category.value if rule.category else "any",
+                    rule.tier.value,
+                    match_score,
+                )
 
         # Use best rule or fall back to balanced tier
         if best_rule:
@@ -213,12 +239,24 @@ class TaskAwareModelRouter:
             confidence = best_rule.confidence
             cat_str = category.value if category else ""
             reasoning = f"Matched rule for {complexity.value} {cat_str}"
+            logger.info(
+                "Task routed by rule match: tier=%s, confidence=%.2f, rule_complexity=%s, rule_category=%s",
+                tier.value,
+                confidence,
+                best_rule.complexity.value,
+                best_rule.category.value if best_rule.category else "any",
+            )
         else:
             tier = ModelTier.BALANCED
             confidence = 0.5
             reasoning = (
                 f"No rule matched; using default balanced tier "
                 f"for {complexity.value}"
+            )
+            logger.info(
+                "Task routed to default: tier=%s, reason=no_rule_match, complexity=%s",
+                tier.value,
+                complexity.value,
             )
 
         # Select specific model from tier if available
@@ -284,7 +322,15 @@ class TaskAwareModelRouter:
         """
         models = self.model_tier_mapping.get(tier, [])
         if models:
-            return models[0]
+            selected = models[0]
+            logger.debug(
+                "Model selected from tier: tier=%s, model=%s, available=%d",
+                tier.value,
+                selected,
+                len(models),
+            )
+            return selected
+        logger.warning("No models available for tier: %s", tier.value)
         return None
 
     def _estimate_cost_savings(
@@ -323,6 +369,54 @@ class TaskAwareModelRouter:
 # Singleton instance
 _router: Optional[TaskAwareModelRouter] = None
 
+# Default fallback model if routing completely fails
+_FALLBACK_MODEL = "claude-sonnet-5"
+
+
+def _validate_routing_result(decision: RoutingDecision) -> RoutingDecision:
+    """Validate routing result and apply fallbacks if needed.
+
+    Ensures that routing always produces a valid, usable result even if
+    some components fail (e.g., model not available in tier).
+
+    Args:
+        decision: The routing decision to validate
+
+    Returns:
+        A valid routing decision with fallback model if needed
+    """
+    # Ensure we always have a model
+    if not decision.recommended_model:
+        decision.recommended_model = _FALLBACK_MODEL
+        logger.warning(
+            "Routing result had no model; using fallback: %s (tier=%s)",
+            _FALLBACK_MODEL,
+            decision.recommended_tier.value,
+        )
+
+    # Ensure confidence is in valid range
+    if not (0.0 <= decision.confidence <= 1.0):
+        old_confidence = decision.confidence
+        decision.confidence = max(0.0, min(1.0, decision.confidence))
+        logger.warning(
+            "Routing confidence out of range [0-1]: %.2f → %.2f",
+            old_confidence,
+            decision.confidence,
+        )
+
+    # Ensure cost savings is in valid range
+    if decision.cost_savings_estimate is not None:
+        if not (0.0 <= decision.cost_savings_estimate <= 100.0):
+            old_savings = decision.cost_savings_estimate
+            decision.cost_savings_estimate = max(0.0, min(100.0, decision.cost_savings_estimate))
+            logger.warning(
+                "Routing cost savings out of range [0-100%%]: %.1f → %.1f",
+                old_savings,
+                decision.cost_savings_estimate,
+            )
+
+    return decision
+
 
 def get_model_router() -> TaskAwareModelRouter:
     """Get or create the task-aware model router singleton."""
@@ -338,6 +432,7 @@ def route_task_to_model(
     """Route a task description to a recommended model.
 
     This is the primary entry point for task-aware model routing.
+    Includes comprehensive error handling and fallback strategies.
 
     Args:
         task_description: Description of the task
@@ -345,25 +440,72 @@ def route_task_to_model(
 
     Returns:
         Tuple of (recommended_model_id, routing_decision)
+
+    Raises:
+        No exceptions — always returns a valid fallback result.
     """
-    router = get_model_router()
-    decision = router.analyze_task(task_description, available_tools)
+    try:
+        # Validate input
+        if not task_description or not isinstance(task_description, str):
+            logger.warning(
+                "Invalid task description for routing; using fallback model. "
+                "task_type=%s",
+                type(task_description).__name__,
+            )
+            return _FALLBACK_MODEL, RoutingDecision(
+                recommended_tier=ModelTier.BALANCED,
+                recommended_model=_FALLBACK_MODEL,
+                complexity=ReasoningComplexity.MODERATE,
+                confidence=0.5,
+                reasoning="Invalid task description; using fallback",
+            )
 
-    model = decision.recommended_model or "claude-sonnet-5"
+        if available_tools < 0:
+            logger.warning("Negative available_tools: %d; clamping to 0", available_tools)
+            available_tools = 0
 
-    logger.debug(
-        "Task routing: %s -> %s (tier=%s, confidence=%.2f)",
-        task_description[:50],
-        model,
-        decision.recommended_tier.value,
-        decision.confidence,
-    )
+        router = get_model_router()
+        decision = router.analyze_task(task_description, available_tools)
 
-    if decision.cost_savings_estimate and decision.cost_savings_estimate > 0:
+        # Validate and fix any issues with the decision
+        decision = _validate_routing_result(decision)
+
+        model = decision.recommended_model or _FALLBACK_MODEL
+
         logger.info(
-            "Estimated cost savings: %.1f%% by routing to %s",
-            decision.cost_savings_estimate,
+            "Task routing decision: task=%s... → model=%s (tier=%s, complexity=%s, category=%s, "
+            "confidence=%.2f, savings=%.1f%%)",
+            task_description[:60],
             model,
+            decision.recommended_tier.value,
+            decision.complexity.value,
+            decision.category.value if decision.category else "uncategorized",
+            decision.confidence,
+            decision.cost_savings_estimate or 0.0,
         )
 
-    return model, decision
+        if decision.cost_savings_estimate and decision.cost_savings_estimate > 0:
+            logger.info(
+                "Routing cost optimization: estimated %.1f%% cost savings by using %s "
+                "(reasoning: %s)",
+                decision.cost_savings_estimate,
+                model,
+                decision.reasoning,
+            )
+
+        return model, decision
+
+    except Exception as e:
+        logger.exception(
+            "Task routing failed with exception; using fallback model %s: %s",
+            _FALLBACK_MODEL,
+            str(e)[:200],
+        )
+        # Return safe fallback
+        return _FALLBACK_MODEL, RoutingDecision(
+            recommended_tier=ModelTier.BALANCED,
+            recommended_model=_FALLBACK_MODEL,
+            complexity=ReasoningComplexity.MODERATE,
+            confidence=0.3,
+            reasoning=f"Routing failed: {str(e)[:100]}; using fallback",
+        )

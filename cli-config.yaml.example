@@ -1112,6 +1112,38 @@ delegation:
   #                                           # same keys as above (model/provider/base_url/api_key/api_mode); unset
   #                                           # keys inherit from the worker, e.g. model-only keeps the same provider.
   #                                           # Empty = verifiers use the worker's credentials (default, unchanged).
+  #
+  # task_aware_routing:                       # Automatic model selection based on task complexity.
+  #   enabled: true                           # Enable/disable task-aware routing (default: true).
+  #   confidence_threshold: 0.7               # Routing confidence threshold [0.0-1.0] (default: 0.7).
+  #                                           # When complexity analysis has lower confidence, falls back to parent model.
+  #   model_tiers:                            # Customize model tier mappings per deployment.
+  #     fast_cheap:                           # Cheapest/fastest tier for simple tasks.
+  #       - "claude-haiku-4-5-20251001"       # Default: Haiku models
+  #       - "gpt-4o-mini"
+  #     balanced:                             # Mid-tier for moderate tasks (good cost/quality tradeoff).
+  #       - "claude-sonnet-5"                 # Default: Sonnet/Sonnet-equivalent
+  #       - "gpt-4o"
+  #     capable:                              # Advanced tier for complex reasoning.
+  #       - "claude-opus-5"                   # Default: Opus/extended-reasoning
+  #       - "o1-mini"
+  #     extended:                             # Maximum capability for critical tasks.
+  #       - "claude-opus-5"                   # Default: Opus with extended thinking
+  #       - "o1"
+  #   cost_multipliers:                       # Per-tier relative cost (for savings estimation).
+  #     fast_cheap: 1.0                       # Reference tier (default)
+  #     balanced: 3.5                         # ~3.5x cost of fast tier (default)
+  #     capable: 7.0                          # ~7x cost of fast tier (default)
+  #     extended: 10.0                        # ~10x cost of fast tier (default)
+  #   complexity_thresholds:                  # Customize task complexity cutoffs [0.0-1.0].
+  #     simple_moderate: 0.3                  # Below: SIMPLE, above: MODERATE (default: 0.3)
+  #     moderate_complex: 0.65                # Below: MODERATE, above: COMPLEX (default: 0.65)
+  #     complex_critical: 0.85                # Below: COMPLEX, above: CRITICAL (default: 0.85)
+  #   category_overrides:                     # Force specific categories to fixed tiers.
+  #     security:                             # Force security tasks to capable or higher.
+  #       min_tier: "capable"
+  #     read:                                 # Force read tasks to fast_cheap or balanced.
+  #       max_tier: "balanced"
 
 # =============================================================================
 # Honcho Integration (Cross-Session User Modeling)
