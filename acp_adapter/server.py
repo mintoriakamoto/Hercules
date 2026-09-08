@@ -94,7 +94,7 @@ _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="acp-agent")
 def _shutdown_executor() -> None:
     """Gracefully shutdown the thread pool executor on process exit."""
     try:
-        _executor.shutdown(wait=True, timeout=5)
+        _executor.shutdown(wait=True)
         logger.debug("ACP thread pool executor shut down gracefully")
     except Exception as e:
         logger.warning("error shutting down ACP executor: %s", e)
