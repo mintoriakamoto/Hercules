@@ -1220,7 +1220,12 @@ def _build_child_agent(
                 decision.cost_savings_estimate or 0,
             )
         except Exception as e:
-            logger.debug("Task routing failed, using parent model: %s", e)
+            logger.warning(
+                "Task routing failed (falling back to parent model %s): %s",
+                parent_agent.model,
+                str(e)[:200],
+                exc_info=True,
+            )
             effective_model = parent_agent.model
     effective_provider = override_provider or getattr(parent_agent, "provider", None)
     effective_base_url = override_base_url or parent_agent.base_url
@@ -3185,6 +3190,13 @@ def delegate_task(
             effective_role = _normalize_role(t.get("role") or top_role)
             # Per-task model beats config credentials model
             effective_model = t.get("model") or creds["model"]
+            if t.get("model"):
+                logger.debug(
+                    "Task %d using explicit model override: %s (from config: %s)",
+                    i,
+                    t.get("model"),
+                    creds["model"],
+                )
             child = _build_child_agent(
                 task_index=i,
                 goal=t["goal"],
