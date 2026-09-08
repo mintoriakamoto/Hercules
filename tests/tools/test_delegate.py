@@ -1561,8 +1561,8 @@ class TestDelegationProviderIntegration(unittest.TestCase):
 
     @patch("tools.delegate_tool._load_config")
     @patch("tools.delegate_tool._resolve_delegation_credentials")
-    def test_empty_config_inherits_parent(self, mock_creds, mock_cfg):
-        """When delegation config is empty, child inherits parent credentials."""
+    def test_empty_config_uses_task_aware_routing(self, mock_creds, mock_cfg):
+        """When delegation config is empty, child uses task-aware model routing."""
         mock_cfg.return_value = {"max_iterations": 45, "model": "", "provider": ""}
         mock_creds.return_value = {
             "model": None,
@@ -1583,9 +1583,45 @@ class TestDelegationProviderIntegration(unittest.TestCase):
             delegate_task(goal="Test inherit", parent_agent=parent)
 
             _, kwargs = MockAgent.call_args
-            self.assertEqual(kwargs["model"], parent.model)
+            # With task-aware routing, simple tasks route to cheaper models
+            # (e.g., "Test inherit" -> haiku for cost optimization)
+            self.assertIsNotNone(kwargs["model"])
+            # The routed model should be different from the parent's for simple tasks
+            self.assertNotEqual(kwargs["model"], parent.model)
             self.assertEqual(kwargs["provider"], parent.provider)
             self.assertEqual(kwargs["base_url"], parent.base_url)
+
+    @patch("tools.delegate_tool._load_config")
+    @patch("tools.delegate_tool._resolve_delegation_credentials")
+    def test_explicit_model_bypasses_routing(self, mock_creds, mock_cfg):
+        """Explicit model in task should bypass task-aware routing."""
+        mock_cfg.return_value = {"max_iterations": 45, "model": "", "provider": ""}
+        mock_creds.return_value = {
+            "model": None,
+            "provider": None,
+            "base_url": None,
+            "api_key": None,
+            "api_mode": None,
+        }
+        parent = _make_mock_parent(depth=0)
+        explicit_model = "claude-opus-5"
+
+        with patch("run_agent.AIAgent") as MockAgent:
+            mock_child = MagicMock()
+            mock_child.run_conversation.return_value = {
+                "final_response": "done", "completed": True, "api_calls": 1
+            }
+            MockAgent.return_value = mock_child
+
+            # Use tasks format with explicit model
+            delegate_task(
+                tasks=[{"goal": "Simple task", "model": explicit_model}],
+                parent_agent=parent
+            )
+
+            _, kwargs = MockAgent.call_args
+            # Explicit model should be used, not routed to cheaper model
+            self.assertEqual(kwargs["model"], explicit_model)
 
     def test_inherit_parent_base_url_prefers_client_kwargs(self):
         parent = _make_mock_parent(depth=0)
