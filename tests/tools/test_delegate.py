@@ -34,6 +34,8 @@ from tools.delegate_tool import (
     _strip_blocked_tools,
     _resolve_child_credential_pool,
     _resolve_delegation_credentials,
+    _resolve_verifier_credentials,
+    _run_verification_wave,
     _inherit_parent_base_url,
 )
 
@@ -3157,3 +3159,101 @@ class TestFallbackModelInheritance(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestVerifierCredentialDecorrelation(unittest.TestCase):
+    """``delegation.verifier`` runs adversarial verifiers on a different model
+    than the worker they check, so a verifier doesn't share the worker's blind
+    spots. Absent/empty, it must be a strict no-op (worker creds, as before)."""
+
+    PRODUCER = {
+        "model": "worker/model",
+        "provider": "openrouter",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key": "k-worker",
+        "api_mode": "chat_completions",
+        "request_overrides": None,
+        "max_output_tokens": None,
+    }
+
+    def test_absent_block_returns_producer_creds_unchanged(self):
+        out = _resolve_verifier_credentials({}, _make_mock_parent(), self.PRODUCER)
+        self.assertIs(out, self.PRODUCER)  # identity: a true no-op, not a copy
+
+    def test_empty_block_returns_producer_creds_unchanged(self):
+        cfg = {"verifier": {"model": "", "provider": "  "}}
+        out = _resolve_verifier_credentials(cfg, _make_mock_parent(), self.PRODUCER)
+        self.assertIs(out, self.PRODUCER)
+
+    def test_non_dict_block_is_ignored(self):
+        out = _resolve_verifier_credentials(
+            {"verifier": "openai/gpt-4o"}, _make_mock_parent(), self.PRODUCER
+        )
+        self.assertIs(out, self.PRODUCER)
+
+    def test_model_only_swaps_model_but_keeps_worker_transport(self):
+        """Setting just ``model`` must not blank provider/base_url/api_key to None."""
+        cfg = {"verifier": {"model": "checker/model"}}
+        out = _resolve_verifier_credentials(cfg, _make_mock_parent(), self.PRODUCER)
+        self.assertEqual(out["model"], "checker/model")
+        self.assertEqual(out["provider"], "openrouter")
+        self.assertEqual(out["base_url"], "https://openrouter.ai/api/v1")
+        self.assertEqual(out["api_key"], "k-worker")
+        self.assertEqual(out["api_mode"], "chat_completions")
+        self.assertIsNot(out, self.PRODUCER)
+
+    def test_producer_creds_are_not_mutated(self):
+        before = dict(self.PRODUCER)
+        _resolve_verifier_credentials(
+            {"verifier": {"model": "checker/model"}}, _make_mock_parent(), self.PRODUCER
+        )
+        self.assertEqual(self.PRODUCER, before)
+
+    @patch("model_tools._last_resolved_tool_names", [], create=True)
+    @patch("tools.delegate_tool._run_single_child")
+    @patch("tools.delegate_tool._build_child_agent")
+    def test_verification_wave_spawns_verifier_on_verifier_creds(self, mock_build, mock_run):
+        """The verifier child is built from verifier_creds — NOT the worker's creds."""
+        mock_build.return_value = MagicMock()
+        mock_run.return_value = {"status": "completed", "summary": "VERDICT: verified"}
+        parent = _make_mock_parent()
+        parent._interrupt_requested = False
+        results = [{"task_index": 0, "status": "completed", "summary": "did the thing"}]
+        worker = dict(self.PRODUCER)
+        checker = {
+            **self.PRODUCER,
+            "model": "checker/model",
+            "provider": "anthropic",
+            "base_url": "https://api.anthropic.com",
+            "api_key": "k-checker",
+            "api_mode": "anthropic_messages",
+        }
+        _run_verification_wave(
+            results, [{"goal": "do the thing"}], parent, worker, 1, [], verifier_creds=checker
+        )
+        mock_build.assert_called_once()
+        kw = mock_build.call_args.kwargs
+        self.assertEqual(kw["model"], "checker/model")
+        self.assertEqual(kw["override_provider"], "anthropic")
+        self.assertEqual(kw["override_base_url"], "https://api.anthropic.com")
+        self.assertEqual(kw["override_api_key"], "k-checker")
+        self.assertEqual(kw["override_api_mode"], "anthropic_messages")
+        self.assertNotEqual(kw["model"], worker["model"])
+        self.assertEqual(kw["role"], "leaf")
+        self.assertEqual(results[0]["verification"]["verdict"], "VERDICT: verified")
+
+    @patch("model_tools._last_resolved_tool_names", [], create=True)
+    @patch("tools.delegate_tool._run_single_child")
+    @patch("tools.delegate_tool._build_child_agent")
+    def test_verification_wave_falls_back_to_worker_creds_when_unset(self, mock_build, mock_run):
+        """No verifier_creds => identical to the pre-change behaviour (worker creds)."""
+        mock_build.return_value = MagicMock()
+        mock_run.return_value = {"status": "completed", "summary": "VERDICT: verified"}
+        parent = _make_mock_parent()
+        parent._interrupt_requested = False
+        results = [{"task_index": 0, "status": "completed", "summary": "did the thing"}]
+        _run_verification_wave(results, [{"goal": "g"}], parent, dict(self.PRODUCER), 1, [])
+        kw = mock_build.call_args.kwargs
+        self.assertEqual(kw["model"], "worker/model")
+        self.assertEqual(kw["override_provider"], "openrouter")
+        self.assertEqual(kw["override_api_key"], "k-worker")

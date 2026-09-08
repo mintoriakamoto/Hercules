@@ -2449,6 +2449,7 @@ def _run_verification_wave(
     creds: dict,
     max_children: int,
     parent_tool_names: list,
+    verifier_creds: Optional[dict] = None,
 ) -> None:
     """Second delegation wave: adversarially verify completed tasks' claims.
 
@@ -2466,6 +2467,7 @@ def _run_verification_wave(
     that to the build window, the same best-effort guard the primary build
     path uses.
     """
+    verifier_creds = verifier_creds or creds
     to_verify = [
         e for e in results
         if e.get("status") == "completed" and (e.get("summary") or "").strip()
@@ -2488,18 +2490,18 @@ def _run_verification_wave(
                 goal=_build_verifier_goal(original_goal, e["summary"]),
                 context=None,
                 toolsets=None,
-                model=creds["model"],
+                model=verifier_creds["model"],
                 max_iterations=_VERIFIER_MAX_ITERATIONS,
                 task_count=len(to_verify),
                 parent_agent=parent_agent,
-                override_provider=creds["provider"],
-                override_base_url=creds["base_url"],
-                override_api_key=creds["api_key"],
-                override_api_mode=creds["api_mode"],
-                override_request_overrides=creds.get("request_overrides"),
-                override_max_tokens=creds.get("max_output_tokens"),
-                override_acp_command=creds.get("command"),
-                override_acp_args=creds.get("args"),
+                override_provider=verifier_creds["provider"],
+                override_base_url=verifier_creds["base_url"],
+                override_api_key=verifier_creds["api_key"],
+                override_api_mode=verifier_creds["api_mode"],
+                override_request_overrides=verifier_creds.get("request_overrides"),
+                override_max_tokens=verifier_creds.get("max_output_tokens"),
+                override_acp_command=verifier_creds.get("command"),
+                override_acp_args=verifier_creds.get("args"),
                 role="leaf",
             )
             child._delegate_saved_tool_names = parent_tool_names
@@ -2617,6 +2619,7 @@ def _run_repair_rounds(
     max_children: int,
     parent_tool_names: list,
     max_rounds: int,
+    verifier_creds: Optional[dict] = None,
 ) -> None:
     """Self-correcting loop: repair refuted tasks, then re-verify, until the
     verdict flips to verified or ``max_rounds`` is exhausted.
@@ -2631,6 +2634,7 @@ def _run_repair_rounds(
     truthful. Fail-soft throughout — a crashed repair/verify leaves the prior
     refuted verdict in place. Gated to a no-op when ``max_rounds <= 0``.
     """
+    verifier_creds = verifier_creds or creds
     if max_rounds <= 0:
         return
 
@@ -2725,18 +2729,18 @@ def _run_repair_rounds(
                     goal=_build_verifier_goal(original_goal, e["_repair_candidate"]),
                     context=None,
                     toolsets=None,
-                    model=creds["model"],
+                    model=verifier_creds["model"],
                     max_iterations=_VERIFIER_MAX_ITERATIONS,
                     task_count=len(reverify_targets),
                     parent_agent=parent_agent,
-                    override_provider=creds["provider"],
-                    override_base_url=creds["base_url"],
-                    override_api_key=creds["api_key"],
-                    override_api_mode=creds["api_mode"],
-                    override_request_overrides=creds.get("request_overrides"),
-                    override_max_tokens=creds.get("max_output_tokens"),
-                    override_acp_command=creds.get("command"),
-                    override_acp_args=creds.get("args"),
+                    override_provider=verifier_creds["provider"],
+                    override_base_url=verifier_creds["base_url"],
+                    override_api_key=verifier_creds["api_key"],
+                    override_api_mode=verifier_creds["api_mode"],
+                    override_request_overrides=verifier_creds.get("request_overrides"),
+                    override_max_tokens=verifier_creds.get("max_output_tokens"),
+                    override_acp_command=verifier_creds.get("command"),
+                    override_acp_args=verifier_creds.get("args"),
                     role="leaf",
                 )
                 child._delegate_saved_tool_names = parent_tool_names
@@ -3073,6 +3077,7 @@ def delegate_task(
     # children inherit from the parent.
     try:
         creds = _resolve_delegation_credentials(cfg, parent_agent)
+        verifier_creds = _resolve_verifier_credentials(cfg, parent_agent, creds)
     except ValueError as exc:
         return tool_error(str(exc))
 
@@ -3355,6 +3360,7 @@ def delegate_task(
                     creds,
                     max_children,
                     _parent_tool_names,
+                    verifier_creds=verifier_creds,
                 )
             except Exception as _verify_exc:
                 logger.warning("Verification wave failed: %s", _verify_exc)
@@ -3381,6 +3387,7 @@ def delegate_task(
                         max_children,
                         _parent_tool_names,
                         _repair_rounds,
+                        verifier_creds=verifier_creds,
                     )
             except Exception as _repair_exc:
                 logger.warning("Repair loop failed: %s", _repair_exc)
@@ -3860,6 +3867,43 @@ def _resolve_delegation_credentials(cfg: dict, parent_agent) -> dict:
         "command": runtime.get("command"),
         "args": list(runtime.get("args") or []),
     }
+
+
+_VERIFIER_CRED_KEYS = ("model", "provider", "base_url", "api_key", "api_mode")
+
+
+def _resolve_verifier_credentials(cfg: dict, parent_agent, producer_creds: dict) -> dict:
+    """Resolve credentials for adversarial *verifier* children.
+
+    A verifier that runs on the same model as the worker it is checking shares
+    that worker's blind spots, so it tends to miss exactly the mistakes it was
+    spawned to catch. ``delegation.verifier`` lets an operator point verifiers
+    at a different model/provider. It accepts the same keys as the top-level
+    delegation block (model, provider, base_url, api_key, api_mode) and is
+    resolved by the same code path, so every provider that works for workers
+    works for verifiers.
+
+    Keys the verifier block leaves unset inherit from ``producer_creds``: a
+    block that sets only ``model`` swaps the model but keeps the worker's
+    transport (provider/base_url/api_key). When the block is absent or empty,
+    verifiers use the worker's credentials exactly as before, so this is
+    opt-in and changes nothing by default.
+
+    Raises ValueError (like the producer path) on a misconfigured block —
+    a broken verifier override should fail loudly, not silently fall back.
+    """
+    vcfg = cfg.get("verifier")
+    if not isinstance(vcfg, dict):
+        return producer_creds
+    vcfg = {k: vcfg.get(k) for k in _VERIFIER_CRED_KEYS}
+    if not any(str(v or "").strip() for v in vcfg.values()):
+        return producer_creds
+    resolved = _resolve_delegation_credentials(vcfg, parent_agent)
+    merged = dict(producer_creds)
+    for k, v in resolved.items():
+        if v is not None:
+            merged[k] = v
+    return merged
 
 
 def _load_config() -> dict:
