@@ -12,6 +12,7 @@ from unittest.mock import patch as mock_patch
 import tools.approval as approval_module
 from hercules_constants import get_hercules_home
 from tools.approval import (
+    _home_prefix_fold_regex,
     _get_approval_mode,
     _normalize_approval_mode,
     _smart_approve,
@@ -2454,3 +2455,39 @@ class TestApprovalPromptRedaction:
         # The script's credential must not appear in the user-facing message.
         assert "sk-proj-abc123xyz4567890abcdef" not in result["message"]
         assert "sk-proj-abc123xyz4567890abcdef" not in result["command"]
+
+
+class TestHomePrefixFoldGuard:
+    """_home_prefix_fold_regex: degenerate homes stay rejected, real homes fold.
+
+    Regression coverage for the root-user case, which the two-component
+    degenerate-path rule wrongly rejected, so ``tee /root/.bashrc`` was never
+    folded to ``~/.bashrc`` and went undetected whenever tests or the agent
+    ran as root.
+    """
+
+    def test_root_user_home_folds(self):
+        rx = _home_prefix_fold_regex("/root")
+        assert rx is not None
+        folded = rx.sub(lambda m: "~" + m.group("tail"), "tee /root/.bashrc")
+        assert folded == "tee ~/.bashrc"
+
+    def test_tee_root_bashrc_detected_end_to_end(self):
+        dangerous, key, _desc = detect_dangerous_command("echo x | tee /root/.bashrc")
+        assert dangerous is True
+        assert key is not None
+
+    def test_two_component_home_still_folds(self):
+        assert _home_prefix_fold_regex("/home/alice") is not None
+
+    def test_home_container_dir_still_rejected(self):
+        # Documented behaviour preserved: /home holds homes; it is not one.
+        assert _home_prefix_fold_regex("/home") is None
+
+    def test_degenerate_roots_still_rejected(self):
+        for p in ("", "/", "//", "C:\\", "C:/", "C:"):
+            assert _home_prefix_fold_regex(p) is None, repr(p)
+
+    def test_relative_root_not_folded(self):
+        # Only the absolute POSIX /root is the exception, not a relative 'root'.
+        assert _home_prefix_fold_regex("root") is None

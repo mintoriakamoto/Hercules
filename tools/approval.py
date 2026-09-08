@@ -886,7 +886,17 @@ def _home_prefix_fold_regex(path: str):
     # ``/home`` does not); for Windows it rejects a bare drive root (``C:\\``)
     # while accepting a real home (``C:\\Users\\alice``).
     if len(components) < 2:
-        return None
+        # ``/root`` is the POSIX root user's home: a legitimate one-component
+        # home the two-component rule did not anticipate. Without this
+        # exception ``tee /root/.bashrc`` is never folded to ``~/.bashrc`` and
+        # goes undetected whenever the agent runs as root (containers, root
+        # Docker jobs). It is deliberately narrow: only the absolute ``/root``
+        # qualifies, so ``/``, ``C:\\``, a bare ``root`` and the ``/home``
+        # container-of-homes are still rejected. Other one-component homes such
+        # as ``/app`` remain unfolded; relaxing the rule for all non-drive
+        # single components is a separate decision.
+        if not (components == ["root"] and path.startswith("/")):
+            return None
     body = r"[/\\]+".join(re.escape(c) for c in components)
     # Optional leading root separator (POSIX ``/`` or UNC ``\\``); a Windows
     # drive letter is captured as the first component.
