@@ -38,6 +38,7 @@ from toolsets import TOOLSETS
 _RUNTIME_PROVIDER_CUSTOM = "custom"
 from tools import file_state
 from tools.terminal_tool import set_approval_callback as _set_subagent_approval_cb
+from agent.task_aware_model_router import route_task_to_model
 from utils import base_url_hostname, is_truthy_value
 
 
@@ -1203,7 +1204,24 @@ def _build_child_agent(
         child_thinking_cb = _child_thinking
 
     # Resolve effective credentials: config override > parent inherit
-    effective_model = model or parent_agent.model
+    # Use task-aware model routing if no explicit model provided
+    if model:
+        effective_model = model
+    else:
+        try:
+            routed_model, decision = route_task_to_model(goal or "", available_tools=len(child_toolsets))
+            effective_model = routed_model
+            logger.debug(
+                "Delegated task routing: %s → %s (tier=%s, confidence=%.2f, savings=%.1f%%)",
+                (goal or "")[:50],
+                routed_model,
+                decision.recommended_tier.value,
+                decision.confidence,
+                decision.cost_savings_estimate or 0,
+            )
+        except Exception as e:
+            logger.debug("Task routing failed, using parent model: %s", e)
+            effective_model = parent_agent.model
     effective_provider = override_provider or getattr(parent_agent, "provider", None)
     effective_base_url = override_base_url or parent_agent.base_url
     if not override_base_url:
@@ -3165,6 +3183,8 @@ def delegate_task(
             # Per-task role beats top-level; normalise again so unknown
             # per-task values warn and degrade to leaf uniformly.
             effective_role = _normalize_role(t.get("role") or top_role)
+            # Per-task model beats config credentials model
+            effective_model = t.get("model") or creds["model"]
             child = _build_child_agent(
                 task_index=i,
                 goal=t["goal"],
@@ -3172,7 +3192,7 @@ def delegate_task(
                 # Subagents always inherit the parent's toolsets; the model
                 # cannot choose or narrow them (no model-facing toolsets arg).
                 toolsets=None,
-                model=creds["model"],
+                model=effective_model,
                 max_iterations=effective_max_iter,
                 task_count=n_tasks,
                 parent_agent=parent_agent,
