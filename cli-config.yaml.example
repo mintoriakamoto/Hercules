@@ -1106,6 +1106,12 @@ delegation:
   # provider: "openrouter"                    # Override provider for subagents (empty = inherit parent)
   #                                           # Resolves full credentials (base_url, api_key) automatically.
   #                                           # Supported: openrouter, nous, zai, kimi-coding, minimax
+  # verifier:                                 # Run adversarial verifiers (verify=True) on a DIFFERENT model than
+  #   model: "openai/gpt-4o"                  # the worker they check. A verifier on the worker's own model shares
+  #   provider: "openrouter"                  # its blind spots and misses what it was spawned to catch. Accepts the
+  #                                           # same keys as above (model/provider/base_url/api_key/api_mode); unset
+  #                                           # keys inherit from the worker, e.g. model-only keeps the same provider.
+  #                                           # Empty = verifiers use the worker's credentials (default, unchanged).
 
 # =============================================================================
 # Honcho Integration (Cross-Session User Modeling)
