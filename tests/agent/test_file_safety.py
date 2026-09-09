@@ -102,30 +102,34 @@ class TestEnvFileReadBlocking:
 class TestCacheFileReadBlocking:
     """Internal Hercules cache files must remain blocked."""
 
-    def test_hub_index_cache_blocked(self, tmp_path):
+    @patch("agent.file_safety._hercules_root_path")
+    @patch("agent.file_safety._hercules_home_path")
+    def test_hub_index_cache_blocked(self, mock_home, mock_root, tmp_path):
         """Hub index-cache reads are blocked."""
         hercules_home = tmp_path / ".hercules"
         cache = hercules_home / "skills" / ".hub" / "index-cache" / "data.json"
         cache.parent.mkdir(parents=True)
         cache.write_text("{}")
 
-        with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            with patch("agent.file_safety._hercules_root_path", return_value=tmp_path):
-                error = get_read_block_error(str(cache))
-                assert error is not None
-                assert "internal Hercules cache" in error
+        mock_home.return_value = hercules_home
+        mock_root.return_value = tmp_path
+        error = get_read_block_error(str(cache))
+        assert error is not None
+        assert "internal Hercules cache" in error
 
-    def test_hub_directory_blocked(self, tmp_path):
+    @patch("agent.file_safety._hercules_root_path")
+    @patch("agent.file_safety._hercules_home_path")
+    def test_hub_directory_blocked(self, mock_home, mock_root, tmp_path):
         """Hub directory reads are blocked."""
         hercules_home = tmp_path / ".hercules"
         hub = hercules_home / "skills" / ".hub" / "metadata.json"
         hub.parent.mkdir(parents=True)
         hub.write_text("{}")
 
-        with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            with patch("agent.file_safety._hercules_root_path", return_value=tmp_path):
-                error = get_read_block_error(str(hub))
-                assert error is not None
+        mock_home.return_value = hercules_home
+        mock_root.return_value = tmp_path
+        error = get_read_block_error(str(hub))
+        assert error is not None
 
 
 # ---------------------------------------------------------------------------
