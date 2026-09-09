@@ -85,7 +85,7 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     from pathlib import Path
     from hercules_constants import get_hercules_home
     import agent.model_metadata as mm
-    from unittest.mock import wraps
+    import time
 
     # Ensure cache directory exists (created by _hermetic_environment fixture)
     hercules_home = get_hercules_home()
@@ -96,15 +96,10 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     # Clear before test
     _clear_model_metadata_caches()
 
-    # Wrap fetch_model_metadata to always force_refresh in tests
-    # This ensures that mocked versions are called instead of returning cached values
-    original_fetch = mm.fetch_model_metadata
-
-    def _fetch_with_force_refresh(force_refresh=False):
-        # In tests, always force a fresh fetch to bypass cache and let mocks work
-        return original_fetch(force_refresh=True)
-
-    monkeypatch.setattr(mm, "fetch_model_metadata", _fetch_with_force_refresh)
+    # Set cache time to an old value so fetch_model_metadata always refreshes
+    # This bypasses the cache check at line 842 in model_metadata.py and ensures
+    # that mocked versions of fetch_model_metadata are actually called
+    monkeypatch.setattr(mm, "_model_metadata_cache_time", 0.0, raising=False)
 
     yield
 
