@@ -40,7 +40,7 @@ def _clear_model_metadata_caches():
 
 
 @pytest.fixture(autouse=True)
-def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environment):
+def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environment, request):
     """Clear model metadata caches for all tests.
 
     Depends on _hermetic_environment fixture which already isolates HERCULES_HOME.
@@ -48,12 +48,17 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     """
     from pathlib import Path
     from hercules_constants import get_hercules_home
+    import agent.model_metadata as mm
 
     # Ensure cache directory exists (created by _hermetic_environment fixture)
     hercules_home = get_hercules_home()
     cache_dir = hercules_home / "cache"
     if not cache_dir.exists():
         cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Force re-import to pick up new HERCULES_HOME
+    import importlib
+    importlib.reload(mm)
 
     # Clear before test
     _clear_model_metadata_caches()
