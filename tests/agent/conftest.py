@@ -2,29 +2,56 @@
 
 import pytest
 from unittest.mock import patch, MagicMock
+import importlib
+import sys
 
 
 def _clear_model_metadata_caches():
     """Clear all model metadata caches (in-memory and on-disk)."""
     import agent.model_metadata as mm
 
-    # Clear in-memory caches - set to their initial values
-    mm._model_metadata_cache = {}
-    mm._model_metadata_cache_time = 0
-    mm._novita_metadata_cache = {}
-    mm._novita_metadata_cache_time = 0
-    mm._endpoint_model_metadata_cache = {}
-    mm._endpoint_model_metadata_cache_time = {}
-    mm._endpoint_probe_path_cache = {}
-    mm._codex_oauth_context_cache = {}
-    mm._codex_oauth_context_cache_time = 0.0
+    # Clear in-memory caches by directly mutating the dict/cache objects
+    # This ensures that any code holding references to these objects sees the changes
+    try:
+        mm._model_metadata_cache.clear()
+        mm._model_metadata_cache_time = 0
+    except (AttributeError, TypeError):
+        mm._model_metadata_cache = {}
+        mm._model_metadata_cache_time = 0
+
+    try:
+        mm._novita_metadata_cache.clear()
+        mm._novita_metadata_cache_time = 0
+    except (AttributeError, TypeError):
+        mm._novita_metadata_cache = {}
+        mm._novita_metadata_cache_time = 0
+
+    try:
+        mm._endpoint_model_metadata_cache.clear()
+    except (AttributeError, TypeError):
+        mm._endpoint_model_metadata_cache = {}
+
+    try:
+        mm._endpoint_model_metadata_cache_time.clear()
+    except (AttributeError, TypeError):
+        mm._endpoint_model_metadata_cache_time = {}
+
+    try:
+        mm._endpoint_probe_path_cache.clear()
+    except (AttributeError, TypeError):
+        mm._endpoint_probe_path_cache = {}
+
+    try:
+        mm._codex_oauth_context_cache.clear()
+        mm._codex_oauth_context_cache_time = 0.0
+    except (AttributeError, TypeError):
+        mm._codex_oauth_context_cache = {}
+        mm._codex_oauth_context_cache_time = 0.0
 
     # Also clear any context length caches that might be populated
-    # This is important because models.dev results and other probes might cache data
     try:
-        # Reset the local context cache if it exists
         if hasattr(mm, '_local_context_cache'):
-            mm._local_context_cache = {}
+            mm._local_context_cache.clear()
     except:
         pass
 
@@ -57,6 +84,7 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     """
     from pathlib import Path
     from hercules_constants import get_hercules_home
+    import agent.model_metadata as mm
 
     # Ensure cache directory exists (created by _hermetic_environment fixture)
     hercules_home = get_hercules_home()
