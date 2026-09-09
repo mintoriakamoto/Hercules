@@ -660,8 +660,8 @@ class TestNousPortalContextResolution:
 
 class TestGetModelContextLength:
     @pytest.fixture(autouse=True)
-    def _clear_caches(self):
-        """Auto-use fixture to clear all caches before and after each test."""
+    def _clear_caches_and_block_network(self):
+        """Auto-use fixture to clear all caches and prevent network calls."""
         import agent.model_metadata as mm
         # Clear before test
         mm._model_metadata_cache = {}
@@ -680,7 +680,15 @@ class TestGetModelContextLength:
                 cache_file.unlink()
         except Exception:
             pass
-        yield
+
+        # Patch requests.get to prevent accidental network calls
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"data": []}
+            mock_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_response
+            yield
+
         # Clear after test as well
         mm._model_metadata_cache = {}
         mm._model_metadata_cache_time = 0
