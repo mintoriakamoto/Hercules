@@ -16,7 +16,7 @@ import pytest
 
 from agent.process_bootstrap import build_keepalive_http_client
 
-_CA_ENV_VARS = ("HERCULES_CA_BUNDLE", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "HTTPS_PROXY")
+_CA_ENV_VARS = ("HERCULES_CA_BUNDLE", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "HTTPS_PROXY", "NIX_SSL_CERT_FILE")
 
 
 @pytest.fixture
