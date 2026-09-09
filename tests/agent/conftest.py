@@ -77,11 +77,11 @@ def _clear_model_metadata_caches():
 
 @pytest.fixture(autouse=True)
 def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environment):
-    """Clear model metadata caches for all tests by reloading the module.
+    """Clear model metadata caches for all tests.
 
     Depends on _hermetic_environment fixture which already isolates HERCULES_HOME.
-    Reloads the module to ensure all module-level caches are fresh for each test,
-    avoiding cache pollution across tests.
+    Uses monkeypatch to directly clear cache objects and remove disk cache files,
+    ensuring fresh state for each test regardless of how functions are imported.
     """
     from pathlib import Path
     from hercules_constants import get_hercules_home
@@ -93,13 +93,13 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     if not cache_dir.exists():
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # Remove disk cache files to ensure no stale cache is loaded on module reload
+    # Remove disk cache files first
     for _ in range(3):
         try:
             cache_file = mm._get_model_metadata_cache_path()
             if cache_file.exists():
                 cache_file.unlink()
-                break
+            break
         except Exception:
             pass
 
@@ -108,12 +108,24 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
             context_cache_file = mm._get_context_cache_path()
             if context_cache_file.exists():
                 context_cache_file.unlink()
-                break
+            break
         except Exception:
             pass
 
-    # Reload the module to reset all module-level caches to their initial state.
-    # This is the most reliable way to ensure fresh caches for each test.
-    importlib.reload(mm)
+    # Clear all in-memory caches by replacing them with fresh empty dicts/values
+    # Use monkeypatch to ensure these changes are isolated to this test
+    monkeypatch.setattr(mm, "_model_metadata_cache", {})
+    monkeypatch.setattr(mm, "_model_metadata_cache_time", 0)
+    monkeypatch.setattr(mm, "_novita_metadata_cache", {})
+    monkeypatch.setattr(mm, "_novita_metadata_cache_time", 0)
+    monkeypatch.setattr(mm, "_endpoint_model_metadata_cache", {})
+    monkeypatch.setattr(mm, "_endpoint_model_metadata_cache_time", {})
+    monkeypatch.setattr(mm, "_endpoint_probe_path_cache", {})
+    monkeypatch.setattr(mm, "_codex_oauth_context_cache", {})
+    monkeypatch.setattr(mm, "_codex_oauth_context_cache_time", 0.0)
+
+    # Clear any context length cache if it exists
+    if hasattr(mm, "_local_context_cache"):
+        monkeypatch.setattr(mm, "_local_context_cache", {})
 
     yield
