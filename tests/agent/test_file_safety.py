@@ -4,10 +4,11 @@ Run with:  python -m pytest tests/agent/test_file_safety.py -v
 """
 
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
+from agent import file_safety
 from agent.file_safety import (
     _BLOCKED_PROJECT_ENV_BASENAMES,
     get_read_block_error,
@@ -109,8 +110,8 @@ class TestCacheFileReadBlocking:
         cache.parent.mkdir(parents=True)
         cache.write_text("{}")
 
-        with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            with patch("agent.file_safety._hercules_root_path", return_value=hercules_home):
+        with patch.object(file_safety, "_hercules_home_path", return_value=hercules_home):
+            with patch.object(file_safety, "_hercules_root_path", return_value=hercules_home):
                 error = get_read_block_error(str(cache))
                 assert error is not None
                 assert "internal Hercules cache" in error
@@ -122,8 +123,8 @@ class TestCacheFileReadBlocking:
         hub.parent.mkdir(parents=True)
         hub.write_text("{}")
 
-        with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            with patch("agent.file_safety._hercules_root_path", return_value=hercules_home):
+        with patch.object(file_safety, "_hercules_home_path", return_value=hercules_home):
+            with patch.object(file_safety, "_hercules_root_path", return_value=hercules_home):
                 error = get_read_block_error(str(hub))
                 assert error is not None
 
@@ -141,7 +142,7 @@ class TestCombinedGuards:
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
 
-        with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
+        with patch.object(file_safety, "_hercules_home_path", return_value=hercules_home):
             # Regular project .env should still be blocked
             error = get_read_block_error("/workspace/.env")
             assert error is not None
@@ -157,8 +158,8 @@ class TestCombinedGuards:
         cache.parent.mkdir(parents=True)
         cache.write_text("")
 
-        with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            with patch("agent.file_safety._hercules_root_path", return_value=hercules_home):
+        with patch.object(file_safety, "_hercules_home_path", return_value=hercules_home):
+            with patch.object(file_safety, "_hercules_root_path", return_value=hercules_home):
                 error = get_read_block_error(str(cache))
                 assert error is not None
                 assert "internal Hercules cache" in error
