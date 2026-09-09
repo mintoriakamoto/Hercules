@@ -40,8 +40,12 @@ def _clear_model_metadata_caches():
 
 
 @pytest.fixture(autouse=True)
-def clear_model_metadata_caches_and_mock_requests():
-    """Clear model metadata caches and mock network requests for all tests."""
+def clear_model_metadata_caches_and_mock_requests(_hermetic_environment):
+    """Clear model metadata caches and mock network requests for all tests.
+
+    Depends on _hermetic_environment fixture to ensure HERCULES_HOME is set
+    to the per-test tempdir before we clear caches (which use get_hercules_home()).
+    """
     # Clear before test
     _clear_model_metadata_caches()
 

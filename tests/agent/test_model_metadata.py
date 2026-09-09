@@ -721,16 +721,7 @@ class TestGetModelContextLength:
                 mock_response.json.return_value = {"data": []}
                 mock_response.raise_for_status = MagicMock()
                 mock_get.return_value = mock_response
-                result = get_model_context_length("test/model")
-                # Debug: log what happened
-                if result != CONTEXT_PROBE_TIERS[0]:
-                    print(f"\nDEBUG test_api_missing_context_length_key:")
-                    print(f"  Result: {result} (expected {CONTEXT_PROBE_TIERS[0]})")
-                    print(f"  Mock fetch_model_metadata called: {mock_fetch.called}")
-                    print(f"  Mock fetch_model_metadata call_count: {mock_fetch.call_count}")
-                    print(f"  Mock requests.get called: {mock_get.called}")
-                    print(f"  Mock requests.get call_count: {mock_get.call_count}")
-                assert result == CONTEXT_PROBE_TIERS[0]
+                assert get_model_context_length("test/model") == CONTEXT_PROBE_TIERS[0]
 
     def test_cache_takes_priority_over_api(self, tmp_path):
         """Persistent cache should be checked BEFORE API metadata."""
