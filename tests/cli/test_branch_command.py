@@ -10,10 +10,15 @@ Verifies that:
 """
 
 import os
+import sys
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+
+# Add tests directory to path so conftest can be imported
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 @pytest.fixture
