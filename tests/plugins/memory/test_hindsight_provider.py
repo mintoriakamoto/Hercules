@@ -426,6 +426,8 @@ class TestConfig:
 
         monkeypatch.setitem(sys.modules, "hindsight", SimpleNamespace(HindsightEmbedded=FakeHindsightEmbedded))
         monkeypatch.setattr("plugins.memory.hindsight._check_local_runtime", lambda: (True, ""))
+        # Mock the lazy_deps.ensure call to avoid trying to install hindsight-client
+        monkeypatch.setattr("tools.lazy_deps.ensure", lambda feature, prompt=True: None)
 
         p = HindsightMemoryProvider()
         p._mode = "local_embedded"
