@@ -659,47 +659,6 @@ class TestNousPortalContextResolution:
 # =========================================================================
 
 class TestGetModelContextLength:
-    @pytest.fixture(autouse=True)
-    def _clear_caches_and_block_network(self):
-        """Auto-use fixture to clear all caches and prevent network calls."""
-        import agent.model_metadata as mm
-        # Clear before test
-        mm._model_metadata_cache = {}
-        mm._model_metadata_cache_time = 0
-        mm._novita_metadata_cache = {}
-        mm._novita_metadata_cache_time = 0
-        mm._endpoint_model_metadata_cache = {}
-        mm._endpoint_model_metadata_cache_time = {}
-        mm._endpoint_probe_path_cache = {}
-        mm._codex_oauth_context_cache = {}
-        mm._codex_oauth_context_cache_time = 0.0
-        # Also remove disk cache
-        try:
-            cache_file = mm._get_model_metadata_cache_path()
-            if cache_file.exists():
-                cache_file.unlink()
-        except Exception:
-            pass
-
-        # Patch requests.get to prevent accidental network calls
-        with patch("agent.model_metadata.requests.get") as mock_get:
-            mock_response = MagicMock()
-            mock_response.json.return_value = {"data": []}
-            mock_response.raise_for_status = MagicMock()
-            mock_get.return_value = mock_response
-            yield
-
-        # Clear after test as well
-        mm._model_metadata_cache = {}
-        mm._model_metadata_cache_time = 0
-        mm._novita_metadata_cache = {}
-        mm._novita_metadata_cache_time = 0
-        mm._endpoint_model_metadata_cache = {}
-        mm._endpoint_model_metadata_cache_time = {}
-        mm._endpoint_probe_path_cache = {}
-        mm._codex_oauth_context_cache = {}
-        mm._codex_oauth_context_cache_time = 0.0
-
     def test_known_model_from_api(self):
         with patch("agent.model_metadata.requests.get") as mock_get:
             mock_response = MagicMock()
