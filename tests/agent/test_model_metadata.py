@@ -593,69 +593,65 @@ class TestNousPortalContextResolution:
         mm._endpoint_model_metadata_cache.clear()
         mm._endpoint_model_metadata_cache_time.clear()
 
-    @patch("agent.model_metadata.fetch_endpoint_model_metadata")
-    @patch("agent.model_metadata.fetch_model_metadata")
-    def test_portal_value_wins_over_openrouter_catalog(
-        self, mock_or, mock_portal, tmp_path, monkeypatch
-    ):
+    def test_portal_value_wins_over_openrouter_catalog(self, tmp_path, monkeypatch):
         """The motivating case: OR catalog says 1M for qwen3.6-plus, but
         the Nous portal correctly enforces 262144.  Portal must win."""
-        import agent.model_metadata as mm
-        cache_file = tmp_path / "context_length_cache.yaml"
-        monkeypatch.setattr(mm, "_get_context_cache_path", lambda: cache_file)
+        with patch("agent.model_metadata.fetch_model_metadata") as mock_or:
+            with patch("agent.model_metadata.fetch_endpoint_model_metadata") as mock_portal:
+                import agent.model_metadata as mm
+                cache_file = tmp_path / "context_length_cache.yaml"
+                monkeypatch.setattr(mm, "_get_context_cache_path", lambda: cache_file)
 
-        mock_portal.return_value = {
-            "qwen3.6-plus": {"context_length": 262_144},
-        }
-        mock_or.return_value = {
-            "qwen/qwen3.6-plus": {"context_length": 1_000_000},
-        }
+                mock_portal.return_value = {
+                    "qwen3.6-plus": {"context_length": 262_144},
+                }
+                mock_or.return_value = {
+                    "qwen/qwen3.6-plus": {"context_length": 1_000_000},
+                }
 
-        ctx = mm.get_model_context_length(
-            model="qwen3.6-plus",
-            base_url="https://inference-api.nousresearch.com/v1",
-            api_key="fake-token",
-            provider="nous",
-        )
-        assert ctx == 262_144, (
-            f"Portal must override OR catalog; got {ctx} (OR leak?)"
-        )
+                ctx = mm.get_model_context_length(
+                    model="qwen3.6-plus",
+                    base_url="https://inference-api.nousresearch.com/v1",
+                    api_key="fake-token",
+                    provider="nous",
+                )
+                assert ctx == 262_144, (
+                    f"Portal must override OR catalog; got {ctx} (OR leak?)"
+                )
 
-    @patch("agent.model_metadata.fetch_endpoint_model_metadata")
-    @patch("agent.model_metadata.fetch_model_metadata")
-    def test_stale_cache_survives_when_portal_unreachable(
-        self, mock_or, mock_portal, tmp_path, monkeypatch
-    ):
+    def test_stale_cache_survives_when_portal_unreachable(self, tmp_path, monkeypatch):
         """When the portal is unreachable AND we have a (potentially stale)
         on-disk cache entry, the entry must survive untouched — we don't
         want a transient outage to delete the only value we have.  The
         request itself still gets served via OR fallback for this call."""
-        import agent.model_metadata as mm
-        cache_file = tmp_path / "context_length_cache.yaml"
-        monkeypatch.setattr(mm, "_get_context_cache_path", lambda: cache_file)
+        with patch("agent.model_metadata.fetch_model_metadata") as mock_or:
+            with patch("agent.model_metadata.fetch_endpoint_model_metadata") as mock_portal:
+                import agent.model_metadata as mm
+                cache_file = tmp_path / "context_length_cache.yaml"
+                monkeypatch.setattr(mm, "_get_context_cache_path", lambda: cache_file)
 
-        base_url = "https://inference-api.nousresearch.com/v1"
-        existing_key = f"qwen3.6-plus@{base_url}"
-        cache_file.write_text(yaml.dump({"context_lengths": {
-            existing_key: 1_000_000,
-        }}))
+                base_url = "https://inference-api.nousresearch.com/v1"
+                existing_key = f"qwen3.6-plus@{base_url}"
+                cache_file.write_text(yaml.dump({"context_lengths": {
+                    existing_key: 1_000_000,
+                }}))
 
-        mock_portal.return_value = {}  # portal unreachable
-        mock_or.return_value = {
-            "qwen/qwen3.6-plus": {"context_length": 1_000_000},
-        }
+                mock_portal.return_value = {}  # portal unreachable
+                mock_or.return_value = {
+                    "qwen/qwen3.6-plus": {"context_length": 1_000_000},
+                }
 
-        mm.get_model_context_length(
-            model="qwen3.6-plus",
-            base_url=base_url,
-            api_key="fake",
-            provider="nous",
-        )
+                mm.get_model_context_length(
+                    model="qwen3.6-plus",
+                    base_url=base_url,
+                    api_key="fake",
+                    provider="nous",
+                )
 
-        remaining = yaml.safe_load(cache_file.read_text()).get("context_lengths", {})
-        assert remaining.get(existing_key) == 1_000_000, (
-            "Persistent cache entry must survive a transient portal outage"
-        )
+                remaining = yaml.safe_load(cache_file.read_text()).get("context_lengths", {})
+                assert remaining.get(existing_key) == 1_000_000, (
+                    "Persistent cache entry must survive a transient portal outage"
+                )
 
 
 # =========================================================================
@@ -1087,120 +1083,120 @@ class TestFetchModelMetadata:
 
         assert result["stale/model"]["context_length"] == 50000
 
-    @patch("agent.model_metadata.requests.get")
-    def test_caches_result(self, mock_get):
-        self._reset_cache()
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "data": [{"id": "test/model", "context_length": 99999, "name": "Test"}]
-        }
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+    def test_caches_result(self):
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            self._reset_cache()
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "data": [{"id": "test/model", "context_length": 99999, "name": "Test"}]
+            }
+            mock_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_response
 
-        result1 = fetch_model_metadata(force_refresh=True)
-        assert "test/model" in result1
-        assert mock_get.call_count == 1
+            result1 = fetch_model_metadata(force_refresh=True)
+            assert "test/model" in result1
+            assert mock_get.call_count == 1
 
-        result2 = fetch_model_metadata()
-        assert "test/model" in result2
-        assert mock_get.call_count == 1  # cached
+            result2 = fetch_model_metadata()
+            assert "test/model" in result2
+            assert mock_get.call_count == 1  # cached
 
-    @patch("agent.model_metadata.requests.get")
-    def test_api_failure_returns_empty_on_cold_cache(self, mock_get):
-        self._reset_cache()
-        mock_get.side_effect = Exception("Network error")
-        result = fetch_model_metadata(force_refresh=True)
-        assert result == {}
+    def test_api_failure_returns_empty_on_cold_cache(self):
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            self._reset_cache()
+            mock_get.side_effect = Exception("Network error")
+            result = fetch_model_metadata(force_refresh=True)
+            assert result == {}
 
-    @patch("agent.model_metadata.requests.get")
-    def test_api_failure_returns_stale_cache(self, mock_get):
+    def test_api_failure_returns_stale_cache(self):
         """On API failure with existing cache, stale data is returned."""
-        import agent.model_metadata as mm
-        mm._model_metadata_cache = {"old/model": {"context_length": 50000}}
-        mm._model_metadata_cache_time = 0  # expired
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            import agent.model_metadata as mm
+            mm._model_metadata_cache = {"old/model": {"context_length": 50000}}
+            mm._model_metadata_cache_time = 0  # expired
 
-        mock_get.side_effect = Exception("Network error")
-        result = fetch_model_metadata(force_refresh=True)
-        assert "old/model" in result
-        assert result["old/model"]["context_length"] == 50000
+            mock_get.side_effect = Exception("Network error")
+            result = fetch_model_metadata(force_refresh=True)
+            assert "old/model" in result
+            assert result["old/model"]["context_length"] == 50000
 
-    @patch("agent.model_metadata.requests.get")
-    def test_canonical_slug_aliasing(self, mock_get):
+    def test_canonical_slug_aliasing(self):
         """Models with canonical_slug get indexed under both IDs."""
-        self._reset_cache()
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "data": [{
-                "id": "anthropic/claude-3.5-sonnet:beta",
-                "canonical_slug": "anthropic/claude-3.5-sonnet",
-                "context_length": 200000,
-                "name": "Claude 3.5 Sonnet"
-            }]
-        }
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            self._reset_cache()
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "data": [{
+                    "id": "anthropic/claude-3.5-sonnet:beta",
+                    "canonical_slug": "anthropic/claude-3.5-sonnet",
+                    "context_length": 200000,
+                    "name": "Claude 3.5 Sonnet"
+                }]
+            }
+            mock_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_response
 
-        result = fetch_model_metadata(force_refresh=True)
-        # Both the original ID and canonical slug should work
-        assert "anthropic/claude-3.5-sonnet:beta" in result
-        assert "anthropic/claude-3.5-sonnet" in result
-        assert result["anthropic/claude-3.5-sonnet"]["context_length"] == 200000
+            result = fetch_model_metadata(force_refresh=True)
+            # Both the original ID and canonical slug should work
+            assert "anthropic/claude-3.5-sonnet:beta" in result
+            assert "anthropic/claude-3.5-sonnet" in result
+            assert result["anthropic/claude-3.5-sonnet"]["context_length"] == 200000
 
-    @patch("agent.model_metadata.requests.get")
-    def test_provider_prefixed_models_get_bare_aliases(self, mock_get):
-        self._reset_cache()
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "data": [{
-                "id": "provider/test-model",
-                "context_length": 123456,
-                "name": "Provider: Test Model",
-            }]
-        }
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+    def test_provider_prefixed_models_get_bare_aliases(self):
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            self._reset_cache()
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "data": [{
+                    "id": "provider/test-model",
+                    "context_length": 123456,
+                    "name": "Provider: Test Model",
+                }]
+            }
+            mock_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_response
 
-        result = fetch_model_metadata(force_refresh=True)
+            result = fetch_model_metadata(force_refresh=True)
 
-        assert result["provider/test-model"]["context_length"] == 123456
-        assert result["test-model"]["context_length"] == 123456
+            assert result["provider/test-model"]["context_length"] == 123456
+            assert result["test-model"]["context_length"] == 123456
 
-    @patch("agent.model_metadata.requests.get")
-    def test_ttl_expiry_triggers_refetch(self, mock_get, tmp_path, monkeypatch):
+    def test_ttl_expiry_triggers_refetch(self, tmp_path, monkeypatch):
         """Cache expires after _MODEL_CACHE_TTL seconds."""
-        import agent.model_metadata as mm
-        self._reset_cache()
-        cache_path = self._isolate_disk_cache(monkeypatch, tmp_path)
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            import agent.model_metadata as mm
+            self._reset_cache()
+            cache_path = self._isolate_disk_cache(monkeypatch, tmp_path)
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "data": [{"id": "m1", "context_length": 1000, "name": "M1"}]
-        }
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "data": [{"id": "m1", "context_length": 1000, "name": "M1"}]
+            }
+            mock_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_response
 
-        fetch_model_metadata(force_refresh=True)
-        assert mock_get.call_count == 1
+            fetch_model_metadata(force_refresh=True)
+            assert mock_get.call_count == 1
 
-        # Simulate both memory and disk TTL expiry.
-        mm._model_metadata_cache_time = time.time() - _MODEL_CACHE_TTL - 1
-        old = time.time() - _MODEL_CACHE_TTL - 1
-        import os
-        os.utime(cache_path, (old, old))
-        fetch_model_metadata()
-        assert mock_get.call_count == 2  # refetched
+            # Simulate both memory and disk TTL expiry.
+            mm._model_metadata_cache_time = time.time() - _MODEL_CACHE_TTL - 1
+            old = time.time() - _MODEL_CACHE_TTL - 1
+            import os
+            os.utime(cache_path, (old, old))
+            fetch_model_metadata()
+            assert mock_get.call_count == 2  # refetched
 
-    @patch("agent.model_metadata.requests.get")
-    def test_malformed_json_no_data_key(self, mock_get):
+    def test_malformed_json_no_data_key(self):
         """API returns JSON without 'data' key — empty cache, no crash."""
-        self._reset_cache()
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"error": "something"}
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            self._reset_cache()
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"error": "something"}
+            mock_response.raise_for_status = MagicMock()
+            mock_get.return_value = mock_response
 
-        result = fetch_model_metadata(force_refresh=True)
-        assert result == {}
+            result = fetch_model_metadata(force_refresh=True)
+            assert result == {}
 
 
 # =========================================================================
@@ -1406,13 +1402,13 @@ class TestContextLengthCache:
         with patch("agent.model_metadata._get_context_cache_path", return_value=cache_file):
             assert get_cached_context_length("model", "http://x") is None
 
-    @patch("agent.model_metadata.fetch_model_metadata")
-    def test_cached_value_takes_priority(self, mock_fetch, tmp_path):
-        mock_fetch.return_value = {}
-        cache_file = tmp_path / "cache.yaml"
-        with patch("agent.model_metadata._get_context_cache_path", return_value=cache_file):
-            save_context_length("unknown/model", "http://local", 65536)
-            assert get_model_context_length("unknown/model", base_url="http://local") == 65536
+    def test_cached_value_takes_priority(self, tmp_path):
+        with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
+            mock_fetch.return_value = {}
+            cache_file = tmp_path / "cache.yaml"
+            with patch("agent.model_metadata._get_context_cache_path", return_value=cache_file):
+                save_context_length("unknown/model", "http://local", 65536)
+                assert get_model_context_length("unknown/model", base_url="http://local") == 65536
 
     def test_special_chars_in_model_name(self, tmp_path):
         """Model names with colons, slashes, etc. don't break the cache."""
