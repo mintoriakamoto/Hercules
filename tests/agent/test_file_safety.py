@@ -140,28 +140,32 @@ class TestCacheFileReadBlocking:
 class TestCombinedGuards:
     """Both guards should work independently without interference."""
 
-    def test_env_guard_works_regardless_of_hercules_home(self, tmp_path):
+    @patch("hercules_constants.get_hercules_home")
+    def test_env_guard_works_regardless_of_hercules_home(self, mock_home, tmp_path):
         """The env basename guard does not depend on HERCULES_HOME resolution."""
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
+        mock_home.return_value = hercules_home
 
-        with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            # Regular project .env should still be blocked
-            error = get_read_block_error("/workspace/.env")
-            assert error is not None
+        # Regular project .env should still be blocked
+        error = get_read_block_error("/workspace/.env")
+        assert error is not None
 
-            # .env.example should still be allowed
-            error = get_read_block_error("/workspace/.env.example")
-            assert error is None
+        # .env.example should still be allowed
+        error = get_read_block_error("/workspace/.env.example")
+        assert error is None
 
-    def test_cache_guard_still_works_with_env_guard(self, tmp_path):
+    @patch("hercules_constants.get_default_hercules_root")
+    @patch("hercules_constants.get_hercules_home")
+    def test_cache_guard_still_works_with_env_guard(self, mock_home, mock_root, tmp_path):
         """Cache file blocking still works when env guard is active."""
         hercules_home = tmp_path / ".hercules"
         cache = hercules_home / "skills" / ".hub" / "index-cache" / "x"
         cache.parent.mkdir(parents=True)
         cache.write_text("")
 
-        with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            error = get_read_block_error(str(cache))
-            assert error is not None
-            assert "internal Hercules cache" in error
+        mock_home.return_value = hercules_home
+        mock_root.return_value = tmp_path
+        error = get_read_block_error(str(cache))
+        assert error is not None
+        assert "internal Hercules cache" in error
