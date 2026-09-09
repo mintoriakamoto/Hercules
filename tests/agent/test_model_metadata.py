@@ -662,8 +662,11 @@ class TestNousPortalContextResolution:
 def mock_openrouter_network():
     """Prevent network calls to OpenRouter during tests in this class."""
     with patch("agent.model_metadata.requests.get") as mock_get:
-        # Make requests.get raise to simulate network errors
-        mock_get.side_effect = RuntimeError("Should not make network calls in tests")
+        # Return empty response (no models) to simulate empty API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"data": []}
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
         yield mock_get
 
 
