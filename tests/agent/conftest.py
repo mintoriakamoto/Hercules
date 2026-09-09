@@ -92,6 +92,11 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     if not cache_dir.exists():
         cache_dir.mkdir(parents=True, exist_ok=True)
 
+    # Reload the module to reset all module-level state (including caches)
+    # This is necessary because the in-memory caches can be populated by previous
+    # tests and reassigning variables doesn't help if other code holds references
+    importlib.reload(mm)
+
     # Clear before test
     _clear_model_metadata_caches()
 
