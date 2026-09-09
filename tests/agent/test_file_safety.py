@@ -110,9 +110,10 @@ class TestCacheFileReadBlocking:
         cache.write_text("{}")
 
         with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            error = get_read_block_error(str(cache))
-            assert error is not None
-            assert "internal Hercules cache" in error
+            with patch("agent.file_safety._hercules_root_path", return_value=hercules_home):
+                error = get_read_block_error(str(cache))
+                assert error is not None
+                assert "internal Hercules cache" in error
 
     def test_hub_directory_blocked(self, tmp_path):
         """Hub directory reads are blocked."""
@@ -122,8 +123,9 @@ class TestCacheFileReadBlocking:
         hub.write_text("{}")
 
         with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            error = get_read_block_error(str(hub))
-            assert error is not None
+            with patch("agent.file_safety._hercules_root_path", return_value=hercules_home):
+                error = get_read_block_error(str(hub))
+                assert error is not None
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +158,7 @@ class TestCombinedGuards:
         cache.write_text("")
 
         with patch("agent.file_safety._hercules_home_path", return_value=hercules_home):
-            error = get_read_block_error(str(cache))
-            assert error is not None
-            assert "internal Hercules cache" in error
+            with patch("agent.file_safety._hercules_root_path", return_value=hercules_home):
+                error = get_read_block_error(str(cache))
+                assert error is not None
+                assert "internal Hercules cache" in error
