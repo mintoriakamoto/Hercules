@@ -673,8 +673,16 @@ def mock_openrouter_network():
 class TestGetModelContextLength:
     def setup_method(self):
         import agent.model_metadata as mm
+        # Clear all in-memory caches
         mm._model_metadata_cache = {}
         mm._model_metadata_cache_time = 0
+        mm._novita_metadata_cache = {}
+        mm._novita_metadata_cache_time = 0
+        mm._endpoint_model_metadata_cache = {}
+        mm._endpoint_model_metadata_cache_time = {}
+        mm._endpoint_probe_path_cache = {}
+        mm._codex_oauth_context_cache = {}
+        mm._codex_oauth_context_cache_time = 0.0
         # Also remove disk cache to avoid cross-test contamination
         cache_file = mm._get_model_metadata_cache_path()
         if cache_file.exists():
