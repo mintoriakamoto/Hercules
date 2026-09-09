@@ -80,7 +80,8 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     """Clear model metadata caches for all tests.
 
     Depends on _hermetic_environment fixture which already isolates HERCULES_HOME.
-    We create the cache directory and clear in-memory caches before and after tests.
+    Uses monkeypatch to replace cache dicts with fresh empty instances to ensure
+    all code paths see the cleared caches, even when they hold direct references.
     """
     from pathlib import Path
     from hercules_constants import get_hercules_home
@@ -93,26 +94,37 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     if not cache_dir.exists():
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # Clear before test
-    _clear_model_metadata_caches()
+    # Use monkeypatch to replace cache dicts with fresh empty instances.
+    # This ensures that all code paths (including those holding direct references
+    # to the cache object) see the cleared state.
+    monkeypatch.setattr("agent.model_metadata._model_metadata_cache", {})
+    monkeypatch.setattr("agent.model_metadata._model_metadata_cache_time", 0)
+    monkeypatch.setattr("agent.model_metadata._novita_metadata_cache", {})
+    monkeypatch.setattr("agent.model_metadata._novita_metadata_cache_time", 0)
+    monkeypatch.setattr("agent.model_metadata._endpoint_model_metadata_cache", {})
+    monkeypatch.setattr("agent.model_metadata._endpoint_model_metadata_cache_time", {})
+    monkeypatch.setattr("agent.model_metadata._endpoint_probe_path_cache", {})
+    monkeypatch.setattr("agent.model_metadata._codex_oauth_context_cache", {})
+    monkeypatch.setattr("agent.model_metadata._codex_oauth_context_cache_time", 0.0)
 
-    # Patch fetch_model_metadata to bypass the cache check by adding a custom
-    # attribute that signals "always refresh". We'll patch it to check this attribute.
-    original_fetch = mm.fetch_model_metadata
+    # Also clear any disk cache files (for safety, though monkeypatch isolation
+    # should handle most cases)
+    for _ in range(3):
+        try:
+            cache_file = mm._get_model_metadata_cache_path()
+            if cache_file.exists():
+                cache_file.unlink()
+                break
+        except Exception:
+            pass
 
-    def fetch_with_bypass(force_refresh=False):
-        # Always pass force_refresh=True to bypass any cache checks
-        return original_fetch(force_refresh=True)
-
-    # Replace the function object itself (not via monkeypatch, but directly)
-    mm.fetch_model_metadata = fetch_with_bypass
-
-    # Also clear the _model_metadata_cache directly by reference
-    mm._model_metadata_cache.clear()
-    mm._model_metadata_cache_time = 0
+    for _ in range(3):
+        try:
+            context_cache_file = mm._get_context_cache_path()
+            if context_cache_file.exists():
+                context_cache_file.unlink()
+                break
+        except Exception:
+            pass
 
     yield
-
-    # Clear after test and restore original function
-    _clear_model_metadata_caches()
-    mm.fetch_model_metadata = original_fetch
