@@ -19,10 +19,14 @@ import pytest
 @pytest.fixture
 def session_db(tmp_path):
     """Create a real SessionDB for testing."""
-    os.environ["HERCULES_HOME"] = str(tmp_path / ".hercules")
-    os.makedirs(tmp_path / ".hercules", exist_ok=True)
+    from pathlib import Path
+    from conftest import setup_hercules_home
+
+    hercules_home = tmp_path / ".hercules"
+    setup_hercules_home(hercules_home)
+    os.environ["HERCULES_HOME"] = str(hercules_home)
     from hercules_state import SessionDB
-    db = SessionDB(db_path=tmp_path / ".hercules" / "test_sessions.db")
+    db = SessionDB(db_path=hercules_home / "test_sessions.db")
     yield db
     db.close()
 
