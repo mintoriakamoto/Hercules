@@ -77,16 +77,15 @@ def _clear_model_metadata_caches():
 
 @pytest.fixture(autouse=True)
 def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environment):
-    """Clear model metadata caches for all tests.
+    """Clear model metadata caches for all tests by reloading the module.
 
     Depends on _hermetic_environment fixture which already isolates HERCULES_HOME.
-    Uses monkeypatch to replace cache dicts with fresh empty instances to ensure
-    all code paths see the cleared caches, even when they hold direct references.
+    Reloads the module to ensure all module-level caches are fresh for each test,
+    avoiding cache pollution across tests.
     """
     from pathlib import Path
     from hercules_constants import get_hercules_home
     import agent.model_metadata as mm
-    import time
 
     # Ensure cache directory exists (created by _hermetic_environment fixture)
     hercules_home = get_hercules_home()
@@ -94,21 +93,7 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     if not cache_dir.exists():
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # Use monkeypatch to replace cache dicts with fresh empty instances.
-    # This ensures that all code paths (including those holding direct references
-    # to the cache object) see the cleared state.
-    monkeypatch.setattr("agent.model_metadata._model_metadata_cache", {})
-    monkeypatch.setattr("agent.model_metadata._model_metadata_cache_time", 0)
-    monkeypatch.setattr("agent.model_metadata._novita_metadata_cache", {})
-    monkeypatch.setattr("agent.model_metadata._novita_metadata_cache_time", 0)
-    monkeypatch.setattr("agent.model_metadata._endpoint_model_metadata_cache", {})
-    monkeypatch.setattr("agent.model_metadata._endpoint_model_metadata_cache_time", {})
-    monkeypatch.setattr("agent.model_metadata._endpoint_probe_path_cache", {})
-    monkeypatch.setattr("agent.model_metadata._codex_oauth_context_cache", {})
-    monkeypatch.setattr("agent.model_metadata._codex_oauth_context_cache_time", 0.0)
-
-    # Also clear any disk cache files (for safety, though monkeypatch isolation
-    # should handle most cases)
+    # Remove disk cache files to ensure no stale cache is loaded on module reload
     for _ in range(3):
         try:
             cache_file = mm._get_model_metadata_cache_path()
@@ -126,5 +111,9 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
                 break
         except Exception:
             pass
+
+    # Reload the module to reset all module-level caches to their initial state.
+    # This is the most reliable way to ensure fresh caches for each test.
+    importlib.reload(mm)
 
     yield
