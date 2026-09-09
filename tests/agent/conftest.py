@@ -36,13 +36,7 @@ def clear_model_metadata_caches_and_mock_requests():
     except Exception:
         pass
 
-    # Globally patch requests.get to prevent accidental network calls
-    with patch("agent.model_metadata.requests.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"data": []}
-        mock_response.raise_for_status = MagicMock()
-        mock_get.return_value = mock_response
-        yield
+    yield
 
     # Clear after test as well
     mm._model_metadata_cache = {}

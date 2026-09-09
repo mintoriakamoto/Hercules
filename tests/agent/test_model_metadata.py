@@ -714,9 +714,20 @@ class TestGetModelContextLength:
     def test_api_missing_context_length_key(self):
         """Model in API but without context_length → defaults to the top
         probe tier (currently 256K)."""
+        # Clear in-memory caches again just to be sure
+        import agent.model_metadata as mm
+        mm._model_metadata_cache = {}
+        mm._model_metadata_cache_time = 0
+
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
-            mock_fetch.return_value = {"test/model": {"name": "Test"}}
-            assert get_model_context_length("test/model") == CONTEXT_PROBE_TIERS[0]
+            with patch("agent.model_metadata.requests.get") as mock_get:
+                mock_fetch.return_value = {"test/model": {"name": "Test"}}
+                mock_response = MagicMock()
+                mock_response.json.return_value = {"data": []}
+                mock_response.raise_for_status = MagicMock()
+                mock_get.return_value = mock_response
+                result = get_model_context_length("test/model")
+                assert result == CONTEXT_PROBE_TIERS[0], f"Expected {CONTEXT_PROBE_TIERS[0]}, got {result}. fetch_model_metadata called: {mock_fetch.called}, calls: {mock_fetch.call_count}"
 
     def test_cache_takes_priority_over_api(self, tmp_path):
         """Persistent cache should be checked BEFORE API metadata."""
