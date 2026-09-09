@@ -96,12 +96,23 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     # Clear before test
     _clear_model_metadata_caches()
 
-    # Set cache time to an old value so fetch_model_metadata always refreshes
-    # This bypasses the cache check at line 842 in model_metadata.py and ensures
-    # that mocked versions of fetch_model_metadata are actually called
-    monkeypatch.setattr(mm, "_model_metadata_cache_time", 0.0, raising=False)
+    # Patch fetch_model_metadata to bypass the cache check by adding a custom
+    # attribute that signals "always refresh". We'll patch it to check this attribute.
+    original_fetch = mm.fetch_model_metadata
+
+    def fetch_with_bypass(force_refresh=False):
+        # Always pass force_refresh=True to bypass any cache checks
+        return original_fetch(force_refresh=True)
+
+    # Replace the function object itself (not via monkeypatch, but directly)
+    mm.fetch_model_metadata = fetch_with_bypass
+
+    # Also clear the _model_metadata_cache directly by reference
+    mm._model_metadata_cache.clear()
+    mm._model_metadata_cache_time = 0
 
     yield
 
-    # Clear after test as well
+    # Clear after test and restore original function
     _clear_model_metadata_caches()
+    mm.fetch_model_metadata = original_fetch
