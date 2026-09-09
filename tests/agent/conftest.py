@@ -5,8 +5,8 @@ from unittest.mock import patch, MagicMock
 
 
 @pytest.fixture(autouse=True)
-def clear_model_metadata_cache():
-    """Clear model metadata caches before and after each test."""
+def clear_model_metadata_caches_and_mock_requests():
+    """Clear model metadata caches and mock network requests for all tests."""
     import agent.model_metadata as mm
 
     # Clear before test
@@ -28,7 +28,21 @@ def clear_model_metadata_cache():
     except Exception:
         pass
 
-    yield
+    # Remove context length cache
+    try:
+        context_cache_file = mm._get_context_cache_path()
+        if context_cache_file.exists():
+            context_cache_file.unlink()
+    except Exception:
+        pass
+
+    # Globally patch requests.get to prevent accidental network calls
+    with patch("agent.model_metadata.requests.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"data": []}
+        mock_response.raise_for_status = MagicMock()
+        mock_get.return_value = mock_response
+        yield
 
     # Clear after test as well
     mm._model_metadata_cache = {}
@@ -46,5 +60,13 @@ def clear_model_metadata_cache():
         cache_file = mm._get_model_metadata_cache_path()
         if cache_file.exists():
             cache_file.unlink()
+    except Exception:
+        pass
+
+    # Remove context length cache again
+    try:
+        context_cache_file = mm._get_context_cache_path()
+        if context_cache_file.exists():
+            context_cache_file.unlink()
     except Exception:
         pass
