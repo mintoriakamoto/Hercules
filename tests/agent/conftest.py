@@ -8,7 +8,7 @@ def _clear_model_metadata_caches():
     """Clear all model metadata caches (in-memory and on-disk)."""
     import agent.model_metadata as mm
 
-    # Clear in-memory caches
+    # Clear in-memory caches - set to their initial values
     mm._model_metadata_cache = {}
     mm._model_metadata_cache_time = 0
     mm._novita_metadata_cache = {}
@@ -18,6 +18,15 @@ def _clear_model_metadata_caches():
     mm._endpoint_probe_path_cache = {}
     mm._codex_oauth_context_cache = {}
     mm._codex_oauth_context_cache_time = 0.0
+
+    # Also clear any context length caches that might be populated
+    # This is important because models.dev results and other probes might cache data
+    try:
+        # Reset the local context cache if it exists
+        if hasattr(mm, '_local_context_cache'):
+            mm._local_context_cache = {}
+    except:
+        pass
 
     # Remove disk cache files (multiple attempts to handle edge cases)
     for _ in range(3):  # Retry up to 3 times
