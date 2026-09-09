@@ -659,6 +659,11 @@ class TestNousPortalContextResolution:
 # =========================================================================
 
 class TestGetModelContextLength:
+    def setup_method(self):
+        import agent.model_metadata as mm
+        mm._model_metadata_cache = {}
+        mm._model_metadata_cache_time = 0
+
     def test_known_model_from_api(self):
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {
