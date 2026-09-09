@@ -658,47 +658,62 @@ class TestNousPortalContextResolution:
 # get_model_context_length — resolution order
 # =========================================================================
 
+@pytest.fixture
+def mock_openrouter_network():
+    """Prevent network calls to OpenRouter during tests in this class."""
+    with patch("agent.model_metadata.requests.get") as mock_get:
+        # Make requests.get raise to simulate network errors
+        mock_get.side_effect = RuntimeError("Should not make network calls in tests")
+        yield mock_get
+
+
 class TestGetModelContextLength:
     def setup_method(self):
         import agent.model_metadata as mm
         mm._model_metadata_cache = {}
         mm._model_metadata_cache_time = 0
+        # Also remove disk cache to avoid cross-test contamination
+        cache_file = mm._get_model_metadata_cache_path()
+        if cache_file.exists():
+            cache_file.unlink()
 
-    def test_known_model_from_api(self):
-        with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
-            mock_fetch.return_value = {
-                "test/model": {"context_length": 32000}
+    def test_known_model_from_api(self, mock_openrouter_network):
+        with patch("agent.model_metadata.requests.get") as mock_get:
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "data": [{"id": "test/model", "context_length": 32000}]
             }
+            mock_get.return_value = mock_response
             assert get_model_context_length("test/model") == 32000
 
-    def test_fallback_to_defaults(self):
+    def test_fallback_to_defaults(self, mock_openrouter_network):
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {}
             assert get_model_context_length("anthropic/claude-sonnet-4") == 200000
 
-    def test_unknown_model_returns_first_probe_tier(self):
+    def test_unknown_model_returns_first_probe_tier(self, mock_openrouter_network):
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {}
             assert get_model_context_length("unknown/never-heard-of-this") == CONTEXT_PROBE_TIERS[0]
 
-    def test_partial_match_in_defaults(self):
+    def test_partial_match_in_defaults(self, mock_openrouter_network):
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {}
             assert get_model_context_length("openai/gpt-4o") == 128000
 
-    def test_qwen3_coder_plus_context_length(self):
+    def test_qwen3_coder_plus_context_length(self, mock_openrouter_network):
         """qwen3-coder-plus has a 1M context window, not the generic 128K Qwen default."""
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {}
             assert get_model_context_length("qwen3-coder-plus") == 1000000
 
-    def test_qwen3_coder_context_length(self):
+    def test_qwen3_coder_context_length(self, mock_openrouter_network):
         """qwen3-coder has a 256K context window, not the generic 128K Qwen default."""
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {}
             assert get_model_context_length("qwen3-coder") == 262144
 
-    def test_qwen3_6_plus_context_length(self):
+    def test_qwen3_6_plus_context_length(self, mock_openrouter_network):
         """qwen3.6-plus has a 1M context window, not the generic 128K Qwen default."""
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {}
@@ -708,20 +723,20 @@ class TestGetModelContextLength:
             assert get_model_context_length("qwen/qwen3.6-plus") == 1048576
             assert get_model_context_length("dashscope/qwen3.6-plus") == 1048576
 
-    def test_qwen_generic_context_length(self):
+    def test_qwen_generic_context_length(self, mock_openrouter_network):
         """Generic qwen models still get the 128K default."""
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {}
             assert get_model_context_length("qwen3-plus") == 131072
 
-    def test_api_missing_context_length_key(self):
+    def test_api_missing_context_length_key(self, mock_openrouter_network):
         """Model in API but without context_length → defaults to the top
         probe tier (currently 256K)."""
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {"test/model": {"name": "Test"}}
             assert get_model_context_length("test/model") == CONTEXT_PROBE_TIERS[0]
 
-    def test_cache_takes_priority_over_api(self, tmp_path):
+    def test_cache_takes_priority_over_api(self, tmp_path, mock_openrouter_network):
         """Persistent cache should be checked BEFORE API metadata."""
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {"my/model": {"context_length": 999999}}
@@ -731,7 +746,7 @@ class TestGetModelContextLength:
                 result = get_model_context_length("my/model", base_url="http://local")
                 assert result == 32768  # cache wins over API's 999999
 
-    def test_no_base_url_skips_cache(self, tmp_path):
+    def test_no_base_url_skips_cache(self, tmp_path, mock_openrouter_network):
         """Without base_url, cache lookup is skipped."""
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             mock_fetch.return_value = {}
@@ -742,7 +757,7 @@ class TestGetModelContextLength:
                 result = get_model_context_length("custom/model")
                 assert result == CONTEXT_PROBE_TIERS[0]
 
-    def test_custom_endpoint_metadata_beats_fuzzy_default(self):
+    def test_custom_endpoint_metadata_beats_fuzzy_default(self, mock_openrouter_network):
         with patch("agent.model_metadata.fetch_model_metadata") as mock_fetch:
             with patch("agent.model_metadata.fetch_endpoint_model_metadata") as mock_endpoint_fetch:
                 mock_fetch.return_value = {}
