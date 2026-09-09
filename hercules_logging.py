@@ -535,6 +535,13 @@ class _ManagedRotatingFileHandler(RotatingFileHandler):
         super().handleError(record)
 
     def _open(self):
+        # Ensure parent directory exists before trying to open the file.
+        # This is especially important when logging to a file in a dynamically
+        # created HERCULES_HOME directory.
+        try:
+            Path(self.baseFilename).parent.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass  # If mkdir fails, let the parent's _open() handle the error
         stream = super()._open()
         self._chmod_if_managed()
         return stream

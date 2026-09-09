@@ -115,6 +115,8 @@ def agent_env():
 
     test_home = tempfile.mkdtemp(prefix="hercules_e2e_47967_")
     os.makedirs(os.path.join(test_home, ".hercules"))
+    os.makedirs(os.path.join(test_home, ".hercules", "logs"), exist_ok=True)
+    os.makedirs(os.path.join(test_home, ".hercules", "sessions"), exist_ok=True)
     prev_home = os.environ.get("HERCULES_HOME")
     os.environ["HERCULES_HOME"] = os.path.join(test_home, ".hercules")
 
