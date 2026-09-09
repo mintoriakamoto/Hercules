@@ -102,8 +102,8 @@ class TestEnvFileReadBlocking:
 class TestCacheFileReadBlocking:
     """Internal Hercules cache files must remain blocked."""
 
-    @patch("agent.file_safety._hercules_root_path")
-    @patch("agent.file_safety._hercules_home_path")
+    @patch("hercules_constants.get_default_hercules_root")
+    @patch("hercules_constants.get_hercules_home")
     def test_hub_index_cache_blocked(self, mock_home, mock_root, tmp_path):
         """Hub index-cache reads are blocked."""
         hercules_home = tmp_path / ".hercules"
@@ -117,8 +117,8 @@ class TestCacheFileReadBlocking:
         assert error is not None
         assert "internal Hercules cache" in error
 
-    @patch("agent.file_safety._hercules_root_path")
-    @patch("agent.file_safety._hercules_home_path")
+    @patch("hercules_constants.get_default_hercules_root")
+    @patch("hercules_constants.get_hercules_home")
     def test_hub_directory_blocked(self, mock_home, mock_root, tmp_path):
         """Hub directory reads are blocked."""
         hercules_home = tmp_path / ".hercules"
