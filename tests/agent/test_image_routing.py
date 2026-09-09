@@ -6,7 +6,7 @@ import base64
 from pathlib import Path
 from unittest.mock import patch
 
-
+from agent import image_routing
 from agent.image_routing import (
     _coerce_capability_bool,
     _coerce_mode,
@@ -77,24 +77,24 @@ class TestDecideImageInputMode:
         cfg = {"agent": {"image_input_mode": "native"}}
         # Non-vision model, aux-vision explicitly configured: native still wins.
         cfg["auxiliary"] = {"vision": {"provider": "openrouter", "model": "foo"}}
-        with patch("agent.image_routing._lookup_supports_vision", return_value=False):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=False):
             assert decide_image_input_mode("openrouter", "some-non-vision-model", cfg) == "native"
 
     def test_explicit_text_overrides_everything(self):
         cfg = {"agent": {"image_input_mode": "text"}}
-        with patch("agent.image_routing._lookup_supports_vision", return_value=True):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=True):
             assert decide_image_input_mode("anthropic", "claude-sonnet-4", cfg) == "text"
 
     def test_auto_with_vision_capable_model(self):
-        with patch("agent.image_routing._lookup_supports_vision", return_value=True):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=True):
             assert decide_image_input_mode("anthropic", "claude-sonnet-4", {}) == "native"
 
     def test_auto_with_non_vision_model(self):
-        with patch("agent.image_routing._lookup_supports_vision", return_value=False):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=False):
             assert decide_image_input_mode("openrouter", "qwen/qwen3-235b", {}) == "text"
 
     def test_auto_with_unknown_model(self):
-        with patch("agent.image_routing._lookup_supports_vision", return_value=None):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=None):
             assert decide_image_input_mode("openrouter", "brand-new-slug", {}) == "text"
 
     def test_auto_prefers_native_for_vision_capable_main_model_even_with_aux_configured(self):
@@ -104,22 +104,22 @@ class TestDecideImageInputMode:
         not preempt native vision on a vision-capable main model.
         """
         cfg = {"auxiliary": {"vision": {"provider": "openrouter", "model": "google/gemini-2.5-flash"}}}
-        with patch("agent.image_routing._lookup_supports_vision", return_value=True):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=True):
             assert decide_image_input_mode("anthropic", "claude-sonnet-4", cfg) == "native"
 
     def test_auto_uses_aux_vision_fallback_for_text_only_main_model(self):
         """#29135: aux vision still acts as fallback for non-vision main models."""
         cfg = {"auxiliary": {"vision": {"provider": "openrouter", "model": "google/gemini-2.5-flash"}}}
-        with patch("agent.image_routing._lookup_supports_vision", return_value=False):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=False):
             assert decide_image_input_mode("deepseek", "deepseek-v4-pro", cfg) == "text"
 
     def test_none_config_is_auto(self):
-        with patch("agent.image_routing._lookup_supports_vision", return_value=True):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=True):
             assert decide_image_input_mode("anthropic", "claude-sonnet-4", None) == "native"
 
     def test_invalid_mode_coerces_to_auto(self):
         cfg = {"agent": {"image_input_mode": "weird-value"}}
-        with patch("agent.image_routing._lookup_supports_vision", return_value=True):
+        with patch.object(image_routing, "_lookup_supports_vision", return_value=True):
             assert decide_image_input_mode("anthropic", "claude-sonnet-4", cfg) == "native"
 
     def test_auto_uses_text_for_text_only_modalities_even_with_attachment_flag(self):
