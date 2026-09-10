@@ -129,6 +129,38 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
             pass
 
     # Clear model_metadata module caches
+    # First, clear by calling .clear() on existing dicts to handle any external references
+    try:
+        mm._model_metadata_cache.clear()
+    except (AttributeError, TypeError):
+        pass
+    try:
+        mm._novita_metadata_cache.clear()
+    except (AttributeError, TypeError):
+        pass
+    try:
+        mm._endpoint_model_metadata_cache.clear()
+    except (AttributeError, TypeError):
+        pass
+    try:
+        mm._endpoint_model_metadata_cache_time.clear()
+    except (AttributeError, TypeError):
+        pass
+    try:
+        mm._endpoint_probe_path_cache.clear()
+    except (AttributeError, TypeError):
+        pass
+    try:
+        mm._codex_oauth_context_cache.clear()
+    except (AttributeError, TypeError):
+        pass
+    if hasattr(mm, "_local_context_cache"):
+        try:
+            mm._local_context_cache.clear()
+        except (AttributeError, TypeError):
+            pass
+
+    # Then replace with new empty objects via monkeypatch
     monkeypatch.setattr(mm, "_model_metadata_cache", {})
     monkeypatch.setattr(mm, "_model_metadata_cache_time", 0)
     monkeypatch.setattr(mm, "_novita_metadata_cache", {})
