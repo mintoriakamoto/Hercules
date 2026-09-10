@@ -193,10 +193,22 @@ def _clear_other_module_caches(monkeypatch):
     try:
         import agent.bedrock_adapter as ba
         if hasattr(ba, '_bedrock_runtime_client_cache'):
+            try:
+                ba._bedrock_runtime_client_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(ba, '_bedrock_runtime_client_cache', {})
         if hasattr(ba, '_bedrock_control_client_cache'):
+            try:
+                ba._bedrock_control_client_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(ba, '_bedrock_control_client_cache', {})
         if hasattr(ba, '_discovery_cache'):
+            try:
+                ba._discovery_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(ba, '_discovery_cache', {})
     except Exception:
         pass
@@ -213,6 +225,10 @@ def _clear_other_module_caches(monkeypatch):
     try:
         import agent.i18n as i18n
         if hasattr(i18n, '_catalog_cache'):
+            try:
+                i18n._catalog_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(i18n, '_catalog_cache', {})
     except Exception:
         pass
@@ -221,6 +237,10 @@ def _clear_other_module_caches(monkeypatch):
     try:
         import agent.lsp.workspace as ws
         if hasattr(ws, '_workspace_cache'):
+            try:
+                ws._workspace_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(ws, '_workspace_cache', {})
     except Exception:
         pass
@@ -229,6 +249,10 @@ def _clear_other_module_caches(monkeypatch):
     try:
         import agent.auxiliary_client as ac
         if hasattr(ac, '_client_cache'):
+            try:
+                ac._client_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(ac, '_client_cache', {})
     except Exception:
         pass
@@ -237,6 +261,10 @@ def _clear_other_module_caches(monkeypatch):
     try:
         import agent.vertex_adapter as va
         if hasattr(va, '_creds_cache'):
+            try:
+                va._creds_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(va, '_creds_cache', {})
     except Exception:
         pass
@@ -245,6 +273,10 @@ def _clear_other_module_caches(monkeypatch):
     try:
         import agent.skill_bundles as sb
         if hasattr(sb, '_bundles_cache'):
+            try:
+                sb._bundles_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(sb, '_bundles_cache', {})
     except Exception:
         pass
@@ -253,6 +285,10 @@ def _clear_other_module_caches(monkeypatch):
     try:
         import agent.models_dev as md
         if hasattr(md, '_models_dev_cache'):
+            try:
+                md._models_dev_cache.clear()
+            except (AttributeError, TypeError):
+                pass
             monkeypatch.setattr(md, '_models_dev_cache', {})
     except Exception:
         pass
