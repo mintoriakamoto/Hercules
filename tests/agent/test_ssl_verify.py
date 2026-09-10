@@ -7,7 +7,7 @@ import pytest
 
 from agent.ssl_verify import resolve_httpx_verify
 
-_CA_ENV_VARS = ("HERCULES_CA_BUNDLE", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE")
+_CA_ENV_VARS = ("HERCULES_CA_BUNDLE", "SSL_CERT_FILE", "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE", "NIX_SSL_CERT_FILE")
 
 
 @pytest.fixture

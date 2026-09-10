@@ -29,8 +29,12 @@ import os
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
 import pytest
+
+# Add tests directory to path so conftest can be imported
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 # ---------------------------------------------------------------------------
@@ -41,10 +45,13 @@ import pytest
 @pytest.fixture
 def isolated_home(monkeypatch):
     """Temp HERCULES_HOME with config + clean credential env vars."""
+    from pathlib import Path
+    from conftest import setup_hercules_home
+
     test_home = tempfile.mkdtemp(prefix="hercules_test_31179_")
-    hercules_home = os.path.join(test_home, ".hercules")
-    os.makedirs(hercules_home)
-    monkeypatch.setenv("HERCULES_HOME", hercules_home)
+    hercules_home = Path(test_home) / ".hercules"
+    setup_hercules_home(hercules_home)
+    monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
 
     # Strip all credential-shaped env vars so each scenario starts hermetic.
     for k in list(os.environ.keys()):

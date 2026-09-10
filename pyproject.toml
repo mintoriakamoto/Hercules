@@ -369,6 +369,12 @@ testpaths = ["tests"]
 markers = [
     "integration: marks tests requiring external services (API keys, Modal, etc.)",
     "real_concurrent_gate: opt out of the autouse stub that disables _detect_concurrent_hercules_instances",
+    "asyncio: marks tests as asyncio tests",
+    "performance: marks tests as performance tests",
+    "timeout: marks tests with timeout requirements",
+    "live_system_guard_bypass: bypass the live system guard for process termination",
+    "no_isolate: marks tests that should not be isolated",
+    "ssh: marks tests requiring SSH",
 ]
 # integration tests take way too long to run in the normal CI environments
 # Hardware optimization: Ryzen 9950X (16 cores/32 threads), RTX 3060 (12GB VRAM)

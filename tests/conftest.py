@@ -32,6 +32,23 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 
+def setup_hercules_home(hercules_home_path: Path) -> None:
+    """Create a properly structured HERCULES_HOME directory with all required subdirectories.
+
+    This ensures that tests can safely access HERCULES_HOME without encountering
+    FileNotFoundError when logging or accessing standard subdirectories.
+
+    Parameters
+    ----------
+    hercules_home_path : Path
+        The path to the HERCULES_HOME directory to set up.
+    """
+    hercules_home_path.mkdir(parents=True, exist_ok=True)
+    # Create essential subdirectories that tests and the agent expect to exist
+    for subdir in ("sessions", "cron", "memories", "skills", "logs", "cache"):
+        (hercules_home_path / subdir).mkdir(exist_ok=True)
+
+
 # ── Per-file process isolation ──────────────────────────────────────────────
 # Tests run via ``scripts/run_tests_parallel.py``, which spawns a fresh
 # ``python -m pytest <file>`` subprocess per test file. Cross-file state
@@ -353,11 +370,7 @@ def _hermetic_environment(tmp_path, monkeypatch):
     #    ``Path.home() / ".hercules"`` instead of ``get_hercules_home()``
     #    is a bug to fix at the callsite.
     fake_hercules_home = tmp_path / "hercules_test"
-    fake_hercules_home.mkdir()
-    (fake_hercules_home / "sessions").mkdir()
-    (fake_hercules_home / "cron").mkdir()
-    (fake_hercules_home / "memories").mkdir()
-    (fake_hercules_home / "skills").mkdir()
+    setup_hercules_home(fake_hercules_home)
     monkeypatch.setenv("HERCULES_HOME", str(fake_hercules_home))
 
     # 4. Deterministic locale / timezone / hashseed. CI runs in UTC with
@@ -400,6 +413,25 @@ def _hermetic_environment(tmp_path, monkeypatch):
 def _isolate_hercules_home(_hermetic_environment):
     """Alias preserved for any test that yields this name explicitly."""
     return None
+
+
+@pytest.fixture()
+def temp_hercules_home(monkeypatch, tmp_path):
+    """Provide a temporary HERCULES_HOME directory with all required subdirectories.
+
+    Useful for tests that need to manually set HERCULES_HOME or spawn subprocesses
+    with a custom home directory. The directory structure is properly initialized
+    and cleaned up automatically.
+
+    Returns
+    -------
+    Path
+        Path to the temporary HERCULES_HOME directory.
+    """
+    hercules_home = tmp_path / "hercules_home"
+    setup_hercules_home(hercules_home)
+    monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
+    return hercules_home
 
 
 # ── Module-level state reset — replaced by per-file process isolation ──────
