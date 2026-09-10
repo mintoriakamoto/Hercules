@@ -77,10 +77,10 @@ def _clear_model_metadata_caches():
 
 @pytest.fixture(autouse=True)
 def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environment):
-    """Clear model metadata caches for all tests.
+    """Clear all module-level caches for all tests to prevent cross-test pollution.
 
     Depends on _hermetic_environment fixture which already isolates HERCULES_HOME.
-    Uses monkeypatch to directly clear cache objects and remove disk cache files,
+    Uses monkeypatch to directly clear cache objects in all agent modules,
     ensuring fresh state for each test regardless of how functions are imported.
     """
     from pathlib import Path
@@ -112,8 +112,7 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
         except Exception:
             pass
 
-    # Clear all in-memory caches by replacing them with fresh empty dicts/values
-    # Use monkeypatch to ensure these changes are isolated to this test
+    # Clear model_metadata module caches
     monkeypatch.setattr(mm, "_model_metadata_cache", {})
     monkeypatch.setattr(mm, "_model_metadata_cache_time", 0)
     monkeypatch.setattr(mm, "_novita_metadata_cache", {})
@@ -123,9 +122,89 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     monkeypatch.setattr(mm, "_endpoint_probe_path_cache", {})
     monkeypatch.setattr(mm, "_codex_oauth_context_cache", {})
     monkeypatch.setattr(mm, "_codex_oauth_context_cache_time", 0.0)
-
-    # Clear any context length cache if it exists
     if hasattr(mm, "_local_context_cache"):
         monkeypatch.setattr(mm, "_local_context_cache", {})
 
+    # Clear caches in other agent modules to prevent cross-test pollution
+    _clear_other_module_caches(monkeypatch)
+
     yield
+
+
+def _clear_other_module_caches(monkeypatch):
+    """Clear module-level caches in all other agent modules."""
+    # bedrock_adapter caches
+    try:
+        import agent.bedrock_adapter as ba
+        if hasattr(ba, '_bedrock_runtime_client_cache'):
+            monkeypatch.setattr(ba, '_bedrock_runtime_client_cache', {})
+        if hasattr(ba, '_bedrock_control_client_cache'):
+            monkeypatch.setattr(ba, '_bedrock_control_client_cache', {})
+        if hasattr(ba, '_discovery_cache'):
+            monkeypatch.setattr(ba, '_discovery_cache', {})
+    except Exception:
+        pass
+
+    # anthropic_adapter cache
+    try:
+        import agent.anthropic_adapter as aa
+        if hasattr(aa, '_claude_code_version_cache'):
+            monkeypatch.setattr(aa, '_claude_code_version_cache', None)
+    except Exception:
+        pass
+
+    # i18n cache
+    try:
+        import agent.i18n as i18n
+        if hasattr(i18n, '_catalog_cache'):
+            monkeypatch.setattr(i18n, '_catalog_cache', {})
+    except Exception:
+        pass
+
+    # lsp workspace cache
+    try:
+        import agent.lsp.workspace as ws
+        if hasattr(ws, '_workspace_cache'):
+            monkeypatch.setattr(ws, '_workspace_cache', {})
+    except Exception:
+        pass
+
+    # auxiliary_client cache
+    try:
+        import agent.auxiliary_client as ac
+        if hasattr(ac, '_client_cache'):
+            monkeypatch.setattr(ac, '_client_cache', {})
+    except Exception:
+        pass
+
+    # vertex_adapter cache
+    try:
+        import agent.vertex_adapter as va
+        if hasattr(va, '_creds_cache'):
+            monkeypatch.setattr(va, '_creds_cache', {})
+    except Exception:
+        pass
+
+    # skill_bundles cache
+    try:
+        import agent.skill_bundles as sb
+        if hasattr(sb, '_bundles_cache'):
+            monkeypatch.setattr(sb, '_bundles_cache', {})
+    except Exception:
+        pass
+
+    # models_dev cache
+    try:
+        import agent.models_dev as md
+        if hasattr(md, '_models_dev_cache'):
+            monkeypatch.setattr(md, '_models_dev_cache', {})
+    except Exception:
+        pass
+
+    # pet manifest cache
+    try:
+        import agent.pet.manifest as pm
+        if hasattr(pm, '_cache'):
+            monkeypatch.setattr(pm, '_cache', None)
+    except Exception:
+        pass
