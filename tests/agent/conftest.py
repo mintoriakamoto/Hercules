@@ -144,6 +144,14 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     # Clear caches in other agent modules to prevent cross-test pollution
     _clear_other_module_caches(monkeypatch)
 
+    # Kill any lingering Codex subprocesses that might have been spawned by previous tests
+    # and left in an invalid state
+    try:
+        import subprocess
+        subprocess.run(["pkill", "-f", "codex.*app-server"], timeout=2, capture_output=True)
+    except Exception:
+        pass
+
     yield
 
 
