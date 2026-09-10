@@ -109,22 +109,22 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     if not cache_dir.exists():
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-    # Remove disk cache files first
-    for _ in range(3):
+    # Remove disk cache files first (multiple retries to handle edge cases)
+    for attempt in range(5):
         try:
             cache_file = mm._get_model_metadata_cache_path()
             if cache_file.exists():
                 cache_file.unlink()
-            break
+                break
         except Exception:
             pass
 
-    for _ in range(3):
+    for attempt in range(5):
         try:
             context_cache_file = mm._get_context_cache_path()
             if context_cache_file.exists():
                 context_cache_file.unlink()
-            break
+                break
         except Exception:
             pass
 
