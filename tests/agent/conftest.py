@@ -87,6 +87,22 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     from hercules_constants import get_hercules_home
     import agent.model_metadata as mm
 
+    # CRITICAL: Force import all agent modules to ensure they're loaded before we clear caches.
+    # This prevents a scenario where a test is the first to import a module, getting fresh
+    # (but polluted) caches created at import time before this fixture runs.
+    try:
+        import agent.bedrock_adapter
+        import agent.anthropic_adapter
+        import agent.i18n
+        import agent.lsp.workspace
+        import agent.auxiliary_client
+        import agent.vertex_adapter
+        import agent.skill_bundles
+        import agent.models_dev
+        import agent.pet.manifest
+    except Exception:
+        pass
+
     # Ensure cache directory exists (created by _hermetic_environment fixture)
     hercules_home = get_hercules_home()
     cache_dir = hercules_home / "cache"
