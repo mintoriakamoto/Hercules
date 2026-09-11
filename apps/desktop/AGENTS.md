@@ -16,11 +16,12 @@ wrong — but **never break an invariant** to make a change easier.
 1. **[What this app is](#what-this-app-is)** — Architecture and separation of concerns
 2. **[Decide state by authority](#decide-state-by-authority)** — State ownership and scope
 3. **[Identity is not incidental](#identity-is-not-incidental)** — Session and entity identity
-4. **[Server truth is cached, not owned](#server-truth-is-cached-not-owned)** — Cache semantics
+4. **[Server truth is cached](#server-truth-is-cached-not-owned)** — Cache semantics and reconciliation
 5. **[Switching context](#switching-context-is-a-re-home-not-a-reboot)** — Profile and mode changes
-6. **[Cross-platform resolution](#cross-everything-as-an-observable-ladder)** — Compatibility and fallbacks
+6. **[Observable ladder](#cross-everything-as-an-observable-ladder)** — Compatibility and fallbacks
 7. **[UX principles](#respect-the-person-using-it)** — User-focused design rules
 8. **[Performance](#make-it-feel-instant)** — Responsiveness and efficiency
+9. **[Pre-handoff checklist](#pre-handoff-checklist)** — Final verification before shipping
 
 ---
 

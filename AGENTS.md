@@ -6,10 +6,10 @@
 ## Quick Navigation
 
 1. **[What Hercules Is](#what-hercules-is)** — The system's architecture and core principles
-2. **[Contribution Philosophy](#contribution-rubric)** — What gets merged, what doesn't, and why
+2. **[Contribution Philosophy](#contribution-philosophy)** — What gets merged, what doesn't, and why
 3. **[Technical Architecture](#development-environment)** — Project structure, AIAgent, CLI, TUI, Desktop
-4. **[Development Practices](#testing)** — Tools, testing, configuration, profiles
-5. **[Reference](#typescriptstyle)** — Style guides, dependency policy, known pitfalls
+4. **[Important Policies](#important-policies)** — Prompt caching, background processes, profiles
+5. **[Testing & Reference](#testing)** — Style guides, dependency policy, known pitfalls
 
 ---
 
