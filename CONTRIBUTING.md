@@ -1,10 +1,26 @@
 # Contributing to Hercules
 
-Thank you for your interest in contributing to Hercules! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing! This document provides practical guidelines for the
+contribution workflow. **Before you start coding, read [`AGENTS.md`](./AGENTS.md)** — it explains
+the design philosophy, contribution rubric, and what we do/don't want. This guide assumes you've
+understood that context.
 
 ## Code of Conduct
 
 This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+
+## Documentation Map
+
+Before contributing, know which document to read for what:
+
+| Document | Purpose | Read when you... |
+|----------|---------|------------------|
+| [`AGENTS.md`](./AGENTS.md) (root) | Design philosophy, contribution rubric, tech architecture | Planning a feature or fixing a bug; reviewing PRs |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) (this file) | Practical workflow, testing, code quality | Ready to start coding; need setup/build instructions |
+| [`apps/desktop/AGENTS.md`](./apps/desktop/AGENTS.md) | Desktop app architecture and invariants | Building the Electron app; changing state, routing, or UI patterns |
+| [`apps/desktop/DESIGN.md`](./apps/desktop/DESIGN.md) | Visual design system, components, tokens | Adding UI components or changing styles |
+
+---
 
 ## Getting Started
 
