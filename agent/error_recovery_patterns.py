@@ -13,6 +13,7 @@ Each pattern is tested and documented with clear recovery semantics.
 from __future__ import annotations
 
 import logging
+import random
 import time
 from typing import Any, Callable, Optional, TypeVar, Union
 
@@ -55,7 +56,6 @@ class RetryStrategy:
         )
 
         if self.jitter:
-            import random
             delay = delay * (0.5 + random.random())
 
         return delay

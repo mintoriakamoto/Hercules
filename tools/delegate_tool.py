@@ -3189,12 +3189,13 @@ def delegate_task(
             # per-task values warn and degrade to leaf uniformly.
             effective_role = _normalize_role(t.get("role") or top_role)
             # Per-task model beats config credentials model
-            effective_model = t.get("model") or creds["model"]
-            if t.get("model"):
+            task_model = t.get("model")
+            effective_model = task_model or creds["model"]
+            if task_model:
                 logger.debug(
                     "Task %d using explicit model override: %s (from config: %s)",
                     i,
-                    t.get("model"),
+                    task_model,
                     creds["model"],
                 )
             child = _build_child_agent(
