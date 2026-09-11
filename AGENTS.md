@@ -1,53 +1,83 @@
-# Hercules Agent - Development Guide
+# Hercules Agent — Development Guide
 
-Instructions for AI coding assistants and developers working on the hercules-agent codebase.
+**For**: AI coding assistants, engineers, and reviewers building Hercules.  
+**Philosophy**: Never give up on the right solution.
 
-**Never give up on the right solution.**
+## Quick Navigation
+
+1. **[What Hercules Is](#what-hercules-is)** — The system's architecture and core principles
+2. **[Contribution Philosophy](#contribution-rubric)** — What gets merged, what doesn't, and why
+3. **[Technical Architecture](#development-environment)** — Project structure, AIAgent, CLI, TUI, Desktop
+4. **[Development Practices](#testing)** — Tools, testing, configuration, profiles
+5. **[Reference](#typescriptstyle)** — Style guides, dependency policy, known pitfalls
+
+---
 
 ## What Hercules Is
 
-Hercules is a personal AI agent that runs the same agent core across a CLI, a
-messaging gateway (Telegram, Discord, Slack, and ~20 other platforms), a TUI,
-and an Electron desktop app. It learns across sessions (memory + skills),
-delegates to subagents, runs scheduled jobs, and drives a real terminal and
-browser. It is extended primarily through **plugins and skills**, not by
-growing the core.
+Hercules is a personal AI agent that runs the same core across multiple surfaces:
+- **CLI** — interactive terminal with autocomplete, skins, and slash commands
+- **Messaging Gateway** — Telegram, Discord, Slack, and ~20 other platforms (unified routing)
+- **TUI** — React/Ink terminal UI with streaming, tools, and approvals
+- **Desktop** — Electron app with native filesystem, git, and window management
 
-Two properties shape almost every design decision and are the lens for
-reviewing any change:
+**Key capabilities**: long-lived sessions with memory and learned skills, delegation to
+subagents, scheduled job execution (cron), driving real terminals and browsers, running plugins.
 
-- **Per-conversation prompt caching is sacred.** A long-lived conversation
-  reuses a cached prefix every turn. Anything that mutates past context,
-  swaps toolsets, or rebuilds the system prompt mid-conversation invalidates
-  that cache and multiplies the user's cost. We do not do it (the one
-  exception is context compression).
-- **The core is a narrow waist; capability lives at the edges.** Every model
-  tool we add is sent on every API call, so the bar for a new *core* tool is
-  high. Most new capability should arrive as a CLI command + skill, a
-  service-gated tool, or a plugin — not as core surface.
+### Two Sacred Principles
 
-## Contribution Rubric — What We Want / What We Don't
+Every design decision is tested against these two properties:
 
-This is the project's intent layer. Use it two ways:
+1. **Per-conversation prompt caching is sacred.**
+   - A long-lived conversation reuses a cached prefix every turn.
+   - **Never** mutate past context, swap toolsets, or rebuild the system prompt mid-conversation.
+   - Cache invalidation multiplies the user's cost — the only exception is context compression.
+   - This is load-bearing: changes that break caching are rejected even when well-built.
 
-1. **For humans and for your own work** — what gets merged and what gets
-   rejected, so a contribution aims at the target.
-2. **For automated review (the triage sweeper)** — guidance on when a PR is
-   safe to close on the three allowed reasons (`implemented_on_main`,
-   `cannot_reproduce`, `incoherent`) and, just as important, **when NOT to
-   close** one. Taste-based "we don't want this / out of scope" closes are NOT
-   an automated decision — those stay with a human maintainer. The sweeper's
-   job here is to recognize design intent and *avoid wrongly closing a
-   legitimate contribution*, not to make the won't-implement call itself.
+2. **The core is a narrow waist; capability lives at the edges.**
+   - Every model tool is sent on every API call. The bar for a new *core* tool is extremely high.
+   - Prefer the **Footprint Ladder** (see later section): extend code → CLI command + skill → 
+     service-gated tool → plugin → MCP server → **last resort: core tool**.
+   - Hercules is **expansive at the edges** (platforms, skills, providers) but **conservative at the waist** (core tool schema).
 
-Read the balance right: Hercules ships a **lot** — most merges are bug fixes to
-real reported behavior, and the product surface (platforms, channels,
-providers, models, desktop/TUI features) expands aggressively and on purpose.
-The restraint below is aimed squarely at the **core agent + the model tool
-schema**, the one place where every addition is paid for on every API call.
-"Smallest footprint" governs *how a capability is wired into the core*, NOT
-whether the product is allowed to grow. We are expansive at the edges and
-conservative at the waist.
+## Contribution Philosophy
+
+This section is **the project's intent layer**. Use it in three contexts:
+
+1. **Planning your work** — what's in scope, what's out of scope, and how to position a contribution
+2. **Reviewing changes** — when a PR is sound and when it's fighting the design
+3. **PR triage** — when it's safe to close automatically vs. when a human must decide
+
+### Balance: We ship a lot
+
+Hercules is **expansive**: most merges are bug fixes, and the product surface (platforms, channels,
+providers, models, desktop/TUI features) grows aggressively on purpose.
+
+The restraint below applies **only to the core agent + the model tool schema** — the one place
+where every addition is paid for on every API call. "Smallest footprint" governs *how* capability
+is wired into the core, **NOT** whether the product is allowed to grow.
+
+### Verify the premise first
+
+The most common reason a well-written PR gets closed is not code quality — it is that the change
+rests on a **wrong premise** or treats **intentional design as a gap**. Verify before you write:
+
+- **"Intentional design, not a gap."** A limitation often looks like an oversight when it's deliberate.
+  Read the original commit's intent (`git log -p -S "<symbol>"`) before "fixing" a restriction.
+  Example: profiles are independent islands on purpose — coupling them would break the design.
+- **"The premise doesn't hold."** Trace the real code/runtime before accepting a rationale. If you can't
+  point to the exact line where the bug manifests AND show your fix changes that line's behavior, you
+  haven't verified the claim.
+- **"The absence/omission was deliberate."** Adding the obvious-looking missing piece can break things
+  the omission was protecting. Example: `__init__.py` in a test tree shadowed the real plugin.
+- **"Overreach / resurrected approach."** Scope creep that supersedes what was agreed, or revives a
+  direction the maintainers closed, gets rejected. Keep the change to the narrow piece agreed; offer
+  the rest as a follow-up.
+
+**Throughline**: Verify the claim AND the intent against the codebase. A confirmed reproduction on
+`main` plus line-level proof beats a plausible rationale every time.
+
+---
 
 ### What we want
 
@@ -135,54 +165,13 @@ conservative at the waist.
   such a directory to the tree are closed with a pointer to publish it as its own
   repo.
 
-### Before you call it a bug — verify the premise (and when NOT to close)
+---
 
-The most common reason a well-written PR gets closed is not code quality — it
-is that the change is built on a **wrong premise**, or it treats an
-**intentional design as a gap**. These patterns cut both ways: they tell a
-human reviewer what to scrutinize, and they tell the automated sweeper when a
-PR is NOT safe to close as `implemented_on_main` / `cannot_reproduce` (when in
-doubt, leave it open for a human). They are distilled from real closes.
+### The Footprint Ladder: Where to put new capability
 
-- **"Intentional design, not a gap."** A limitation that looks like an
-  oversight is often deliberate. Before "fixing" a missing link or a
-  restriction, ask whether the isolation IS the design. Example: profiles are
-  independent islands on purpose — a PR adding live config inheritance from the
-  default profile was closed because coupling profiles together is exactly what
-  the design prevents (the copy-at-creation `--clone` path already covers the
-  legitimate "start from my default" case). Read the original commit's intent
-  (`git log -p -S "<symbol>"`) before assuming something is unfinished.
-- **"The premise doesn't hold against how X actually works."** A PR's
-  justification frequently rests on a wrong mental model of an existing
-  mechanism. Trace the real code/runtime before accepting the rationale. Two
-  real closes: a rate-limit "re-probe during cooldown" PR (the breaker only
-  trips on a *confirmed-empty* account bucket, so re-probing just hammers a
-  bucket we've already proven empty); a usage-accumulation fix whose new branch
-  **never executes at runtime** because an earlier guard already popped the
-  state it depended on. If you can't point to the exact line where the bug
-  manifests AND show the fix changes that line's behavior, you haven't verified
-  the premise.
-- **"This fix was wrong — the absence/omission was deliberate."** Adding the
-  obvious-looking missing piece can break things the omission was protecting.
-  Example: restoring "missing" `__init__.py` files made a test tree importable
-  as a dotted package that shadowed the real plugin, deleting its `register()`
-  at import time. The absence was load-bearing.
-- **"Overreached / resurrected an approach we'd moved past."** Scope creep that
-  supersedes an agreed-on base, or revives a direction the maintainers
-  deliberately closed, gets rejected even when the code works. Keep the change
-  to the narrow piece that was actually agreed; offer the rest as a focused
-  follow-up.
-
-The throughline: **verify the claim AND the intent against the codebase before
-writing or merging a fix.** A confirmed reproduction on current `main` plus a
-line-level account of where the fix acts beats a plausible-sounding rationale
-every time. When in doubt about intent, it is cheaper to ask than to ship a
-fix that fights the design.
-
-### The Footprint Ladder (new capability decision)
-
-Each rung adds more permanent surface than the one above. Choose the highest
-(least-footprint) rung that correctly solves the problem:
+When you've verified the design intent and decided a capability belongs in Hercules, the next
+question is **where**: core tool, plugin, skill, or something else? Each rung adds more permanent
+surface. Choose the **highest rung** (smallest footprint) that correctly solves the problem:
 
 1. **Extend existing code** — the capability is a variation of something that
    already exists. Zero new surface.
