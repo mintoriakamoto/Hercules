@@ -87,7 +87,7 @@ log_success "System packages updated"
 
 log_step "[2/8] Installing system dependencies..."
 
-# Core build and development tools
+# Core build and development tools (always required)
 SYSTEM_DEPS=(
     build-essential git curl wget gnupg ca-certificates
     python3 python3-dev python3-pip python3-venv
@@ -96,46 +96,64 @@ SYSTEM_DEPS=(
     rustc cargo pkg-config
 )
 
-# Audio/Video processing
+# Audio/Video processing and multimedia
 AUDIO_VIDEO_DEPS=(
-    alsa-utils pulseaudio pavucontrol
-    v4l-utils libv4l-dev
     ffmpeg libavcodec-dev libavformat-dev libswscale-dev
+    alsa-utils pulseaudio
+    v4l-utils libv4l-dev
     portaudio19-dev sox libsox-fmt-all
+    # Audio processing libraries (required for TTS/voice features)
+    libjack-dev libjack0 jackd
+    libopus-dev libvorbis-dev libflac-dev
 )
 
-# Security and penetration testing tools
+# Penetration testing tools (optional, can be skipped for production)
 PENTEST_DEPS=(
     nmap metasploit-framework wireshark tcpdump
     openssl openssh-server openssh-client
-    libmagic1 libmagic-dev
     dnsmasq aircrack-ng hydra john hashcat
 )
 
-# Database and persistence
+# Database and persistence backends (optional, for distributed deployments)
 DATABASE_DEPS=(
     postgresql postgresql-contrib postgresql-client
     redis-server redis-tools
-    sqlite3 libsqlite3-dev
 )
 
-# Utility and development
+# Utility and development tools
 UTILITY_DEPS=(
     tmux screen jq htop vim nano
-    git-flow graphviz
-    expect
+    git-flow graphviz expect
+    curl wget
 )
 
-ALL_DEPS=(
-    "${SYSTEM_DEPS[@]}"
-    "${AUDIO_VIDEO_DEPS[@]}"
-    "${PENTEST_DEPS[@]}"
-    "${DATABASE_DEPS[@]}"
-    "${UTILITY_DEPS[@]}"
-)
+# Build initial required set
+INSTALL_DEPS=("${SYSTEM_DEPS[@]}" "${AUDIO_VIDEO_DEPS[@]}" "${UTILITY_DEPS[@]}")
 
-apt install -y "${ALL_DEPS[@]}"
-log_success "System dependencies installed"
+# Interactive optional package selection
+echo ""
+echo -e "${YELLOW}Optional System Packages:${NC}"
+
+read -p "Install optional Penetration Testing tools? (nmap, metasploit, wireshark) [y/N]: " -r PENTEST_CHOICE
+if [[ $PENTEST_CHOICE =~ ^[Yy]$ ]]; then
+    INSTALL_DEPS+=("${PENTEST_DEPS[@]}")
+    log_step "Pentest tools will be installed"
+else
+    log_step "Skipping pentest tools (can be installed later with: apt install nmap metasploit-framework)"
+fi
+
+read -p "Install Database servers? (PostgreSQL, Redis) [y/N]: " -r DATABASE_CHOICE
+if [[ $DATABASE_CHOICE =~ ^[Yy]$ ]]; then
+    INSTALL_DEPS+=("${DATABASE_DEPS[@]}")
+    log_step "Database servers will be installed"
+else
+    log_step "Skipping database servers (can be installed later or use cloud-hosted)"
+fi
+
+echo ""
+log_step "Installing selected system dependencies..."
+apt install -y "${INSTALL_DEPS[@]}"
+log_success "System dependencies installed ($(echo ${#INSTALL_DEPS[@]} | wc -c) packages)"
 
 # ============================================================================
 # [3/8] GPU Drivers (Optional)
@@ -366,52 +384,217 @@ log_success "AI models configured"
 
 log_step "[8/8] Finalizing configuration and services..."
 
-# Create .env configuration file
+# Generate secure credentials and create .env configuration file
 if [ ! -f "$HERCULES_HOME/.env" ]; then
-    cat > "$HERCULES_HOME/.env" << 'ENV_EOF'
+    log_step "Generating secure configuration and credentials..."
+
+    # Generate secure random credentials
+    DASHBOARD_PASSWORD=$(openssl rand -base64 24 2>/dev/null || head -c 24 /dev/urandom | base64)
+    API_SERVER_KEY=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p)
+    POSTGRES_PASSWORD=$(openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64)
+    REDIS_PASSWORD=$(openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64)
+
+    cat > "$HERCULES_HOME/.env" << EOF
+# ============================================================================
 # Hercules Agent Configuration
-# Edit these settings to configure your Hercules instance
+# ============================================================================
+# Edit these settings to configure your Hercules instance.
+# See https://github.com/mintoriakamoto/Hercules/blob/main/.env.example for
+# complete documentation of all available options.
 
-# LLM Provider Selection
-# Options: openai, anthropic, gemini, openrouter, ollama, lmstudio
+# ============================================================================
+# [1] LLM Provider Configuration
+# ============================================================================
+# Primary provider for agent reasoning and responses
 LLM_PROVIDER=openai
+# Options: openai, anthropic, gemini, openrouter, ollama, bedrock, etc.
 
-# API Keys (leave empty for offline mode)
+# Provider API Keys (leave empty for offline/local mode)
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
+GOOGLE_API_KEY=
 GEMINI_API_KEY=
 
-# Local Model Configuration (for offline mode)
-LOCAL_MODEL_PATH=${HERCULES_HOME}/models/phi-2
+# Optional: OpenRouter (multi-provider aggregator)
+# OPENROUTER_API_KEY=
+
+# Optional: Local model support
+LOCAL_MODEL_PATH=\${HERCULES_HOME}/models/phi-2
 OLLAMA_BASE_URL=http://localhost:11434
 
-# Memory and Persistence
-MEMORY_TYPE=sqlite  # sqlite, postgresql, redis
-DATABASE_URL=sqlite:///${HERCULES_HOME}/data/hercules.db
+# ============================================================================
+# [2] Database & Persistence Layer
+# ============================================================================
+# Memory system (all session data, learned skills, persistent memory)
+MEMORY_TYPE=sqlite
+# Options: sqlite, postgresql, redis, mongodb
 
-# Gateway Configuration
-GATEWAY_PORT=8000
+# Database connection URLs
+DATABASE_URL=sqlite://\${HERCULES_HOME}/data/hercules.db
+# For PostgreSQL: postgresql://hercules:${POSTGRES_PASSWORD}@localhost/hercules
+# For Redis: redis://default:${REDIS_PASSWORD}@localhost:6379/0
+
+# PostgreSQL credentials (if using MEMORY_TYPE=postgresql)
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+POSTGRES_USER=hercules
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=hercules
+
+# Redis credentials (if using MEMORY_TYPE=redis)
+REDIS_PASSWORD=${REDIS_PASSWORD}
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# ============================================================================
+# [3] Gateway & Service Configuration
+# ============================================================================
+# Web gateway for messaging platforms and dashboard
+
 GATEWAY_HOST=0.0.0.0
+GATEWAY_PORT=8000
+GATEWAY_ALLOW_ALL_USERS=false
 
-# Platform Integrations
-TELEGRAM_BOT_TOKEN=
-DISCORD_TOKEN=
-SLACK_TOKEN=
-MATRIX_HOMESERVER=
+# Dashboard web UI configuration
+HERCULES_DASHBOARD=0
+# Set to 1 to enable dashboard (requires auth when exposed publicly)
+HERCULES_DASHBOARD_HOST=127.0.0.1
+HERCULES_DASHBOARD_PORT=9119
+HERCULES_DASHBOARD_BASIC_AUTH_USERNAME=admin
+HERCULES_DASHBOARD_BASIC_AUTH_PASSWORD=${DASHBOARD_PASSWORD}
 
-# Logging
+# API Server configuration (for external integrations)
+API_SERVER_HOST=
+# Leave empty to disable. Set to 0.0.0.0 to expose publicly (requires KEY)
+API_SERVER_PORT=8642
+API_SERVER_KEY=${API_SERVER_KEY}
+
+# ============================================================================
+# [4] Messaging Platform Integrations
+# ============================================================================
+# Optional: Connect to messaging platforms for the gateway
+
+# Telegram
+# TELEGRAM_BOT_TOKEN=your_bot_token_here
+# TELEGRAM_ALLOWED_USERS=123456789,987654321
+# TELEGRAM_HOME_CHANNEL=your_home_channel_id
+
+# Slack
+# SLACK_BOT_TOKEN=xoxb-...
+# SLACK_APP_TOKEN=xapp-...
+# SLACK_ALLOWED_USERS=U1234567890
+
+# Discord (requires plugin installation)
+# DISCORD_TOKEN=your_token_here
+
+# Email (IMAP/SMTP)
+# EMAIL_ADDRESS=your@email.com
+# EMAIL_PASSWORD=app_password_here
+# EMAIL_IMAP_HOST=imap.gmail.com
+# EMAIL_SMTP_HOST=smtp.gmail.com
+
+# Matrix/Element
+# MATRIX_HOMESERVER=https://matrix.org
+# MATRIX_ACCESS_TOKEN=syt_your_token
+
+# Microsoft Teams
+# TEAMS_CLIENT_ID=
+# TEAMS_CLIENT_SECRET=
+# TEAMS_TENANT_ID=
+
+# Google Chat
+# GOOGLE_CHAT_PROJECT_ID=
+# GOOGLE_CHAT_SERVICE_ACCOUNT_JSON=
+
+# ============================================================================
+# [5] Tool & Feature APIs
+# ============================================================================
+# Optional: Configure external tool providers
+
+# Web search
+# EXA_API_KEY=
+# FIRECRAWL_API_KEY=
+
+# Browser automation
+# BROWSERBASE_API_KEY=
+# BROWSERBASE_PROJECT_ID=
+
+# Image generation
+# FAL_KEY=
+
+# Voice & Speech
+# ELEVENLABS_API_KEY=
+# STT_OPENAI_MODEL=whisper-1
+
+# ============================================================================
+# [6] Logging & Debugging
+# ============================================================================
 LOG_LEVEL=INFO
-LOG_DIR=${HERCULES_HOME}/logs
+# Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_DIR=\${HERCULES_HOME}/logs
 
-# Offline Mode (no external API calls)
+WEB_TOOLS_DEBUG=false
+VISION_TOOLS_DEBUG=false
+
+# ============================================================================
+# [7] Agent Behavior
+# ============================================================================
 OFFLINE_MODE=false
+# Set to true for completely offline operation (no API calls)
 
-# Skill Loading
-SKILLS_DIR=${HERCULES_HOME}/skills
+SKILLS_DIR=\${HERCULES_HOME}/skills
 ENABLE_SKILL_AUTO_IMPROVE=true
-ENV_EOF
+# Automatically create and improve skills from complex interactions
+
+CONTEXT_COMPRESSION_ENABLED=true
+CONTEXT_COMPRESSION_THRESHOLD=50000
+
+# Human-like response pacing (delay between responses)
+HERCULES_HUMAN_DELAY_MODE=false
+# HERCULES_HUMAN_DELAY_MIN_MS=100
+# HERCULES_HUMAN_DELAY_MAX_MS=1000
+
+# ============================================================================
+# [8] Terminal Backend (for code execution)
+# ============================================================================
+# Options: local, docker, ssh, modal, singularity, daytona
+TERMINAL_ENV=local
+
+# For Docker backend:
+# TERMINAL_DOCKER_IMAGE=nikolaik/python-nodejs:python3.11-nodejs20
+
+# For SSH backend:
+# TERMINAL_SSH_HOST=your.server.com
+# TERMINAL_SSH_USER=hercules
+# TERMINAL_SSH_PORT=22
+# TERMINAL_SSH_KEY=\${HERCULES_HOME}/keys/id_rsa
+
+TERMINAL_TIMEOUT=300
+# Maximum execution time for tool commands (seconds)
+
+# ============================================================================
+# [9] Optional: GitHub Integration
+# ============================================================================
+# GITHUB_TOKEN=your_personal_access_token
+# GITHUB_APP_ID=
+# GITHUB_APP_PRIVATE_KEY_PATH=\${HERCULES_HOME}/keys/github_app_key.pem
+
+# ============================================================================
+# Documentation: https://github.com/mintoriakamoto/Hercules/blob/main/.env.example
+# ============================================================================
+EOF
     chmod 600 "$HERCULES_HOME/.env"
-    log_success "Configuration file created at $HERCULES_HOME/.env"
+    log_success "Comprehensive configuration created at $HERCULES_HOME/.env"
+    echo ""
+    echo -e "${YELLOW}📝 Configuration Summary:${NC}"
+    echo "  Dashboard password: $DASHBOARD_PASSWORD"
+    echo "  API server key:     ${API_SERVER_KEY:0:16}..."
+    echo ""
+    echo -e "${YELLOW}⚠️  IMPORTANT:${NC}"
+    echo "  1. Edit $HERCULES_HOME/.env to configure your LLM provider and API keys"
+    echo "  2. Run: $VENV_DIR/bin/hercules setup  (interactive configuration wizard)"
+    echo "  3. See INSTALL.md for platform-specific setup guides"
+    echo ""
 fi
 
 # Create PRINCIPLES.md for ethical guidelines
