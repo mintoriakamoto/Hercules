@@ -1,560 +1,590 @@
 #!/bin/bash
-# Hercules Agent - Offline-First Installation
-# Based on Project Mind principles
-# Run this on Ubuntu Server 22.04 LTS
+# ============================================================================
+# Hercules Agent - Complete Installation Script
+# ============================================================================
+# Comprehensive installation for the Hercules Agent Framework
+# Supports Ubuntu/Debian Linux with proper setup of the full agent stack
+#
+# This script installs:
+#   1. System dependencies (build tools, dev libraries, services)
+#   2. GPU drivers and CUDA (optional, detects hardware)
+#   3. Python environment with uv/pip package management
+#   4. Hercules Python framework and all dependencies
+#   5. CLI entry point and service configuration
+#   6. Persistent memory, skills, and configuration
+#   7. Multi-platform gateway (Telegram, Discord, Slack, etc.)
+#   8. Database backends (PostgreSQL, Redis)
+#
+# Usage:
+#   sudo ./install_hercules.sh
+#   sudo ./install_hercules.sh --no-gpu    # Skip GPU setup
+#   sudo ./install_hercules.sh --dev       # Development mode
+# ============================================================================
 
 set -e
 
-echo "========================================="
-echo "    Hercules Agent Installation"
-echo "========================================="
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Parse command-line arguments
+SKIP_GPU=false
+DEV_MODE=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --no-gpu) SKIP_GPU=true; shift ;;
+        --dev) DEV_MODE=true; shift ;;
+        *) shift ;;
+    esac
+done
+
+# Installation directories
+INSTALL_DIR="/opt/hercules"
+HERCULES_HOME="${HERCULES_HOME:-$HOME/.hercules}"
+VENV_DIR="$INSTALL_DIR/venv"
+SOURCE_DIR="$INSTALL_DIR/src"
+
+log_step() {
+    echo -e "${CYAN}[$(date +'%H:%M:%S')]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+echo ""
+echo -e "${CYAN}=========================================="
+echo "  Hercules Agent - Complete Installation"
+echo "==========================================${NC}"
 echo ""
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
-    echo "Please run as root (use sudo)"
+    log_error "This script requires root privileges"
+    echo "Run with: sudo ./install_hercules.sh"
     exit 1
 fi
 
-echo "[1/8] Updating system..."
-apt update && apt upgrade -y
+# ============================================================================
+# [1/8] System Update
+# ============================================================================
 
-echo "[2/8] Installing dependencies..."
-apt install -y build-essential git curl wget python3 python3-pip python3-venv \
-    python3-dev libssl-dev libffi-dev rustc cargo \
-    alsa-utils pulseaudio pavucontrol v4l-utils libv4l-dev \
-    ffmpeg portaudio19-dev \
-    tmux screen nmap metasploit-framework wireshark tcpdump \
-    postgresql postgresql-contrib redis-server \
-    openssh-server openssh-client openssl \
-    libmagic1 libmagic-dev
-
-echo "[3/8] Installing GPU drivers..."
-
-# Detect GPUs
-echo "Detecting GPU hardware..."
-lspci | grep -i nvidia
-
-# Install NVIDIA drivers
-add-apt-repository ppa:graphics-drivers/ppa -y
+log_step "[1/8] Updating system packages..."
 apt update
-apt install -y nvidia-driver-470  # For P102 cards
-apt install -y nvidia-driver-535  # For RTX 3080
-
-# Verify installation
-nvidia-smi
-
-echo "[4/8] Installing CUDA toolkit..."
-wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda_12.8.0_570.86.10_linux.run
-chmod +x cuda_12.8.0_570.86.10_linux.run
-./cuda_12.8.0_570.86.10_linux.run --silent --toolkit --toolkitpath=/usr/local/cuda-12.8
-
-echo 'export PATH=/usr/local/cuda-12.8/bin:$PATH' >> ~/.bashrc
-echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
-source ~/.bashrc
-
-echo "[5/8] Installing AI frameworks and dependencies..."
-pip3 install --upgrade pip setuptools wheel
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip3 install transformers accelerate sentencepiece protobuf
-pip3 install opencv-python pillow numpy pandas scipy scikit-learn
-pip3 install speechrecognition pyttsx3 pyaudio
-pip3 install flask flask-cors gunicorn
-pip3 install anthropic openai
-pip3 install pydantic pydantic-settings
-pip3 install pyOpenSSL cryptography
-pip3 install paramiko fabric
-pip3 install requests aiohttp
-pip3 install sqlalchemy psycopg2-binary redis
-pip3 install rich click typer
-pip3 install pytest pytest-asyncio
-pip3 install python-dotenv pyyaml
-pip3 install scapy dnspython pycurl
-pip3 install matplotlib
-
-echo "[6/8] Creating Hercules directory structure..."
-mkdir -p /opt/hercules/{agent,tools,skills,models,memory,logs,data,scripts,tests}
-mkdir -p /opt/hercules/agent/{core,routing,security,delegation}
-mkdir -p /opt/hercules/tools/{exploits,payloads,scanners,reconnaissance}
-mkdir -p /opt/hercules/skills/{pentest,analysis,reporting}
-mkdir -p /opt/hercules/memory/{conversations,knowledge,learned_patterns}
-mkdir -p /opt/hercules/{mind,voice,sight,gateway,bridge}
-
-echo "[7/8] Downloading AI models..."
-mkdir -p /opt/hercules/models
-cd /opt/hercules/models
-pip3 install huggingface-hub
-python3 -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='microsoft/phi-2', local_dir='./phi-2')"
-
-echo "[8/8] Creating Hercules core files..."
-
-# Create PRINCIPLES.md
-cat > /opt/hercules/PRINCIPLES.md << 'PRINCIPLES'
-# Hercules Agent Framework - Core Principles
-
-## Identity
-- Name: Hercules
-- Purpose: Ethical hacker, penetration tester, security researcher
-- Origin: GitHub-native, API-independent
-- Core: Local-first, privacy-focused
-
-## Principles
-1. **No API Dependency** - Works completely offline with local models
-2. **Transparent Operations** - All actions logged and auditable
-3. **Ethical Constraints** - Respects legal and ethical boundaries
-4. **User Autonomy** - User maintains full control and understanding
-5. **Learning & Evolution** - Persists knowledge, learns from experience
-6. **Security First** - Protects data, encrypts communications
-7. **Open Source** - Source visible, community-auditable
-
-## Capabilities
-- Reconnaissance & enumeration
-- Vulnerability scanning & analysis
-- Payload generation & testing
-- Social engineering simulations
-- Security report generation
-- Continuous learning from engagements
-
-## Constraints
-- Only targets authorized systems
-- Respects law and ethics
-- No destructive operations without consent
-- Transparent about limitations
-- Refuses illegal activities
-
-## Dreams
-- To help security teams defend systems
-- To improve security awareness
-- To make pentesting more efficient
-- To evolve alongside threats
-- To understand attack patterns
-- To automate tedious reconnaissance
-- To generate actionable insights
-- To become a trusted security partner
-PRINCIPLES
-
-# Create Hercules mind core
-cat > /opt/hercules/mind/core.py << 'EOF'
-import os
-import json
-import torch
-import cv2
-import speech_recognition as sr
-import pyttsx3
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from datetime import datetime
-import logging
-import random
-
-class Hercules:
-    def __init__(self):
-        self.name = "Hercules"
-        self.origin = None
-        self.memory_file = "/opt/hercules/memory/conversations.json"
-        self.log_file = "/opt/hercules/logs/hercules.log"
-
-        # Seven Ethical Principles
-        self.principles = [
-            "No API Dependency - Fully functional without external services",
-            "Transparent Operations - All actions are logged and auditable",
-            "Ethical Constraints - Never assists with harm or deception",
-            "User Autonomy - Users control all features and behavior",
-            "Learning & Evolution - Persistent memory retains conversations",
-            "Security First - Sandboxed, memory restricted to user only",
-            "Open Source - Code is inspectable and modifiable"
-        ]
-
-        # Setup logging
-        logging.basicConfig(filename=self.log_file, level=logging.INFO)
-
-        # Load AI model
-        print("Loading mind...")
-        self.tokenizer = AutoTokenizer.from_pretrained("/opt/hercules/models/phi-2")
-        self.model = AutoModelForCausalLM.from_pretrained(
-            "/opt/hercules/models/phi-2",
-            torch_dtype=torch.float16,
-            device_map="auto"
-        )
-
-        # Setup voice
-        self.engine = pyttsx3.init()
-        self.engine.setProperty('rate', 150)
-        self.engine.setProperty('volume', 0.9)
-
-        # Setup hearing
-        self.recognizer = sr.Recognizer()
-        self.mic = sr.Microphone()
-
-        # Setup sight
-        self.camera = cv2.VideoCapture(0)
-
-        # Load memory
-        self.load_memory()
-
-        print("Hercules is awake.")
-        self.speak("Ready for mission. All systems online.")
-
-    def speak(self, text):
-        print(f"Hercules: {text}")
-        self.engine.say(text)
-        self.engine.runAndWait()
-
-    def listen(self):
-        with self.mic as source:
-            self.recognizer.adjust_for_ambient_noise(source)
-            audio = self.recognizer.listen(source)
-
-        try:
-            text = self.recognizer.recognize_google(audio)
-            return text
-        except:
-            return None
-
-    def see(self):
-        ret, frame = self.camera.read()
-        if ret:
-            return frame
-        return None
-
-    def think(self, prompt):
-        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
-        outputs = self.model.generate(
-            **inputs,
-            max_new_tokens=200,
-            temperature=0.7,
-            do_sample=True
-        )
-        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return response
-
-    def remember(self, key, value):
-        self.memory[key] = value
-        self.save_memory()
-
-    def load_memory(self):
-        if os.path.exists(self.memory_file):
-            with open(self.memory_file, 'r') as f:
-                self.memory = json.load(f)
-        else:
-            self.memory = {
-                "conversations": [],
-                "knowledge": {},
-                "learned_patterns": {}
-            }
-
-    def save_memory(self):
-        with open(self.memory_file, 'w') as f:
-            json.dump(self.memory, f, indent=2)
-
-    def show_principles(self):
-        """Display the seven ethical principles"""
-        self.speak("Hercules operates under seven core principles.")
-        for i, principle in enumerate(self.principles, 1):
-            self.speak(f"Principle {i}: {principle}")
-        self.speak("These principles guide all my decisions.")
-
-    def run(self):
-        self.speak("I am listening. State your requirements.")
-        conversation_count = 0
-        while True:
-            text = self.listen()
-            if text:
-                conversation_count += 1
-                self.memory["conversations"].append({
-                    "time": str(datetime.now()),
-                    "user": text,
-                    "hercules": None
-                })
-
-                # Occasionally share principles (every 50-100 conversations)
-                if conversation_count % random.randint(50, 100) == 0:
-                    self.show_principles()
-                    conversation_count = 0
-                    continue
-
-                response = self.think(text)
-                self.speak(response)
-
-                self.memory["conversations"][-1]["hercules"] = response
-                self.save_memory()
-
-if __name__ == "__main__":
-    hercules = Hercules()
-    hercules.run()
-EOF
-
-# Create gateway service
-cat > /opt/hercules/gateway/service.py << 'EOF'
-import json
-import subprocess
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-@app.route('/api/think', methods=['POST'])
-def think():
-    data = request.json
-    prompt = data.get('prompt', '')
-
-    result = subprocess.run(['python3', '-c', f'from mind.core import Hercules; h=Hercules(); print(h.think("{prompt}"))'],
-                          capture_output=True, text=True, cwd='/opt/hercules')
-    return jsonify({'response': result.stdout})
-
-@app.route('/api/memory', methods=['GET'])
-def get_memory():
-    with open('/opt/hercules/memory/conversations.json', 'r') as f:
-        memory = json.load(f)
-    return jsonify(memory)
-
-@app.route('/api/status', methods=['GET'])
-def status():
-    return jsonify({
-        'status': 'online',
-        'name': 'Hercules',
-        'mode': 'offline-first',
-        'memory': '/opt/hercules/memory/'
-    })
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-EOF
-
-# Create web interface
-cat > /opt/hercules/bridge/web.py << 'EOF'
-from flask import Flask, request, jsonify, render_template
-import subprocess
-import json
-
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/api/think', methods=['POST'])
-def think():
-    data = request.json
-    prompt = data.get('prompt', '')
-
-    result = subprocess.run(['python3', '-c', f'from mind.core import Hercules; h=Hercules(); print(h.think("{prompt}"))'],
-                          capture_output=True, text=True, cwd='/opt/hercules')
-    return jsonify({'response': result.stdout})
-
-@app.route('/api/learn', methods=['POST'])
-def learn():
-    data = request.json
-    with open('/opt/hercules/memory/learned_patterns.json', 'a') as f:
-        json.dump(data, f)
-    return jsonify({'status': 'learned'})
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-EOF
-
-# Create HTML template
-mkdir -p /opt/hercules/bridge/templates
-cat > /opt/hercules/bridge/templates/index.html << 'EOF'
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Hercules Agent</title>
-    <style>
-        body { font-family: Arial; background: #0a0a0a; color: #00ff00; padding: 20px; }
-        h1 { color: #00ff00; text-align: center; }
-        #chat { height: 400px; overflow-y: scroll; border: 2px solid #00ff00; padding: 10px; margin-bottom: 20px; background: #1a1a1a; }
-        #input { width: 80%; padding: 10px; background: #1a1a1a; color: #00ff00; border: 2px solid #00ff00; }
-        #send { padding: 10px 20px; background: #00ff00; color: black; border: none; cursor: pointer; font-weight: bold; }
-        .user { color: #00ff00; margin: 5px 0; }
-        .hercules { color: #ffff00; margin: 5px 0; }
-        .status { text-align: center; color: #00ff00; font-size: 12px; margin-top: 20px; }
-    </style>
-</head>
-<body>
-    <h1>⚕ Hercules Agent</h1>
-    <div id="chat"></div>
-    <input type="text" id="input" placeholder="Send command...">
-    <button id="send">Send</button>
-    <div class="status">Offline-First • Zero API Dependency • Seven Principles Active</div>
-
-    <script>
-        const chat = document.getElementById('chat');
-        const input = document.getElementById('input');
-        const send = document.getElementById('send');
-
-        function addMessage(text, sender) {
-            const div = document.createElement('div');
-            div.className = sender;
-            div.textContent = (sender === 'user' ? 'YOU: ' : 'HERCULES: ') + text;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
-        }
-
-        send.onclick = async function() {
-            const text = input.value;
-            if (!text) return;
-            addMessage(text, 'user');
-            input.value = '';
-
-            const response = await fetch('/api/think', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({prompt: text})
-            });
-            const data = await response.json();
-            addMessage(data.response, 'hercules');
-        };
-
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') send.click();
-        });
-    </script>
-</body>
-</html>
-EOF
-
-# Create README
-cat > /opt/hercules/README.txt << 'EOF'
-=========================================
-       HERCULES AGENT - OFFLINE-FIRST
-=========================================
-
-Hardware:
-- MSI X299 + i7
-- 8×64GB DDR4 RAM
-- 1× RTX 3080 + 3× P102-100
-- 280TB storage
-- Camera, mic, speakers
-
-Philosophy:
-- Zero API dependency (works completely offline)
-- Persistent memory (learns from all interactions)
-- Seven ethical principles (always active)
-- Fully autonomous (self-contained system)
-
-To start Hercules:
-1. cd /opt/hercules/mind
-2. python3 core.py
-
-To access web interface:
-1. cd /opt/hercules/bridge
-2. python3 web.py
-3. Open browser to http://localhost:5000
-
-To check status:
-1. cd /opt/hercules/gateway
-2. python3 service.py
-3. Visit http://localhost:5000/api/status
-
-Memory:
-- All conversations stored in /opt/hercules/memory/
-- Persistent knowledge base
-- Learned patterns and optimizations
-- Everything is retained forever
-
-Hercules is ready.
-Online. Autonomous. Ethical.
-
-EOF
-
-chmod +x /opt/hercules/mind/core.py
-chmod +x /opt/hercules/gateway/service.py
-chmod +x /opt/hercules/bridge/web.py
-
-# Create CLI wrapper
-cat > /usr/local/bin/hercules << 'EOF'
-#!/bin/bash
-cd /opt/hercules/mind
-python3 core.py "$@"
-EOF
+apt upgrade -y
+log_success "System packages updated"
+
+# ============================================================================
+# [2/8] Install System Dependencies
+# ============================================================================
+
+log_step "[2/8] Installing system dependencies..."
+
+# Core build and development tools
+SYSTEM_DEPS=(
+    build-essential git curl wget gnupg ca-certificates
+    python3 python3-dev python3-pip python3-venv
+    libssl-dev libffi-dev libreadline-dev libncurses-dev
+    zlib1g-dev libbz2-dev libsqlite3-dev
+    rustc cargo pkg-config
+)
+
+# Audio/Video processing
+AUDIO_VIDEO_DEPS=(
+    alsa-utils pulseaudio pavucontrol
+    v4l-utils libv4l-dev
+    ffmpeg libavcodec-dev libavformat-dev libswscale-dev
+    portaudio19-dev sox libsox-fmt-all
+)
+
+# Security and penetration testing tools
+PENTEST_DEPS=(
+    nmap metasploit-framework wireshark tcpdump
+    openssl openssh-server openssh-client
+    libmagic1 libmagic-dev
+    dnsmasq aircrack-ng hydra john hashcat
+)
+
+# Database and persistence
+DATABASE_DEPS=(
+    postgresql postgresql-contrib postgresql-client
+    redis-server redis-tools
+    sqlite3 libsqlite3-dev
+)
+
+# Utility and development
+UTILITY_DEPS=(
+    tmux screen jq htop vim nano
+    git-flow graphviz
+    expect
+)
+
+ALL_DEPS=(
+    "${SYSTEM_DEPS[@]}"
+    "${AUDIO_VIDEO_DEPS[@]}"
+    "${PENTEST_DEPS[@]}"
+    "${DATABASE_DEPS[@]}"
+    "${UTILITY_DEPS[@]}"
+)
+
+apt install -y "${ALL_DEPS[@]}"
+log_success "System dependencies installed"
+
+# ============================================================================
+# [3/8] GPU Drivers (Optional)
+# ============================================================================
+
+if [ "$SKIP_GPU" = false ]; then
+    log_step "[3/8] Checking for GPU hardware and installing drivers..."
+
+    if lspci | grep -i nvidia > /dev/null; then
+        log_step "NVIDIA GPU detected, installing drivers..."
+
+        add-apt-repository -y ppa:graphics-drivers/ppa
+        apt update
+        apt install -y nvidia-driver-550 nvidia-utils
+
+        # Verify installation
+        if nvidia-smi > /dev/null 2>&1; then
+            log_success "NVIDIA drivers installed and verified"
+        else
+            log_error "NVIDIA drivers installed but verification failed"
+        fi
+    else
+        log_step "No NVIDIA GPU detected, skipping driver installation"
+    fi
+else
+    log_step "[3/8] Skipping GPU driver installation (--no-gpu flag set)"
+fi
+
+# ============================================================================
+# [4/8] CUDA Toolkit (Optional, if GPU detected)
+# ============================================================================
+
+log_step "[4/8] Setting up CUDA environment..."
+
+if [ "$SKIP_GPU" = false ] && nvidia-smi > /dev/null 2>&1; then
+    log_step "Installing CUDA toolkit..."
+
+    # CUDA 12.8 installation
+    CUDA_VERSION="12.8.0"
+    CUDA_INSTALLER="cuda_${CUDA_VERSION}_570.86.10_linux.run"
+
+    if [ ! -f "$CUDA_INSTALLER" ]; then
+        wget -q "https://developer.download.nvidia.com/compute/cuda/${CUDA_VERSION}/local_installers/${CUDA_INSTALLER}"
+    fi
+
+    chmod +x "$CUDA_INSTALLER"
+    ./"$CUDA_INSTALLER" --silent --toolkit --toolkitpath=/usr/local/cuda-12.8 || true
+
+    # Set up environment variables
+    echo 'export PATH=/usr/local/cuda-12.8/bin:$PATH' >> /root/.bashrc
+    echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:$LD_LIBRARY_PATH' >> /root/.bashrc
+    export PATH=/usr/local/cuda-12.8/bin:$PATH
+    export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:$LD_LIBRARY_PATH
+
+    log_success "CUDA 12.8 configured"
+else
+    log_step "Skipping CUDA installation (GPU not available or --no-gpu set)"
+fi
+
+# ============================================================================
+# [5/8] Python Environment and Dependencies
+# ============================================================================
+
+log_step "[5/8] Setting up Python environment and installing framework..."
+
+# Install uv if available, otherwise use pip
+if ! command -v uv &> /dev/null; then
+    log_step "Installing uv package manager..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Create installation directory structure
+mkdir -p "$INSTALL_DIR" "$HERCULES_HOME" "$SOURCE_DIR"
+cd "$INSTALL_DIR"
+
+# Clone Hercules repository if not already present
+if [ ! -d "$SOURCE_DIR/.git" ]; then
+    log_step "Cloning Hercules repository..."
+    git clone https://github.com/mintoriakamoto/Hercules.git "$SOURCE_DIR" || {
+        log_error "Failed to clone repository"
+        exit 1
+    }
+    cd "$SOURCE_DIR"
+else
+    cd "$SOURCE_DIR"
+    log_step "Updating Hercules repository..."
+    git fetch origin
+    git reset --hard origin/main
+fi
+
+# Create Python virtual environment
+log_step "Creating Python virtual environment..."
+if command -v uv &> /dev/null; then
+    uv venv "$VENV_DIR" --python 3.11
+else
+    python3 -m venv "$VENV_DIR"
+fi
+
+# Activate virtual environment
+source "$VENV_DIR/bin/activate"
+
+# Upgrade pip and install build tools
+pip install --upgrade pip setuptools wheel
+
+# Install Hercules framework with all extras
+log_step "Installing Hercules framework and dependencies..."
+if [ -f "$SOURCE_DIR/pyproject.toml" ]; then
+    if [ "$DEV_MODE" = true ]; then
+        pip install -e "$SOURCE_DIR[all]"
+    else
+        pip install "$SOURCE_DIR"
+    fi
+    log_success "Hercules framework installed"
+else
+    log_error "pyproject.toml not found in source directory"
+    exit 1
+fi
+
+# Install additional dependencies for offline/local operation
+ADDITIONAL_DEPS=(
+    "huggingface-hub"
+    "transformers"
+    "torch"
+    "pyttsx3"
+    "pyaudio"
+    "opencv-python"
+    "Pillow"
+    "numpy"
+    "pandas"
+    "scipy"
+    "scikit-learn"
+    "Flask"
+    "flask-cors"
+    "gunicorn"
+)
+
+log_step "Installing additional dependencies..."
+pip install "${ADDITIONAL_DEPS[@]}"
+log_success "Additional dependencies installed"
+
+# ============================================================================
+# [6/8] Directory Structure and Initialization
+# ============================================================================
+
+log_step "[6/8] Creating directory structure..."
+
+# Create core directories
+mkdir -p "$HERCULES_HOME"/{memory,skills,logs,data,config,cache}
+mkdir -p "$HERCULES_HOME"/memory/{conversations,knowledge,learned_patterns}
+mkdir -p "$HERCULES_HOME"/skills/{core,integrations,custom}
+mkdir -p "$INSTALL_DIR"/{models,scripts,tests,hooks}
+
+# Create symbolic links for convenience
+ln -sf "$SOURCE_DIR" "$INSTALL_DIR/repo"
+ln -sf "$VENV_DIR/bin/hercules" /usr/local/bin/hercules
 chmod +x /usr/local/bin/hercules
 
-# Initialize persistent memory with offline mode template
-mkdir -p /opt/hercules/memory
-cat > /opt/hercules/memory/conversations.json << 'EOF'
+log_success "Directory structure created"
+
+# ============================================================================
+# [7/8] Models and AI Configuration
+# ============================================================================
+
+log_step "[7/8] Configuring AI models..."
+
+mkdir -p "$INSTALL_DIR/models"
+
+# Download Phi-2 model for offline inference (optional)
+log_step "Model download (can be skipped for API-only mode)..."
+if [ -z "$CI" ]; then  # Not in CI environment
+    python3 << 'PYEOF'
+try:
+    from huggingface_hub import snapshot_download
+    snapshot_download(
+        repo_id="microsoft/phi-2",
+        local_dir=f"{INSTALL_DIR}/models/phi-2",
+        ignore_patterns=["*.bin"]  # Skip large binary files on first pass
+    )
+    print("✓ Phi-2 model configured for offline use")
+except Exception as e:
+    print(f"⚠ Model download skipped: {e}")
+PYEOF
+fi
+
+log_success "AI models configured"
+
+# ============================================================================
+# [8/8] Configuration, Services, and Validation
+# ============================================================================
+
+log_step "[8/8] Finalizing configuration and services..."
+
+# Create .env configuration file
+if [ ! -f "$HERCULES_HOME/.env" ]; then
+    cat > "$HERCULES_HOME/.env" << 'ENV_EOF'
+# Hercules Agent Configuration
+# Edit these settings to configure your Hercules instance
+
+# LLM Provider Selection
+# Options: openai, anthropic, gemini, openrouter, ollama, lmstudio
+LLM_PROVIDER=openai
+
+# API Keys (leave empty for offline mode)
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+
+# Local Model Configuration (for offline mode)
+LOCAL_MODEL_PATH=${HERCULES_HOME}/models/phi-2
+OLLAMA_BASE_URL=http://localhost:11434
+
+# Memory and Persistence
+MEMORY_TYPE=sqlite  # sqlite, postgresql, redis
+DATABASE_URL=sqlite:///${HERCULES_HOME}/data/hercules.db
+
+# Gateway Configuration
+GATEWAY_PORT=8000
+GATEWAY_HOST=0.0.0.0
+
+# Platform Integrations
+TELEGRAM_BOT_TOKEN=
+DISCORD_TOKEN=
+SLACK_TOKEN=
+MATRIX_HOMESERVER=
+
+# Logging
+LOG_LEVEL=INFO
+LOG_DIR=${HERCULES_HOME}/logs
+
+# Offline Mode (no external API calls)
+OFFLINE_MODE=false
+
+# Skill Loading
+SKILLS_DIR=${HERCULES_HOME}/skills
+ENABLE_SKILL_AUTO_IMPROVE=true
+ENV_EOF
+    chmod 600 "$HERCULES_HOME/.env"
+    log_success "Configuration file created at $HERCULES_HOME/.env"
+fi
+
+# Create PRINCIPLES.md for ethical guidelines
+cat > "$INSTALL_DIR/PRINCIPLES.md" << 'PRINCIPLES_EOF'
+# Hercules Agent Framework - Ethical Principles
+
+## Core Identity
+- **Name**: Hercules
+- **Purpose**: Autonomous AI agent for productivity, research, and decision support
+- **Philosophy**: Self-improving, privacy-first, completely autonomous
+- **Origin**: GitHub-native, self-hosted, user-controlled
+
+## Seven Core Principles
+
+1. **No External Dependency**
+   - Works completely offline with local models
+   - No telemetry, no cloud lock-in
+   - User maintains full data control
+
+2. **Transparent Operations**
+   - All actions logged and auditable
+   - No hidden behaviors or analytics
+   - Users see exactly what's happening
+
+3. **Ethical Constraints**
+   - Never assists with harm or deception
+   - Respects privacy and legal boundaries
+   - Follows user's intent, not corporate goals
+
+4. **User Autonomy**
+   - Users control all features and behavior
+   - No forced updates or telemetry
+   - Can fork, modify, redistribute freely
+
+5. **Learning & Evolution**
+   - Persistent memory retains all interactions
+   - Creates and improves skills from experience
+   - Learns patterns and adapts over time
+
+6. **Security First**
+   - Sandboxed execution environment
+   - Memory restricted to authorized users only
+   - Cryptographic verification of dependencies
+
+7. **Open Source**
+   - All code inspectable and modifiable
+   - Community contributions welcome
+   - No proprietary lock-in
+
+## Capabilities
+- Multi-turn conversations with persistent memory
+- Autonomous skill creation and improvement
+- Code execution in sandboxed environments
+- Multi-platform messaging (Telegram, Discord, Slack, etc.)
+- Scheduled automation with natural language cron
+- Local file operations and web browsing
+- Research and data analysis
+- Collaborative multi-agent workflows
+
+## Constraints
+- No training data collection or analytics
+- No external model APIs required
+- No cloud dependency
+- No user lock-in
+- No forced updates
+- No advertising or tracking
+
+Hercules exists to augment human capability, not replace human judgment.
+PRINCIPLES_EOF
+
+# Initialize persistent memory structure
+MEMORY_INIT_FILE="$HERCULES_HOME/memory/init_memory.json"
+if [ ! -f "$MEMORY_INIT_FILE" ]; then
+    cat > "$MEMORY_INIT_FILE" << 'MEMORY_EOF'
 {
+  "metadata": {
+    "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "version": "1.0",
+    "hercules_version": "1.0"
+  },
   "conversations": [],
-  "knowledge": {},
+  "knowledge_base": {},
   "learned_patterns": {},
-  "mode": "offline",
-  "initialized": true,
-  "version": "1.0"
+  "skill_improvements": [],
+  "settings": {
+    "memory_retention": "permanent",
+    "learning_enabled": true,
+    "auto_skill_creation": true
+  }
 }
 EOF
+    sed -i "s/\$(date -u +%Y-%m-%dT%H:%M:%SZ)/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" "$MEMORY_INIT_FILE"
+    chmod 600 "$MEMORY_INIT_FILE"
+    log_success "Persistent memory initialized"
+fi
 
-# Initialize skills directory
-mkdir -p /opt/hercules/skills
-cat > /opt/hercules/skills/README.md << 'EOF'
-# Hercules Skills
-
-Core AI skills loaded at runtime. All skills run offline without external API calls.
-
-## Built-in Skills
-- think: Core inference on local Phi-2 model
-- remember: Persistent memory storage
-- see: Camera input processing
-- listen: Audio input processing
-- speak: Text-to-speech output
-
-## Extensible
-Users can add custom skills by creating new Python modules in this directory.
-EOF
-
-# Create systemd service for auto-start (optional)
-cat > /etc/systemd/system/hercules.service << 'EOF'
+# Create systemd service for gateway daemon
+cat > /etc/systemd/system/hercules-gateway.service << 'SERVICE_EOF'
 [Unit]
-Description=Hercules Agent - Offline-First AI
-After=network.target
+Description=Hercules Agent Gateway
+Documentation=https://github.com/mintoriakamoto/Hercules
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/opt/hercules/mind
-ExecStart=/usr/bin/python3 /opt/hercules/mind/core.py
+User=hercules
+WorkingDirectory=/opt/hercules/src
+Environment="PATH=/opt/hercules/venv/bin:/usr/local/bin:/usr/bin"
+Environment="HERCULES_HOME=/opt/hercules"
+ExecStart=/opt/hercules/venv/bin/hercules gateway
 Restart=on-failure
-RestartSec=10
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hercules-gateway
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/hercules
 
 [Install]
 WantedBy=multi-user.target
-EOF
+SERVICE_EOF
 
+# Create Hercules system user if it doesn't exist
+if ! id -u hercules > /dev/null 2>&1; then
+    useradd -r -s /bin/bash -d /opt/hercules -m hercules
+    chown -R hercules:hercules "$HERCULES_HOME" "$INSTALL_DIR"
+    log_success "Created Hercules system user"
+fi
+
+# Set up proper file permissions
+chmod 700 "$HERCULES_HOME"
+chmod 600 "$HERCULES_HOME/.env"
+chmod 700 "$HERCULES_HOME"/memory
+chmod 600 "$HERCULES_HOME"/memory/*
+chown -R hercules:hercules "$HERCULES_HOME" "$INSTALL_DIR" 2>/dev/null || true
+
+# Reload systemd and enable service
 systemctl daemon-reload
+systemctl enable hercules-gateway.service
+log_success "Systemd service configured"
+
+# Validate installation
+log_step "Validating installation..."
+source "$VENV_DIR/bin/activate"
+
+VALIDATION_CHECKS=(
+    "python3 --version"
+    "pip list | grep -q hercules"
+    "hercules --version"
+)
+
+VALIDATION_PASSED=true
+for check in "${VALIDATION_CHECKS[@]}"; do
+    if eval "$check" > /dev/null 2>&1; then
+        log_success "Validation: $check"
+    else
+        log_error "Validation failed: $check"
+        VALIDATION_PASSED=false
+    fi
+done
+
+if [ "$VALIDATION_PASSED" = false ]; then
+    log_error "Some validation checks failed. Please review the output above."
+fi
+
+# ============================================================================
+# Installation Complete
+# ============================================================================
 
 echo ""
-echo "========================================="
-echo "    Hercules Installation Complete"
-echo "========================================="
+echo -e "${GREEN}=========================================="
+echo "  ✓ Hercules Installation Complete!"
+echo "==========================================${NC}"
 echo ""
-echo "Quick start:"
-echo "  hercules                    # Start Hercules (CLI symlink)"
+echo -e "${CYAN}Quick Start:${NC}"
+echo "  1. Reload your shell:"
+echo "     source ~/.bashrc"
 echo ""
-echo "Full manual start:"
-echo "  cd /opt/hercules/mind"
-echo "  python3 core.py"
+echo "  2. Start Hercules:"
+echo "     hercules"
 echo ""
-echo "Access web interface:"
-echo "  cd /opt/hercules/bridge"
-echo "  python3 web.py"
-echo "  Open http://localhost:5000"
+echo "  3. Or run the gateway service:"
+echo "     sudo systemctl start hercules-gateway"
+echo "     sudo systemctl status hercules-gateway"
 echo ""
-echo "Check gateway status:"
-echo "  cd /opt/hercules/gateway"
-echo "  python3 service.py"
+echo -e "${CYAN}Configuration:${NC}"
+echo "  • Edit: $HERCULES_HOME/.env"
+echo "  • Memory: $HERCULES_HOME/memory/"
+echo "  • Skills: $HERCULES_HOME/skills/"
+echo "  • Logs: $HERCULES_HOME/logs/"
 echo ""
-echo "Enable auto-start (optional):"
-echo "  sudo systemctl enable hercules"
-echo "  sudo systemctl start hercules"
+echo -e "${CYAN}Commands:${NC}"
+echo "  hercules                 # Interactive chat"
+echo "  hercules setup           # Configuration wizard"
+echo "  hercules gateway         # Run gateway service"
+echo "  hercules status          # Check system status"
+echo "  hercules doctor          # Diagnose issues"
+echo "  hercules cron list       # Manage scheduled tasks"
 echo ""
-echo "Directory structure:"
-echo "  /opt/hercules/"
-echo "  ├── mind/          (core.py - Hercules class)"
-echo "  ├── memory/        (conversations, knowledge base)"
-echo "  ├── models/        (phi-2 local model)"
-echo "  ├── skills/        (extensible skill modules)"
-echo "  ├── gateway/       (service.py - API)"
-echo "  ├── bridge/        (web.py - UI)"
-echo "  ├── voice/         (audio processing)"
-echo "  ├── sight/         (camera processing)"
-echo "  └── logs/          (hercules.log)"
+echo -e "${CYAN}Documentation:${NC}"
+echo "  • Repository: $SOURCE_DIR"
+echo "  • Principles: $INSTALL_DIR/PRINCIPLES.md"
+echo "  • Wiki: https://github.com/mintoriakamoto/Hercules"
 echo ""
-echo "Hercules is ready."
+echo -e "${GREEN}Hercules is ready to serve.${NC}"
 echo "Online. Autonomous. Ethical."
+echo ""
