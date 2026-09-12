@@ -8,6 +8,9 @@ by peers. This package implements that with the smallest honest primitive:
   validations (tamper-evident "immutable evidence").
 * :mod:`~agent.consensus.trust`     — reputation by web-of-trust distance from
   a chosen root; Sybil-resistant, no proof-of-work.
+* :mod:`~agent.consensus.proofs`    — claims that commit to a replayable
+  proof, so standing is earned by re-running the check rather than by peers
+  voting on it. A ``validation`` is an opinion; a ``verification`` is evidence.
 
 Nothing here talks to a network. The data model and its verification are the
 substance; transport (gossip, a DHT, nostr relays, a git repo) is pluggable and
@@ -24,6 +27,25 @@ from agent.consensus.records import (
     claim,
     content_hash,
     validation,
+)
+from agent.consensus.proofs import (
+    VERIFICATION,
+    VERIFIED_CLAIM,
+    Observation,
+    Proof,
+    ProofRunner,
+    derive_verdict,
+    independent_verdicts,
+    is_self_consistent,
+    make_runner,
+    output_hash,
+    proof_of,
+    replay,
+    settle,
+    stake_at_risk,
+    verdict_of,
+    verification,
+    verified_claim,
 )
 from agent.consensus.trust import TrustGraph, graph_from_validations
 
@@ -42,4 +64,21 @@ __all__ = [
     "VALIDATION",
     "TrustGraph",
     "graph_from_validations",
+    "Proof",
+    "Observation",
+    "ProofRunner",
+    "verified_claim",
+    "verification",
+    "replay",
+    "derive_verdict",
+    "verdict_of",
+    "proof_of",
+    "is_self_consistent",
+    "independent_verdicts",
+    "settle",
+    "stake_at_risk",
+    "output_hash",
+    "make_runner",
+    "VERIFIED_CLAIM",
+    "VERIFICATION",
 ]
