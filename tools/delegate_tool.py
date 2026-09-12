@@ -37,6 +37,7 @@ from toolsets import TOOLSETS
 # Must match hercules_cli.runtime_provider.RUNTIME_PROVIDER_TYPE_CUSTOM.
 _RUNTIME_PROVIDER_CUSTOM = "custom"
 from tools import file_state
+from tools.daemon_pool import DaemonThreadPoolExecutor
 from tools.terminal_tool import set_approval_callback as _set_subagent_approval_cb
 from agent.task_aware_model_router import route_task_to_model
 from utils import base_url_hostname, is_truthy_value
@@ -1977,7 +1978,6 @@ def _run_single_child(
         # Daemon worker (tools.daemon_pool): a timed-out child is abandoned
         # below; a stdlib non-daemon worker would then block interpreter
         # exit at atexit-join time if the child never unwinds.
-        from tools.daemon_pool import DaemonThreadPoolExecutor
         _timeout_executor = DaemonThreadPoolExecutor(
             max_workers=1,
             # Install a non-interactive approval callback in the worker thread
@@ -2908,7 +2908,6 @@ def _run_dag_batch(
     "resolved" so its dependents proceed (with its error surfaced upstream)
     rather than hanging. Returns one entry per task; the caller sorts.
     """
-    from tools.daemon_pool import DaemonThreadPoolExecutor
     from concurrent.futures import wait as _cf_wait, FIRST_COMPLETED
 
     child_by_index = {i: (t, child) for (i, t, child) in children}
