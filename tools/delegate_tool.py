@@ -112,6 +112,31 @@ def _get_subagent_approval_callback():
         return _subagent_auto_approve
     return _subagent_auto_deny
 
+
+def _create_delegation_executor(max_workers: int):
+    """Create executor for parallel subagent execution.
+
+    Returns appropriate executor based on HERCULES_DELEGATION_EXECUTOR mode:
+      - "thread": ThreadPoolExecutor (default, lower overhead)
+      - "process": ProcessPoolExecutor (true parallelism, no GIL)
+
+    Args:
+        max_workers: Maximum concurrent workers
+
+    Returns:
+        Either DaemonThreadPoolExecutor or ProcessDelegationExecutor
+    """
+    if _EXECUTOR_MODE == "process":
+        try:
+            from tools.process_delegation import ProcessDelegationExecutor
+            logger.debug(f"Using process-based delegation executor (max_workers={max_workers})")
+            return ProcessDelegationExecutor(max_workers=max_workers)
+        except Exception as e:
+            logger.warning(f"Failed to initialize process executor: {e}; falling back to threads")
+            return DaemonThreadPoolExecutor(max_workers=max_workers)
+    else:
+        return DaemonThreadPoolExecutor(max_workers=max_workers)
+
 # NOTE: nested delegation is granted by role='orchestrator' (which re-adds the
 # "delegation" toolset in _build_child_agent), NOT by the model naming toolsets
 # — the model has no toolsets argument. Subagents inherit the parent's toolsets.
@@ -124,6 +149,10 @@ _DEFAULT_MAX_CONCURRENT_CHILDREN = 3
 # every turn / agent spawn even when delegate_task is never called.
 _HIGH_CONCURRENCY_WARNED = False
 MAX_DEPTH = 1  # flat by default: parent (0) -> child (1); grandchild rejected unless max_spawn_depth raised.
+
+# Execution mode: thread-based (default) or process-based parallelism
+_EXECUTOR_MODE = os.environ.get("HERCULES_DELEGATION_EXECUTOR", "thread").lower()
+# Supported: "thread" (ThreadPoolExecutor), "process" (ProcessPoolExecutor)
 # Configurable depth cap consulted by _get_max_spawn_depth; MAX_DEPTH
 # stays as the default fallback and is still the symbol tests import.
 _MIN_SPAWN_DEPTH = 1
@@ -2532,10 +2561,9 @@ def _run_verification_wave(
     finally:
         _model_tools._last_resolved_tool_names = _saved
 
-    from tools.daemon_pool import DaemonThreadPoolExecutor
     from concurrent.futures import wait as _cf_wait, FIRST_COMPLETED
 
-    with DaemonThreadPoolExecutor(max_workers=max_children) as executor:
+    with _create_delegation_executor(max_workers=max_children) as executor:
         futures = {
             executor.submit(
                 _run_single_child,
@@ -2593,13 +2621,12 @@ def _run_children_pairs(
     yields an error result rather than propagating, mirroring the primary
     verification wave's fail-soft contract.
     """
-    from tools.daemon_pool import DaemonThreadPoolExecutor
     from concurrent.futures import wait as _cf_wait, FIRST_COMPLETED
 
     out: Dict[int, Dict[str, Any]] = {}
     if not pairs:
         return out
-    with DaemonThreadPoolExecutor(max_workers=max(1, max_children)) as executor:
+    with _create_delegation_executor(max_workers=max(1, max_children)) as executor:
         futures = {
             executor.submit(
                 _run_single_child,
@@ -2924,7 +2951,7 @@ def _run_dag_batch(
         _emit_parent_console(parent_agent, f"  {line}")
 
     interrupted = False
-    with DaemonThreadPoolExecutor(max_workers=max(1, max_children)) as executor:
+    with _create_delegation_executor(max_workers=max(1, max_children)) as executor:
         while len(done) < n_tasks:
             if getattr(parent_agent, "_interrupt_requested", False) is True:
                 interrupted = True
@@ -3265,8 +3292,7 @@ def delegate_task(
             # Daemon workers (tools.daemon_pool): the `with` block still joins
             # normally, but if the parent is interrupted while a child is
             # wedged, the abandoned worker must not block interpreter exit.
-            from tools.daemon_pool import DaemonThreadPoolExecutor
-            with DaemonThreadPoolExecutor(max_workers=max_children) as executor:
+            with _create_delegation_executor(max_workers=max_children) as executor:
                 futures = {}
                 for i, t, child in children:
                     future = executor.submit(
