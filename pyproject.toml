@@ -270,6 +270,38 @@ youtube = [
 # starlette==1.0.1 pinned for CVE-2026-48710 (BadHost) — fastapi pulls Starlette
 # transitively and pre-1.0.1 is the vulnerable range. See the mcp extra above.
 web = ["fastapi==0.133.1", "uvicorn[standard]==0.41.0", "starlette==1.0.1", "python-multipart==0.0.27"]
+# Machine learning backends — for AI model inference, embeddings, and fine-tuning.
+# Lazy-installed when ML features are first used.
+ml = [
+  "huggingface-hub==0.24.3",
+  "transformers==4.41.2",
+  "torch==2.4.0",
+]
+# Computer vision — image processing, detection, segmentation via OpenCV and ML pipelines.
+# Lazy-installed when vision features are first used. Pillow is already a core dep.
+vision = [
+  "opencv-python==4.10.0.84",
+]
+# Audio processing — text-to-speech (TTS), speech recognition, and audio handling.
+# Lazy-installed when audio features are first used.
+audio = [
+  "pyttsx3==2.90",
+  "pyaudio==0.2.14",
+]
+# Data science and analytics — statistical analysis, dataframe manipulation, ML pipelines.
+# Lazy-installed when data science features are first used.
+data = [
+  "pandas==2.2.1",
+  "scipy==1.14.0",
+  "scikit-learn==1.5.0",
+]
+# Web framework extras — API servers, async frameworks for custom integrations.
+# Lazy-installed when needed for building custom services.
+web-server = [
+  "Flask==3.0.0",
+  "flask-cors==4.0.0",
+  "gunicorn==23.0.0",
+]
 all = [
   # Policy (2026-05-12): `[all]` includes only extras that genuinely
   # CAN'T be lazy-installed via `tools/lazy_deps.py` — i.e. things every

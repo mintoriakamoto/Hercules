@@ -241,41 +241,78 @@ source "$VENV_DIR/bin/activate"
 # Upgrade pip and install build tools
 pip install --upgrade pip setuptools wheel
 
-# Install Hercules framework with all extras
-log_step "Installing Hercules framework and dependencies..."
-if [ -f "$SOURCE_DIR/pyproject.toml" ]; then
-    if [ "$DEV_MODE" = true ]; then
-        pip install -e "$SOURCE_DIR[all]"
-    else
-        pip install "$SOURCE_DIR"
-    fi
-    log_success "Hercules framework installed"
-else
+# Install Hercules framework
+log_step "Installing Hercules framework..."
+if [ ! -f "$SOURCE_DIR/pyproject.toml" ]; then
     log_error "pyproject.toml not found in source directory"
     exit 1
 fi
 
-# Install additional dependencies for offline/local operation
-ADDITIONAL_DEPS=(
-    "huggingface-hub"
-    "transformers"
-    "torch"
-    "pyttsx3"
-    "pyaudio"
-    "opencv-python"
-    "Pillow"
-    "numpy"
-    "pandas"
-    "scipy"
-    "scikit-learn"
-    "Flask"
-    "flask-cors"
-    "gunicorn"
-)
+# Determine base installation mode
+INSTALL_EXTRAS="hercules-agent"
+if [ "$DEV_MODE" = true ]; then
+    INSTALL_EXTRAS="hercules-agent[dev]"
+    log_step "Installing in development mode..."
+else
+    log_step "Installing base Hercules framework..."
+fi
 
-log_step "Installing additional dependencies..."
-pip install "${ADDITIONAL_DEPS[@]}"
-log_success "Additional dependencies installed"
+# Interactive feature selection for optional extras
+echo ""
+echo -e "${YELLOW}Optional Feature Selection:${NC}"
+echo "The following features can be added. Select which you want:"
+echo ""
+
+# ML/AI features
+read -p "Install Machine Learning support? (huggingface-hub, transformers, torch) [y/N]: " -r ML_CHOICE
+if [[ $ML_CHOICE =~ ^[Yy]$ ]]; then
+    INSTALL_EXTRAS="$INSTALL_EXTRAS[ml]"
+    log_step "ML support will be installed"
+fi
+
+# Computer vision features
+read -p "Install Computer Vision support? (opencv-python) [y/N]: " -r VISION_CHOICE
+if [[ $VISION_CHOICE =~ ^[Yy]$ ]]; then
+    INSTALL_EXTRAS="$INSTALL_EXTRAS[vision]"
+    log_step "Vision support will be installed"
+fi
+
+# Audio/TTS features
+read -p "Install Audio/TTS support? (pyttsx3, pyaudio) [y/N]: " -r AUDIO_CHOICE
+if [[ $AUDIO_CHOICE =~ ^[Yy]$ ]]; then
+    INSTALL_EXTRAS="$INSTALL_EXTRAS[audio]"
+    log_step "Audio support will be installed"
+fi
+
+# Data science features
+read -p "Install Data Science support? (pandas, scipy, scikit-learn) [y/N]: " -r DATA_CHOICE
+if [[ $DATA_CHOICE =~ ^[Yy]$ ]]; then
+    INSTALL_EXTRAS="$INSTALL_EXTRAS[data]"
+    log_step "Data science support will be installed"
+fi
+
+# Web server features
+read -p "Install Web Framework support? (Flask, gunicorn) [y/N]: " -r WEB_CHOICE
+if [[ $WEB_CHOICE =~ ^[Yy]$ ]]; then
+    INSTALL_EXTRAS="$INSTALL_EXTRAS[web-server]"
+    log_step "Web framework support will be installed"
+fi
+
+# Messaging platforms
+read -p "Install Messaging Platform Integrations? (Telegram, Discord, Slack, etc.) [y/N]: " -r MESSAGING_CHOICE
+if [[ $MESSAGING_CHOICE =~ ^[Yy]$ ]]; then
+    INSTALL_EXTRAS="$INSTALL_EXTRAS[messaging]"
+    log_step "Messaging platforms will be installed"
+fi
+
+echo ""
+log_step "Installing Hercules with selected extras: $INSTALL_EXTRAS"
+if [ "$DEV_MODE" = true ]; then
+    pip install -e "$SOURCE_DIR[$INSTALL_EXTRAS]"
+else
+    pip install "$SOURCE_DIR[$INSTALL_EXTRAS]"
+fi
+log_success "Hercules framework installed with selected features"
 
 # ============================================================================
 # [6/8] Directory Structure and Initialization
