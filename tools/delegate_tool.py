@@ -495,6 +495,41 @@ def _get_child_timeout() -> Optional[float]:
     return DEFAULT_CHILD_TIMEOUT
 
 
+# Statuses meaning the child dropped off rather than finished. "interrupted"
+# is deliberately absent: the parent was interrupted on purpose, and
+# re-dispatching would fight the very interrupt that stopped the batch.
+_RETRIABLE_CHILD_STATUSES = frozenset({"error", "timeout"})
+DEFAULT_MAX_CHILD_RETRIES = 1
+
+
+def _get_max_child_retries() -> int:
+    """Read delegation.max_child_retries from config; 0 disables retries.
+
+    A child that crashes or times out is otherwise a permanent hole in the
+    batch — the parent gets an error entry and that task's work is simply
+    lost, with no signal that anything should be re-run. One retry recovers
+    the common transient causes (provider blip, rate limit, a wedged tool
+    call) without turning a deterministically-broken task into a retry storm,
+    which is why the default is 1 rather than higher.
+    """
+    cfg = _load_config()
+    val = cfg.get("max_child_retries")
+    if val is None:
+        val = os.getenv("DELEGATION_MAX_CHILD_RETRIES")
+    if val is None:
+        return DEFAULT_MAX_CHILD_RETRIES
+    try:
+        parsed = int(val)
+    except (TypeError, ValueError):
+        logger.warning(
+            "delegation.max_child_retries=%r is not a valid integer; using %d",
+            val,
+            DEFAULT_MAX_CHILD_RETRIES,
+        )
+        return DEFAULT_MAX_CHILD_RETRIES
+    return max(0, parsed)
+
+
 def _get_max_spawn_depth() -> int:
     """Read delegation.max_spawn_depth from config, floored at 1 (no ceiling).
 
@@ -3222,46 +3257,62 @@ def delegate_task(
     # Build all child agents on the main thread (thread-safe construction)
     # Wrapped in try/finally so the global is always restored even if a
     # child build raises (otherwise _last_resolved_tool_names stays corrupted).
+    def _build_for_task(i: int, t: dict, *, recovery_context: Optional[str] = None):
+        """Construct one child for task ``i``.
+
+        Shared by the initial build loop and by retries, so a retried task
+        gets a genuinely fresh agent rather than one carrying the wreckage of
+        the attempt that just died.
+        """
+        # Per-task role beats top-level; normalise again so unknown
+        # per-task values warn and degrade to leaf uniformly.
+        effective_role = _normalize_role(t.get("role") or top_role)
+        # Per-task model beats config credentials model
+        task_model = t.get("model")
+        effective_model = task_model or creds["model"]
+        if task_model:
+            logger.debug(
+                "Task %d using explicit model override: %s (from config: %s)",
+                i,
+                task_model,
+                creds["model"],
+            )
+        task_context = t.get("context")
+        if recovery_context:
+            task_context = (
+                f"{task_context}\n\n{recovery_context}"
+                if task_context
+                else recovery_context
+            )
+        child = _build_child_agent(
+            task_index=i,
+            goal=t["goal"],
+            context=task_context,
+            # Subagents always inherit the parent's toolsets; the model
+            # cannot choose or narrow them (no model-facing toolsets arg).
+            toolsets=None,
+            model=effective_model,
+            max_iterations=effective_max_iter,
+            task_count=n_tasks,
+            parent_agent=parent_agent,
+            override_provider=creds["provider"],
+            override_base_url=creds["base_url"],
+            override_api_key=creds["api_key"],
+            override_api_mode=creds["api_mode"],
+            override_request_overrides=creds.get("request_overrides"),
+            override_max_tokens=creds.get("max_output_tokens"),
+            override_acp_command=creds.get("command"),
+            override_acp_args=creds.get("args"),
+            role=effective_role,
+        )
+        # Override with correct parent tool names (before child construction mutated global)
+        child._delegate_saved_tool_names = _parent_tool_names
+        return child
+
     children = []
     try:
         for i, t in enumerate(task_list):
-            # Per-task role beats top-level; normalise again so unknown
-            # per-task values warn and degrade to leaf uniformly.
-            effective_role = _normalize_role(t.get("role") or top_role)
-            # Per-task model beats config credentials model
-            task_model = t.get("model")
-            effective_model = task_model or creds["model"]
-            if task_model:
-                logger.debug(
-                    "Task %d using explicit model override: %s (from config: %s)",
-                    i,
-                    task_model,
-                    creds["model"],
-                )
-            child = _build_child_agent(
-                task_index=i,
-                goal=t["goal"],
-                context=t.get("context"),
-                # Subagents always inherit the parent's toolsets; the model
-                # cannot choose or narrow them (no model-facing toolsets arg).
-                toolsets=None,
-                model=effective_model,
-                max_iterations=effective_max_iter,
-                task_count=n_tasks,
-                parent_agent=parent_agent,
-                override_provider=creds["provider"],
-                override_base_url=creds["base_url"],
-                override_api_key=creds["api_key"],
-                override_api_mode=creds["api_mode"],
-                override_request_overrides=creds.get("request_overrides"),
-                override_max_tokens=creds.get("max_output_tokens"),
-                override_acp_command=creds.get("command"),
-                override_acp_args=creds.get("args"),
-                role=effective_role,
-            )
-            # Override with correct parent tool names (before child construction mutated global)
-            child._delegate_saved_tool_names = _parent_tool_names
-            children.append((i, t, child))
+            children.append((i, t, _build_for_task(i, t)))
     finally:
         # Authoritative restore: reset global to parent's tool names after all children built
         _model_tools._last_resolved_tool_names = _parent_tool_names
@@ -3417,6 +3468,75 @@ def delegate_task(
                                 logger.debug("Spinner update_text failed: %s", e)
 
             # Sort by task_index so results match input order
+            results.sort(key=lambda r: r["task_index"])
+
+        # Drop-off recovery: a child that crashed or timed out left a hole in
+        # the batch, and nothing downstream would ever re-run it. Re-dispatch
+        # those tasks on fresh agents before verification, so a recovered
+        # result is verified like any other. Runs for every execution path
+        # (single, DAG, parallel batch) because it works off `results`.
+        _max_retries = _get_max_child_retries()
+        # `is not True` rather than a plain truth test: an absent attribute on
+        # a mock-like parent returns a truthy stand-in, which would silently
+        # disable recovery. Same idiom as the interrupt check in the batch loop.
+        if (
+            _max_retries > 0
+            and getattr(parent_agent, "_interrupt_requested", False) is not True
+        ):
+            _task_by_index = {i: t for (i, t, _c) in children}
+            for _attempt in range(1, _max_retries + 1):
+                _dropped = [
+                    r
+                    for r in results
+                    if r.get("status") in _RETRIABLE_CHILD_STATUSES
+                    and r.get("task_index") in _task_by_index
+                ]
+                if not _dropped:
+                    break
+                for _entry in _dropped:
+                    _idx = _entry["task_index"]
+                    _prior_error = str(_entry.get("error") or "unknown failure")
+                    _emit_parent_console(
+                        parent_agent,
+                        f"  ↻ retrying task {_idx + 1}/{n_tasks} "
+                        f"(attempt {_attempt + 1}): {_prior_error[:80]}",
+                    )
+                    try:
+                        try:
+                            _retry_child = _build_for_task(
+                                _idx,
+                                _task_by_index[_idx],
+                                recovery_context=(
+                                    "RECOVERY ATTEMPT: a previous agent on this "
+                                    "exact task did not finish. It failed with: "
+                                    f"{_prior_error}\n"
+                                    "Check the blackboard for partial work it may "
+                                    "have posted and continue from there rather "
+                                    "than starting over. If the same failure "
+                                    "recurs, report it as a blocker instead of "
+                                    "retrying it yourself."
+                                ),
+                            )
+                        finally:
+                            _model_tools._last_resolved_tool_names = _parent_tool_names
+                        _retry_result = _run_single_child(
+                            _idx,
+                            _task_by_index[_idx]["goal"],
+                            _retry_child,
+                            parent_agent,
+                        )
+                    except Exception as _retry_exc:
+                        logger.warning(
+                            "Retry of task %d failed to run: %s", _idx, _retry_exc
+                        )
+                        _entry["retry_attempts"] = _attempt
+                        continue
+                    # Keep the original failure visible even when the retry
+                    # works: a task that only succeeds on a second run is a
+                    # signal about the task, not a clean pass.
+                    _retry_result["retry_attempts"] = _attempt
+                    _retry_result["recovered_from"] = _prior_error[:500]
+                    results[results.index(_entry)] = _retry_result
             results.sort(key=lambda r: r["task_index"])
 
         # Adversarial verification wave (opt-in, foreground only): every

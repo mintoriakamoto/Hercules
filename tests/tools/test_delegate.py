@@ -3293,3 +3293,144 @@ class TestVerifierCredentialDecorrelation(unittest.TestCase):
         self.assertEqual(kw["model"], "worker/model")
         self.assertEqual(kw["override_provider"], "openrouter")
         self.assertEqual(kw["override_api_key"], "k-worker")
+
+
+class TestChildDropOffRecovery(unittest.TestCase):
+    """A child that crashes or times out must not leave a hole in the batch."""
+
+    @staticmethod
+    def _ok(idx, summary="done"):
+        return {
+            "task_index": idx,
+            "status": "completed",
+            "summary": summary,
+            "api_calls": 1,
+            "duration_seconds": 1.0,
+        }
+
+    @staticmethod
+    def _dead(idx, status="error", error="provider exploded"):
+        return {
+            "task_index": idx,
+            "status": status,
+            "summary": None,
+            "error": error,
+            "api_calls": 0,
+            "duration_seconds": 0,
+        }
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_failed_child_is_retried_and_recovered(self, mock_run, _retries):
+        mock_run.side_effect = [self._dead(0), self._ok(0, "recovered")]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="flaky work", parent_agent=parent))
+
+        entry = result["results"][0]
+        self.assertEqual(entry["status"], "completed")
+        self.assertEqual(entry["summary"], "recovered")
+        self.assertEqual(mock_run.call_count, 2)
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_recovered_entry_keeps_the_original_failure_visible(
+        self, mock_run, _retries
+    ):
+        mock_run.side_effect = [
+            self._dead(0, error="rate limited"),
+            self._ok(0, "recovered"),
+        ]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="flaky work", parent_agent=parent))
+
+        entry = result["results"][0]
+        self.assertEqual(entry["retry_attempts"], 1)
+        self.assertIn("rate limited", entry["recovered_from"])
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=2)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_retry_budget_is_bounded(self, mock_run, _retries):
+        mock_run.side_effect = [self._dead(0) for _ in range(10)]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="always broken", parent_agent=parent))
+
+        # One original attempt plus exactly two retries, then it gives up.
+        self.assertEqual(mock_run.call_count, 3)
+        self.assertEqual(result["results"][0]["status"], "error")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=0)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_retries_can_be_disabled(self, mock_run, _retries):
+        mock_run.side_effect = [self._dead(0)]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="broken", parent_agent=parent))
+
+        self.assertEqual(mock_run.call_count, 1)
+        self.assertEqual(result["results"][0]["status"], "error")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_timeout_is_treated_as_a_drop_off(self, mock_run, _retries):
+        mock_run.side_effect = [self._dead(0, status="timeout"), self._ok(0)]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="slow work", parent_agent=parent))
+
+        self.assertEqual(mock_run.call_count, 2)
+        self.assertEqual(result["results"][0]["status"], "completed")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_interrupted_children_are_not_retried(self, mock_run, _retries):
+        """The parent was stopped on purpose — re-dispatching fights the user."""
+        mock_run.side_effect = [self._dead(0, status="interrupted")]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="cancelled work", parent_agent=parent))
+
+        self.assertEqual(mock_run.call_count, 1)
+        self.assertEqual(result["results"][0]["status"], "interrupted")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_completed_children_are_never_retried(self, mock_run, _retries):
+        mock_run.side_effect = [self._ok(0)]
+        parent = _make_mock_parent()
+        delegate_task(goal="fine", parent_agent=parent)
+
+        self.assertEqual(mock_run.call_count, 1)
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_only_the_failed_task_in_a_batch_is_retried(self, mock_run, _retries):
+        mock_run.side_effect = [
+            self._ok(0, "A ok"),
+            self._dead(1),
+            self._ok(1, "B recovered"),
+        ]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "task A"}, {"goal": "task B"}], parent_agent=parent
+            )
+        )
+
+        self.assertEqual(mock_run.call_count, 3)
+        summaries = {r["task_index"]: r["summary"] for r in result["results"]}
+        self.assertEqual(summaries[0], "A ok")
+        self.assertEqual(summaries[1], "B recovered")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_retry_child_is_told_what_killed_the_previous_attempt(
+        self, mock_run, _retries
+    ):
+        mock_run.side_effect = [self._dead(0, error="ocket timeout"), self._ok(0)]
+        parent = _make_mock_parent()
+        with patch(
+            "tools.delegate_tool._build_child_agent", wraps=_build_child_agent
+        ) as mock_build:
+            delegate_task(goal="flaky", parent_agent=parent)
+
+        retry_context = mock_build.call_args_list[-1].kwargs["context"]
+        self.assertIn("RECOVERY ATTEMPT", retry_context)
+        self.assertIn("ocket timeout", retry_context)
+        self.assertIn("blackboard", retry_context)
