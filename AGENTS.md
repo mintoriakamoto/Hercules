@@ -996,7 +996,23 @@ Roles:
 Key config knobs (under `delegation:` in `config.yaml`):
 `max_concurrent_children`, `max_spawn_depth`, `child_timeout_seconds`,
 `orchestrator_enabled`, `subagent_auto_approve`, `inherit_mcp_toolsets`,
-`max_iterations`.
+`max_iterations`, `max_child_retries`, `max_total_agents`.
+
+Two of those bound failure rather than behaviour. `max_child_retries`
+(default 1) re-dispatches a child that crashed or timed out onto a fresh
+agent, because otherwise a dropped child is a permanent hole in the batch
+that nothing re-runs. `max_total_agents` (default 32) caps the total agents
+one delegation tree may start, shared across every nesting level — it exists
+because `max_spawn_depth` and `max_concurrent_children` each bound one level
+while nothing bounds their product, so raising those alone can grow a tree
+without limit.
+
+A task may also carry `proof`: a command that must succeed for the task to
+count as done. The parent re-runs it after the child finishes and the exit
+code sets the verdict, so a task comes back `refuted` when its own check
+fails. Prefer it over `verify` wherever success is machine-checkable — it
+costs one command rather than a whole extra subagent, and unlike a second
+model's opinion it cannot be talked into the wrong answer.
 
 Durability rule: background `delegate_task` is detached from the current
 turn but still process-local. For work that must survive process restart, use
