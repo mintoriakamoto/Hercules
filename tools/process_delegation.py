@@ -27,11 +27,9 @@ Provides drop-in replacement for ThreadPoolExecutor in delegate_task:
 
 from __future__ import annotations
 
-import json
 import logging
 import multiprocessing as mp
 import pickle
-import sys
 import traceback
 from concurrent.futures import (
     ProcessPoolExecutor,
@@ -44,7 +42,11 @@ from typing import Any, Callable, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # Context for passing through process boundary
-_mp_context = mp.get_context("spawn")  # spawn safer than fork, works on Windows
+try:
+    _mp_context = mp.get_context("spawn")  # spawn safer than fork, works on Windows
+except ValueError:
+    # Fallback on systems where spawn is not available
+    _mp_context = None
 
 
 class ProcessDelegationExecutor:
@@ -61,10 +63,10 @@ class ProcessDelegationExecutor:
             max_workers: Maximum number of worker processes.
                         Defaults to CPU count.
         """
-        self._executor = ProcessPoolExecutor(
-            max_workers=max_workers,
-            mp_context=_mp_context,
-        )
+        kwargs = {"max_workers": max_workers}
+        if _mp_context is not None:
+            kwargs["mp_context"] = _mp_context
+        self._executor = ProcessPoolExecutor(**kwargs)
         self._futures: Dict[Future, str] = {}  # Future -> delegation_id mapping
 
     def submit(
