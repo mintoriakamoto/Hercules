@@ -394,23 +394,101 @@ chmod +x /opt/hercules/mind/core.py
 chmod +x /opt/hercules/gateway/service.py
 chmod +x /opt/hercules/bridge/web.py
 
+# Create CLI wrapper
+cat > /usr/local/bin/hercules << 'EOF'
+#!/bin/bash
+cd /opt/hercules/mind
+python3 core.py "$@"
+EOF
+chmod +x /usr/local/bin/hercules
+
+# Initialize persistent memory with offline mode template
+mkdir -p /opt/hercules/memory
+cat > /opt/hercules/memory/conversations.json << 'EOF'
+{
+  "conversations": [],
+  "knowledge": {},
+  "learned_patterns": {},
+  "mode": "offline",
+  "initialized": true,
+  "version": "1.0"
+}
+EOF
+
+# Initialize skills directory
+mkdir -p /opt/hercules/skills
+cat > /opt/hercules/skills/README.md << 'EOF'
+# Hercules Skills
+
+Core AI skills loaded at runtime. All skills run offline without external API calls.
+
+## Built-in Skills
+- think: Core inference on local Phi-2 model
+- remember: Persistent memory storage
+- see: Camera input processing
+- listen: Audio input processing
+- speak: Text-to-speech output
+
+## Extensible
+Users can add custom skills by creating new Python modules in this directory.
+EOF
+
+# Create systemd service for auto-start (optional)
+cat > /etc/systemd/system/hercules.service << 'EOF'
+[Unit]
+Description=Hercules Agent - Offline-First AI
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/hercules/mind
+ExecStart=/usr/bin/python3 /opt/hercules/mind/core.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+
 echo ""
 echo "========================================="
 echo "    Hercules Installation Complete"
 echo "========================================="
 echo ""
-echo "To start Hercules:"
+echo "Quick start:"
+echo "  hercules                    # Start Hercules (CLI symlink)"
+echo ""
+echo "Full manual start:"
 echo "  cd /opt/hercules/mind"
 echo "  python3 core.py"
 echo ""
-echo "To access web interface:"
+echo "Access web interface:"
 echo "  cd /opt/hercules/bridge"
 echo "  python3 web.py"
 echo "  Open http://localhost:5000"
 echo ""
-echo "To check status:"
+echo "Check gateway status:"
 echo "  cd /opt/hercules/gateway"
 echo "  python3 service.py"
+echo ""
+echo "Enable auto-start (optional):"
+echo "  sudo systemctl enable hercules"
+echo "  sudo systemctl start hercules"
+echo ""
+echo "Directory structure:"
+echo "  /opt/hercules/"
+echo "  ├── mind/          (core.py - Hercules class)"
+echo "  ├── memory/        (conversations, knowledge base)"
+echo "  ├── models/        (phi-2 local model)"
+echo "  ├── skills/        (extensible skill modules)"
+echo "  ├── gateway/       (service.py - API)"
+echo "  ├── bridge/        (web.py - UI)"
+echo "  ├── voice/         (audio processing)"
+echo "  ├── sight/         (camera processing)"
+echo "  └── logs/          (hercules.log)"
 echo ""
 echo "Hercules is ready."
 echo "Online. Autonomous. Ethical."
