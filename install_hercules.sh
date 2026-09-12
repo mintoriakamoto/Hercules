@@ -573,7 +573,30 @@ TERMINAL_TIMEOUT=300
 # Maximum execution time for tool commands (seconds)
 
 # ============================================================================
-# [9] Optional: GitHub Integration
+# [9] Agent Swarm & Parallel Delegation (Multi-Agent Orchestration)
+# ============================================================================
+# Hercules supports parallel execution of specialized subagents for
+# distributed analysis, code review, testing, and optimization.
+#
+# EXECUTION MODES:
+#   thread   — Default. Lower overhead, I/O-bound tasks, GIL-constrained CPU work
+#   process  — True parallelism, CPU-bound tasks, better isolation (no GIL)
+#
+HERCULES_DELEGATION_EXECUTOR=thread
+# Set to "process" for compute-heavy subagent work (analysis, parsing, reasoning)
+# HERCULES_DELEGATION_EXECUTOR=process
+
+# Max concurrent subagents (default: CPU count)
+# HERCULES_MAX_SUBAGENTS=6
+
+# Subagent task timeout in seconds
+# HERCULES_DELEGATION_TIMEOUT=300
+
+# Enable detailed delegation logging
+# HERCULES_DELEGATION_DEBUG=false
+
+# ============================================================================
+# [10] Optional: GitHub Integration
 # ============================================================================
 # GITHUB_TOKEN=your_personal_access_token
 # GITHUB_APP_ID=
@@ -799,6 +822,10 @@ echo "  hercules gateway         # Run gateway service"
 echo "  hercules status          # Check system status"
 echo "  hercules doctor          # Diagnose issues"
 echo "  hercules cron list       # Manage scheduled tasks"
+echo ""
+echo -e "${CYAN}Agent Swarm (Multi-Agent Orchestration):${NC}"
+echo "  HERCULES_DELEGATION_EXECUTOR=process hercules analyze --parallel"
+echo "  # Runs up to 6 specialized agents in parallel (code review, testing, etc.)"
 echo ""
 echo -e "${CYAN}Documentation:${NC}"
 echo "  • Repository: $SOURCE_DIR"
