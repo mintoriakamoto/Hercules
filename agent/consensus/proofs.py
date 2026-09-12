@@ -71,6 +71,22 @@ class Proof:
             expect_output_hash=body.get("expect_output_hash"),
         )
 
+    def is_met(self, observed: "Observation") -> bool:
+        """Did this run clear the bar? Purely mechanical, no identity needed.
+
+        Kept on the Proof rather than only behind a signed record so callers
+        with no key material -- delegation subagents, which are ephemeral and
+        anonymous -- can still check work against a declared bar.
+        """
+        if observed.exit_code != self.expect_exit:
+            return False
+        if (
+            self.expect_output_hash is not None
+            and observed.output_hash != self.expect_output_hash
+        ):
+            return False
+        return True
+
 
 @dataclass(frozen=True)
 class Observation:
@@ -157,15 +173,7 @@ def derive_verdict(record: SignedRecord, observed: Observation) -> float:
     everyone computes the same verdict. There is no room for a verifier to
     grade generously, which is the whole point.
     """
-    expected = proof_of(record)
-    if observed.exit_code != expected.expect_exit:
-        return -1.0
-    if (
-        expected.expect_output_hash is not None
-        and observed.output_hash != expected.expect_output_hash
-    ):
-        return -1.0
-    return 1.0
+    return 1.0 if proof_of(record).is_met(observed) else -1.0
 
 
 def verification(

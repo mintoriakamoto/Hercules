@@ -3434,3 +3434,142 @@ class TestChildDropOffRecovery(unittest.TestCase):
         self.assertIn("RECOVERY ATTEMPT", retry_context)
         self.assertIn("ocket timeout", retry_context)
         self.assertIn("blackboard", retry_context)
+
+
+class TestProofChecks(unittest.TestCase):
+    """A declared proof, not the subagent's self-report, settles the task."""
+
+    @staticmethod
+    def _done(idx=0, summary="I fixed it"):
+        return {
+            "task_index": idx,
+            "status": "completed",
+            "summary": summary,
+            "api_calls": 1,
+            "duration_seconds": 1.0,
+        }
+
+    @staticmethod
+    def _term(exit_code, output="out"):
+        return json.dumps({"output": output, "exit_code": exit_code, "error": None})
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_passing_proof_confirms_the_task(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(0)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="fix auth", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["status"], "completed")
+        self.assertEqual(entry["proof"]["verdict"], "verified")
+        self.assertEqual(entry["proof"]["observed_exit"], 0)
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_failing_proof_refutes_a_confident_subagent(self, mock_run, mock_term):
+        """The child says it worked; the command says otherwise."""
+        mock_run.side_effect = [self._done(summary="All tests pass now!")]
+        mock_term.return_value = self._term(1)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="fix auth", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["status"], "refuted")
+        self.assertEqual(entry["proof"]["verdict"], "refuted")
+        self.assertEqual(entry["proof"]["observed_exit"], 1)
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_proof_runs_through_the_terminal_tool(self, mock_run, mock_term):
+        """Proof commands get no privileged path around the usual guards."""
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(0)
+        parent = _make_mock_parent()
+        delegate_task(goal="g", proof="npm run build", parent_agent=parent)
+        self.assertEqual(mock_term.call_args.args[0], "npm run build")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_no_proof_means_no_command_is_run(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="g", parent_agent=parent))
+        mock_term.assert_not_called()
+        self.assertNotIn("proof", result["results"][0])
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=0)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_task_that_never_finished_is_not_proof_checked(
+        self, mock_run, _retries, mock_term
+    ):
+        mock_run.side_effect = [
+            {"task_index": 0, "status": "error", "summary": None, "error": "boom"}
+        ]
+        parent = _make_mock_parent()
+        delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        mock_term.assert_not_called()
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_expected_exit_code_is_honoured(self, mock_run, mock_term):
+        """Proving a command still fails is a legitimate bar."""
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(1)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                goal="g", proof="./repro.sh", proof_expect_exit=1, parent_agent=parent
+            )
+        )
+        self.assertEqual(result["results"][0]["proof"]["verdict"], "verified")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_unparseable_backend_output_does_not_read_as_success(
+        self, mock_run, mock_term
+    ):
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = "not json at all"
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        )
+        self.assertEqual(result["results"][0]["status"], "refuted")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_crashing_runner_is_recorded_not_swallowed(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        mock_term.side_effect = RuntimeError("backend down")
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["proof"]["verdict"], "unchecked")
+        self.assertIn("backend down", entry["proof"]["error"])
+        self.assertEqual(entry["status"], "completed", "unchecked is not refuted")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_per_task_proofs_in_a_batch(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done(0), self._done(1)]
+        mock_term.side_effect = [self._term(0), self._term(1)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[
+                    {"goal": "task A", "proof": "pytest a"},
+                    {"goal": "task B", "proof": "pytest b"},
+                ],
+                parent_agent=parent,
+            )
+        )
+        by_index = {r["task_index"]: r for r in result["results"]}
+        self.assertEqual(by_index[0]["status"], "completed")
+        self.assertEqual(by_index[1]["status"], "refuted")

@@ -530,6 +530,89 @@ def _get_max_child_retries() -> int:
     return max(0, parsed)
 
 
+# A proof is a command the parent wrote, so it runs through exactly the same
+# guards and backend as any other command the agent issues. It gets no
+# elevated path: a proof is still just a command someone wrote.
+DEFAULT_PROOF_TIMEOUT_SECONDS = 600
+
+
+def _proof_runner(parent_agent):
+    """A ProofRunner backed by the sandboxed terminal tool."""
+    from agent.consensus.proofs import Observation, output_hash
+    from tools.terminal_tool import terminal_tool
+
+    def _run(command: str) -> "Observation":
+        raw = terminal_tool(command, timeout=DEFAULT_PROOF_TIMEOUT_SECONDS)
+        try:
+            payload = json.loads(raw)
+        except (json.JSONDecodeError, ValueError, TypeError):
+            # A backend that returned something unparseable has not shown the
+            # proof passing, so it must not read as success.
+            return Observation(exit_code=-1, output_hash=output_hash(str(raw)))
+        return Observation(
+            exit_code=int(payload.get("exit_code", -1)),
+            output_hash=output_hash(str(payload.get("output", ""))),
+        )
+
+    return _run
+
+
+def _run_proof_checks(results, task_list, parent_agent) -> None:
+    """Replay each task's declared proof and record what actually happened.
+
+    A subagent reporting "done" is a self-report. Where the task declared a
+    proof, the parent re-runs it and the entry carries the observed exit code,
+    so "completed" stops meaning "the child said so" and starts meaning "the
+    check passed".
+
+    A refuted task is reported, never silently re-run: correction is what
+    delegation.verify_repair_rounds exists for, and quietly retrying work
+    whose proof failed is how you burn a budget on a task that cannot pass.
+    """
+    from agent.consensus.proofs import Proof
+
+    runner = None
+    for entry in results:
+        idx = entry.get("task_index")
+        task = task_list[idx] if isinstance(idx, int) and idx < len(task_list) else None
+        command = str((task or {}).get("proof") or "").strip()
+        if not command:
+            continue
+        if entry.get("status") != "completed":
+            # The child never claimed to finish; there is no claim to check.
+            continue
+        proof = Proof(
+            command=command,
+            expect_exit=int((task or {}).get("proof_expect_exit", 0) or 0),
+        )
+        if runner is None:
+            runner = _proof_runner(parent_agent)
+        try:
+            observed = runner(proof.command)
+        except Exception as exc:
+            logger.warning("Proof replay failed for task %s: %s", idx, exc)
+            entry["proof"] = {
+                "command": proof.command,
+                "verdict": "unchecked",
+                "error": str(exc)[:300],
+            }
+            continue
+        met = proof.is_met(observed)
+        entry["proof"] = {
+            "command": proof.command,
+            "expect_exit": proof.expect_exit,
+            "observed_exit": observed.exit_code,
+            "verdict": "verified" if met else "refuted",
+        }
+        if not met:
+            entry["status"] = "refuted"
+        _emit_parent_console(
+            parent_agent,
+            f"  {'✓' if met else '✗'} proof [{(idx or 0) + 1}]: {proof.command[:60]} "
+            f"(exit {observed.exit_code}, wanted {proof.expect_exit})",
+        )
+
+
 def _get_max_spawn_depth() -> int:
     """Read delegation.max_spawn_depth from config, floored at 1 (no ceiling).
 
@@ -3096,6 +3179,8 @@ def delegate_task(
     role: Optional[str] = None,
     background: Optional[bool] = None,
     verify: Optional[bool] = None,
+    proof: Optional[str] = None,
+    proof_expect_exit: Optional[int] = None,
     parent_agent=None,
 ) -> str:
     """
@@ -3194,7 +3279,15 @@ def delegate_task(
         # scheduler and only its TOTAL task count needs a (looser) ceiling.
         task_list = tasks
     elif goal and isinstance(goal, str) and goal.strip():
-        task_list = [{"goal": goal, "context": context, "role": top_role}]
+        task_list = [
+            {
+                "goal": goal,
+                "context": context,
+                "role": top_role,
+                "proof": proof,
+                "proof_expect_exit": proof_expect_exit,
+            }
+        ]
     else:
         return tool_error("Provide either 'goal' (single task) or 'tasks' (batch).")
 
@@ -3538,6 +3631,15 @@ def delegate_task(
                     _retry_result["recovered_from"] = _prior_error[:500]
                     results[results.index(_entry)] = _retry_result
             results.sort(key=lambda r: r["task_index"])
+
+        # Proof replay: where a task declared a machine-checkable bar, run it
+        # and let the exit code settle the task instead of the child's own
+        # report. Runs before the verify wave because a command that either
+        # passes or does not is stronger evidence than a second model's read.
+        try:
+            _run_proof_checks(results, task_list, parent_agent)
+        except Exception as _proof_exc:
+            logger.warning("Proof check pass failed: %s", _proof_exc)
 
         # Adversarial verification wave (opt-in, foreground only): every
         # completed task's claimed outcome is checked by a fresh skeptic
@@ -4374,6 +4476,32 @@ DELEGATE_TASK_SCHEMA = {
                             "enum": ["leaf", "orchestrator"],
                             "description": "Per-task role override. See top-level 'role' for semantics.",
                         },
+                        "proof": {
+                            "type": "string",
+                            "description": (
+                                "A shell command that must succeed for this "
+                                "task to count as done, e.g. 'pytest tests/"
+                                "test_auth.py -q' or 'npm run build'. After the "
+                                "subagent finishes, you re-run this yourself and "
+                                "its exit code decides the verdict, so "
+                                "'completed' stops meaning 'the subagent said "
+                                "so'. A task whose proof fails comes back with "
+                                "status 'refuted' and the observed exit code. "
+                                "Prefer this over verify whenever success is "
+                                "machine-checkable: it costs one command "
+                                "instead of a whole extra subagent, and it "
+                                "cannot be talked into the wrong answer."
+                            ),
+                        },
+                        "proof_expect_exit": {
+                            "type": "integer",
+                            "description": (
+                                "Exit code the proof command must return "
+                                "(default 0). Set it when success means a "
+                                "non-zero exit, e.g. proving a command still "
+                                "fails."
+                            ),
+                        },
                         "depends_on": {
                             "type": "array",
                             "items": {"type": "integer"},
@@ -4399,6 +4527,22 @@ DELEGATE_TASK_SCHEMA = {
                 "type": "string",
                 "enum": ["leaf", "orchestrator"],
                 "description": "(rebuilt at get_definitions() time)",
+            },
+            "proof": {
+                "type": "string",
+                "description": (
+                    "Single-task mode: a shell command that must succeed for "
+                    "the task to count as done. You re-run it after the "
+                    "subagent finishes and its exit code decides the verdict, "
+                    "so a wrong self-report cannot pass. Use it instead of "
+                    "verify whenever success is machine-checkable."
+                ),
+            },
+            "proof_expect_exit": {
+                "type": "integer",
+                "description": (
+                    "Exit code the proof command must return (default 0)."
+                ),
             },
             "verify": {
                 "type": "boolean",
@@ -4488,6 +4632,8 @@ registry.register(
         role=args.get("role"),
         background=_model_background_value(args, kw.get("parent_agent")),
         verify=args.get("verify"),
+        proof=args.get("proof"),
+        proof_expect_exit=args.get("proof_expect_exit"),
         parent_agent=kw.get("parent_agent"),
     ),
     check_fn=check_delegate_requirements,
