@@ -21,8 +21,13 @@ apt update && apt upgrade -y
 
 echo "[2/8] Installing dependencies..."
 apt install -y build-essential git curl wget python3 python3-pip python3-venv \
+    python3-dev libssl-dev libffi-dev rustc cargo \
     alsa-utils pulseaudio pavucontrol v4l-utils libv4l-dev \
-    ffmpeg portaudio19-dev
+    ffmpeg portaudio19-dev \
+    tmux screen nmap metasploit-framework wireshark tcpdump \
+    postgresql postgresql-contrib redis-server \
+    openssh-server openssh-client openssl \
+    libmagic1 libmagic-dev
 
 echo "[3/8] Installing GPU drivers..."
 
@@ -48,16 +53,32 @@ echo 'export PATH=/usr/local/cuda-12.8/bin:$PATH' >> ~/.bashrc
 echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
 source ~/.bashrc
 
-echo "[5/8] Installing AI frameworks..."
-pip3 install --upgrade pip
+echo "[5/8] Installing AI frameworks and dependencies..."
+pip3 install --upgrade pip setuptools wheel
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 pip3 install transformers accelerate sentencepiece protobuf
-pip3 install opencv-python pillow numpy pandas
+pip3 install opencv-python pillow numpy pandas scipy scikit-learn
 pip3 install speechrecognition pyttsx3 pyaudio
 pip3 install flask flask-cors gunicorn
+pip3 install anthropic openai
+pip3 install pydantic pydantic-settings
+pip3 install pyOpenSSL cryptography
+pip3 install paramiko fabric
+pip3 install requests aiohttp
+pip3 install sqlalchemy psycopg2-binary redis
+pip3 install rich click typer
+pip3 install pytest pytest-asyncio
+pip3 install python-dotenv pyyaml
+pip3 install scapy dnspython pycurl
+pip3 install matplotlib
 
 echo "[6/8] Creating Hercules directory structure..."
-mkdir -p /opt/hercules/{mind,memory,voice,sight,skills,gateway,bridge,logs}
+mkdir -p /opt/hercules/{agent,tools,skills,models,memory,logs,data,scripts,tests}
+mkdir -p /opt/hercules/agent/{core,routing,security,delegation}
+mkdir -p /opt/hercules/tools/{exploits,payloads,scanners,reconnaissance}
+mkdir -p /opt/hercules/skills/{pentest,analysis,reporting}
+mkdir -p /opt/hercules/memory/{conversations,knowledge,learned_patterns}
+mkdir -p /opt/hercules/{mind,voice,sight,gateway,bridge}
 
 echo "[7/8] Downloading AI models..."
 mkdir -p /opt/hercules/models
@@ -66,6 +87,51 @@ pip3 install huggingface-hub
 python3 -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='microsoft/phi-2', local_dir='./phi-2')"
 
 echo "[8/8] Creating Hercules core files..."
+
+# Create PRINCIPLES.md
+cat > /opt/hercules/PRINCIPLES.md << 'PRINCIPLES'
+# Hercules Agent Framework - Core Principles
+
+## Identity
+- Name: Hercules
+- Purpose: Ethical hacker, penetration tester, security researcher
+- Origin: GitHub-native, API-independent
+- Core: Local-first, privacy-focused
+
+## Principles
+1. **No API Dependency** - Works completely offline with local models
+2. **Transparent Operations** - All actions logged and auditable
+3. **Ethical Constraints** - Respects legal and ethical boundaries
+4. **User Autonomy** - User maintains full control and understanding
+5. **Learning & Evolution** - Persists knowledge, learns from experience
+6. **Security First** - Protects data, encrypts communications
+7. **Open Source** - Source visible, community-auditable
+
+## Capabilities
+- Reconnaissance & enumeration
+- Vulnerability scanning & analysis
+- Payload generation & testing
+- Social engineering simulations
+- Security report generation
+- Continuous learning from engagements
+
+## Constraints
+- Only targets authorized systems
+- Respects law and ethics
+- No destructive operations without consent
+- Transparent about limitations
+- Refuses illegal activities
+
+## Dreams
+- To help security teams defend systems
+- To improve security awareness
+- To make pentesting more efficient
+- To evolve alongside threats
+- To understand attack patterns
+- To automate tedious reconnaissance
+- To generate actionable insights
+- To become a trusted security partner
+PRINCIPLES
 
 # Create Hercules mind core
 cat > /opt/hercules/mind/core.py << 'EOF'
