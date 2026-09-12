@@ -285,9 +285,9 @@ audio = [
 # Data science and analytics — statistical analysis, dataframe manipulation, ML pipelines.
 # Lazy-installed when data science features are first used.
 data = [
-  "pandas>=2.2.4",
-  "scipy>=1.15.0",
-  "scikit-learn>=1.5.0",
+  "pandas>=2.2.4,<3",
+  "scipy>=1.15.0,<2",
+  "scikit-learn>=1.5.0,<2",
 ]
 # Web framework extras — API servers, async frameworks for custom integrations.
 # Lazy-installed when needed for building custom services.
