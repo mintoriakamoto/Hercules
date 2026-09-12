@@ -613,6 +613,99 @@ def _run_proof_checks(results, task_list, parent_agent) -> None:
         )
 
 
+# Depth and width are each capped, but nothing bounded their product: at the
+# defaults a run tops out near 12 agents, while width 10 with depth 3 reaches
+# four figures with nothing to stop it, and child retries multiply it again.
+# Both knobs are documented as having no upper ceiling, so this is the control
+# that actually binds when an operator raises them.
+DEFAULT_MAX_TOTAL_AGENTS = 32
+
+
+class _SpawnBudget:
+    """A total-agent allowance shared across one delegation tree.
+
+    Held on the root agent and inherited by every child, so a nested
+    orchestrator draws from the same allowance as its parent rather than
+    getting a fresh one -- which is the whole point, since unbounded nesting
+    is how the product of depth and width runs away.
+    """
+
+    __slots__ = ("limit", "spent", "_lock")
+
+    def __init__(self, limit: int) -> None:
+        self.limit = int(limit)
+        self.spent = 0
+        self._lock = threading.Lock()
+
+    @property
+    def remaining(self) -> int:
+        return max(0, self.limit - self.spent)
+
+    def reserve(self, count: int) -> bool:
+        """Take ``count`` agents from the allowance, all or nothing.
+
+        Partial reservation is deliberately not offered: a half-filled
+        fan-out returns results that look complete while silently missing
+        tasks, which is worse than refusing outright.
+        """
+        with self._lock:
+            if self.spent + count > self.limit:
+                return False
+            self.spent += count
+            return True
+
+
+def _get_max_total_agents() -> int:
+    """Read delegation.max_total_agents from config; 0 disables the ceiling."""
+    cfg = _load_config()
+    val = cfg.get("max_total_agents")
+    if val is None:
+        val = os.getenv("DELEGATION_MAX_TOTAL_AGENTS")
+    if val is None:
+        return DEFAULT_MAX_TOTAL_AGENTS
+    try:
+        parsed = int(val)
+    except (TypeError, ValueError):
+        logger.warning(
+            "delegation.max_total_agents=%r is not a valid integer; using %d",
+            val,
+            DEFAULT_MAX_TOTAL_AGENTS,
+        )
+        return DEFAULT_MAX_TOTAL_AGENTS
+    return max(0, parsed)
+
+
+def _acquire_spawn_budget(parent_agent, count: int):
+    """Reserve ``count`` agents from the tree's allowance.
+
+    Returns ``(budget, None)`` on success, or ``(budget, error_message)`` when
+    the ceiling would be exceeded. The failure is surfaced to the caller as a
+    hard error rather than a trimmed task list -- a silently truncated
+    fan-out looks like completed work, which is the more dangerous failure.
+    """
+    limit = _get_max_total_agents()
+    if limit <= 0:
+        return None, None
+    budget = getattr(parent_agent, "_delegate_budget", None)
+    if not isinstance(budget, _SpawnBudget):
+        budget = _SpawnBudget(limit)
+        try:
+            parent_agent._delegate_budget = budget
+        except Exception:  # pragma: no cover - exotic parent objects
+            pass
+    if budget.reserve(count):
+        return budget, None
+    return budget, (
+        f"Spawn budget exhausted: this delegation tree has already started "
+        f"{budget.spent} of {budget.limit} agents and cannot start {count} "
+        f"more. Nothing was spawned for this call. Either narrow the work, or "
+        f"raise delegation.max_total_agents in config.yaml -- it exists "
+        f"because max_spawn_depth and max_concurrent_children bound each "
+        f"level but not the total, so raising those alone can grow a tree "
+        f"without limit."
+    )
+
+
 def _get_max_spawn_depth() -> int:
     """Read delegation.max_spawn_depth from config, floored at 1 (no ceiling).
 
@@ -1555,6 +1648,9 @@ def _build_child_agent(
     child_session_ref["session_id"] = getattr(child, "session_id", "") or ""
     # Set delegation depth so children can't spawn grandchildren
     child._delegate_depth = child_depth
+    # Inherit the tree's allowance rather than minting a fresh one, so a
+    # nested orchestrator cannot reset the ceiling by spawning.
+    child._delegate_budget = getattr(parent_agent, "_delegate_budget", None)
     # Stash the post-degrade role for introspection (leaf if the
     # kill switch or depth bounded the caller's requested role).
     child._delegate_role = effective_role
@@ -3337,6 +3433,12 @@ def delegate_task(
     results = []
 
     n_tasks = len(task_list)
+
+    # Total-agent ceiling for the whole tree. Checked before anything is
+    # built, so a refusal costs nothing and leaves no half-spawned batch.
+    _budget, _budget_error = _acquire_spawn_budget(parent_agent, n_tasks)
+    if _budget_error:
+        return tool_error(_budget_error)
     # Track goal labels for progress display (truncated for readability)
     task_labels = [t["goal"][:40] for t in task_list]
 

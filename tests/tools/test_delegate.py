@@ -3573,3 +3573,99 @@ class TestProofChecks(unittest.TestCase):
         by_index = {r["task_index"]: r for r in result["results"]}
         self.assertEqual(by_index[0]["status"], "completed")
         self.assertEqual(by_index[1]["status"], "refuted")
+
+
+class TestSpawnBudget(unittest.TestCase):
+    """Depth and width are each capped; the product needs its own ceiling."""
+
+    @staticmethod
+    def _ok(idx=0):
+        return {
+            "task_index": idx,
+            "status": "completed",
+            "summary": "done",
+            "api_calls": 1,
+            "duration_seconds": 1.0,
+        }
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=10)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_batch_within_budget_runs(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0), self._ok(1)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "a"}, {"goal": "b"}], parent_agent=parent
+            )
+        )
+        self.assertEqual(len(result["results"]), 2)
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=2)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_exceeding_the_ceiling_refuses_loudly(self, mock_run, _limit):
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}],
+                parent_agent=parent,
+            )
+        )
+        self.assertIn("error", result)
+        self.assertIn("Spawn budget exhausted", result["error"])
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=2)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_refused_batch_spawns_nothing(self, mock_run, _limit):
+        """Never a half-filled fan-out that reads as complete."""
+        parent = _make_mock_parent()
+        delegate_task(
+            tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}], parent_agent=parent
+        )
+        mock_run.assert_not_called()
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=3)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_the_allowance_is_spent_across_successive_calls(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0), self._ok(0), self._ok(0)]
+        parent = _make_mock_parent()
+        for _ in range(3):
+            self.assertNotIn(
+                "error", json.loads(delegate_task(goal="g", parent_agent=parent))
+            )
+        exhausted = json.loads(delegate_task(goal="one too many", parent_agent=parent))
+        self.assertIn("error", exhausted)
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=0)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_zero_limit_disables_the_ceiling(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0) for _ in range(3)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}],
+                parent_agent=parent,
+            )
+        )
+        self.assertNotIn("error", result)
+
+    def test_reservation_is_all_or_nothing(self):
+        from tools.delegate_tool import _SpawnBudget
+
+        budget = _SpawnBudget(5)
+        self.assertTrue(budget.reserve(3))
+        self.assertFalse(budget.reserve(3), "must not partially fill")
+        self.assertEqual(budget.remaining, 2, "a refused reservation spends nothing")
+
+    def test_budget_is_shared_not_reset_by_nesting(self):
+        """A nested orchestrator must draw from its parent's allowance."""
+        from tools.delegate_tool import _SpawnBudget
+
+        root = _make_mock_parent()
+        root._delegate_budget = _SpawnBudget(4)
+        root._delegate_budget.reserve(3)
+
+        with patch("tools.delegate_tool._get_max_total_agents", return_value=4):
+            from tools.delegate_tool import _acquire_spawn_budget
+
+            _, error = _acquire_spawn_budget(root, 2)
+        self.assertIsNotNone(error, "a child must not get a fresh ceiling")
