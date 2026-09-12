@@ -337,6 +337,114 @@ class TestConflicts:
         assert payload["conflicts"][0]["key"] == "k"
 
 
+class TestConsensus:
+    """Majority-or-nothing: a wrong minority must never carry the result."""
+
+    @staticmethod
+    def _answer(author, value, key="answer"):
+        bb.post(key, value, author=author)
+
+    def test_unanimous_agreement_reaches_consensus(self):
+        for name in ("a", "b", "c"):
+            self._answer(f"worker:{name}", "42")
+        result = bb.consensus("answer")
+        assert result["has_consensus"] is True
+        assert result["agreed"] == 42
+        assert result["support"] == 3
+        assert result["dissent"] == []
+
+    def test_majority_carries_over_a_dissenting_minority(self):
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "42")
+        self._answer("worker:c", "99")
+        result = bb.consensus("answer")
+        assert result["agreed"] == 42
+        assert result["support"] == 2
+        assert [d["author"] for d in result["dissent"]] == ["worker:c"]
+
+    def test_an_even_split_reaches_no_consensus(self):
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "99")
+        result = bb.consensus("answer")
+        assert result["has_consensus"] is False
+        assert result["agreed"] is None, "a tie must not resolve to either side"
+
+    def test_plurality_without_majority_is_not_consensus(self):
+        """The failure a malicious minority exploits: largest faction wins."""
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "42")
+        self._answer("worker:c", "99")
+        self._answer("worker:d", "77")
+        self._answer("worker:e", "88")
+        result = bb.consensus("answer")
+        # "42" is the largest bloc at 2 of 5, but 3 are required.
+        assert result["has_consensus"] is False
+        assert result["agreed"] is None
+        assert result["required"] == 3
+
+    def test_malicious_minority_cannot_flip_the_result(self):
+        """Chen et al.: consensus degrades gently as N_mal rises."""
+        for name in ("a", "b", "c", "d", "e"):
+            self._answer(f"honest:{name}", "correct")
+        for n in range(4):
+            self._answer(f"malicious:{n}", "poisoned")
+        result = bb.consensus("answer")
+        assert result["agreed"] == "correct"
+        assert result["support"] == 5
+        assert result["total_authors"] == 9
+        assert len(result["dissent"]) == 4
+
+    def test_malicious_majority_withholds_rather_than_forces(self):
+        """Past the majority they win — but the honest floor is a real bound."""
+        for name in ("a", "b"):
+            self._answer(f"honest:{name}", "correct")
+        for n in range(3):
+            self._answer(f"malicious:{n}", "poisoned")
+        assert bb.consensus("answer")["agreed"] == "poisoned"
+        # Raising the bar past what they control withholds agreement instead.
+        guarded = bb.consensus("answer", min_support=4)
+        assert guarded["has_consensus"] is False
+
+    def test_one_author_cannot_inflate_its_own_support(self):
+        self._answer("worker:a", "42")
+        for _ in range(10):
+            self._answer("worker:a", "42")  # same agent, posting repeatedly
+        self._answer("worker:b", "99")
+        result = bb.consensus("answer")
+        # Were posts counted instead of authors, a's 11 entries would clear
+        # any threshold and carry the result on its own.
+        assert result["total_authors"] == 2, "11 posts from a, but a is one author"
+        assert result["has_consensus"] is False
+        assert result["agreed"] is None
+
+    def test_an_author_changing_its_mind_moves_its_vote(self):
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "99")
+        self._answer("worker:c", "99")
+        assert bb.consensus("answer")["agreed"] == 99
+        self._answer("worker:b", "42")  # b switches sides
+        self._answer("worker:c", "42")
+        assert bb.consensus("answer")["agreed"] == 42
+
+    def test_structurally_equal_json_answers_agree(self):
+        self._answer("worker:a", json.dumps({"x": 1, "y": 2}))
+        self._answer("worker:b", json.dumps({"y": 2, "x": 1}))
+        result = bb.consensus("answer")
+        assert result["has_consensus"] is True
+        assert result["agreed"] == {"x": 1, "y": 2}
+
+    def test_no_posts_means_no_consensus(self):
+        result = bb.consensus("never-answered")
+        assert result["has_consensus"] is False
+        assert result["total_authors"] == 0
+
+    def test_consensus_through_the_tool_entry_point(self):
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "42")
+        payload = json.loads(bb.blackboard_tool("consensus", key="answer"))
+        assert payload["agreed"] == 42
+
+
 class TestClaimDispatch:
     def test_claim_and_release_through_the_tool_entry_point(self):
         acquired = json.loads(

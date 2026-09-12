@@ -210,6 +210,81 @@ def conflicts(*, board: Optional[str] = None) -> dict[str, Any]:
     return {"board": resolved, "conflicts": contested}
 
 
+def _latest_positions(key: str, board: str) -> dict[str, str]:
+    """Each author's most recent raw value for ``key`` on ``board``."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT value, author FROM blackboard_entries"
+            " WHERE board = ? AND key = ? ORDER BY seq",
+            (board, key),
+        ).fetchall()
+    latest: dict[str, str] = {}
+    for row_value, row_author in rows:
+        latest[row_author] = row_value
+    return latest
+
+
+def consensus(
+    key: str,
+    *,
+    board: Optional[str] = None,
+    min_support: Optional[int] = None,
+) -> dict[str, Any]:
+    """Agree on ``key`` only when a strict majority of authors agree.
+
+    Aggregating N independent answers by majority is markedly more robust to
+    wrong or hostile agents than debating or plurality-voting them: a
+    dissenting minority can withhold agreement but cannot manufacture it.
+    That property is why this reports ``agreed: None`` when the threshold
+    isn't met instead of falling back to the most popular answer — a
+    plurality rule hands the result to whichever faction is largest, which is
+    exactly the failure a malicious minority exploits.
+
+    One vote per author, counted on each author's latest position, so an
+    agent cannot inflate its own support by posting repeatedly.
+    """
+    key = (key or "").strip()
+    if not key:
+        raise ValueError("key is required")
+    resolved = _resolve_board(board)
+    positions = _latest_positions(key, resolved)
+    total = len(positions)
+
+    tally: dict[str, list[str]] = {}
+    for author, raw_value in positions.items():
+        tally.setdefault(raw_value, []).append(author)
+
+    threshold = total // 2 + 1 if min_support is None else max(1, int(min_support))
+
+    agreed_raw: Optional[str] = None
+    support: list[str] = []
+    for raw_value, backers in tally.items():
+        if len(backers) >= threshold and len(backers) > len(support):
+            agreed_raw, support = raw_value, backers
+
+    def _decode(raw: str) -> Any:
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return raw
+
+    dissent = [
+        {"author": author, "value": _decode(raw_value)}
+        for author, raw_value in sorted(positions.items())
+        if agreed_raw is None or raw_value != agreed_raw
+    ]
+    return {
+        "board": resolved,
+        "key": key,
+        "agreed": _decode(agreed_raw) if agreed_raw is not None else None,
+        "has_consensus": agreed_raw is not None,
+        "support": len(support),
+        "total_authors": total,
+        "required": threshold,
+        "dissent": dissent,
+    }
+
+
 def boards() -> list[dict[str, Any]]:
     """All boards with entry counts, newest activity first."""
     with _connect() as conn:
@@ -381,6 +456,7 @@ def blackboard_tool(
     board: str = "",
     timeout_seconds: float = 60.0,
     ttl_seconds: float = _DEFAULT_CLAIM_TTL,
+    min_support: int = 0,
 ) -> str:
     """Tool entry point — dispatch on action, return JSON."""
     act = (action or "").strip().lower()
@@ -423,6 +499,12 @@ def blackboard_tool(
             result = claims(board=board or None)
         elif act == "conflicts":
             result = conflicts(board=board or None)
+        elif act == "consensus":
+            result = consensus(
+                key,
+                board=board or None,
+                min_support=int(min_support) if min_support else None,
+            )
         else:
             return tool_error(
                 f"unknown action {action!r}; use post, read, wait, boards, "
@@ -460,7 +542,13 @@ BLACKBOARD_SCHEMA = {
         "see what is currently taken. Because reads are last-writer-wins, a "
         "sibling overwriting your finding looks the same as agreement: use "
         "conflicts to list keys where different authors posted different "
-        "values, and reconcile those before relying on them."
+        "values, and reconcile those before relying on them. When a question "
+        "matters enough to answer redundantly, have each agent post its own "
+        "answer under one shared key and read it back with consensus: that "
+        "reports agreement only when a majority of authors agree, and returns "
+        "no agreement rather than the most popular answer when they don't, so "
+        "a wrong minority cannot carry the result. It costs an agent per "
+        "answer, so reserve it for decisions worth paying for."
     ),
     "parameters": {
         "type": "object",
@@ -477,8 +565,16 @@ BLACKBOARD_SCHEMA = {
                     "release",
                     "claims",
                     "conflicts",
+                    "consensus",
                 ],
                 "description": "Operation to perform.",
+            },
+            "min_support": {
+                "type": "integer",
+                "description": (
+                    "For consensus: how many agreeing authors are required. "
+                    "Defaults to a strict majority of the authors who posted."
+                ),
             },
             "ttl_seconds": {
                 "type": "number",
@@ -537,6 +633,7 @@ registry.register(
         board=args.get("board", ""),
         timeout_seconds=args.get("timeout_seconds", 60.0),
         ttl_seconds=args.get("ttl_seconds", _DEFAULT_CLAIM_TTL),
+        min_support=args.get("min_support", 0),
     ),
     check_fn=lambda: True,
     emoji="📋",
