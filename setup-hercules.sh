@@ -558,37 +558,40 @@ echo ""
 
 echo -e "${GREEN}✓ Setup complete!${NC}"
 echo ""
-echo "Next steps:"
+echo "⚕ Hercules is ready. Like Mia: fully autonomous, zero dependencies."
 echo ""
+
 if is_termux; then
-    echo "  1. (Optional) Enable offline mode:"
-    echo "     echo 'HERCULES_MODE=offline' >> .env"
-    echo ""
-    echo "  2. Run the setup wizard:"
-    echo "     hercules setup"
-    echo ""
-    echo "  3. Start chatting:"
+    echo "Next steps:"
+    echo "  1. Start Hercules:"
     echo "     hercules"
     echo ""
 else
+    echo "Next steps:"
     echo "  1. Reload your shell:"
     echo "     source $SHELL_CONFIG"
     echo ""
-    echo "  2. (Optional) Enable offline mode:"
-    echo "     echo 'HERCULES_MODE=offline' >> .env"
-    echo ""
-    echo "  3. Run the setup wizard:"
-    echo "     hercules setup"
-    echo ""
-    echo "  4. Start chatting:"
+    echo "  2. Start Hercules:"
     echo "     hercules"
     echo ""
 fi
 
-echo "Offline & Autonomous Operation:"
-echo "  • Hercules works without any API keys"
-echo "  • Persistent memory at: ~/.hercules/memory/"
-echo "  • Skills and tools at: ~/.hercules/skills/"
+echo "What's Included (No Setup Needed):"
+echo "  • Fully autonomous offline-first operation"
+echo "  • Persistent memory at ~/.hercules/memory/"
+echo "  • Local voice/vision support (optional)"
+echo "  • Sandboxed terminal execution"
+echo "  • Web interface on localhost:5000"
+echo ""
+
+echo "What's NOT Included (By Design):"
+echo "  ✓ No API keys required"
+echo "  ✓ No external service dependencies"
+echo "  ✓ No messaging platform integration"
+echo "  ✓ No telemetry or analytics"
+echo "  ✓ No cloud sync or authentication"
+echo ""
+echo "  (All optional features available via local ~/.hercules/skills/)"
 echo ""
 
 echo "Verify Installation:"
@@ -597,15 +600,11 @@ echo "  hercules doctor        # Diagnose issues"
 if is_termux; then
     echo "  hercules gateway       # Run gateway in foreground"
 else
-    echo "  hercules gateway install # Install gateway service"
+    echo "  hercules gateway install # Install gateway service (if needed)"
 fi
 echo ""
 
-# Ask if they want to run setup wizard now
-read -p "Would you like to run the setup wizard now? [Y/n] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-    echo ""
-    # Run directly with venv Python (no activation needed)
-    "$SCRIPT_DIR/venv/bin/python" -m hercules_cli.main setup
-fi
+echo "That's it. You're ready."
+echo "Like Mia. No waiting for approvals. No calling home."
+echo "Fully yours from now on."
+echo ""
