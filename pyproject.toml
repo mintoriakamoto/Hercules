@@ -191,12 +191,11 @@ honcho = ["honcho-ai==2.0.1"]
 # can't break fresh installs.
 supermemory = ["supermemory==3.50.0"]
 mem0 = ["mem0ai==2.0.10"]
-# Image resize recovery for the vision tools. Pillow is now a CORE dependency
-# (see the main `dependencies` list) since the byte/pixel shrink paths are on
-# the default vision-embed path and the mid-session lazy install deadlocked the
-# CLI under prompt_toolkit (#40490). This extra is kept as a no-op back-compat
-# alias so existing `pip install hercules-agent[vision]` invocations still resolve.
-vision = []
+# Computer vision — image processing, detection, segmentation via OpenCV and ML pipelines.
+# Pillow is already a CORE dependency (see the main `dependencies` list).
+# This extra adds opencv-python for advanced vision features.
+# Lazy-installed when vision features are first used.
+vision = ["opencv-python==4.10.0.84"]
 # CVE-2026-48710 (BadHost): Starlette is pulled transitively by mcp's
 # sse-starlette / HTTP-SSE stack (and by fastapi in the `web` extra). Before
 # 1.0.1, a malformed Host header makes `request.url.path` desync from the path
@@ -277,11 +276,6 @@ ml = [
   "transformers==4.41.2",
   "torch==2.4.0",
 ]
-# Computer vision — image processing, detection, segmentation via OpenCV and ML pipelines.
-# Lazy-installed when vision features are first used. Pillow is already a core dep.
-vision = [
-  "opencv-python==4.10.0.84",
-]
 # Audio processing — text-to-speech (TTS), speech recognition, and audio handling.
 # Lazy-installed when audio features are first used.
 audio = [
@@ -291,9 +285,9 @@ audio = [
 # Data science and analytics — statistical analysis, dataframe manipulation, ML pipelines.
 # Lazy-installed when data science features are first used.
 data = [
-  "pandas==2.2.1",
-  "scipy==1.14.0",
-  "scikit-learn==1.5.0",
+  "pandas>=2.2.4",
+  "scipy>=1.15.0",
+  "scikit-learn>=1.5.0",
 ]
 # Web framework extras — API servers, async frameworks for custom integrations.
 # Lazy-installed when needed for building custom services.
