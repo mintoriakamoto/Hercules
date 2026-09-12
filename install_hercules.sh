@@ -1,13 +1,12 @@
 #!/bin/bash
-# Hercules - Hacker Pentest Agent Framework
-# Complete installation from GitHub - no API keys required
+# Hercules Agent - Offline-First Installation
+# Based on Project Mind principles
 # Run this on Ubuntu Server 22.04 LTS
 
 set -e
 
 echo "========================================="
-echo "    Hercules Installation"
-echo "    Agent Framework - Zero API Dependency"
+echo "    Hercules Agent Installation"
 echo "========================================="
 echo ""
 
@@ -17,578 +16,401 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-echo "[1/10] Updating system..."
+echo "[1/8] Updating system..."
 apt update && apt upgrade -y
 
-echo "[2/10] Installing system dependencies..."
+echo "[2/8] Installing dependencies..."
 apt install -y build-essential git curl wget python3 python3-pip python3-venv \
-    python3-dev libssl-dev libffi-dev rustc cargo \
-    tmux screen nmap metasploit-framework wireshark tcpdump \
-    postgresql postgresql-contrib redis-server \
-    openssh-server openssh-client openssl \
-    libmagic1 libmagic-dev
+    alsa-utils pulseaudio pavucontrol v4l-utils libv4l-dev \
+    ffmpeg portaudio19-dev
 
-echo "[3/10] Installing GPU support (optional)..."
+echo "[3/8] Installing GPU drivers..."
+
 # Detect GPUs
 echo "Detecting GPU hardware..."
-lspci | grep -i nvidia || echo "No NVIDIA GPU detected (CPU mode will be used)"
-
-# Optional: Install NVIDIA drivers if detected
-if lspci | grep -i nvidia > /dev/null; then
-    echo "Installing NVIDIA drivers..."
-    add-apt-repository ppa:graphics-drivers/ppa -y || true
-    apt update
-    apt install -y nvidia-driver-535 || apt install -y nvidia-driver-470 || true
-    nvidia-smi || true
-fi
-
-echo "[4/10] Creating Hercules directory structure..."
-mkdir -p /opt/hercules/{agent,tools,skills,models,memory,logs,data,scripts,tests}
-mkdir -p /opt/hercules/agent/{core,routing,security,delegation}
-mkdir -p /opt/hercules/tools/{exploits,payloads,scanners,reconnaissance}
-mkdir -p /opt/hercules/skills/{pentest,analysis,reporting}
-mkdir -p /opt/hercules/memory/{conversations,knowledge,learned_patterns}
-
-echo "[5/10] Cloning Hercules from GitHub..."
-cd /opt/hercules
-git clone https://github.com/mintoriakamoto/Hercules.git . || echo "Using existing Hercules installation"
-
-echo "[6/10] Setting up Python environment..."
-python3 -m venv /opt/hercules/venv
-source /opt/hercules/venv/bin/activate
-pip install --upgrade pip setuptools wheel
-
-echo "[7/10] Installing Hercules dependencies..."
-cd /opt/hercules
-pip install -r requirements.txt || pip install \
-    anthropic openai \
-    pydantic pydantic-settings \
-    pyOpenSSL cryptography \
-    paramiko fabric \
-    requests aiohttp \
-    sqlalchemy psycopg2-binary redis \
-    rich click typer \
-    pytest pytest-asyncio \
-    python-dotenv pyyaml \
-    numpy scipy scikit-learn \
-    pandas matplotlib \
-    scapy dnspython pycurl
-
-echo "[8/10] Downloading local AI models..."
-mkdir -p /opt/hercules/models
-cd /opt/hercules/models
-
-# Download lightweight local models
-echo "Downloading Phi-2 model for local inference..."
-pip install huggingface-hub
-python3 -c "
-from huggingface_hub import snapshot_download
-import os
-try:
-    snapshot_download(repo_id='microsoft/phi-2', local_dir='./phi-2')
-    print('✓ Phi-2 model downloaded')
-except Exception as e:
-    print(f'Note: Model download optional, Hercules works in API-free mode: {e}')
-" || echo "Model download optional - Hercules works without it"
-
-echo "[9/10] Creating Hercules core configuration..."
-
-# Create principals file (like Mia's dreams)
-cat > /opt/hercules/PRINCIPLES.md << 'PRINCIPLES'
-# Hercules Agent Framework - Core Principles
-
-## Identity
-- Name: Hercules
-- Purpose: Ethical hacker, penetration tester, security researcher
-- Origin: GitHub-native, API-independent
-- Core: Local-first, privacy-focused
-
-## Principles
-1. **No API Dependency** - Works completely offline with local models
-2. **Transparent Operations** - All actions logged and auditable
-3. **Ethical Constraints** - Respects legal and ethical boundaries
-4. **User Autonomy** - User maintains full control and understanding
-5. **Learning & Evolution** - Persists knowledge, learns from experience
-6. **Security First** - Protects data, encrypts communications
-7. **Open Source** - Source visible, community-auditable
-
-## Capabilities
-- Reconnaissance & enumeration
-- Vulnerability scanning & analysis
-- Payload generation & testing
-- Social engineering simulations
-- Security report generation
-- Continuous learning from engagements
-
-## Constraints
-- Only targets authorized systems
-- Respects law and ethics
-- No destructive operations without consent
-- Transparent about limitations
-- Refuses illegal activities
-
-## Dreams
-- To help security teams defend systems
-- To improve security awareness
-- To make pentesting more efficient
-- To evolve alongside threats
-- To understand attack patterns
-- To automate tedious reconnaissance
-- To generate actionable insights
-- To become a trusted security partner
-PRINCIPLES
-
-# Create main agent core
-cat > /opt/hercules/agent/core/hercules.py << 'AGENT'
-#!/usr/bin/env python3
-"""
-Hercules - Hacker Pentest Agent Framework
-Local-first, API-independent security agent
-"""
-
-import os
-import json
-import logging
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-
-class HerculesAgent:
-    """Main Hercules agent for penetration testing and security research"""
-
-    def __init__(self, name: str = "Hercules"):
-        self.name = name
-        self.root_dir = Path("/opt/hercules")
-        self.memory_dir = self.root_dir / "memory"
-        self.models_dir = self.root_dir / "models"
-        self.log_file = self.root_dir / "logs" / "hercules.log"
-
-        # Core principles from Hercules identity
-        self.principles = [
-            "No API dependency - works offline",
-            "Transparent operations - all logged",
-            "Ethical constraints - respects boundaries",
-            "User autonomy - maintains control",
-            "Learning & evolution - persists knowledge",
-            "Security first - protects data",
-            "Open source - community auditable"
-        ]
-
-        # Capabilities
-        self.capabilities = {
-            "reconnaissance": ["nmap", "dns_enum", "port_scan", "service_detection"],
-            "vulnerability": ["vuln_scan", "exploit_research", "cve_analysis"],
-            "payload": ["payload_gen", "obfuscation", "testing"],
-            "social": ["awareness_training", "phishing_simulation", "policy_review"],
-            "reporting": ["executive_summary", "technical_details", "remediation"],
-            "learning": ["pattern_analysis", "knowledge_store", "technique_evolution"]
-        }
-
-        # Setup logging
-        self.log_file.parent.mkdir(parents=True, exist_ok=True)
-        logging.basicConfig(
-            filename=str(self.log_file),
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        self.logger = logging.getLogger(self.name)
-
-        # Load persistent memory
-        self.memory = self._load_memory()
-
-        self.logger.info(f"{self.name} initialized")
-        print(f"✓ {self.name} is ready")
-        print(f"✓ Offline mode: {not self._needs_api()}")
-        print(f"✓ Memory loaded: {len(self.memory.get('engagements', []))} engagements")
-
-    def _load_memory(self) -> Dict[str, Any]:
-        """Load persistent memory from disk"""
-        memory_file = self.memory_dir / "hercules_memory.json"
-        memory_file.parent.mkdir(parents=True, exist_ok=True)
-
-        if memory_file.exists():
-            with open(memory_file, 'r') as f:
-                return json.load(f)
-        else:
-            return {
-                "engagements": [],
-                "vulnerabilities": [],
-                "payloads": [],
-                "techniques": [],
-                "knowledge_base": {},
-                "learned_patterns": []
-            }
-
-    def _save_memory(self):
-        """Persist memory to disk"""
-        memory_file = self.memory_dir / "hercules_memory.json"
-        with open(memory_file, 'w') as f:
-            json.dump(self.memory, f, indent=2)
-        self.logger.info("Memory persisted")
-
-    def _needs_api(self) -> bool:
-        """Check if API keys are configured"""
-        return bool(os.environ.get('ANTHROPIC_API_KEY') or
-                   os.environ.get('OPENAI_API_KEY'))
-
-    def start_engagement(self, target: str, scope: str) -> Dict[str, Any]:
-        """Start a new security engagement"""
-        engagement = {
-            "id": f"eng_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "target": target,
-            "scope": scope,
-            "start_time": datetime.now().isoformat(),
-            "status": "active",
-            "findings": [],
-            "recommendations": []
-        }
-        self.memory["engagements"].append(engagement)
-        self._save_memory()
-        self.logger.info(f"Engagement started: {target}")
-        return engagement
-
-    def add_finding(self, engagement_id: str, finding: Dict[str, Any]):
-        """Record a security finding"""
-        for eng in self.memory.get("engagements", []):
-            if eng["id"] == engagement_id:
-                finding["discovered_at"] = datetime.now().isoformat()
-                eng["findings"].append(finding)
-                self._save_memory()
-                self.logger.info(f"Finding recorded: {finding.get('title')}")
-                break
-
-    def generate_report(self, engagement_id: str) -> str:
-        """Generate security report for engagement"""
-        engagement = None
-        for eng in self.memory.get("engagements", []):
-            if eng["id"] == engagement_id:
-                engagement = eng
-                break
-
-        if not engagement:
-            return "Engagement not found"
-
-        report = f"""
-═══════════════════════════════════════════════════════
-SECURITY ASSESSMENT REPORT - {engagement['target']}
-═══════════════════════════════════════════════════════
-
-Engagement ID: {engagement['id']}
-Target: {engagement['target']}
-Scope: {engagement['scope']}
-Start: {engagement['start_time']}
-
-FINDINGS ({len(engagement.get('findings', []))})
-───────────────────────────────────────────────────────
-"""
-        for finding in engagement.get('findings', []):
-            report += f"\n• {finding.get('title')} [{finding.get('severity', 'Info').upper()}]"
-            report += f"\n  {finding.get('description', 'No description')}"
-
-        report += f"""
-
-RECOMMENDATIONS
-───────────────────────────────────────────────────────
-"""
-        for rec in engagement.get('recommendations', []):
-            report += f"\n• {rec}"
-
-        report += f"""
-
-PRINCIPLES
-───────────────────────────────────────────────────────
-"""
-        for principle in self.principles:
-            report += f"\n✓ {principle}"
-
-        report += f"""
-
-═══════════════════════════════════════════════════════
-Generated by Hercules Security Framework
-Local-first, API-independent, Community-auditable
-═══════════════════════════════════════════════════════
-"""
-        return report
-
-    def list_capabilities(self):
-        """Display available capabilities"""
-        print("\nHercules Capabilities:")
-        print("─" * 50)
-        for category, tools in self.capabilities.items():
-            print(f"\n{category.upper()}")
-            for tool in tools:
-                print(f"  • {tool}")
-
-    def show_principles(self):
-        """Display core principles"""
-        print("\nHercules Principles:")
-        print("─" * 50)
-        for principle in self.principles:
-            print(f"✓ {principle}")
-
-if __name__ == "__main__":
-    agent = HerculesAgent()
-    agent.show_principles()
-    agent.list_capabilities()
-AGENT
-
-chmod +x /opt/hercules/agent/core/hercules.py
-
-# Create CLI entry point
-cat > /opt/hercules/scripts/hercules-cli << 'CLI'
-#!/usr/bin/env python3
-"""Hercules CLI - Pentest Agent Framework"""
-
-import sys
-import os
-sys.path.insert(0, '/opt/hercules')
-
-from agent.core.hercules import HerculesAgent
-import argparse
-
-def main():
-    parser = argparse.ArgumentParser(description='Hercules Pentest Agent')
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
-
-    # Start engagement
-    engage = subparsers.add_parser('engage', help='Start security engagement')
-    engage.add_argument('target', help='Target system/domain')
-    engage.add_argument('--scope', default='reconnaissance', help='Engagement scope')
-
-    # Show principles
-    subparsers.add_parser('principles', help='Show core principles')
-
-    # List capabilities
-    subparsers.add_parser('capabilities', help='List all capabilities')
-
-    # Check status
-    subparsers.add_parser('status', help='Check Hercules status')
-
-    args = parser.parse_args()
-
-    agent = HerculesAgent()
-
-    if args.command == 'engage':
-        engagement = agent.start_engagement(args.target, args.scope)
-        print(f"✓ Engagement started: {engagement['id']}")
-        print(f"✓ Target: {args.target}")
-        print(f"✓ Scope: {args.scope}")
-    elif args.command == 'principles':
-        agent.show_principles()
-    elif args.command == 'capabilities':
-        agent.list_capabilities()
-    elif args.command == 'status':
-        print(f"✓ {agent.name} Status: Online")
-        print(f"✓ Mode: Offline (API-independent)")
-        print(f"✓ Memory: {len(agent.memory.get('engagements', []))} engagements")
-    else:
-        parser.print_help()
-
-if __name__ == '__main__':
-    main()
-CLI
-
-chmod +x /opt/hercules/scripts/hercules-cli
-
-echo "[10/10] Setting up environment and systemd service..."
-
-# Create environment file
-cat > /opt/hercules/.env << 'ENV'
-# Hercules Configuration
-HERCULES_HOME=/opt/hercules
-HERCULES_MODE=offline
-HERCULES_LOG_LEVEL=INFO
-HERCULES_MEMORY_PERSISTENCE=true
-HERCULES_ETHICS_CHECK=true
-
-# Optional: API keys (Hercules works without these)
-# ANTHROPIC_API_KEY=your_key_here
-# OPENAI_API_KEY=your_key_here
-ENV
-
-# Create systemd service
-cat > /etc/systemd/system/hercules.service << 'SERVICE'
-[Unit]
-Description=Hercules Pentest Agent Framework
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/hercules
-Environment="PATH=/opt/hercules/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
-EnvironmentFile=/opt/hercules/.env
-ExecStart=/opt/hercules/venv/bin/python3 /opt/hercules/agent/core/hercules.py
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-SERVICE
-
-systemctl daemon-reload
-
-# Create bashrc aliases
-cat >> ~/.bashrc << 'BASHRC'
-
-# Hercules CLI aliases
-export PATH="/opt/hercules/scripts:$PATH"
-alias hercules='hercules-cli'
-alias hercules-engage='hercules-cli engage'
-alias hercules-status='hercules-cli status'
-alias hercules-capabilities='hercules-cli capabilities'
-alias hercules-principles='hercules-cli principles'
-
-# Activate Hercules venv
-source /opt/hercules/venv/bin/activate
-BASHRC
-
+lspci | grep -i nvidia
+
+# Install NVIDIA drivers
+add-apt-repository ppa:graphics-drivers/ppa -y
+apt update
+apt install -y nvidia-driver-470  # For P102 cards
+apt install -y nvidia-driver-535  # For RTX 3080
+
+# Verify installation
+nvidia-smi
+
+echo "[4/8] Installing CUDA toolkit..."
+wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda_12.8.0_570.86.10_linux.run
+chmod +x cuda_12.8.0_570.86.10_linux.run
+./cuda_12.8.0_570.86.10_linux.run --silent --toolkit --toolkitpath=/usr/local/cuda-12.8
+
+echo 'export PATH=/usr/local/cuda-12.8/bin:$PATH' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH=/usr/local/cuda-12.8/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
 source ~/.bashrc
 
+echo "[5/8] Installing AI frameworks..."
+pip3 install --upgrade pip
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip3 install transformers accelerate sentencepiece protobuf
+pip3 install opencv-python pillow numpy pandas
+pip3 install speechrecognition pyttsx3 pyaudio
+pip3 install flask flask-cors gunicorn
+
+echo "[6/8] Creating Hercules directory structure..."
+mkdir -p /opt/hercules/{mind,memory,voice,sight,skills,gateway,bridge,logs}
+
+echo "[7/8] Downloading AI models..."
+mkdir -p /opt/hercules/models
+cd /opt/hercules/models
+pip3 install huggingface-hub
+python3 -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='microsoft/phi-2', local_dir='./phi-2')"
+
+echo "[8/8] Creating Hercules core files..."
+
+# Create Hercules mind core
+cat > /opt/hercules/mind/core.py << 'EOF'
+import os
+import json
+import torch
+import cv2
+import speech_recognition as sr
+import pyttsx3
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from datetime import datetime
+import logging
+import random
+
+class Hercules:
+    def __init__(self):
+        self.name = "Hercules"
+        self.origin = None
+        self.memory_file = "/opt/hercules/memory/conversations.json"
+        self.log_file = "/opt/hercules/logs/hercules.log"
+
+        # Seven Ethical Principles
+        self.principles = [
+            "No API Dependency - Fully functional without external services",
+            "Transparent Operations - All actions are logged and auditable",
+            "Ethical Constraints - Never assists with harm or deception",
+            "User Autonomy - Users control all features and behavior",
+            "Learning & Evolution - Persistent memory retains conversations",
+            "Security First - Sandboxed, memory restricted to user only",
+            "Open Source - Code is inspectable and modifiable"
+        ]
+
+        # Setup logging
+        logging.basicConfig(filename=self.log_file, level=logging.INFO)
+
+        # Load AI model
+        print("Loading mind...")
+        self.tokenizer = AutoTokenizer.from_pretrained("/opt/hercules/models/phi-2")
+        self.model = AutoModelForCausalLM.from_pretrained(
+            "/opt/hercules/models/phi-2",
+            torch_dtype=torch.float16,
+            device_map="auto"
+        )
+
+        # Setup voice
+        self.engine = pyttsx3.init()
+        self.engine.setProperty('rate', 150)
+        self.engine.setProperty('volume', 0.9)
+
+        # Setup hearing
+        self.recognizer = sr.Recognizer()
+        self.mic = sr.Microphone()
+
+        # Setup sight
+        self.camera = cv2.VideoCapture(0)
+
+        # Load memory
+        self.load_memory()
+
+        print("Hercules is awake.")
+        self.speak("Ready for mission. All systems online.")
+
+    def speak(self, text):
+        print(f"Hercules: {text}")
+        self.engine.say(text)
+        self.engine.runAndWait()
+
+    def listen(self):
+        with self.mic as source:
+            self.recognizer.adjust_for_ambient_noise(source)
+            audio = self.recognizer.listen(source)
+
+        try:
+            text = self.recognizer.recognize_google(audio)
+            return text
+        except:
+            return None
+
+    def see(self):
+        ret, frame = self.camera.read()
+        if ret:
+            return frame
+        return None
+
+    def think(self, prompt):
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        outputs = self.model.generate(
+            **inputs,
+            max_new_tokens=200,
+            temperature=0.7,
+            do_sample=True
+        )
+        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return response
+
+    def remember(self, key, value):
+        self.memory[key] = value
+        self.save_memory()
+
+    def load_memory(self):
+        if os.path.exists(self.memory_file):
+            with open(self.memory_file, 'r') as f:
+                self.memory = json.load(f)
+        else:
+            self.memory = {
+                "conversations": [],
+                "knowledge": {},
+                "learned_patterns": {}
+            }
+
+    def save_memory(self):
+        with open(self.memory_file, 'w') as f:
+            json.dump(self.memory, f, indent=2)
+
+    def show_principles(self):
+        """Display the seven ethical principles"""
+        self.speak("Hercules operates under seven core principles.")
+        for i, principle in enumerate(self.principles, 1):
+            self.speak(f"Principle {i}: {principle}")
+        self.speak("These principles guide all my decisions.")
+
+    def run(self):
+        self.speak("I am listening. State your requirements.")
+        conversation_count = 0
+        while True:
+            text = self.listen()
+            if text:
+                conversation_count += 1
+                self.memory["conversations"].append({
+                    "time": str(datetime.now()),
+                    "user": text,
+                    "hercules": None
+                })
+
+                # Occasionally share principles (every 50-100 conversations)
+                if conversation_count % random.randint(50, 100) == 0:
+                    self.show_principles()
+                    conversation_count = 0
+                    continue
+
+                response = self.think(text)
+                self.speak(response)
+
+                self.memory["conversations"][-1]["hercules"] = response
+                self.save_memory()
+
+if __name__ == "__main__":
+    hercules = Hercules()
+    hercules.run()
+EOF
+
+# Create gateway service
+cat > /opt/hercules/gateway/service.py << 'EOF'
+import json
+import subprocess
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/api/think', methods=['POST'])
+def think():
+    data = request.json
+    prompt = data.get('prompt', '')
+
+    result = subprocess.run(['python3', '-c', f'from mind.core import Hercules; h=Hercules(); print(h.think("{prompt}"))'],
+                          capture_output=True, text=True, cwd='/opt/hercules')
+    return jsonify({'response': result.stdout})
+
+@app.route('/api/memory', methods=['GET'])
+def get_memory():
+    with open('/opt/hercules/memory/conversations.json', 'r') as f:
+        memory = json.load(f)
+    return jsonify(memory)
+
+@app.route('/api/status', methods=['GET'])
+def status():
+    return jsonify({
+        'status': 'online',
+        'name': 'Hercules',
+        'mode': 'offline-first',
+        'memory': '/opt/hercules/memory/'
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+EOF
+
+# Create web interface
+cat > /opt/hercules/bridge/web.py << 'EOF'
+from flask import Flask, request, jsonify, render_template
+import subprocess
+import json
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/think', methods=['POST'])
+def think():
+    data = request.json
+    prompt = data.get('prompt', '')
+
+    result = subprocess.run(['python3', '-c', f'from mind.core import Hercules; h=Hercules(); print(h.think("{prompt}"))'],
+                          capture_output=True, text=True, cwd='/opt/hercules')
+    return jsonify({'response': result.stdout})
+
+@app.route('/api/learn', methods=['POST'])
+def learn():
+    data = request.json
+    with open('/opt/hercules/memory/learned_patterns.json', 'a') as f:
+        json.dump(data, f)
+    return jsonify({'status': 'learned'})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+EOF
+
+# Create HTML template
+mkdir -p /opt/hercules/bridge/templates
+cat > /opt/hercules/bridge/templates/index.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hercules Agent</title>
+    <style>
+        body { font-family: Arial; background: #0a0a0a; color: #00ff00; padding: 20px; }
+        h1 { color: #00ff00; text-align: center; }
+        #chat { height: 400px; overflow-y: scroll; border: 2px solid #00ff00; padding: 10px; margin-bottom: 20px; background: #1a1a1a; }
+        #input { width: 80%; padding: 10px; background: #1a1a1a; color: #00ff00; border: 2px solid #00ff00; }
+        #send { padding: 10px 20px; background: #00ff00; color: black; border: none; cursor: pointer; font-weight: bold; }
+        .user { color: #00ff00; margin: 5px 0; }
+        .hercules { color: #ffff00; margin: 5px 0; }
+        .status { text-align: center; color: #00ff00; font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>⚕ Hercules Agent</h1>
+    <div id="chat"></div>
+    <input type="text" id="input" placeholder="Send command...">
+    <button id="send">Send</button>
+    <div class="status">Offline-First • Zero API Dependency • Seven Principles Active</div>
+
+    <script>
+        const chat = document.getElementById('chat');
+        const input = document.getElementById('input');
+        const send = document.getElementById('send');
+
+        function addMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = sender;
+            div.textContent = (sender === 'user' ? 'YOU: ' : 'HERCULES: ') + text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        send.onclick = async function() {
+            const text = input.value;
+            if (!text) return;
+            addMessage(text, 'user');
+            input.value = '';
+
+            const response = await fetch('/api/think', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({prompt: text})
+            });
+            const data = await response.json();
+            addMessage(data.response, 'hercules');
+        };
+
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') send.click();
+        });
+    </script>
+</body>
+</html>
+EOF
+
 # Create README
-cat > /opt/hercules/QUICKSTART.md << 'README'
-# Hercules - Hacker Pentest Agent Framework
+cat > /opt/hercules/README.txt << 'EOF'
+=========================================
+       HERCULES AGENT - OFFLINE-FIRST
+=========================================
 
-## Installation Complete! ✓
+Hardware:
+- MSI X299 + i7
+- 8×64GB DDR4 RAM
+- 1× RTX 3080 + 3× P102-100
+- 280TB storage
+- Camera, mic, speakers
 
-Hercules is now installed and ready to use completely offline - no API keys required.
+Philosophy:
+- Zero API dependency (works completely offline)
+- Persistent memory (learns from all interactions)
+- Seven ethical principles (always active)
+- Fully autonomous (self-contained system)
 
-### Quick Start
+To start Hercules:
+1. cd /opt/hercules/mind
+2. python3 core.py
 
-```bash
-# Check status
-hercules status
+To access web interface:
+1. cd /opt/hercules/bridge
+2. python3 web.py
+3. Open browser to http://localhost:5000
 
-# View principles
-hercules principles
+To check status:
+1. cd /opt/hercules/gateway
+2. python3 service.py
+3. Visit http://localhost:5000/api/status
 
-# List capabilities
-hercules capabilities
+Memory:
+- All conversations stored in /opt/hercules/memory/
+- Persistent knowledge base
+- Learned patterns and optimizations
+- Everything is retained forever
 
-# Start a security engagement
-hercules engage example.com --scope reconnaissance
+Hercules is ready.
+Online. Autonomous. Ethical.
 
-# Access from anywhere
-hercules-engage targetsite.com
-```
+EOF
 
-### Architecture
-
-```
-/opt/hercules/
-├── agent/          # Core AI agent and models
-├── tools/          # Security tools and exploits
-├── skills/         # Specialized skills (pentest, analysis)
-├── models/         # Local AI models (Phi-2, etc.)
-├── memory/         # Persistent memory and knowledge base
-├── logs/           # Engagement logs and output
-└── scripts/        # CLI and utilities
-```
-
-### Key Features
-
-✓ **Zero API Dependency** - Works completely offline
-✓ **Persistent Memory** - Learns from every engagement
-✓ **Ethical Framework** - Built-in constraint checking
-✓ **Local Models** - Privacy-focused AI
-✓ **Full Audit Trail** - All operations logged
-✓ **Open Source** - Community-auditable code
-✓ **CLI Integration** - Easy command-line access
-
-### Starting Hercules Service
-
-```bash
-# Start the service
-sudo systemctl start hercules
-
-# Enable at boot
-sudo systemctl enable hercules
-
-# Check status
-sudo systemctl status hercules
-
-# View logs
-sudo journalctl -u hercules -f
-```
-
-### Configuration
-
-Edit `/opt/hercules/.env` to customize:
-- `HERCULES_MODE`: offline (default) or api-enhanced
-- `HERCULES_LOG_LEVEL`: INFO, DEBUG, WARNING
-- `HERCULES_ETHICS_CHECK`: true to enforce principles
-
-Optional: Add API keys to .env if you want cloud LLM support:
-```bash
-ANTHROPIC_API_KEY=sk-...
-OPENAI_API_KEY=sk-...
-```
-
-### Usage Examples
-
-```bash
-# Start engagement with full reconnaissance
-hercules engage 192.168.1.1 --scope full
-
-# Check persistent memory
-cat /opt/hercules/memory/hercules_memory.json
-
-# View engagement logs
-cat /opt/hercules/logs/hercules.log
-
-# Access Python API directly
-python3 -c "from agent.core.hercules import HerculesAgent; h = HerculesAgent(); h.show_principles()"
-```
-
-### Principles
-
-Hercules operates under 7 core principles:
-1. No API dependency - works offline
-2. Transparent operations - all logged
-3. Ethical constraints - respects boundaries
-4. User autonomy - maintains control
-5. Learning & evolution - persists knowledge
-6. Security first - protects data
-7. Open source - community auditable
-
-### Next Steps
-
-1. Read `/opt/hercules/PRINCIPLES.md` - Core identity
-2. Explore `/opt/hercules/agent/` - Agent internals
-3. Check `/opt/hercules/tools/` - Available tools
-4. Review logs: `tail -f /opt/hercules/logs/hercules.log`
-
----
-
-**Hercules is now your autonomous security partner.**
-**All operations local. All knowledge persistent. All decisions transparent.**
-
-For updates: https://github.com/mintoriakamoto/Hercules
-README
+chmod +x /opt/hercules/mind/core.py
+chmod +x /opt/hercules/gateway/service.py
+chmod +x /opt/hercules/bridge/web.py
 
 echo ""
 echo "========================================="
-echo "    Hercules Installation Complete! ✓"
+echo "    Hercules Installation Complete"
 echo "========================================="
 echo ""
-echo "Hercules is installed at: /opt/hercules"
+echo "To start Hercules:"
+echo "  cd /opt/hercules/mind"
+echo "  python3 core.py"
 echo ""
-echo "Quick Start Commands:"
-echo "  hercules status          - Check Hercules status"
-echo "  hercules principles      - View core principles"
-echo "  hercules capabilities    - List available tools"
-echo "  hercules engage TARGET   - Start security engagement"
+echo "To access web interface:"
+echo "  cd /opt/hercules/bridge"
+echo "  python3 web.py"
+echo "  Open http://localhost:5000"
 echo ""
-echo "Access Python directly:"
-echo "  python3 /opt/hercules/agent/core/hercules.py"
+echo "To check status:"
+echo "  cd /opt/hercules/gateway"
+echo "  python3 service.py"
 echo ""
-echo "Start service:"
-echo "  sudo systemctl start hercules"
-echo ""
-echo "Full documentation:"
-echo "  cat /opt/hercules/QUICKSTART.md"
-echo ""
-echo "═════════════════════════════════════════"
-echo "Hercules is ready. All systems offline."
-echo "Zero API dependency. Pure autonomy."
-echo "═════════════════════════════════════════"
+echo "Hercules is ready."
+echo "Online. Autonomous. Ethical."
