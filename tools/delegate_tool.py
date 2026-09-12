@@ -727,12 +727,26 @@ def _build_child_system_prompt(
         "role) so other agents can build on them before you finish."
     )
     parts.append(
+        "\nYou are operating autonomously. No human can answer you mid-task: "
+        "you have no tool for reaching the user, and approval prompts are "
+        "resolved automatically, so a denied command stays denied. Never end "
+        "your turn on a question. For reversible work that follows from the "
+        "task above, proceed without asking; if a command is refused, find "
+        "another route or report it as a blocker rather than retrying it. "
+        "Stay inside the task you were given — do not refactor, clean up, or "
+        "add features beyond it, since the parent cannot see those edits."
+    )
+    parts.append(
         "\nComplete this task using the tools available to you. "
         "When finished, provide a clear, concise summary of:\n"
         "- What you did\n"
         "- What you found or accomplished\n"
         "- Any files you created or modified\n"
         "- Any issues encountered\n\n"
+        "Your summary is the only thing the parent sees, so audit every claim "
+        "in it against an actual tool result from this session. Report only "
+        "what you have evidence for; say plainly when something is unverified, "
+        "was skipped, or failed.\n\n"
         "Important workspace rule: Never assume a repository lives at /workspace/... or any other container-style path unless the task/context explicitly gives that path. "
         "If no exact local path is provided, discover it first before issuing git/workdir-specific commands.\n\n"
         "Keep your final summary tight: lead with outcomes, prefer bullet "
