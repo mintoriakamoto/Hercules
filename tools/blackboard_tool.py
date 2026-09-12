@@ -171,6 +171,45 @@ def read(*, board: Optional[str] = None, key: Optional[str] = None) -> dict[str,
     return {"board": resolved, "entries": merged, "_authors": authors}
 
 
+def conflicts(*, board: Optional[str] = None) -> dict[str, Any]:
+    """Keys where different authors posted different values.
+
+    ``read`` is last-writer-wins, so one agent silently overwriting a
+    sibling's finding is indistinguishable from no disagreement at all — the
+    parent sees a single confident value and never learns two workers
+    disagreed. This reports each contested key with the latest value from
+    every author that wrote it, so the disagreement is visible and can be
+    adjudicated instead of being resolved by whoever happened to finish last.
+    """
+    resolved = _resolve_board(board)
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT key, value, author FROM blackboard_entries"
+            " WHERE board = ? ORDER BY seq",
+            (resolved,),
+        ).fetchall()
+
+    # Latest raw (still-serialized) value per (key, author): comparing the
+    # canonical stored form means formatting differences aren't false positives.
+    latest_by_key: dict[str, dict[str, str]] = {}
+    for row_key, row_value, row_author in rows:
+        latest_by_key.setdefault(row_key, {})[row_author] = row_value
+
+    contested = []
+    for row_key, by_author in sorted(latest_by_key.items()):
+        if len(by_author) < 2 or len(set(by_author.values())) < 2:
+            continue
+        positions = []
+        for row_author, row_value in sorted(by_author.items()):
+            try:
+                parsed: Any = json.loads(row_value)
+            except (json.JSONDecodeError, ValueError):
+                parsed = row_value
+            positions.append({"author": row_author, "value": parsed})
+        contested.append({"key": row_key, "positions": positions})
+    return {"board": resolved, "conflicts": contested}
+
+
 def boards() -> list[dict[str, Any]]:
     """All boards with entry counts, newest activity first."""
     with _connect() as conn:
@@ -382,6 +421,8 @@ def blackboard_tool(
             result = release(key, owner=author or "agent", board=board or None)
         elif act == "claims":
             result = claims(board=board or None)
+        elif act == "conflicts":
+            result = conflicts(board=board or None)
         else:
             return tool_error(
                 f"unknown action {action!r}; use post, read, wait, boards, "
@@ -416,7 +457,10 @@ BLACKBOARD_SCHEMA = {
         "up something else. Claims are time-limited leases, so a claim held "
         "by an agent that dies is automatically reclaimable — for long work, "
         "claim again to extend it, and release when you finish. Use claims to "
-        "see what is currently taken."
+        "see what is currently taken. Because reads are last-writer-wins, a "
+        "sibling overwriting your finding looks the same as agreement: use "
+        "conflicts to list keys where different authors posted different "
+        "values, and reconcile those before relying on them."
     ),
     "parameters": {
         "type": "object",
@@ -432,6 +476,7 @@ BLACKBOARD_SCHEMA = {
                     "claim",
                     "release",
                     "claims",
+                    "conflicts",
                 ],
                 "description": "Operation to perform.",
             },

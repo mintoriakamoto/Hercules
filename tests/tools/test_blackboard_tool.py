@@ -282,6 +282,61 @@ class TestClaims:
         assert result["acquired"] is True, "boards must not share a lease namespace"
 
 
+class TestConflicts:
+    """Last-writer-wins hides disagreement; conflicts has to reveal it."""
+
+    def test_two_authors_disagreeing_on_a_key_is_a_conflict(self):
+        bb.post("root_cause", "race in the cache", author="worker:a")
+        bb.post("root_cause", "missing index", author="worker:b")
+        found = bb.conflicts()["conflicts"]
+        assert len(found) == 1
+        assert found[0]["key"] == "root_cause"
+        assert {p["author"] for p in found[0]["positions"]} == {"worker:a", "worker:b"}
+        assert {p["value"] for p in found[0]["positions"]} == {
+            "race in the cache",
+            "missing index",
+        }
+
+    def test_agreement_between_authors_is_not_a_conflict(self):
+        bb.post("root_cause", "missing index", author="worker:a")
+        bb.post("root_cause", "missing index", author="worker:b")
+        assert bb.conflicts()["conflicts"] == []
+
+    def test_one_author_revising_itself_is_not_a_conflict(self):
+        bb.post("status", "investigating", author="worker:a")
+        bb.post("status", "resolved", author="worker:a")
+        assert bb.conflicts()["conflicts"] == []
+
+    def test_only_each_author_latest_position_counts(self):
+        bb.post("verdict", "vulnerable", author="worker:a")
+        bb.post("verdict", "safe", author="worker:b")
+        # A changes its mind and agrees with B — the disagreement is over.
+        bb.post("verdict", "safe", author="worker:a")
+        assert bb.conflicts()["conflicts"] == []
+
+    def test_structurally_equal_json_is_not_a_conflict(self):
+        bb.post("cfg", json.dumps({"a": 1, "b": 2}), author="worker:a")
+        bb.post("cfg", json.dumps({"b": 2, "a": 1}), author="worker:b")
+        assert bb.conflicts()["conflicts"] == [], "key order is not disagreement"
+
+    def test_conflicting_json_values_are_reported_structurally(self):
+        bb.post("cfg", json.dumps({"port": 8080}), author="worker:a")
+        bb.post("cfg", json.dumps({"port": 9090}), author="worker:b")
+        positions = bb.conflicts()["conflicts"][0]["positions"]
+        assert {p["value"]["port"] for p in positions} == {8080, 9090}
+
+    def test_conflicts_are_scoped_per_board(self):
+        bb.post("k", "one", author="worker:a", board="alpha")
+        bb.post("k", "two", author="worker:b", board="beta")
+        assert bb.conflicts(board="alpha")["conflicts"] == []
+
+    def test_conflicts_through_the_tool_entry_point(self):
+        bb.post("k", "one", author="worker:a")
+        bb.post("k", "two", author="worker:b")
+        payload = json.loads(bb.blackboard_tool("conflicts"))
+        assert payload["conflicts"][0]["key"] == "k"
+
+
 class TestClaimDispatch:
     def test_claim_and_release_through_the_tool_entry_point(self):
         acquired = json.loads(
