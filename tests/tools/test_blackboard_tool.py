@@ -2,6 +2,7 @@
 
 import json
 import threading
+import time
 
 import pytest
 
@@ -203,3 +204,100 @@ class TestIntegration:
 
         prompt = _build_child_system_prompt("do the thing")
         assert "blackboard" in prompt
+
+
+class TestClaims:
+    """Advisory leases, so two siblings can't pick up the same unit of work."""
+
+    def test_first_claim_acquires(self):
+        result = bb.claim("task:refactor", owner="worker:a")
+        assert result["acquired"] is True
+        assert result["owner"] == "worker:a"
+
+    def test_second_claimant_is_refused_while_lease_is_live(self):
+        bb.claim("task:refactor", owner="worker:a", ttl_seconds=60)
+        result = bb.claim("task:refactor", owner="worker:b")
+        assert result["acquired"] is False
+        assert result["owner"] == "worker:a", "a live lease must not be stolen"
+
+    def test_holder_can_renew_its_own_lease(self):
+        first = bb.claim("task:x", owner="worker:a", ttl_seconds=1)
+        renewed = bb.claim("task:x", owner="worker:a", ttl_seconds=600)
+        assert renewed["acquired"] is True
+        assert renewed["expires_at"] > first["expires_at"]
+
+    def test_expired_lease_is_reclaimable(self):
+        bb.claim("task:x", owner="worker:a", ttl_seconds=1)
+        # A holder that dies must not strand the work forever.
+        time.sleep(1.05)
+        result = bb.claim("task:x", owner="worker:b")
+        assert result["acquired"] is True
+        assert result["owner"] == "worker:b"
+
+    def test_release_frees_the_key(self):
+        bb.claim("task:x", owner="worker:a", ttl_seconds=600)
+        assert bb.release("task:x", owner="worker:a")["released"] is True
+        assert bb.claim("task:x", owner="worker:b")["acquired"] is True
+
+    def test_release_by_non_holder_is_a_noop(self):
+        bb.claim("task:x", owner="worker:a", ttl_seconds=600)
+        assert bb.release("task:x", owner="worker:b")["released"] is False
+        assert bb.claim("task:x", owner="worker:c")["acquired"] is False
+
+    def test_exactly_one_of_many_racing_claimants_wins(self):
+        """The whole point of a lease: concurrent claims resolve to one winner."""
+        winners = []
+        lock = threading.Lock()
+        start = threading.Barrier(12)
+
+        def contend(n):
+            start.wait()
+            if bb.claim("task:contended", owner=f"worker:{n}", ttl_seconds=600)["acquired"]:
+                with lock:
+                    winners.append(n)
+
+        threads = [threading.Thread(target=contend, args=(i,)) for i in range(12)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+
+        assert len(winners) == 1, f"expected a single winner, got {winners}"
+        assert bb.claim("task:contended", owner="late")["owner"] == f"worker:{winners[0]}"
+
+    def test_claims_lists_live_leases_and_drops_expired(self):
+        bb.claim("live", owner="worker:a", ttl_seconds=600)
+        bb.claim("stale", owner="worker:b", ttl_seconds=1)
+        time.sleep(1.05)
+        listed = bb.claims()["claims"]
+        assert [c["key"] for c in listed] == ["live"]
+
+    def test_claim_requires_an_owner(self):
+        with pytest.raises(ValueError, match="owner is required"):
+            bb.claim("task:x", owner="  ")
+
+    def test_claims_are_scoped_per_board(self):
+        bb.claim("task:x", owner="worker:a", ttl_seconds=600, board="alpha")
+        result = bb.claim("task:x", owner="worker:b", board="beta")
+        assert result["acquired"] is True, "boards must not share a lease namespace"
+
+
+class TestClaimDispatch:
+    def test_claim_and_release_through_the_tool_entry_point(self):
+        acquired = json.loads(
+            bb.blackboard_tool("claim", key="task:x", author="worker:a")
+        )
+        assert acquired["acquired"] is True
+
+        refused = json.loads(
+            bb.blackboard_tool("claim", key="task:x", author="worker:b")
+        )
+        assert refused["acquired"] is False
+
+        released = json.loads(
+            bb.blackboard_tool("release", key="task:x", author="worker:a")
+        )
+        assert released["released"] is True
+
+    def test_unknown_action_names_the_claim_verbs(self):
+        assert "claim" in bb.blackboard_tool("bogus")

@@ -85,6 +85,15 @@ def _connect() -> sqlite3.Connection:
                         "CREATE INDEX IF NOT EXISTS idx_blackboard_board"
                         " ON blackboard_entries (board, seq)"
                     )
+                    init.execute(
+                        "CREATE TABLE IF NOT EXISTS blackboard_claims ("
+                        " board TEXT NOT NULL,"
+                        " key TEXT NOT NULL,"
+                        " owner TEXT NOT NULL,"
+                        " expires_at REAL NOT NULL,"
+                        " created_at REAL NOT NULL,"
+                        " PRIMARY KEY (board, key))"
+                    )
                     init.commit()
                 finally:
                     init.close()
@@ -224,6 +233,107 @@ def clear(*, board: Optional[str] = None, key: Optional[str] = None) -> dict[str
         return {"board": resolved, "deleted": cur.rowcount}
 
 
+# Claims are advisory leases, not locks. A holder that dies lets its lease
+# lapse and the next caller takes the key over; a permanent lock would strand
+# the work forever, which is the wrong failure mode for a swarm where a child
+# can vanish mid-task.
+_DEFAULT_CLAIM_TTL = 300.0
+_MAX_CLAIM_TTL = 3600.0
+
+
+def claim(
+    key: str,
+    *,
+    owner: str,
+    ttl_seconds: float = _DEFAULT_CLAIM_TTL,
+    board: Optional[str] = None,
+) -> dict[str, Any]:
+    """Take an advisory lease on ``key``, or report who already holds it.
+
+    Concurrent callers race inside SQLite and exactly one wins: the upsert
+    only overwrites a row whose lease has expired, so a live holder is never
+    displaced. The holder renewing its own lease always succeeds.
+    """
+    key = (key or "").strip()
+    if not key:
+        raise ValueError("key is required")
+    owner = (owner or "").strip()
+    if not owner:
+        raise ValueError("owner is required — a lease must be attributable")
+    ttl = min(max(float(ttl_seconds), 1.0), _MAX_CLAIM_TTL)
+    resolved = _resolve_board(board)
+    now = time.time()
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO blackboard_claims (board, key, owner, expires_at, created_at)"
+            " VALUES (?, ?, ?, ?, ?)"
+            " ON CONFLICT(board, key) DO UPDATE SET"
+            "  owner = excluded.owner,"
+            "  expires_at = excluded.expires_at,"
+            "  created_at = excluded.created_at"
+            " WHERE blackboard_claims.expires_at <= excluded.created_at"
+            "  OR blackboard_claims.owner = excluded.owner",
+            (resolved, key, owner, now + ttl, now),
+        )
+        held_by, expires_at = conn.execute(
+            "SELECT owner, expires_at FROM blackboard_claims"
+            " WHERE board = ? AND key = ?",
+            (resolved, key),
+        ).fetchone()
+    return {
+        "board": resolved,
+        "key": key,
+        "acquired": held_by == owner,
+        "owner": held_by,
+        "expires_at": expires_at,
+        "expires_in_seconds": round(max(0.0, expires_at - time.time()), 3),
+    }
+
+
+def release(key: str, *, owner: str, board: Optional[str] = None) -> dict[str, Any]:
+    """Drop a lease you hold. Releasing a lease you don't hold is a no-op."""
+    key = (key or "").strip()
+    if not key:
+        raise ValueError("key is required")
+    owner = (owner or "").strip()
+    if not owner:
+        raise ValueError("owner is required")
+    resolved = _resolve_board(board)
+    with _connect() as conn:
+        cur = conn.execute(
+            "DELETE FROM blackboard_claims WHERE board = ? AND key = ? AND owner = ?",
+            (resolved, key, owner),
+        )
+    return {"board": resolved, "key": key, "released": cur.rowcount > 0}
+
+
+def claims(*, board: Optional[str] = None) -> dict[str, Any]:
+    """Live leases on a board, soonest to expire first. Expired rows are dropped."""
+    resolved = _resolve_board(board)
+    now = time.time()
+    with _connect() as conn:
+        conn.execute(
+            "DELETE FROM blackboard_claims WHERE board = ? AND expires_at <= ?",
+            (resolved, now),
+        )
+        rows = conn.execute(
+            "SELECT key, owner, expires_at FROM blackboard_claims"
+            " WHERE board = ? ORDER BY expires_at",
+            (resolved,),
+        ).fetchall()
+    return {
+        "board": resolved,
+        "claims": [
+            {
+                "key": k,
+                "owner": o,
+                "expires_in_seconds": round(max(0.0, exp - now), 3),
+            }
+            for k, o, exp in rows
+        ],
+    }
+
+
 def blackboard_tool(
     action: str,
     key: str = "",
@@ -231,6 +341,7 @@ def blackboard_tool(
     author: str = "",
     board: str = "",
     timeout_seconds: float = 60.0,
+    ttl_seconds: float = _DEFAULT_CLAIM_TTL,
 ) -> str:
     """Tool entry point — dispatch on action, return JSON."""
     act = (action or "").strip().lower()
@@ -260,9 +371,21 @@ def blackboard_tool(
             result = boards()
         elif act == "clear":
             result = clear(board=board or None, key=key or None)
+        elif act == "claim":
+            result = claim(
+                key,
+                owner=author or "agent",
+                ttl_seconds=ttl_seconds,
+                board=board or None,
+            )
+        elif act == "release":
+            result = release(key, owner=author or "agent", board=board or None)
+        elif act == "claims":
+            result = claims(board=board or None)
         else:
             return tool_error(
-                f"unknown action {action!r}; use post, read, wait, boards, or clear"
+                f"unknown action {action!r}; use post, read, wait, boards, "
+                "clear, claim, release, or claims"
             )
     except (ValueError, sqlite3.Error) as exc:
         return tool_error(str(exc))
@@ -286,15 +409,39 @@ BLACKBOARD_SCHEMA = {
         "key appears — use this instead of repeatedly reading when you depend "
         "on another agent's entry; errors on timeout), boards (list boards), "
         "clear (a board, or one key). The board defaults to the shared "
-        "session board; pass board explicitly only to segregate workstreams."
+        "session board; pass board explicitly only to segregate workstreams. "
+        "To avoid duplicating a sibling's work, call claim with the unit of "
+        "work as the key before starting it and only proceed when the reply "
+        "says acquired=true; otherwise another agent already has it, so pick "
+        "up something else. Claims are time-limited leases, so a claim held "
+        "by an agent that dies is automatically reclaimable — for long work, "
+        "claim again to extend it, and release when you finish. Use claims to "
+        "see what is currently taken."
     ),
     "parameters": {
         "type": "object",
         "properties": {
             "action": {
                 "type": "string",
-                "enum": ["post", "read", "wait", "boards", "clear"],
+                "enum": [
+                    "post",
+                    "read",
+                    "wait",
+                    "boards",
+                    "clear",
+                    "claim",
+                    "release",
+                    "claims",
+                ],
                 "description": "Operation to perform.",
+            },
+            "ttl_seconds": {
+                "type": "number",
+                "description": (
+                    "For claim: how long the lease lasts before another agent "
+                    "may take the key over (default 300, max 3600). Set it to "
+                    "roughly how long the work should take."
+                ),
             },
             "key": {
                 "type": "string",
@@ -318,7 +465,9 @@ BLACKBOARD_SCHEMA = {
                 "type": "string",
                 "description": (
                     "Who is posting (e.g. 'parent', 'worker:research'). Helps "
-                    "readers attribute entries; defaults to 'agent'."
+                    "readers attribute entries; defaults to 'agent'. For claim "
+                    "and release this identifies the lease holder, so use a "
+                    "stable id that is distinct from your siblings'."
                 ),
             },
             "board": {
@@ -342,6 +491,7 @@ registry.register(
         author=args.get("author", ""),
         board=args.get("board", ""),
         timeout_seconds=args.get("timeout_seconds", 60.0),
+        ttl_seconds=args.get("ttl_seconds", _DEFAULT_CLAIM_TTL),
     ),
     check_fn=lambda: True,
     emoji="📋",
