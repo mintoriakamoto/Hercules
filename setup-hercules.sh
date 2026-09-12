@@ -576,37 +576,42 @@ else
     echo ""
 fi
 
-echo "CLI & Tools Included:"
-echo "  ✓ Full hercules CLI (interactive & command-line)"
-echo "  ✓ All read/write/execute operations"
-echo "  ✓ Terminal execution (local/docker/ssh)"
-echo "  ✓ Web search APIs (Exa, Parallel, Firecrawl)"
-echo "  ✓ Image generation (FAL.ai)"
-echo "  ✓ Browser automation (Browserbase)"
-echo "  ✓ All LLM providers (optional)"
-echo "  ✓ Local voice/vision (optional)"
-echo "  ✓ Persistent memory (local)"
-echo "  ✓ Skills system (modular)"
+echo "Next steps:"
 echo ""
-
-echo "What's NOT Included (By Design):"
-echo "  ✗ Messaging integrations (Slack, Telegram, Discord, Teams, Email)"
-echo "  ✗ Web service endpoints or background gateway"
-echo "  ✗ Telemetry, analytics, or cloud sync"
-echo "  ✗ External authentication or vendor dependencies"
-echo ""
-
-echo "Why? Like Mia: fully autonomous, no calling home."
-echo "Pure CLI, pure tools, pure local."
-echo ""
-
-echo "Verify Installation:"
+if is_termux; then
+    echo "  1. Run the setup wizard to configure (optional):"
+    echo "     hercules setup"
+    echo ""
+    echo "  2. Start chatting:"
+    echo "     hercules"
+    echo ""
+else
+    echo "  1. Reload your shell:"
+    echo "     source $SHELL_CONFIG"
+    echo ""
+    echo "  2. Run the setup wizard to configure (optional):"
+    echo "     hercules setup"
+    echo ""
+    echo "  3. Start chatting:"
+    echo "     hercules"
+    echo ""
+fi
+echo "Other commands:"
 echo "  hercules status        # Check configuration"
+if is_termux; then
+    echo "  hercules gateway       # Run gateway in foreground"
+else
+    echo "  hercules gateway install # Install gateway service (messaging + cron)"
+fi
+echo "  hercules cron list     # View scheduled jobs"
 echo "  hercules doctor        # Diagnose issues"
-echo "  hercules --help        # See all CLI commands"
 echo ""
 
-echo "That's it. You're ready."
-echo "Like Mia. No waiting. No approvals. No dependencies."
-echo "Fully yours from now on."
-echo ""
+# Ask if they want to run setup wizard now
+read -p "Would you like to run the setup wizard now? [Y/n] " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+    echo ""
+    # Run directly with venv Python (no activation needed)
+    "$SCRIPT_DIR/venv/bin/python" -m hercules_cli.main setup
+fi
