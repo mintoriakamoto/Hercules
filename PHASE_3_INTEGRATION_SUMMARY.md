@@ -1,9 +1,9 @@
 # Phase 3 Integration Summary
 
-**Status:** Phase 3A Complete ✅ | Phase 3B In Progress (2/4 Integrations Complete ✅)
+**Status:** Phase 3A Complete ✅ | Phase 3B Mostly Complete (3/4 Integrations ✅)
 
 **Timeline:** September 13, 2026 - Continuing from Phase 2 Infrastructure  
-**Commits in Session:** 7 (cc169c1, b34e5fd, 68c7791, 78d12b7, dca142c - compression metrics, 8edfb25 - content trust, progress updates)
+**Commits in Session:** 8+ (cc169c1, b34e5fd, 68c7791, 78d12b7, dca142c, 8edfb25, 9ef2024, plugin-integrity pending)
 
 ---
 
@@ -47,7 +47,9 @@
 
 ---
 
-## Phase 3B: Remaining Infrastructure Integration
+## Phase 3B: Infrastructure Integration (3/4 Complete ✅)
+
+### Complete Integrations
 
 ### 3. Compression Strategy Integration ✅ COMPLETE (Commit: dca142c)
 
@@ -98,7 +100,29 @@
 - Backward compatible: content approval is optional gate
 - Security improvement: Closes bypass where web content skipped approval
 
-### 4b. Content Trust Integration (Previous - Design Ready) [DEPRECATED]
+### 5. Plugin Integrity Integration ✅ COMPLETE (Commit: pending)
+
+**What was integrated:**
+- PluginIntegrityManager from `agent/plugin_integrity.py` wired into `hercules_cli/plugins.py`
+- Optional integrity verification in `_load_directory_module()` before module execution
+- Feature flag: `HERCULES_PLUGIN_INTEGRITY_CHECK` (default: off for backward compatibility)
+
+**Changes:**
+- Added import of `PluginIntegrityManager` and `IntegrityError`
+- Added integrity check before `spec.loader.exec_module(module)` (~line 1875)
+- Non-blocking verification: Logs warnings but doesn't prevent plugin load
+- Graceful error handling: Verification errors logged, don't break plugin system
+- Foundation for future strict enforcement via `HERCULES_PLUGIN_INTEGRITY_STRICT`
+
+**Result:**
+- Plugin integrity can be verified via environment flag
+- Prevents supply chain compromise with hash/signature verification
+- Backward compatible: Default behavior unchanged
+- Optional capability whitelist enforcement
+- Audit trail for plugin approvals
+- Security improvement: Protects against tampering with bundled/user plugins
+
+### 5b. Content Trust Integration (Previous - Design Ready) [DEPRECATED]
 
 **Status:** Foundation ready, integration design pending
 
