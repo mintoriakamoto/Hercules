@@ -30,6 +30,7 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlparse, parse_qs, urlunparse
 
+from agent.compression_strategy import Compressor, CompressionLevel
 from agent.context_compressor import ContextCompressor
 from agent.iteration_budget import IterationBudget
 from agent.memory_manager import StreamingContextScrubber
@@ -1953,6 +1954,22 @@ def init_agent(
             )
         except Exception as _ce_err:
             _ra().logger.debug("Context engine on_session_start: %s", _ce_err)
+
+    # Initialize unified compression metrics collector (Phase 3B Integration)
+    # This provides observable metrics on compression operations while
+    # maintaining full backward compatibility with existing context_compressor
+    _compression_strategy = os.getenv("HERCULES_COMPRESSION_STRATEGY", "balanced").lower()
+    if _compression_strategy not in ("none", "conservative", "balanced", "aggressive"):
+        _compression_strategy = "balanced"
+    try:
+        agent.compression_metrics = Compressor(
+            strategy=_compression_strategy,
+            enable_metrics=True,
+            fallback_to_truncate=True,
+        )
+    except Exception as _cm_err:
+        _ra().logger.debug("Failed to initialize compression metrics: %s", _cm_err)
+        agent.compression_metrics = None
 
     agent._subdirectory_hints = SubdirectoryHintTracker(
         working_dir=os.getenv("TERMINAL_CWD") or None,
