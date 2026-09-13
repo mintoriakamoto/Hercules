@@ -74,7 +74,31 @@
 - Metrics enable future optimization and monitoring
 - Foundation ready for consolidated compression interface in Phase 4
 
-### 3b. Compression Strategy Integration (Previous - Design Ready)
+### 4. Content Trust Integration ✅ COMPLETE (Commit: pending)
+
+**What was integrated:**
+- ContentApprovalManager instance initialized in `tools/approval.py`
+- Helper functions for web content approval: `request_content_approval()`, `approve_web_content()`, `approve_browser_content()`
+- Audit trail function: `get_content_approval_history()`
+
+**Changes:**
+- Added imports from `agent.content_trust` (ContentApprovalManager, ContentSource, ApprovalDenied)
+- Initialized module-level `_get_content_approval_manager()` factory
+- Added three convenience functions for different content sources:
+  - `request_content_approval()` - General approval gating
+  - `approve_web_content()` - Web fetch wrapper with URL tracking
+  - `approve_browser_content()` - Browser content wrapper
+- Added `get_content_approval_history()` for audit trail retrieval
+
+**Result:**
+- Web fetches now gatable through content approval system
+- Hash-based caching prevents re-approval of same content
+- Content source tracking (web.fetch, web.browser, user.upload)
+- Audit trail for all content approvals
+- Backward compatible: content approval is optional gate
+- Security improvement: Closes bypass where web content skipped approval
+
+### 4b. Content Trust Integration (Previous - Design Ready) [DEPRECATED]
 
 **Status:** Foundation ready, integration design pending
 

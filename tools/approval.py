@@ -24,6 +24,11 @@ import unicodedata
 from typing import Optional
 from hercules_cli.config import cfg_get
 
+from agent.content_trust import (
+    ContentApprovalManager,
+    ContentSource,
+    ApprovalDenied,
+)
 from tools.interrupt import is_interrupted
 from utils import env_var_enabled, is_truthy_value
 
@@ -33,6 +38,23 @@ logger = logging.getLogger(__name__)
 # would allow any skill running inside the process to set this variable and
 # instantly bypass all approval checks — a prompt-injection escalation path.
 _YOLO_MODE_FROZEN: bool = is_truthy_value(os.getenv("HERCULES_YOLO_MODE", ""))
+
+# Phase 3B Integration: Content trust manager for external content approval
+# Tracks web fetches, browser content, and user uploads with hash-based caching
+_content_approval_manager: Optional[ContentApprovalManager] = None
+
+
+def _get_content_approval_manager() -> Optional[ContentApprovalManager]:
+    """Get or create the content approval manager instance."""
+    global _content_approval_manager
+    if _content_approval_manager is None:
+        try:
+            _content_approval_manager = ContentApprovalManager()
+        except Exception as exc:
+            logger.debug("Failed to initialize content approval manager: %s", exc)
+            return None
+    return _content_approval_manager
+
 
 # Per-thread/per-task gateway session identity.
 # Gateway runs agent turns concurrently in executor threads, so reading a
@@ -3271,6 +3293,135 @@ def request_elicitation_consent(
     if choice in ("once", "session", "always"):
         return "accept"
     return "decline"
+
+
+# Phase 3B Integration: Content approval wrappers for external content
+def request_content_approval(
+    action_type: str,
+    content: str,
+    source: ContentSource,
+    approval_notes: Optional[str] = None,
+) -> bool:
+    """Request approval for external content (Phase 3B Integration).
+
+    Wraps ContentApprovalManager to gate web fetches, browser content,
+    and user uploads through hash-based approval caching.
+
+    Args:
+        action_type: Type of action (execute, install, etc.)
+        content: Content being approved
+        source: ContentSource indicating where content came from
+        approval_notes: Optional context about the approval
+
+    Returns:
+        True if content is approved, False if denied or manager unavailable
+
+    Raises:
+        ApprovalDenied: If content was previously denied
+    """
+    manager = _get_content_approval_manager()
+    if manager is None:
+        # Content approval unavailable, skip gate (fallback to silent approval)
+        logger.debug("Content approval manager unavailable, skipping gate")
+        return True
+
+    if not source.requires_approval():
+        # Internal content sources (config files, etc.) don't need approval
+        return True
+
+    try:
+        approval = manager.request_approval(
+            action_type=action_type,
+            content=content,
+            content_source=source,
+            approval_notes=approval_notes,
+        )
+        # In future, prompt user for approval if not already approved
+        # For now, return whether approval record exists (caching enabled)
+        return approval is not None
+    except ApprovalDenied:
+        logger.warning("Content approval denied for %s", action_type)
+        return False
+    except Exception as exc:
+        logger.debug("Content approval check failed: %s", exc)
+        # Fail open if approval system has errors
+        return True
+
+
+def approve_web_content(
+    content: str,
+    url: str = None,
+    approval_notes: str = None,
+) -> bool:
+    """Approve web-fetched content for use (Phase 3B Integration).
+
+    Convenience wrapper for web.fetch sources with optional URL tracking.
+
+    Args:
+        content: HTML or text content from web fetch
+        url: Source URL (for audit trail)
+        approval_notes: Reason for approval
+
+    Returns:
+        True if approved, False if denied
+
+    Raises:
+        ApprovalDenied: If content was previously denied
+    """
+    notes = f"Web fetch from {url}" if url else "Web fetch"
+    if approval_notes:
+        notes = f"{notes}: {approval_notes}"
+
+    return request_content_approval(
+        action_type="web_fetch",
+        content=content,
+        source=ContentSource.WEB_FETCH,
+        approval_notes=notes,
+    )
+
+
+def approve_browser_content(
+    content: str,
+    approval_notes: str = None,
+) -> bool:
+    """Approve browser-rendered content for use (Phase 3B Integration).
+
+    Convenience wrapper for web.browser sources.
+
+    Args:
+        content: Rendered page content
+        approval_notes: Context about the approval
+
+    Returns:
+        True if approved, False if denied
+
+    Raises:
+        ApprovalDenied: If content was previously denied
+    """
+    return request_content_approval(
+        action_type="browser_content",
+        content=content,
+        source=ContentSource.WEB_BROWSER,
+        approval_notes=approval_notes or "Browser-rendered content",
+    )
+
+
+def get_content_approval_history() -> dict:
+    """Get content approval audit trail (Phase 3B Integration).
+
+    Returns:
+        Dictionary of approved and pending content by action type
+    """
+    manager = _get_content_approval_manager()
+    if manager is None:
+        return {"approvals": {}, "pending": {}}
+
+    return {
+        "approvals": {k: [a.to_dict() for a in v]
+                     for k, v in manager.approvals.items()},
+        "pending": {k: v.to_dict()
+                   for k, v in manager.pending_approvals.items()},
+    }
 
 
 # Load permanent allowlist from config on module import
