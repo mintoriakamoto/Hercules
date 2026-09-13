@@ -371,10 +371,12 @@ mkdir -p "$INSTALL_DIR/models"
 # silently accepting a third model produces failures that look like agent bugs
 # rather than a model mismatch.
 #
-# CONFIRM THESE TWO REPO IDs before first use -- a wrong id fails at download
-# time with a 404 that reads like a network problem.
-SUPPORTED_MODEL_PRIMARY="${HERCULES_MODEL_PRIMARY:-<qwen-27b-repo-id>}"
-SUPPORTED_MODEL_COMPACT="${HERCULES_MODEL_COMPACT:-<qwen-a3b-repo-id>}"
+# The repo ids are not baked in: set them via the environment (or edit here)
+# once confirmed. Deliberately empty rather than guessed -- a wrong id fails at
+# download time with a 404 that reads like a network fault, which is a far
+# worse install experience than being told plainly that nothing is configured.
+SUPPORTED_MODEL_PRIMARY="${HERCULES_MODEL_PRIMARY:-}"
+SUPPORTED_MODEL_COMPACT="${HERCULES_MODEL_COMPACT:-}"
 
 # Detection-first: a machine that already holds one of these must never be
 # made to re-download tens of gigabytes. Scans the places local weights
@@ -426,14 +428,22 @@ if [ -n "$FOUND_MODELS" ]; then
     echo "  (inventory written to $INSTALL_DIR/models/DETECTED.txt)"
 else
     log_warn "No supported model found locally."
-    echo "  Hercules runs offline-first, but needs one of:"
-    echo "    primary : $SUPPORTED_MODEL_PRIMARY"
-    echo "    compact : $SUPPORTED_MODEL_COMPACT"
-    echo
-    echo "  These are large downloads, so the installer does not fetch them"
-    echo "  unattended. Pull one when ready:"
-    echo "    hf download $SUPPORTED_MODEL_PRIMARY --local-dir $INSTALL_DIR/models/primary"
-    echo "  or point Hercules at an existing copy:"
+    echo "  Hercules runs offline-first, but needs one of its supported models."
+    if [ -n "$SUPPORTED_MODEL_PRIMARY" ] || [ -n "$SUPPORTED_MODEL_COMPACT" ]; then
+        [ -n "$SUPPORTED_MODEL_PRIMARY" ] && echo "    primary : $SUPPORTED_MODEL_PRIMARY"
+        [ -n "$SUPPORTED_MODEL_COMPACT" ] && echo "    compact : $SUPPORTED_MODEL_COMPACT"
+        echo
+        echo "  These are large downloads, so the installer does not fetch them"
+        echo "  unattended. Pull one when ready:"
+        [ -n "$SUPPORTED_MODEL_PRIMARY" ] && \
+            echo "    hf download $SUPPORTED_MODEL_PRIMARY --local-dir $INSTALL_DIR/models/primary"
+    else
+        echo "  No model repository is configured in this build yet. Set one:"
+        echo "    export HERCULES_MODEL_PRIMARY=<org>/<repo>   # the 27B"
+        echo "    export HERCULES_MODEL_COMPACT=<org>/<repo>   # the A3B"
+        echo "  then re-run this step, or skip it entirely and point Hercules"
+        echo "  at weights you already have:"
+    fi
     echo "    LOCAL_MODEL_PATH=/path/to/weights"
 fi
 
