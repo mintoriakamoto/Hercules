@@ -64,10 +64,11 @@ done
 INSTALL_DIR="/opt/hercules"
 # The agent's DATA home, distinct from the install dir. Default deliberately
 # under $INSTALL_DIR rather than $HOME/.hercules: the gateway unit runs as the
-# `hercules` user (home $INSTALL_DIR) with ProtectHome=yes, so a home under
-# /root or /home is unreadable to the daemon that needs the .env written here.
-# This path is also exactly that user's own ~/.hercules, so the app's built-in
-# default agrees with the unit even if HERCULES_HOME is never exported.
+# `hercules` user, and under ProtectSystem=strict only ReadWritePaths
+# ($INSTALL_DIR) is writable -- a home under /root or /home would be read-only
+# to the daemon, which has to write sessions, memory and logs there. It is also
+# exactly that user's own ~/.hercules, so the app's built-in default agrees with
+# the unit even if HERCULES_HOME is never exported.
 HERCULES_HOME="${HERCULES_HOME:-$INSTALL_DIR/.hercules}"
 VENV_DIR="$INSTALL_DIR/venv"
 SOURCE_DIR="$INSTALL_DIR/src"
@@ -852,7 +853,6 @@ SyslogIdentifier=hercules-gateway
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=yes
 ReadWritePaths=$INSTALL_DIR
 
 [Install]
