@@ -33,8 +33,8 @@
 - [ ] **3.2.3** Move handlers from main.py to commands/* (migration)
 - [ ] **3.2.4** Migrate gateway/run.py decomposition (extraction)
 - [x] **3.3** Integration: Compression Strategy → conversation_loop.py ✅ COMPLETE
-- [ ] **3.4** Integration: Plugin Integrity → hercules_cli/plugins.py
-- [ ] **3.5** Integration: Content Trust → tools/approval.py
+- [x] **3.4** Integration: Content Trust → tools/approval.py ✅ COMPLETE
+- [ ] **3.5** Integration: Plugin Integrity → hercules_cli/plugins.py
 
 ---
 
@@ -77,11 +77,19 @@
    - Configurable strategy via HERCULES_COMPRESSION_STRATEGY env variable
    - Fully backward compatible with existing context_compressor
 
-7. ⏳ **NEXT PHASE: Infrastructure Integration**
+7. ✅ **Phase 3 Content Trust Integration** (8edfb25)
+   - Integrated ContentApprovalManager into tools/approval.py
+   - Added request_content_approval() for general content gating
+   - Added approve_web_content() and approve_browser_content() wrappers
+   - Added get_content_approval_history() for audit trail
+   - Hash-based approval caching with source tracking
+   - Closes bypass where web content skipped approval gates
+
+8. ⏳ **NEXT PHASE: Infrastructure Integration**
    - Plugin integrity integration into hercules_cli/plugins.py (high complexity)
-   - Content trust integration into tools/approval.py
    - Handler migration from main.py to command modules (implementations)
    - Consolidate compression modules (Phase 4)
+   - Document plugin integrity integration design
 
 ---
 
@@ -109,10 +117,10 @@
 3. ✅ CLI handlers ready for migration (stubs in place, registration working)
 
 ### Remaining Work
-⏳ **Phase 3B: Infrastructure Integration (1-2 weeks remaining)**
+⏳ **Phase 3B: Infrastructure Integration (1 week remaining)**
 1. ✅ Compression strategy integration - COMPLETE
-2. Plugin integrity integration into hercules_cli/plugins.py (complex due to dual manifest systems)
-3. Content trust integration into tools/approval.py
+2. ✅ Content trust integration - COMPLETE
+3. Plugin integrity integration into hercules_cli/plugins.py (complex due to dual manifest systems)
 4. Migrate handler implementations from main.py to commands/* (currently stubs)
 5. Update gateway/run.py to use platform_manager
 
