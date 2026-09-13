@@ -2,6 +2,7 @@
 
 import json
 import threading
+import time
 
 import pytest
 
@@ -203,3 +204,263 @@ class TestIntegration:
 
         prompt = _build_child_system_prompt("do the thing")
         assert "blackboard" in prompt
+
+
+class TestClaims:
+    """Advisory leases, so two siblings can't pick up the same unit of work."""
+
+    def test_first_claim_acquires(self):
+        result = bb.claim("task:refactor", owner="worker:a")
+        assert result["acquired"] is True
+        assert result["owner"] == "worker:a"
+
+    def test_second_claimant_is_refused_while_lease_is_live(self):
+        bb.claim("task:refactor", owner="worker:a", ttl_seconds=60)
+        result = bb.claim("task:refactor", owner="worker:b")
+        assert result["acquired"] is False
+        assert result["owner"] == "worker:a", "a live lease must not be stolen"
+
+    def test_holder_can_renew_its_own_lease(self):
+        first = bb.claim("task:x", owner="worker:a", ttl_seconds=1)
+        renewed = bb.claim("task:x", owner="worker:a", ttl_seconds=600)
+        assert renewed["acquired"] is True
+        assert renewed["expires_at"] > first["expires_at"]
+
+    def test_expired_lease_is_reclaimable(self):
+        bb.claim("task:x", owner="worker:a", ttl_seconds=1)
+        # A holder that dies must not strand the work forever.
+        time.sleep(1.05)
+        result = bb.claim("task:x", owner="worker:b")
+        assert result["acquired"] is True
+        assert result["owner"] == "worker:b"
+
+    def test_release_frees_the_key(self):
+        bb.claim("task:x", owner="worker:a", ttl_seconds=600)
+        assert bb.release("task:x", owner="worker:a")["released"] is True
+        assert bb.claim("task:x", owner="worker:b")["acquired"] is True
+
+    def test_release_by_non_holder_is_a_noop(self):
+        bb.claim("task:x", owner="worker:a", ttl_seconds=600)
+        assert bb.release("task:x", owner="worker:b")["released"] is False
+        assert bb.claim("task:x", owner="worker:c")["acquired"] is False
+
+    def test_exactly_one_of_many_racing_claimants_wins(self):
+        """The whole point of a lease: concurrent claims resolve to one winner."""
+        winners = []
+        lock = threading.Lock()
+        start = threading.Barrier(12)
+
+        def contend(n):
+            start.wait()
+            if bb.claim("task:contended", owner=f"worker:{n}", ttl_seconds=600)["acquired"]:
+                with lock:
+                    winners.append(n)
+
+        threads = [threading.Thread(target=contend, args=(i,)) for i in range(12)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+
+        assert len(winners) == 1, f"expected a single winner, got {winners}"
+        assert bb.claim("task:contended", owner="late")["owner"] == f"worker:{winners[0]}"
+
+    def test_claims_lists_live_leases_and_drops_expired(self):
+        bb.claim("live", owner="worker:a", ttl_seconds=600)
+        bb.claim("stale", owner="worker:b", ttl_seconds=1)
+        time.sleep(1.05)
+        listed = bb.claims()["claims"]
+        assert [c["key"] for c in listed] == ["live"]
+
+    def test_claim_requires_an_owner(self):
+        with pytest.raises(ValueError, match="owner is required"):
+            bb.claim("task:x", owner="  ")
+
+    def test_claims_are_scoped_per_board(self):
+        bb.claim("task:x", owner="worker:a", ttl_seconds=600, board="alpha")
+        result = bb.claim("task:x", owner="worker:b", board="beta")
+        assert result["acquired"] is True, "boards must not share a lease namespace"
+
+
+class TestConflicts:
+    """Last-writer-wins hides disagreement; conflicts has to reveal it."""
+
+    def test_two_authors_disagreeing_on_a_key_is_a_conflict(self):
+        bb.post("root_cause", "race in the cache", author="worker:a")
+        bb.post("root_cause", "missing index", author="worker:b")
+        found = bb.conflicts()["conflicts"]
+        assert len(found) == 1
+        assert found[0]["key"] == "root_cause"
+        assert {p["author"] for p in found[0]["positions"]} == {"worker:a", "worker:b"}
+        assert {p["value"] for p in found[0]["positions"]} == {
+            "race in the cache",
+            "missing index",
+        }
+
+    def test_agreement_between_authors_is_not_a_conflict(self):
+        bb.post("root_cause", "missing index", author="worker:a")
+        bb.post("root_cause", "missing index", author="worker:b")
+        assert bb.conflicts()["conflicts"] == []
+
+    def test_one_author_revising_itself_is_not_a_conflict(self):
+        bb.post("status", "investigating", author="worker:a")
+        bb.post("status", "resolved", author="worker:a")
+        assert bb.conflicts()["conflicts"] == []
+
+    def test_only_each_author_latest_position_counts(self):
+        bb.post("verdict", "vulnerable", author="worker:a")
+        bb.post("verdict", "safe", author="worker:b")
+        # A changes its mind and agrees with B — the disagreement is over.
+        bb.post("verdict", "safe", author="worker:a")
+        assert bb.conflicts()["conflicts"] == []
+
+    def test_structurally_equal_json_is_not_a_conflict(self):
+        bb.post("cfg", json.dumps({"a": 1, "b": 2}), author="worker:a")
+        bb.post("cfg", json.dumps({"b": 2, "a": 1}), author="worker:b")
+        assert bb.conflicts()["conflicts"] == [], "key order is not disagreement"
+
+    def test_conflicting_json_values_are_reported_structurally(self):
+        bb.post("cfg", json.dumps({"port": 8080}), author="worker:a")
+        bb.post("cfg", json.dumps({"port": 9090}), author="worker:b")
+        positions = bb.conflicts()["conflicts"][0]["positions"]
+        assert {p["value"]["port"] for p in positions} == {8080, 9090}
+
+    def test_conflicts_are_scoped_per_board(self):
+        bb.post("k", "one", author="worker:a", board="alpha")
+        bb.post("k", "two", author="worker:b", board="beta")
+        assert bb.conflicts(board="alpha")["conflicts"] == []
+
+    def test_conflicts_through_the_tool_entry_point(self):
+        bb.post("k", "one", author="worker:a")
+        bb.post("k", "two", author="worker:b")
+        payload = json.loads(bb.blackboard_tool("conflicts"))
+        assert payload["conflicts"][0]["key"] == "k"
+
+
+class TestConsensus:
+    """Majority-or-nothing: a wrong minority must never carry the result."""
+
+    @staticmethod
+    def _answer(author, value, key="answer"):
+        bb.post(key, value, author=author)
+
+    def test_unanimous_agreement_reaches_consensus(self):
+        for name in ("a", "b", "c"):
+            self._answer(f"worker:{name}", "42")
+        result = bb.consensus("answer")
+        assert result["has_consensus"] is True
+        assert result["agreed"] == 42
+        assert result["support"] == 3
+        assert result["dissent"] == []
+
+    def test_majority_carries_over_a_dissenting_minority(self):
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "42")
+        self._answer("worker:c", "99")
+        result = bb.consensus("answer")
+        assert result["agreed"] == 42
+        assert result["support"] == 2
+        assert [d["author"] for d in result["dissent"]] == ["worker:c"]
+
+    def test_an_even_split_reaches_no_consensus(self):
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "99")
+        result = bb.consensus("answer")
+        assert result["has_consensus"] is False
+        assert result["agreed"] is None, "a tie must not resolve to either side"
+
+    def test_plurality_without_majority_is_not_consensus(self):
+        """The failure a malicious minority exploits: largest faction wins."""
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "42")
+        self._answer("worker:c", "99")
+        self._answer("worker:d", "77")
+        self._answer("worker:e", "88")
+        result = bb.consensus("answer")
+        # "42" is the largest bloc at 2 of 5, but 3 are required.
+        assert result["has_consensus"] is False
+        assert result["agreed"] is None
+        assert result["required"] == 3
+
+    def test_malicious_minority_cannot_flip_the_result(self):
+        """Chen et al.: consensus degrades gently as N_mal rises."""
+        for name in ("a", "b", "c", "d", "e"):
+            self._answer(f"honest:{name}", "correct")
+        for n in range(4):
+            self._answer(f"malicious:{n}", "poisoned")
+        result = bb.consensus("answer")
+        assert result["agreed"] == "correct"
+        assert result["support"] == 5
+        assert result["total_authors"] == 9
+        assert len(result["dissent"]) == 4
+
+    def test_malicious_majority_withholds_rather_than_forces(self):
+        """Past the majority they win — but the honest floor is a real bound."""
+        for name in ("a", "b"):
+            self._answer(f"honest:{name}", "correct")
+        for n in range(3):
+            self._answer(f"malicious:{n}", "poisoned")
+        assert bb.consensus("answer")["agreed"] == "poisoned"
+        # Raising the bar past what they control withholds agreement instead.
+        guarded = bb.consensus("answer", min_support=4)
+        assert guarded["has_consensus"] is False
+
+    def test_one_author_cannot_inflate_its_own_support(self):
+        self._answer("worker:a", "42")
+        for _ in range(10):
+            self._answer("worker:a", "42")  # same agent, posting repeatedly
+        self._answer("worker:b", "99")
+        result = bb.consensus("answer")
+        # Were posts counted instead of authors, a's 11 entries would clear
+        # any threshold and carry the result on its own.
+        assert result["total_authors"] == 2, "11 posts from a, but a is one author"
+        assert result["has_consensus"] is False
+        assert result["agreed"] is None
+
+    def test_an_author_changing_its_mind_moves_its_vote(self):
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "99")
+        self._answer("worker:c", "99")
+        assert bb.consensus("answer")["agreed"] == 99
+        self._answer("worker:b", "42")  # b switches sides
+        self._answer("worker:c", "42")
+        assert bb.consensus("answer")["agreed"] == 42
+
+    def test_structurally_equal_json_answers_agree(self):
+        self._answer("worker:a", json.dumps({"x": 1, "y": 2}))
+        self._answer("worker:b", json.dumps({"y": 2, "x": 1}))
+        result = bb.consensus("answer")
+        assert result["has_consensus"] is True
+        assert result["agreed"] == {"x": 1, "y": 2}
+
+    def test_no_posts_means_no_consensus(self):
+        result = bb.consensus("never-answered")
+        assert result["has_consensus"] is False
+        assert result["total_authors"] == 0
+
+    def test_consensus_through_the_tool_entry_point(self):
+        self._answer("worker:a", "42")
+        self._answer("worker:b", "42")
+        payload = json.loads(bb.blackboard_tool("consensus", key="answer"))
+        assert payload["agreed"] == 42
+
+
+class TestClaimDispatch:
+    def test_claim_and_release_through_the_tool_entry_point(self):
+        acquired = json.loads(
+            bb.blackboard_tool("claim", key="task:x", author="worker:a")
+        )
+        assert acquired["acquired"] is True
+
+        refused = json.loads(
+            bb.blackboard_tool("claim", key="task:x", author="worker:b")
+        )
+        assert refused["acquired"] is False
+
+        released = json.loads(
+            bb.blackboard_tool("release", key="task:x", author="worker:a")
+        )
+        assert released["released"] is True
+
+    def test_unknown_action_names_the_claim_verbs(self):
+        assert "claim" in bb.blackboard_tool("bogus")

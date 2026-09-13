@@ -3293,3 +3293,379 @@ class TestVerifierCredentialDecorrelation(unittest.TestCase):
         self.assertEqual(kw["model"], "worker/model")
         self.assertEqual(kw["override_provider"], "openrouter")
         self.assertEqual(kw["override_api_key"], "k-worker")
+
+
+class TestChildDropOffRecovery(unittest.TestCase):
+    """A child that crashes or times out must not leave a hole in the batch."""
+
+    @staticmethod
+    def _ok(idx, summary="done"):
+        return {
+            "task_index": idx,
+            "status": "completed",
+            "summary": summary,
+            "api_calls": 1,
+            "duration_seconds": 1.0,
+        }
+
+    @staticmethod
+    def _dead(idx, status="error", error="provider exploded"):
+        return {
+            "task_index": idx,
+            "status": status,
+            "summary": None,
+            "error": error,
+            "api_calls": 0,
+            "duration_seconds": 0,
+        }
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_failed_child_is_retried_and_recovered(self, mock_run, _retries):
+        mock_run.side_effect = [self._dead(0), self._ok(0, "recovered")]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="flaky work", parent_agent=parent))
+
+        entry = result["results"][0]
+        self.assertEqual(entry["status"], "completed")
+        self.assertEqual(entry["summary"], "recovered")
+        self.assertEqual(mock_run.call_count, 2)
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_recovered_entry_keeps_the_original_failure_visible(
+        self, mock_run, _retries
+    ):
+        mock_run.side_effect = [
+            self._dead(0, error="rate limited"),
+            self._ok(0, "recovered"),
+        ]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="flaky work", parent_agent=parent))
+
+        entry = result["results"][0]
+        self.assertEqual(entry["retry_attempts"], 1)
+        self.assertIn("rate limited", entry["recovered_from"])
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=2)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_retry_budget_is_bounded(self, mock_run, _retries):
+        mock_run.side_effect = [self._dead(0) for _ in range(10)]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="always broken", parent_agent=parent))
+
+        # One original attempt plus exactly two retries, then it gives up.
+        self.assertEqual(mock_run.call_count, 3)
+        self.assertEqual(result["results"][0]["status"], "error")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=0)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_retries_can_be_disabled(self, mock_run, _retries):
+        mock_run.side_effect = [self._dead(0)]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="broken", parent_agent=parent))
+
+        self.assertEqual(mock_run.call_count, 1)
+        self.assertEqual(result["results"][0]["status"], "error")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_timeout_is_treated_as_a_drop_off(self, mock_run, _retries):
+        mock_run.side_effect = [self._dead(0, status="timeout"), self._ok(0)]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="slow work", parent_agent=parent))
+
+        self.assertEqual(mock_run.call_count, 2)
+        self.assertEqual(result["results"][0]["status"], "completed")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_interrupted_children_are_not_retried(self, mock_run, _retries):
+        """The parent was stopped on purpose — re-dispatching fights the user."""
+        mock_run.side_effect = [self._dead(0, status="interrupted")]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="cancelled work", parent_agent=parent))
+
+        self.assertEqual(mock_run.call_count, 1)
+        self.assertEqual(result["results"][0]["status"], "interrupted")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_completed_children_are_never_retried(self, mock_run, _retries):
+        mock_run.side_effect = [self._ok(0)]
+        parent = _make_mock_parent()
+        delegate_task(goal="fine", parent_agent=parent)
+
+        self.assertEqual(mock_run.call_count, 1)
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_only_the_failed_task_in_a_batch_is_retried(self, mock_run, _retries):
+        mock_run.side_effect = [
+            self._ok(0, "A ok"),
+            self._dead(1),
+            self._ok(1, "B recovered"),
+        ]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "task A"}, {"goal": "task B"}], parent_agent=parent
+            )
+        )
+
+        self.assertEqual(mock_run.call_count, 3)
+        summaries = {r["task_index"]: r["summary"] for r in result["results"]}
+        self.assertEqual(summaries[0], "A ok")
+        self.assertEqual(summaries[1], "B recovered")
+
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=1)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_retry_child_is_told_what_killed_the_previous_attempt(
+        self, mock_run, _retries
+    ):
+        mock_run.side_effect = [self._dead(0, error="ocket timeout"), self._ok(0)]
+        parent = _make_mock_parent()
+        with patch(
+            "tools.delegate_tool._build_child_agent", wraps=_build_child_agent
+        ) as mock_build:
+            delegate_task(goal="flaky", parent_agent=parent)
+
+        retry_context = mock_build.call_args_list[-1].kwargs["context"]
+        self.assertIn("RECOVERY ATTEMPT", retry_context)
+        self.assertIn("ocket timeout", retry_context)
+        self.assertIn("blackboard", retry_context)
+
+
+class TestProofChecks(unittest.TestCase):
+    """A declared proof, not the subagent's self-report, settles the task."""
+
+    @staticmethod
+    def _done(idx=0, summary="I fixed it"):
+        return {
+            "task_index": idx,
+            "status": "completed",
+            "summary": summary,
+            "api_calls": 1,
+            "duration_seconds": 1.0,
+        }
+
+    @staticmethod
+    def _term(exit_code, output="out"):
+        return json.dumps({"output": output, "exit_code": exit_code, "error": None})
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_passing_proof_confirms_the_task(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(0)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="fix auth", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["status"], "completed")
+        self.assertEqual(entry["proof"]["verdict"], "verified")
+        self.assertEqual(entry["proof"]["observed_exit"], 0)
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_failing_proof_refutes_a_confident_subagent(self, mock_run, mock_term):
+        """The child says it worked; the command says otherwise."""
+        mock_run.side_effect = [self._done(summary="All tests pass now!")]
+        mock_term.return_value = self._term(1)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="fix auth", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["status"], "refuted")
+        self.assertEqual(entry["proof"]["verdict"], "refuted")
+        self.assertEqual(entry["proof"]["observed_exit"], 1)
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_proof_runs_through_the_terminal_tool(self, mock_run, mock_term):
+        """Proof commands get no privileged path around the usual guards."""
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(0)
+        parent = _make_mock_parent()
+        delegate_task(goal="g", proof="npm run build", parent_agent=parent)
+        self.assertEqual(mock_term.call_args.args[0], "npm run build")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_no_proof_means_no_command_is_run(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="g", parent_agent=parent))
+        mock_term.assert_not_called()
+        self.assertNotIn("proof", result["results"][0])
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=0)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_task_that_never_finished_is_not_proof_checked(
+        self, mock_run, _retries, mock_term
+    ):
+        mock_run.side_effect = [
+            {"task_index": 0, "status": "error", "summary": None, "error": "boom"}
+        ]
+        parent = _make_mock_parent()
+        delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        mock_term.assert_not_called()
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_expected_exit_code_is_honoured(self, mock_run, mock_term):
+        """Proving a command still fails is a legitimate bar."""
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(1)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                goal="g", proof="./repro.sh", proof_expect_exit=1, parent_agent=parent
+            )
+        )
+        self.assertEqual(result["results"][0]["proof"]["verdict"], "verified")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_unparseable_backend_output_does_not_read_as_success(
+        self, mock_run, mock_term
+    ):
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = "not json at all"
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        )
+        self.assertEqual(result["results"][0]["status"], "refuted")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_crashing_runner_is_recorded_not_swallowed(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        mock_term.side_effect = RuntimeError("backend down")
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["proof"]["verdict"], "unchecked")
+        self.assertIn("backend down", entry["proof"]["error"])
+        self.assertEqual(entry["status"], "completed", "unchecked is not refuted")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_per_task_proofs_in_a_batch(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done(0), self._done(1)]
+        mock_term.side_effect = [self._term(0), self._term(1)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[
+                    {"goal": "task A", "proof": "pytest a"},
+                    {"goal": "task B", "proof": "pytest b"},
+                ],
+                parent_agent=parent,
+            )
+        )
+        by_index = {r["task_index"]: r for r in result["results"]}
+        self.assertEqual(by_index[0]["status"], "completed")
+        self.assertEqual(by_index[1]["status"], "refuted")
+
+
+class TestSpawnBudget(unittest.TestCase):
+    """Depth and width are each capped; the product needs its own ceiling."""
+
+    @staticmethod
+    def _ok(idx=0):
+        return {
+            "task_index": idx,
+            "status": "completed",
+            "summary": "done",
+            "api_calls": 1,
+            "duration_seconds": 1.0,
+        }
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=10)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_batch_within_budget_runs(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0), self._ok(1)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "a"}, {"goal": "b"}], parent_agent=parent
+            )
+        )
+        self.assertEqual(len(result["results"]), 2)
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=2)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_exceeding_the_ceiling_refuses_loudly(self, mock_run, _limit):
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}],
+                parent_agent=parent,
+            )
+        )
+        self.assertIn("error", result)
+        self.assertIn("Spawn budget exhausted", result["error"])
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=2)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_refused_batch_spawns_nothing(self, mock_run, _limit):
+        """Never a half-filled fan-out that reads as complete."""
+        parent = _make_mock_parent()
+        delegate_task(
+            tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}], parent_agent=parent
+        )
+        mock_run.assert_not_called()
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=3)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_the_allowance_is_spent_across_successive_calls(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0), self._ok(0), self._ok(0)]
+        parent = _make_mock_parent()
+        for _ in range(3):
+            self.assertNotIn(
+                "error", json.loads(delegate_task(goal="g", parent_agent=parent))
+            )
+        exhausted = json.loads(delegate_task(goal="one too many", parent_agent=parent))
+        self.assertIn("error", exhausted)
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=0)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_zero_limit_disables_the_ceiling(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0) for _ in range(3)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}],
+                parent_agent=parent,
+            )
+        )
+        self.assertNotIn("error", result)
+
+    def test_reservation_is_all_or_nothing(self):
+        from tools.delegate_tool import _SpawnBudget
+
+        budget = _SpawnBudget(5)
+        self.assertTrue(budget.reserve(3))
+        self.assertFalse(budget.reserve(3), "must not partially fill")
+        self.assertEqual(budget.remaining, 2, "a refused reservation spends nothing")
+
+    def test_budget_is_shared_not_reset_by_nesting(self):
+        """A nested orchestrator must draw from its parent's allowance."""
+        from tools.delegate_tool import _SpawnBudget
+
+        root = _make_mock_parent()
+        root._delegate_budget = _SpawnBudget(4)
+        root._delegate_budget.reserve(3)
+
+        with patch("tools.delegate_tool._get_max_total_agents", return_value=4):
+            from tools.delegate_tool import _acquire_spawn_budget
+
+            _, error = _acquire_spawn_budget(root, 2)
+        self.assertIsNotNone(error, "a child must not get a fresh ceiling")

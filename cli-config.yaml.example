@@ -1096,6 +1096,17 @@ delegation:
                                               # seeded with the refutation, then re-verified — looping up to this
                                               # many rounds or until the verdict flips to verified. Each round costs
                                               # extra child API calls, so raise deliberately.
+  # max_child_retries: 1                      # Re-dispatch a child that crashed or timed out, on a fresh agent
+                                              # (default: 1, 0 disables). Without it a dropped child is a permanent
+                                              # hole in the batch. A deterministically-broken task just fails N+1
+                                              # times, so raise it only for a flaky provider. "interrupted" is never
+                                              # retried — the parent was stopped on purpose.
+  # max_total_agents: 32                      # Hard ceiling on TOTAL agents one delegate_task tree may start,
+                                              # shared across every nesting level (default: 32, 0 disables).
+                                              # This is the knob that actually binds: the two above bound each
+                                              # level but nothing bounds their product, so raising them alone can
+                                              # grow a tree without limit. Exceeding it refuses the call outright
+                                              # rather than spawning a partial fan-out that reads as complete.
   # orchestrator_enabled: true                # Kill switch for role="orchestrator" children (default: true).
   # subagent_auto_approve: false              # When a subagent hits a dangerous-command approval prompt, auto-deny (default: false)
                                               # or auto-approve "once" (true) instead of blocking on stdin.

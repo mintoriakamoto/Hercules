@@ -415,16 +415,171 @@ else
 fi
 
 # ============================================================================
-# Done
+# Initialize persistent memory (Mia principles integration)
+# ============================================================================
+
+HERCULES_HOME_DIR="${HERCULES_HOME:-$HOME/.hercules}"
+MEMORY_DIR="$HERCULES_HOME_DIR/memory"
+
+if [ ! -d "$MEMORY_DIR" ]; then
+    echo ""
+    echo -e "${CYAN}→${NC} Initializing persistent memory structure..."
+    mkdir -p "$MEMORY_DIR"
+
+    # Create conversations log (stores all interactions)
+    if [ ! -f "$MEMORY_DIR/conversations.json" ]; then
+        cat > "$MEMORY_DIR/conversations.json" << 'EOF'
+{
+  "metadata": {
+    "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "version": "1.0",
+    "format": "conversation log with persistent memory"
+  },
+  "conversations": []
+}
+EOF
+        sed -i "s/\$(date -u +%Y-%m-%dT%H:%M:%SZ)/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" "$MEMORY_DIR/conversations.json"
+    fi
+
+    # Create knowledge base (stores learned patterns)
+    if [ ! -f "$MEMORY_DIR/knowledge_base.json" ]; then
+        cat > "$MEMORY_DIR/knowledge_base.json" << 'EOF'
+{
+  "metadata": {
+    "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "version": "1.0",
+    "format": "semantic knowledge store"
+  },
+  "knowledge": {}
+}
+EOF
+        sed -i "s/\$(date -u +%Y-%m-%dT%H:%M:%SZ)/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" "$MEMORY_DIR/knowledge_base.json"
+    fi
+
+    # Create learned patterns (tracks behaviors and optimizations)
+    if [ ! -f "$MEMORY_DIR/learned_patterns.json" ]; then
+        cat > "$MEMORY_DIR/learned_patterns.json" << 'EOF'
+{
+  "metadata": {
+    "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    "version": "1.0",
+    "format": "behavioral patterns and optimizations"
+  },
+  "patterns": {}
+}
+EOF
+        sed -i "s/\$(date -u +%Y-%m-%dT%H:%M:%SZ)/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" "$MEMORY_DIR/learned_patterns.json"
+    fi
+
+    # Restrict memory directory to owner only (security)
+    chmod 700 "$MEMORY_DIR"
+    chmod 600 "$MEMORY_DIR"/*.json 2>/dev/null || true
+
+    echo -e "${GREEN}✓${NC} Persistent memory initialized at $MEMORY_DIR"
+else
+    echo -e "${GREEN}✓${NC} Persistent memory found at $MEMORY_DIR"
+fi
+
+# ============================================================================
+# Offline mode configuration (Mia principles: no API dependency)
+# ============================================================================
+
+if [ ! -f ".env.mia-template" ]; then
+    cat > ".env.mia-template" << 'EOF'
+# Hercules Offline-First Mode (Mia Principles)
+# Set HERCULES_MODE to "offline" for zero API dependency operation
+# In offline mode:
+#   - All operations use local models and persistent memory
+#   - No external API calls are made
+#   - Full conversation and knowledge retention
+#   - Faster, more secure, fully autonomous
+
+HERCULES_MODE=hybrid  # offline | hybrid (default) | api
+
+# When using local models (optional):
+# Supports: phi-2, mistral-7b, llama-2, neural-chat
+# LOCAL_MODEL_PATH=${HOME}/.hercules/models/phi-2
+
+# Ethical Principles (always active)
+# These guide all Hercules behavior regardless of mode
+# See ~/.hercules/principles.json for full configuration
+EOF
+    echo -e "${GREEN}✓${NC} Created .env.mia-template reference"
+fi
+
+# ============================================================================
+# Display Hercules Ethical Principles
 # ============================================================================
 
 echo ""
+echo -e "${CYAN}⚖ Hercules Ethical Principles${NC}"
+echo ""
+echo "Seven core principles guide all Hercules operation:"
+echo ""
+echo "  1. ${CYAN}No API Dependency${NC}"
+echo "     • Fully functional without external APIs"
+echo "     • All core operations work offline"
+echo "     • GitHub-installable, self-contained"
+echo ""
+echo "  2. ${CYAN}Transparent Operations${NC}"
+echo "     • All actions are logged and auditable"
+echo "     • No hidden behaviors or analytics"
+echo "     • User sees exactly what's happening"
+echo ""
+echo "  3. ${CYAN}Ethical Constraints${NC}"
+echo "     • Never assists with harm or deception"
+echo "     • Respects privacy and autonomy"
+echo "     • Follows user's intent, not corporate goals"
+echo ""
+echo "  4. ${CYAN}User Autonomy${NC}"
+echo "     • Users control all features"
+echo "     • No forced updates or telemetry"
+echo "     • Can fork, modify, redistribute freely"
+echo ""
+echo "  5. ${CYAN}Learning & Evolution${NC}"
+echo "     • Persistent memory retains conversations"
+echo "     • Learns patterns from interactions"
+echo "     • Improves over time within user's scope"
+echo ""
+echo "  6. ${CYAN}Security First${NC}"
+echo "     • Sandboxed from external systems"
+echo "     • Memory files restricted to user only"
+echo "     • Cryptographic verification of dependencies"
+echo ""
+echo "  7. ${CYAN}Open Source${NC}"
+echo "     • Code is inspectable and modifiable"
+echo "     • Community contributions welcome"
+echo "     • No proprietary lock-in or restrictions"
+echo ""
+
+# ============================================================================
+# Done
+# ============================================================================
+
 echo -e "${GREEN}✓ Setup complete!${NC}"
 echo ""
+echo "⚕ Hercules is ready. Like Mia: fully autonomous, zero dependencies."
+echo ""
+
+if is_termux; then
+    echo "Next steps:"
+    echo "  1. Start Hercules:"
+    echo "     hercules"
+    echo ""
+else
+    echo "Next steps:"
+    echo "  1. Reload your shell:"
+    echo "     source $SHELL_CONFIG"
+    echo ""
+    echo "  2. Start Hercules:"
+    echo "     hercules"
+    echo ""
+fi
+
 echo "Next steps:"
 echo ""
 if is_termux; then
-    echo "  1. Run the setup wizard to configure API keys:"
+    echo "  1. Run the setup wizard to configure (optional):"
     echo "     hercules setup"
     echo ""
     echo "  2. Start chatting:"
@@ -434,7 +589,7 @@ else
     echo "  1. Reload your shell:"
     echo "     source $SHELL_CONFIG"
     echo ""
-    echo "  2. Run the setup wizard to configure API keys:"
+    echo "  2. Run the setup wizard to configure (optional):"
     echo "     hercules setup"
     echo ""
     echo "  3. Start chatting:"

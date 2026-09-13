@@ -85,6 +85,15 @@ def _connect() -> sqlite3.Connection:
                         "CREATE INDEX IF NOT EXISTS idx_blackboard_board"
                         " ON blackboard_entries (board, seq)"
                     )
+                    init.execute(
+                        "CREATE TABLE IF NOT EXISTS blackboard_claims ("
+                        " board TEXT NOT NULL,"
+                        " key TEXT NOT NULL,"
+                        " owner TEXT NOT NULL,"
+                        " expires_at REAL NOT NULL,"
+                        " created_at REAL NOT NULL,"
+                        " PRIMARY KEY (board, key))"
+                    )
                     init.commit()
                 finally:
                     init.close()
@@ -162,6 +171,120 @@ def read(*, board: Optional[str] = None, key: Optional[str] = None) -> dict[str,
     return {"board": resolved, "entries": merged, "_authors": authors}
 
 
+def conflicts(*, board: Optional[str] = None) -> dict[str, Any]:
+    """Keys where different authors posted different values.
+
+    ``read`` is last-writer-wins, so one agent silently overwriting a
+    sibling's finding is indistinguishable from no disagreement at all — the
+    parent sees a single confident value and never learns two workers
+    disagreed. This reports each contested key with the latest value from
+    every author that wrote it, so the disagreement is visible and can be
+    adjudicated instead of being resolved by whoever happened to finish last.
+    """
+    resolved = _resolve_board(board)
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT key, value, author FROM blackboard_entries"
+            " WHERE board = ? ORDER BY seq",
+            (resolved,),
+        ).fetchall()
+
+    # Latest raw (still-serialized) value per (key, author): comparing the
+    # canonical stored form means formatting differences aren't false positives.
+    latest_by_key: dict[str, dict[str, str]] = {}
+    for row_key, row_value, row_author in rows:
+        latest_by_key.setdefault(row_key, {})[row_author] = row_value
+
+    contested = []
+    for row_key, by_author in sorted(latest_by_key.items()):
+        if len(by_author) < 2 or len(set(by_author.values())) < 2:
+            continue
+        positions = []
+        for row_author, row_value in sorted(by_author.items()):
+            try:
+                parsed: Any = json.loads(row_value)
+            except (json.JSONDecodeError, ValueError):
+                parsed = row_value
+            positions.append({"author": row_author, "value": parsed})
+        contested.append({"key": row_key, "positions": positions})
+    return {"board": resolved, "conflicts": contested}
+
+
+def _latest_positions(key: str, board: str) -> dict[str, str]:
+    """Each author's most recent raw value for ``key`` on ``board``."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT value, author FROM blackboard_entries"
+            " WHERE board = ? AND key = ? ORDER BY seq",
+            (board, key),
+        ).fetchall()
+    latest: dict[str, str] = {}
+    for row_value, row_author in rows:
+        latest[row_author] = row_value
+    return latest
+
+
+def consensus(
+    key: str,
+    *,
+    board: Optional[str] = None,
+    min_support: Optional[int] = None,
+) -> dict[str, Any]:
+    """Agree on ``key`` only when a strict majority of authors agree.
+
+    Aggregating N independent answers by majority is markedly more robust to
+    wrong or hostile agents than debating or plurality-voting them: a
+    dissenting minority can withhold agreement but cannot manufacture it.
+    That property is why this reports ``agreed: None`` when the threshold
+    isn't met instead of falling back to the most popular answer — a
+    plurality rule hands the result to whichever faction is largest, which is
+    exactly the failure a malicious minority exploits.
+
+    One vote per author, counted on each author's latest position, so an
+    agent cannot inflate its own support by posting repeatedly.
+    """
+    key = (key or "").strip()
+    if not key:
+        raise ValueError("key is required")
+    resolved = _resolve_board(board)
+    positions = _latest_positions(key, resolved)
+    total = len(positions)
+
+    tally: dict[str, list[str]] = {}
+    for author, raw_value in positions.items():
+        tally.setdefault(raw_value, []).append(author)
+
+    threshold = total // 2 + 1 if min_support is None else max(1, int(min_support))
+
+    agreed_raw: Optional[str] = None
+    support: list[str] = []
+    for raw_value, backers in tally.items():
+        if len(backers) >= threshold and len(backers) > len(support):
+            agreed_raw, support = raw_value, backers
+
+    def _decode(raw: str) -> Any:
+        try:
+            return json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            return raw
+
+    dissent = [
+        {"author": author, "value": _decode(raw_value)}
+        for author, raw_value in sorted(positions.items())
+        if agreed_raw is None or raw_value != agreed_raw
+    ]
+    return {
+        "board": resolved,
+        "key": key,
+        "agreed": _decode(agreed_raw) if agreed_raw is not None else None,
+        "has_consensus": agreed_raw is not None,
+        "support": len(support),
+        "total_authors": total,
+        "required": threshold,
+        "dissent": dissent,
+    }
+
+
 def boards() -> list[dict[str, Any]]:
     """All boards with entry counts, newest activity first."""
     with _connect() as conn:
@@ -224,6 +347,107 @@ def clear(*, board: Optional[str] = None, key: Optional[str] = None) -> dict[str
         return {"board": resolved, "deleted": cur.rowcount}
 
 
+# Claims are advisory leases, not locks. A holder that dies lets its lease
+# lapse and the next caller takes the key over; a permanent lock would strand
+# the work forever, which is the wrong failure mode for a swarm where a child
+# can vanish mid-task.
+_DEFAULT_CLAIM_TTL = 300.0
+_MAX_CLAIM_TTL = 3600.0
+
+
+def claim(
+    key: str,
+    *,
+    owner: str,
+    ttl_seconds: float = _DEFAULT_CLAIM_TTL,
+    board: Optional[str] = None,
+) -> dict[str, Any]:
+    """Take an advisory lease on ``key``, or report who already holds it.
+
+    Concurrent callers race inside SQLite and exactly one wins: the upsert
+    only overwrites a row whose lease has expired, so a live holder is never
+    displaced. The holder renewing its own lease always succeeds.
+    """
+    key = (key or "").strip()
+    if not key:
+        raise ValueError("key is required")
+    owner = (owner or "").strip()
+    if not owner:
+        raise ValueError("owner is required — a lease must be attributable")
+    ttl = min(max(float(ttl_seconds), 1.0), _MAX_CLAIM_TTL)
+    resolved = _resolve_board(board)
+    now = time.time()
+    with _connect() as conn:
+        conn.execute(
+            "INSERT INTO blackboard_claims (board, key, owner, expires_at, created_at)"
+            " VALUES (?, ?, ?, ?, ?)"
+            " ON CONFLICT(board, key) DO UPDATE SET"
+            "  owner = excluded.owner,"
+            "  expires_at = excluded.expires_at,"
+            "  created_at = excluded.created_at"
+            " WHERE blackboard_claims.expires_at <= excluded.created_at"
+            "  OR blackboard_claims.owner = excluded.owner",
+            (resolved, key, owner, now + ttl, now),
+        )
+        held_by, expires_at = conn.execute(
+            "SELECT owner, expires_at FROM blackboard_claims"
+            " WHERE board = ? AND key = ?",
+            (resolved, key),
+        ).fetchone()
+    return {
+        "board": resolved,
+        "key": key,
+        "acquired": held_by == owner,
+        "owner": held_by,
+        "expires_at": expires_at,
+        "expires_in_seconds": round(max(0.0, expires_at - time.time()), 3),
+    }
+
+
+def release(key: str, *, owner: str, board: Optional[str] = None) -> dict[str, Any]:
+    """Drop a lease you hold. Releasing a lease you don't hold is a no-op."""
+    key = (key or "").strip()
+    if not key:
+        raise ValueError("key is required")
+    owner = (owner or "").strip()
+    if not owner:
+        raise ValueError("owner is required")
+    resolved = _resolve_board(board)
+    with _connect() as conn:
+        cur = conn.execute(
+            "DELETE FROM blackboard_claims WHERE board = ? AND key = ? AND owner = ?",
+            (resolved, key, owner),
+        )
+    return {"board": resolved, "key": key, "released": cur.rowcount > 0}
+
+
+def claims(*, board: Optional[str] = None) -> dict[str, Any]:
+    """Live leases on a board, soonest to expire first. Expired rows are dropped."""
+    resolved = _resolve_board(board)
+    now = time.time()
+    with _connect() as conn:
+        conn.execute(
+            "DELETE FROM blackboard_claims WHERE board = ? AND expires_at <= ?",
+            (resolved, now),
+        )
+        rows = conn.execute(
+            "SELECT key, owner, expires_at FROM blackboard_claims"
+            " WHERE board = ? ORDER BY expires_at",
+            (resolved,),
+        ).fetchall()
+    return {
+        "board": resolved,
+        "claims": [
+            {
+                "key": k,
+                "owner": o,
+                "expires_in_seconds": round(max(0.0, exp - now), 3),
+            }
+            for k, o, exp in rows
+        ],
+    }
+
+
 def blackboard_tool(
     action: str,
     key: str = "",
@@ -231,6 +455,8 @@ def blackboard_tool(
     author: str = "",
     board: str = "",
     timeout_seconds: float = 60.0,
+    ttl_seconds: float = _DEFAULT_CLAIM_TTL,
+    min_support: int = 0,
 ) -> str:
     """Tool entry point — dispatch on action, return JSON."""
     act = (action or "").strip().lower()
@@ -260,9 +486,29 @@ def blackboard_tool(
             result = boards()
         elif act == "clear":
             result = clear(board=board or None, key=key or None)
+        elif act == "claim":
+            result = claim(
+                key,
+                owner=author or "agent",
+                ttl_seconds=ttl_seconds,
+                board=board or None,
+            )
+        elif act == "release":
+            result = release(key, owner=author or "agent", board=board or None)
+        elif act == "claims":
+            result = claims(board=board or None)
+        elif act == "conflicts":
+            result = conflicts(board=board or None)
+        elif act == "consensus":
+            result = consensus(
+                key,
+                board=board or None,
+                min_support=int(min_support) if min_support else None,
+            )
         else:
             return tool_error(
-                f"unknown action {action!r}; use post, read, wait, boards, or clear"
+                f"unknown action {action!r}; use post, read, wait, boards, "
+                "clear, claim, release, or claims"
             )
     except (ValueError, sqlite3.Error) as exc:
         return tool_error(str(exc))
@@ -286,15 +532,57 @@ BLACKBOARD_SCHEMA = {
         "key appears — use this instead of repeatedly reading when you depend "
         "on another agent's entry; errors on timeout), boards (list boards), "
         "clear (a board, or one key). The board defaults to the shared "
-        "session board; pass board explicitly only to segregate workstreams."
+        "session board; pass board explicitly only to segregate workstreams. "
+        "To avoid duplicating a sibling's work, call claim with the unit of "
+        "work as the key before starting it and only proceed when the reply "
+        "says acquired=true; otherwise another agent already has it, so pick "
+        "up something else. Claims are time-limited leases, so a claim held "
+        "by an agent that dies is automatically reclaimable — for long work, "
+        "claim again to extend it, and release when you finish. Use claims to "
+        "see what is currently taken. Because reads are last-writer-wins, a "
+        "sibling overwriting your finding looks the same as agreement: use "
+        "conflicts to list keys where different authors posted different "
+        "values, and reconcile those before relying on them. When a question "
+        "matters enough to answer redundantly, have each agent post its own "
+        "answer under one shared key and read it back with consensus: that "
+        "reports agreement only when a majority of authors agree, and returns "
+        "no agreement rather than the most popular answer when they don't, so "
+        "a wrong minority cannot carry the result. It costs an agent per "
+        "answer, so reserve it for decisions worth paying for."
     ),
     "parameters": {
         "type": "object",
         "properties": {
             "action": {
                 "type": "string",
-                "enum": ["post", "read", "wait", "boards", "clear"],
+                "enum": [
+                    "post",
+                    "read",
+                    "wait",
+                    "boards",
+                    "clear",
+                    "claim",
+                    "release",
+                    "claims",
+                    "conflicts",
+                    "consensus",
+                ],
                 "description": "Operation to perform.",
+            },
+            "min_support": {
+                "type": "integer",
+                "description": (
+                    "For consensus: how many agreeing authors are required. "
+                    "Defaults to a strict majority of the authors who posted."
+                ),
+            },
+            "ttl_seconds": {
+                "type": "number",
+                "description": (
+                    "For claim: how long the lease lasts before another agent "
+                    "may take the key over (default 300, max 3600). Set it to "
+                    "roughly how long the work should take."
+                ),
             },
             "key": {
                 "type": "string",
@@ -318,7 +606,9 @@ BLACKBOARD_SCHEMA = {
                 "type": "string",
                 "description": (
                     "Who is posting (e.g. 'parent', 'worker:research'). Helps "
-                    "readers attribute entries; defaults to 'agent'."
+                    "readers attribute entries; defaults to 'agent'. For claim "
+                    "and release this identifies the lease holder, so use a "
+                    "stable id that is distinct from your siblings'."
                 ),
             },
             "board": {
@@ -342,6 +632,8 @@ registry.register(
         author=args.get("author", ""),
         board=args.get("board", ""),
         timeout_seconds=args.get("timeout_seconds", 60.0),
+        ttl_seconds=args.get("ttl_seconds", _DEFAULT_CLAIM_TTL),
+        min_support=args.get("min_support", 0),
     ),
     check_fn=lambda: True,
     emoji="📋",

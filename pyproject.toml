@@ -191,12 +191,11 @@ honcho = ["honcho-ai==2.0.1"]
 # can't break fresh installs.
 supermemory = ["supermemory==3.50.0"]
 mem0 = ["mem0ai==2.0.10"]
-# Image resize recovery for the vision tools. Pillow is now a CORE dependency
-# (see the main `dependencies` list) since the byte/pixel shrink paths are on
-# the default vision-embed path and the mid-session lazy install deadlocked the
-# CLI under prompt_toolkit (#40490). This extra is kept as a no-op back-compat
-# alias so existing `pip install hercules-agent[vision]` invocations still resolve.
-vision = []
+# Computer vision — image processing, detection, segmentation via OpenCV and ML pipelines.
+# Pillow is already a CORE dependency (see the main `dependencies` list).
+# This extra adds opencv-python for advanced vision features.
+# Lazy-installed when vision features are first used.
+vision = ["opencv-python==4.10.0.84"]
 # CVE-2026-48710 (BadHost): Starlette is pulled transitively by mcp's
 # sse-starlette / HTTP-SSE stack (and by fastapi in the `web` extra). Before
 # 1.0.1, a malformed Host header makes `request.url.path` desync from the path
@@ -270,6 +269,33 @@ youtube = [
 # starlette==1.0.1 pinned for CVE-2026-48710 (BadHost) — fastapi pulls Starlette
 # transitively and pre-1.0.1 is the vulnerable range. See the mcp extra above.
 web = ["fastapi==0.133.1", "uvicorn[standard]==0.41.0", "starlette==1.0.1", "python-multipart==0.0.27"]
+# Machine learning backends — for AI model inference, embeddings, and fine-tuning.
+# Lazy-installed when ML features are first used.
+ml = [
+  "huggingface-hub==0.24.3",
+  "transformers==4.41.2",
+  "torch==2.4.0",
+]
+# Audio processing — text-to-speech (TTS), speech recognition, and audio handling.
+# Lazy-installed when audio features are first used.
+audio = [
+  "pyttsx3==2.90",
+  "pyaudio==0.2.14",
+]
+# Data science and analytics — statistical analysis, dataframe manipulation, ML pipelines.
+# Lazy-installed when data science features are first used.
+data = [
+  "pandas>=2.2.4,<3",
+  "scipy>=1.15.0,<2",
+  "scikit-learn>=1.5.0,<2",
+]
+# Web framework extras — API servers, async frameworks for custom integrations.
+# Lazy-installed when needed for building custom services.
+web-server = [
+  "Flask==3.0.0",
+  "flask-cors==4.0.0",
+  "gunicorn==23.0.0",
+]
 all = [
   # Policy (2026-05-12): `[all]` includes only extras that genuinely
   # CAN'T be lazy-installed via `tools/lazy_deps.py` — i.e. things every
@@ -306,13 +332,7 @@ all = [
 
 [project.scripts]
 hercules = "hercules_cli.main:main"
-# `hermes` is a full alias for `hercules` (same entry point). The project was
-# renamed Hermes -> Hercules; keeping the old command means `hermes update`
-# still connects, pulls, and updates from this GitHub repo for anyone who
-# learned the tool under its former name.
-hermes = "hercules_cli.main:main"
 hercules-agent = "run_agent:main"
-hermes-agent = "run_agent:main"
 hercules-acp = "acp_adapter.entry:main"
 
 [tool.setuptools]

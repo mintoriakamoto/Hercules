@@ -819,8 +819,21 @@ class TestCrossSessionApprovalIsolation:
         )
         notified_a = []
         notified_b = []
-        register_gateway_notify("session-A", lambda d: notified_a.append(d))
-        register_gateway_notify("session-B", lambda d: notified_b.append(d))
+        # Signalled by whichever callback fires first. Waiting on the event
+        # instead of polling a fixed budget keeps the wait bounded by delivery
+        # latency: a loaded runner makes delivery slow, not wrong, and the
+        # routing assertions below are what this test actually guards.
+        delivered = threading.Event()
+
+        def _recorder(sink):
+            def _callback(payload):
+                sink.append(payload)
+                delivered.set()
+
+            return _callback
+
+        register_gateway_notify("session-A", _recorder(notified_a))
+        register_gateway_notify("session-B", _recorder(notified_b))
 
         # Concurrent session B clobbered the process-global env var last.
         os.environ["HERCULES_SESSION_KEY"] = "session-B"
@@ -844,10 +857,7 @@ class TestCrossSessionApprovalIsolation:
         t = threading.Thread(target=worker_a)
         t.start()
         try:
-            for _ in range(50):
-                if notified_a or notified_b:
-                    break
-                time.sleep(0.05)
+            delivered.wait(timeout=30)
 
             # The prompt must land in session A (the originator), never B.
             assert len(notified_a) == 1, "approval prompt did not route to session A"

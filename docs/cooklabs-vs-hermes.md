@@ -13,8 +13,8 @@ Product we ship: https://github.com/mintoriakamoto/Hercules
 | one agent | mesh: Hermes home + Claude + OpenCode + OpenClaw + venvs |
 
 ```bash
-python -m hercules_cli.hermes
-python -m hercules_cli.hermes migrate --dry-run
-python -m hercules_cli.hermes migrate
+python -m hercules_cli.mesh
+python -m hercules_cli.mesh migrate --dry-run
+python -m hercules_cli.mesh migrate
 hercules update
 ```

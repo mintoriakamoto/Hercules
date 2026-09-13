@@ -37,6 +37,7 @@ from toolsets import TOOLSETS
 # Must match hercules_cli.runtime_provider.RUNTIME_PROVIDER_TYPE_CUSTOM.
 _RUNTIME_PROVIDER_CUSTOM = "custom"
 from tools import file_state
+from tools.daemon_pool import DaemonThreadPoolExecutor
 from tools.terminal_tool import set_approval_callback as _set_subagent_approval_cb
 from agent.task_aware_model_router import route_task_to_model
 from utils import base_url_hostname, is_truthy_value
@@ -112,6 +113,31 @@ def _get_subagent_approval_callback():
         return _subagent_auto_approve
     return _subagent_auto_deny
 
+
+def _create_delegation_executor(max_workers: int):
+    """Create executor for parallel subagent execution.
+
+    Returns appropriate executor based on HERCULES_DELEGATION_EXECUTOR mode:
+      - "thread": ThreadPoolExecutor (default, lower overhead)
+      - "process": ProcessPoolExecutor (true parallelism, no GIL)
+
+    Args:
+        max_workers: Maximum concurrent workers
+
+    Returns:
+        Either DaemonThreadPoolExecutor or ProcessDelegationExecutor
+    """
+    if _EXECUTOR_MODE == "process":
+        try:
+            from tools.process_delegation import ProcessDelegationExecutor
+            logger.debug(f"Using process-based delegation executor (max_workers={max_workers})")
+            return ProcessDelegationExecutor(max_workers=max_workers)
+        except Exception as e:
+            logger.warning(f"Failed to initialize process executor: {e}; falling back to threads")
+            return DaemonThreadPoolExecutor(max_workers=max_workers)
+    else:
+        return DaemonThreadPoolExecutor(max_workers=max_workers)
+
 # NOTE: nested delegation is granted by role='orchestrator' (which re-adds the
 # "delegation" toolset in _build_child_agent), NOT by the model naming toolsets
 # — the model has no toolsets argument. Subagents inherit the parent's toolsets.
@@ -124,6 +150,10 @@ _DEFAULT_MAX_CONCURRENT_CHILDREN = 3
 # every turn / agent spawn even when delegate_task is never called.
 _HIGH_CONCURRENCY_WARNED = False
 MAX_DEPTH = 1  # flat by default: parent (0) -> child (1); grandchild rejected unless max_spawn_depth raised.
+
+# Execution mode: thread-based (default) or process-based parallelism
+_EXECUTOR_MODE = os.environ.get("HERCULES_DELEGATION_EXECUTOR", "thread").lower()
+# Supported: "thread" (ThreadPoolExecutor), "process" (ProcessPoolExecutor)
 # Configurable depth cap consulted by _get_max_spawn_depth; MAX_DEPTH
 # stays as the default fallback and is still the symbol tests import.
 _MIN_SPAWN_DEPTH = 1
@@ -465,6 +495,217 @@ def _get_child_timeout() -> Optional[float]:
     return DEFAULT_CHILD_TIMEOUT
 
 
+# Statuses meaning the child dropped off rather than finished. "interrupted"
+# is deliberately absent: the parent was interrupted on purpose, and
+# re-dispatching would fight the very interrupt that stopped the batch.
+_RETRIABLE_CHILD_STATUSES = frozenset({"error", "timeout"})
+DEFAULT_MAX_CHILD_RETRIES = 1
+
+
+def _get_max_child_retries() -> int:
+    """Read delegation.max_child_retries from config; 0 disables retries.
+
+    A child that crashes or times out is otherwise a permanent hole in the
+    batch — the parent gets an error entry and that task's work is simply
+    lost, with no signal that anything should be re-run. One retry recovers
+    the common transient causes (provider blip, rate limit, a wedged tool
+    call) without turning a deterministically-broken task into a retry storm,
+    which is why the default is 1 rather than higher.
+    """
+    cfg = _load_config()
+    val = cfg.get("max_child_retries")
+    if val is None:
+        val = os.getenv("DELEGATION_MAX_CHILD_RETRIES")
+    if val is None:
+        return DEFAULT_MAX_CHILD_RETRIES
+    try:
+        parsed = int(val)
+    except (TypeError, ValueError):
+        logger.warning(
+            "delegation.max_child_retries=%r is not a valid integer; using %d",
+            val,
+            DEFAULT_MAX_CHILD_RETRIES,
+        )
+        return DEFAULT_MAX_CHILD_RETRIES
+    return max(0, parsed)
+
+
+# A proof is a command the parent wrote, so it runs through exactly the same
+# guards and backend as any other command the agent issues. It gets no
+# elevated path: a proof is still just a command someone wrote.
+DEFAULT_PROOF_TIMEOUT_SECONDS = 600
+
+
+def _proof_runner(parent_agent):
+    """A ProofRunner backed by the sandboxed terminal tool."""
+    from agent.consensus.proofs import Observation, output_hash
+    from tools.terminal_tool import terminal_tool
+
+    def _run(command: str) -> "Observation":
+        raw = terminal_tool(command, timeout=DEFAULT_PROOF_TIMEOUT_SECONDS)
+        try:
+            payload = json.loads(raw)
+        except (json.JSONDecodeError, ValueError, TypeError):
+            # A backend that returned something unparseable has not shown the
+            # proof passing, so it must not read as success.
+            return Observation(exit_code=-1, output_hash=output_hash(str(raw)))
+        return Observation(
+            exit_code=int(payload.get("exit_code", -1)),
+            output_hash=output_hash(str(payload.get("output", ""))),
+        )
+
+    return _run
+
+
+def _run_proof_checks(results, task_list, parent_agent) -> None:
+    """Replay each task's declared proof and record what actually happened.
+
+    A subagent reporting "done" is a self-report. Where the task declared a
+    proof, the parent re-runs it and the entry carries the observed exit code,
+    so "completed" stops meaning "the child said so" and starts meaning "the
+    check passed".
+
+    A refuted task is reported, never silently re-run: correction is what
+    delegation.verify_repair_rounds exists for, and quietly retrying work
+    whose proof failed is how you burn a budget on a task that cannot pass.
+    """
+    from agent.consensus.proofs import Proof
+
+    runner = None
+    for entry in results:
+        idx = entry.get("task_index")
+        task = task_list[idx] if isinstance(idx, int) and idx < len(task_list) else None
+        command = str((task or {}).get("proof") or "").strip()
+        if not command:
+            continue
+        if entry.get("status") != "completed":
+            # The child never claimed to finish; there is no claim to check.
+            continue
+        proof = Proof(
+            command=command,
+            expect_exit=int((task or {}).get("proof_expect_exit", 0) or 0),
+        )
+        if runner is None:
+            runner = _proof_runner(parent_agent)
+        try:
+            observed = runner(proof.command)
+        except Exception as exc:
+            logger.warning("Proof replay failed for task %s: %s", idx, exc)
+            entry["proof"] = {
+                "command": proof.command,
+                "verdict": "unchecked",
+                "error": str(exc)[:300],
+            }
+            continue
+        met = proof.is_met(observed)
+        entry["proof"] = {
+            "command": proof.command,
+            "expect_exit": proof.expect_exit,
+            "observed_exit": observed.exit_code,
+            "verdict": "verified" if met else "refuted",
+        }
+        if not met:
+            entry["status"] = "refuted"
+        _emit_parent_console(
+            parent_agent,
+            f"  {'✓' if met else '✗'} proof [{(idx or 0) + 1}]: {proof.command[:60]} "
+            f"(exit {observed.exit_code}, wanted {proof.expect_exit})",
+        )
+
+
+# Depth and width are each capped, but nothing bounded their product: at the
+# defaults a run tops out near 12 agents, while width 10 with depth 3 reaches
+# four figures with nothing to stop it, and child retries multiply it again.
+# Both knobs are documented as having no upper ceiling, so this is the control
+# that actually binds when an operator raises them.
+DEFAULT_MAX_TOTAL_AGENTS = 32
+
+
+class _SpawnBudget:
+    """A total-agent allowance shared across one delegation tree.
+
+    Held on the root agent and inherited by every child, so a nested
+    orchestrator draws from the same allowance as its parent rather than
+    getting a fresh one -- which is the whole point, since unbounded nesting
+    is how the product of depth and width runs away.
+    """
+
+    __slots__ = ("limit", "spent", "_lock")
+
+    def __init__(self, limit: int) -> None:
+        self.limit = int(limit)
+        self.spent = 0
+        self._lock = threading.Lock()
+
+    @property
+    def remaining(self) -> int:
+        return max(0, self.limit - self.spent)
+
+    def reserve(self, count: int) -> bool:
+        """Take ``count`` agents from the allowance, all or nothing.
+
+        Partial reservation is deliberately not offered: a half-filled
+        fan-out returns results that look complete while silently missing
+        tasks, which is worse than refusing outright.
+        """
+        with self._lock:
+            if self.spent + count > self.limit:
+                return False
+            self.spent += count
+            return True
+
+
+def _get_max_total_agents() -> int:
+    """Read delegation.max_total_agents from config; 0 disables the ceiling."""
+    cfg = _load_config()
+    val = cfg.get("max_total_agents")
+    if val is None:
+        val = os.getenv("DELEGATION_MAX_TOTAL_AGENTS")
+    if val is None:
+        return DEFAULT_MAX_TOTAL_AGENTS
+    try:
+        parsed = int(val)
+    except (TypeError, ValueError):
+        logger.warning(
+            "delegation.max_total_agents=%r is not a valid integer; using %d",
+            val,
+            DEFAULT_MAX_TOTAL_AGENTS,
+        )
+        return DEFAULT_MAX_TOTAL_AGENTS
+    return max(0, parsed)
+
+
+def _acquire_spawn_budget(parent_agent, count: int):
+    """Reserve ``count`` agents from the tree's allowance.
+
+    Returns ``(budget, None)`` on success, or ``(budget, error_message)`` when
+    the ceiling would be exceeded. The failure is surfaced to the caller as a
+    hard error rather than a trimmed task list -- a silently truncated
+    fan-out looks like completed work, which is the more dangerous failure.
+    """
+    limit = _get_max_total_agents()
+    if limit <= 0:
+        return None, None
+    budget = getattr(parent_agent, "_delegate_budget", None)
+    if not isinstance(budget, _SpawnBudget):
+        budget = _SpawnBudget(limit)
+        try:
+            parent_agent._delegate_budget = budget
+        except Exception:  # pragma: no cover - exotic parent objects
+            pass
+    if budget.reserve(count):
+        return budget, None
+    return budget, (
+        f"Spawn budget exhausted: this delegation tree has already started "
+        f"{budget.spent} of {budget.limit} agents and cannot start {count} "
+        f"more. Nothing was spawned for this call. Either narrow the work, or "
+        f"raise delegation.max_total_agents in config.yaml -- it exists "
+        f"because max_spawn_depth and max_concurrent_children bound each "
+        f"level but not the total, so raising those alone can grow a tree "
+        f"without limit."
+    )
+
+
 def _get_max_spawn_depth() -> int:
     """Read delegation.max_spawn_depth from config, floored at 1 (no ceiling).
 
@@ -697,12 +938,26 @@ def _build_child_system_prompt(
         "role) so other agents can build on them before you finish."
     )
     parts.append(
+        "\nYou are operating autonomously. No human can answer you mid-task: "
+        "you have no tool for reaching the user, and approval prompts are "
+        "resolved automatically, so a denied command stays denied. Never end "
+        "your turn on a question. For reversible work that follows from the "
+        "task above, proceed without asking; if a command is refused, find "
+        "another route or report it as a blocker rather than retrying it. "
+        "Stay inside the task you were given — do not refactor, clean up, or "
+        "add features beyond it, since the parent cannot see those edits."
+    )
+    parts.append(
         "\nComplete this task using the tools available to you. "
         "When finished, provide a clear, concise summary of:\n"
         "- What you did\n"
         "- What you found or accomplished\n"
         "- Any files you created or modified\n"
         "- Any issues encountered\n\n"
+        "Your summary is the only thing the parent sees, so audit every claim "
+        "in it against an actual tool result from this session. Report only "
+        "what you have evidence for; say plainly when something is unverified, "
+        "was skipped, or failed.\n\n"
         "Important workspace rule: Never assume a repository lives at /workspace/... or any other container-style path unless the task/context explicitly gives that path. "
         "If no exact local path is provided, discover it first before issuing git/workdir-specific commands.\n\n"
         "Keep your final summary tight: lead with outcomes, prefer bullet "
@@ -1393,6 +1648,9 @@ def _build_child_agent(
     child_session_ref["session_id"] = getattr(child, "session_id", "") or ""
     # Set delegation depth so children can't spawn grandchildren
     child._delegate_depth = child_depth
+    # Inherit the tree's allowance rather than minting a fresh one, so a
+    # nested orchestrator cannot reset the ceiling by spawning.
+    child._delegate_budget = getattr(parent_agent, "_delegate_budget", None)
     # Stash the post-degrade role for introspection (leaf if the
     # kill switch or depth bounded the caller's requested role).
     child._delegate_role = effective_role
@@ -1948,7 +2206,6 @@ def _run_single_child(
         # Daemon worker (tools.daemon_pool): a timed-out child is abandoned
         # below; a stdlib non-daemon worker would then block interpreter
         # exit at atexit-join time if the child never unwinds.
-        from tools.daemon_pool import DaemonThreadPoolExecutor
         _timeout_executor = DaemonThreadPoolExecutor(
             max_workers=1,
             # Install a non-interactive approval callback in the worker thread
@@ -2532,10 +2789,9 @@ def _run_verification_wave(
     finally:
         _model_tools._last_resolved_tool_names = _saved
 
-    from tools.daemon_pool import DaemonThreadPoolExecutor
     from concurrent.futures import wait as _cf_wait, FIRST_COMPLETED
 
-    with DaemonThreadPoolExecutor(max_workers=max_children) as executor:
+    with _create_delegation_executor(max_workers=max_children) as executor:
         futures = {
             executor.submit(
                 _run_single_child,
@@ -2593,13 +2849,12 @@ def _run_children_pairs(
     yields an error result rather than propagating, mirroring the primary
     verification wave's fail-soft contract.
     """
-    from tools.daemon_pool import DaemonThreadPoolExecutor
     from concurrent.futures import wait as _cf_wait, FIRST_COMPLETED
 
     out: Dict[int, Dict[str, Any]] = {}
     if not pairs:
         return out
-    with DaemonThreadPoolExecutor(max_workers=max(1, max_children)) as executor:
+    with _create_delegation_executor(max_workers=max(1, max_children)) as executor:
         futures = {
             executor.submit(
                 _run_single_child,
@@ -2881,7 +3136,6 @@ def _run_dag_batch(
     "resolved" so its dependents proceed (with its error surfaced upstream)
     rather than hanging. Returns one entry per task; the caller sorts.
     """
-    from tools.daemon_pool import DaemonThreadPoolExecutor
     from concurrent.futures import wait as _cf_wait, FIRST_COMPLETED
 
     child_by_index = {i: (t, child) for (i, t, child) in children}
@@ -2924,7 +3178,7 @@ def _run_dag_batch(
         _emit_parent_console(parent_agent, f"  {line}")
 
     interrupted = False
-    with DaemonThreadPoolExecutor(max_workers=max(1, max_children)) as executor:
+    with _create_delegation_executor(max_workers=max(1, max_children)) as executor:
         while len(done) < n_tasks:
             if getattr(parent_agent, "_interrupt_requested", False) is True:
                 interrupted = True
@@ -3021,6 +3275,8 @@ def delegate_task(
     role: Optional[str] = None,
     background: Optional[bool] = None,
     verify: Optional[bool] = None,
+    proof: Optional[str] = None,
+    proof_expect_exit: Optional[int] = None,
     parent_agent=None,
 ) -> str:
     """
@@ -3119,7 +3375,15 @@ def delegate_task(
         # scheduler and only its TOTAL task count needs a (looser) ceiling.
         task_list = tasks
     elif goal and isinstance(goal, str) and goal.strip():
-        task_list = [{"goal": goal, "context": context, "role": top_role}]
+        task_list = [
+            {
+                "goal": goal,
+                "context": context,
+                "role": top_role,
+                "proof": proof,
+                "proof_expect_exit": proof_expect_exit,
+            }
+        ]
     else:
         return tool_error("Provide either 'goal' (single task) or 'tasks' (batch).")
 
@@ -3169,6 +3433,12 @@ def delegate_task(
     results = []
 
     n_tasks = len(task_list)
+
+    # Total-agent ceiling for the whole tree. Checked before anything is
+    # built, so a refusal costs nothing and leaves no half-spawned batch.
+    _budget, _budget_error = _acquire_spawn_budget(parent_agent, n_tasks)
+    if _budget_error:
+        return tool_error(_budget_error)
     # Track goal labels for progress display (truncated for readability)
     task_labels = [t["goal"][:40] for t in task_list]
 
@@ -3182,45 +3452,62 @@ def delegate_task(
     # Build all child agents on the main thread (thread-safe construction)
     # Wrapped in try/finally so the global is always restored even if a
     # child build raises (otherwise _last_resolved_tool_names stays corrupted).
+    def _build_for_task(i: int, t: dict, *, recovery_context: Optional[str] = None):
+        """Construct one child for task ``i``.
+
+        Shared by the initial build loop and by retries, so a retried task
+        gets a genuinely fresh agent rather than one carrying the wreckage of
+        the attempt that just died.
+        """
+        # Per-task role beats top-level; normalise again so unknown
+        # per-task values warn and degrade to leaf uniformly.
+        effective_role = _normalize_role(t.get("role") or top_role)
+        # Per-task model beats config credentials model
+        task_model = t.get("model")
+        effective_model = task_model or creds["model"]
+        if task_model:
+            logger.debug(
+                "Task %d using explicit model override: %s (from config: %s)",
+                i,
+                task_model,
+                creds["model"],
+            )
+        task_context = t.get("context")
+        if recovery_context:
+            task_context = (
+                f"{task_context}\n\n{recovery_context}"
+                if task_context
+                else recovery_context
+            )
+        child = _build_child_agent(
+            task_index=i,
+            goal=t["goal"],
+            context=task_context,
+            # Subagents always inherit the parent's toolsets; the model
+            # cannot choose or narrow them (no model-facing toolsets arg).
+            toolsets=None,
+            model=effective_model,
+            max_iterations=effective_max_iter,
+            task_count=n_tasks,
+            parent_agent=parent_agent,
+            override_provider=creds["provider"],
+            override_base_url=creds["base_url"],
+            override_api_key=creds["api_key"],
+            override_api_mode=creds["api_mode"],
+            override_request_overrides=creds.get("request_overrides"),
+            override_max_tokens=creds.get("max_output_tokens"),
+            override_acp_command=creds.get("command"),
+            override_acp_args=creds.get("args"),
+            role=effective_role,
+        )
+        # Override with correct parent tool names (before child construction mutated global)
+        child._delegate_saved_tool_names = _parent_tool_names
+        return child
+
     children = []
     try:
         for i, t in enumerate(task_list):
-            # Per-task role beats top-level; normalise again so unknown
-            # per-task values warn and degrade to leaf uniformly.
-            effective_role = _normalize_role(t.get("role") or top_role)
-            # Per-task model beats config credentials model
-            effective_model = t.get("model") or creds["model"]
-            if t.get("model"):
-                logger.debug(
-                    "Task %d using explicit model override: %s (from config: %s)",
-                    i,
-                    t.get("model"),
-                    creds["model"],
-                )
-            child = _build_child_agent(
-                task_index=i,
-                goal=t["goal"],
-                context=t.get("context"),
-                # Subagents always inherit the parent's toolsets; the model
-                # cannot choose or narrow them (no model-facing toolsets arg).
-                toolsets=None,
-                model=effective_model,
-                max_iterations=effective_max_iter,
-                task_count=n_tasks,
-                parent_agent=parent_agent,
-                override_provider=creds["provider"],
-                override_base_url=creds["base_url"],
-                override_api_key=creds["api_key"],
-                override_api_mode=creds["api_mode"],
-                override_request_overrides=creds.get("request_overrides"),
-                override_max_tokens=creds.get("max_output_tokens"),
-                override_acp_command=creds.get("command"),
-                override_acp_args=creds.get("args"),
-                role=effective_role,
-            )
-            # Override with correct parent tool names (before child construction mutated global)
-            child._delegate_saved_tool_names = _parent_tool_names
-            children.append((i, t, child))
+            children.append((i, t, _build_for_task(i, t)))
     finally:
         # Authoritative restore: reset global to parent's tool names after all children built
         _model_tools._last_resolved_tool_names = _parent_tool_names
@@ -3264,8 +3551,7 @@ def delegate_task(
             # Daemon workers (tools.daemon_pool): the `with` block still joins
             # normally, but if the parent is interrupted while a child is
             # wedged, the abandoned worker must not block interpreter exit.
-            from tools.daemon_pool import DaemonThreadPoolExecutor
-            with DaemonThreadPoolExecutor(max_workers=max_children) as executor:
+            with _create_delegation_executor(max_workers=max_children) as executor:
                 futures = {}
                 for i, t, child in children:
                     future = executor.submit(
@@ -3378,6 +3664,84 @@ def delegate_task(
 
             # Sort by task_index so results match input order
             results.sort(key=lambda r: r["task_index"])
+
+        # Drop-off recovery: a child that crashed or timed out left a hole in
+        # the batch, and nothing downstream would ever re-run it. Re-dispatch
+        # those tasks on fresh agents before verification, so a recovered
+        # result is verified like any other. Runs for every execution path
+        # (single, DAG, parallel batch) because it works off `results`.
+        _max_retries = _get_max_child_retries()
+        # `is not True` rather than a plain truth test: an absent attribute on
+        # a mock-like parent returns a truthy stand-in, which would silently
+        # disable recovery. Same idiom as the interrupt check in the batch loop.
+        if (
+            _max_retries > 0
+            and getattr(parent_agent, "_interrupt_requested", False) is not True
+        ):
+            _task_by_index = {i: t for (i, t, _c) in children}
+            for _attempt in range(1, _max_retries + 1):
+                _dropped = [
+                    r
+                    for r in results
+                    if r.get("status") in _RETRIABLE_CHILD_STATUSES
+                    and r.get("task_index") in _task_by_index
+                ]
+                if not _dropped:
+                    break
+                for _entry in _dropped:
+                    _idx = _entry["task_index"]
+                    _prior_error = str(_entry.get("error") or "unknown failure")
+                    _emit_parent_console(
+                        parent_agent,
+                        f"  ↻ retrying task {_idx + 1}/{n_tasks} "
+                        f"(attempt {_attempt + 1}): {_prior_error[:80]}",
+                    )
+                    try:
+                        try:
+                            _retry_child = _build_for_task(
+                                _idx,
+                                _task_by_index[_idx],
+                                recovery_context=(
+                                    "RECOVERY ATTEMPT: a previous agent on this "
+                                    "exact task did not finish. It failed with: "
+                                    f"{_prior_error}\n"
+                                    "Check the blackboard for partial work it may "
+                                    "have posted and continue from there rather "
+                                    "than starting over. If the same failure "
+                                    "recurs, report it as a blocker instead of "
+                                    "retrying it yourself."
+                                ),
+                            )
+                        finally:
+                            _model_tools._last_resolved_tool_names = _parent_tool_names
+                        _retry_result = _run_single_child(
+                            _idx,
+                            _task_by_index[_idx]["goal"],
+                            _retry_child,
+                            parent_agent,
+                        )
+                    except Exception as _retry_exc:
+                        logger.warning(
+                            "Retry of task %d failed to run: %s", _idx, _retry_exc
+                        )
+                        _entry["retry_attempts"] = _attempt
+                        continue
+                    # Keep the original failure visible even when the retry
+                    # works: a task that only succeeds on a second run is a
+                    # signal about the task, not a clean pass.
+                    _retry_result["retry_attempts"] = _attempt
+                    _retry_result["recovered_from"] = _prior_error[:500]
+                    results[results.index(_entry)] = _retry_result
+            results.sort(key=lambda r: r["task_index"])
+
+        # Proof replay: where a task declared a machine-checkable bar, run it
+        # and let the exit code settle the task instead of the child's own
+        # report. Runs before the verify wave because a command that either
+        # passes or does not is stronger evidence than a second model's read.
+        try:
+            _run_proof_checks(results, task_list, parent_agent)
+        except Exception as _proof_exc:
+            logger.warning("Proof check pass failed: %s", _proof_exc)
 
         # Adversarial verification wave (opt-in, foreground only): every
         # completed task's claimed outcome is checked by a fresh skeptic
@@ -4214,6 +4578,32 @@ DELEGATE_TASK_SCHEMA = {
                             "enum": ["leaf", "orchestrator"],
                             "description": "Per-task role override. See top-level 'role' for semantics.",
                         },
+                        "proof": {
+                            "type": "string",
+                            "description": (
+                                "A shell command that must succeed for this "
+                                "task to count as done, e.g. 'pytest tests/"
+                                "test_auth.py -q' or 'npm run build'. After the "
+                                "subagent finishes, you re-run this yourself and "
+                                "its exit code decides the verdict, so "
+                                "'completed' stops meaning 'the subagent said "
+                                "so'. A task whose proof fails comes back with "
+                                "status 'refuted' and the observed exit code. "
+                                "Prefer this over verify whenever success is "
+                                "machine-checkable: it costs one command "
+                                "instead of a whole extra subagent, and it "
+                                "cannot be talked into the wrong answer."
+                            ),
+                        },
+                        "proof_expect_exit": {
+                            "type": "integer",
+                            "description": (
+                                "Exit code the proof command must return "
+                                "(default 0). Set it when success means a "
+                                "non-zero exit, e.g. proving a command still "
+                                "fails."
+                            ),
+                        },
                         "depends_on": {
                             "type": "array",
                             "items": {"type": "integer"},
@@ -4239,6 +4629,22 @@ DELEGATE_TASK_SCHEMA = {
                 "type": "string",
                 "enum": ["leaf", "orchestrator"],
                 "description": "(rebuilt at get_definitions() time)",
+            },
+            "proof": {
+                "type": "string",
+                "description": (
+                    "Single-task mode: a shell command that must succeed for "
+                    "the task to count as done. You re-run it after the "
+                    "subagent finishes and its exit code decides the verdict, "
+                    "so a wrong self-report cannot pass. Use it instead of "
+                    "verify whenever success is machine-checkable."
+                ),
+            },
+            "proof_expect_exit": {
+                "type": "integer",
+                "description": (
+                    "Exit code the proof command must return (default 0)."
+                ),
             },
             "verify": {
                 "type": "boolean",
@@ -4328,6 +4734,8 @@ registry.register(
         role=args.get("role"),
         background=_model_background_value(args, kw.get("parent_agent")),
         verify=args.get("verify"),
+        proof=args.get("proof"),
+        proof_expect_exit=args.get("proof_expect_exit"),
         parent_agent=kw.get("parent_agent"),
     ),
     check_fn=check_delegate_requirements,
