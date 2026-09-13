@@ -29,12 +29,12 @@
 - [x] **3.1** Extract gateway adapters (platform manager + structure)
 - [x] **3.2** Decompose CLI commands (modular command structure)
 - [x] **3.2.1** Update main.py to use command modules (integration) ✅ COMPLETE
-- [ ] **3.2.2** Move handlers from main.py to commands/* (migration)
-- [ ] **3.2.3** Migrate gateway/run.py decomposition (extraction)
-- [ ] **3.3** Integration: Compression Strategy → conversation_loop.py
-- [ ] **3.4** Integration: Transport Fallback → transports/__init__.py
-- [ ] **3.5** Integration: Plugin Integrity → tools/registry.py
-- [ ] **3.6** Integration: Content Trust → tools/approval.py
+- [x] **3.2.2** Transport Fallback → transports/__init__.py ✅ COMPLETE
+- [ ] **3.2.3** Move handlers from main.py to commands/* (migration)
+- [ ] **3.2.4** Migrate gateway/run.py decomposition (extraction)
+- [x] **3.3** Integration: Compression Strategy → conversation_loop.py ✅ COMPLETE
+- [ ] **3.4** Integration: Plugin Integrity → hercules_cli/plugins.py
+- [ ] **3.5** Integration: Content Trust → tools/approval.py
 
 ---
 
@@ -70,11 +70,18 @@
    - TRY_LEGACY mode maintains backward compatibility
    - Transports now support configurable fallback modes (TRY_LEGACY, FEATURE_FLAG, HARD_FAIL)
 
-6. ⏳ **NEXT PHASE: Infrastructure Integration**
-   - Compression strategy integration into conversation_loop.py
-   - Plugin integrity integration into hercules_cli/plugins.py
+6. ✅ **Phase 3 Compression Strategy Integration** (dca142c)
+   - Added Compressor instance initialization in agent_init.py
+   - Wired metrics collection at all 5 compression call sites in conversation_loop.py
+   - Added get_compression_metrics() method to AIAgent
+   - Configurable strategy via HERCULES_COMPRESSION_STRATEGY env variable
+   - Fully backward compatible with existing context_compressor
+
+7. ⏳ **NEXT PHASE: Infrastructure Integration**
+   - Plugin integrity integration into hercules_cli/plugins.py (high complexity)
    - Content trust integration into tools/approval.py
    - Handler migration from main.py to command modules (implementations)
+   - Consolidate compression modules (Phase 4)
 
 ---
 
@@ -102,8 +109,8 @@
 3. ✅ CLI handlers ready for migration (stubs in place, registration working)
 
 ### Remaining Work
-⏳ **Phase 3B: Infrastructure Integration (2-3 weeks)**
-1. Compression strategy integration into conversation_loop.py
+⏳ **Phase 3B: Infrastructure Integration (1-2 weeks remaining)**
+1. ✅ Compression strategy integration - COMPLETE
 2. Plugin integrity integration into hercules_cli/plugins.py (complex due to dual manifest systems)
 3. Content trust integration into tools/approval.py
 4. Migrate handler implementations from main.py to commands/* (currently stubs)

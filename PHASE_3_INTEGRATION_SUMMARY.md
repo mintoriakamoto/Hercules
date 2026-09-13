@@ -1,9 +1,9 @@
 # Phase 3 Integration Summary
 
-**Status:** Phase 3A Complete ✅ | Phase 3B In Progress
+**Status:** Phase 3A Complete ✅ | Phase 3B In Progress (Compression Strategy Integrated ✅)
 
 **Timeline:** September 13, 2026 - Continuing from Phase 2 Infrastructure  
-**Commits in Session:** 4 (cc169c1, b34e5fd, 68c7791 + progress docs)
+**Commits in Session:** 5 (cc169c1, b34e5fd, 68c7791, progress docs, dca142c - compression metrics)
 
 ---
 
@@ -49,7 +49,32 @@
 
 ## Phase 3B: Remaining Infrastructure Integration
 
-### 3. Compression Strategy Integration (Design Ready)
+### 3. Compression Strategy Integration ✅ COMPLETE (Commit: dca142c)
+
+**What was integrated:**
+- New `Compressor` instance initialized in `agent/agent_init.py` as `agent.compression_metrics`
+- Unified compression metrics collection wired into `agent/conversation_loop.py` at all 5 compression call sites
+- `get_compression_metrics()` method added to AIAgent for retrieving metrics
+
+**Changes:**
+- Added import of `Compressor` and `CompressionLevel` from `agent/compression_strategy`
+- Initialized `agent.compression_metrics = Compressor(strategy=level, enable_metrics=True)` 
+- Configurable strategy via `HERCULES_COMPRESSION_STRATEGY` environment variable (default: "balanced")
+- Wired metrics collection at compression triggers:
+  - Line 1008 (pre-API compression in main loop)
+  - Line 3029 (context length overflow)
+  - Line 3216 (payload too large - 413 error)
+  - Line 3439 (context length exceeded)
+  - Line 4657 (post-response compression)
+
+**Result:**
+- Compression operations now observable via `agent.get_compression_metrics()`
+- Per-operation metrics: original_size, compressed_size, ratio, duration_ms, content_type
+- Fully backward compatible: existing `context_compressor` unchanged
+- Metrics enable future optimization and monitoring
+- Foundation ready for consolidated compression interface in Phase 4
+
+### 3b. Compression Strategy Integration (Previous - Design Ready)
 
 **Status:** Foundation ready, integration design pending
 
