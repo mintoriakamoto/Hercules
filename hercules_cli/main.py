@@ -291,7 +291,6 @@ from hercules_cli.subcommands.whatsapp import build_whatsapp_parser
 from hercules_cli.subcommands.slack import build_slack_parser
 from hercules_cli.subcommands.login import build_login_parser
 from hercules_cli.subcommands.logout import build_logout_parser
-from hercules_cli.subcommands.auth import build_auth_parser
 from hercules_cli.subcommands.status import build_status_parser
 from hercules_cli.subcommands.webhook import build_webhook_parser
 from hercules_cli.subcommands.hooks import build_hooks_parser
@@ -301,7 +300,6 @@ from hercules_cli.subcommands.dump import build_dump_parser
 from hercules_cli.subcommands.debug import build_debug_parser
 from hercules_cli.subcommands.backup import build_backup_parser
 from hercules_cli.subcommands.import_cmd import build_import_cmd_parser
-from hercules_cli.subcommands.config import build_config_parser
 from hercules_cli.subcommands.console import build_console_parser
 from hercules_cli.subcommands.version import build_version_parser
 from hercules_cli.subcommands.update import build_update_parser
@@ -12833,6 +12831,23 @@ def main():
     chat_parser.set_defaults(func=cmd_chat)
 
     # =========================================================================
+    # Modular command registration (Phase 3 Integration)
+    # =========================================================================
+    from hercules_cli.commands import (
+        add_agent_subcommands,
+        add_auth_subcommands,
+        add_web_subcommands,
+        add_config_subcommands,
+        add_mesh_subcommands,
+    )
+
+    add_agent_subcommands(subparsers)
+    add_auth_subcommands(subparsers)
+    add_web_subcommands(subparsers)
+    add_config_subcommands(subparsers)
+    add_mesh_subcommands(subparsers)
+
+    # =========================================================================
     # model command  (parser built in hercules_cli/subcommands/model.py)
     # =========================================================================
     build_model_parser(subparsers, cmd_model=cmd_model)
@@ -13043,9 +13058,9 @@ def main():
     build_logout_parser(subparsers, cmd_logout=cmd_logout)
 
     # =========================================================================
-    # auth command  (parser built in hercules_cli/subcommands/auth.py)
+    # auth command (now registered via modular structure in Phase 3)
     # =========================================================================
-    build_auth_parser(subparsers, cmd_auth=cmd_auth)
+    # build_auth_parser(subparsers, cmd_auth=cmd_auth)  # Moved to hercules_cli.commands.auth_commands
 
     # =========================================================================
     # status command  (parser built in hercules_cli/subcommands/status.py)
@@ -13132,9 +13147,9 @@ def main():
     build_import_cmd_parser(subparsers, cmd_import=cmd_import)
 
     # =========================================================================
-    # config command  (parser built in hercules_cli/subcommands/config.py)
+    # config command (now registered via modular structure in Phase 3)
     # =========================================================================
-    build_config_parser(subparsers, cmd_config=cmd_config)
+    # build_config_parser(subparsers, cmd_config=cmd_config)  # Moved to hercules_cli.commands.config_commands
 
     # =========================================================================
     # console command  (parser built in hercules_cli/subcommands/console.py)

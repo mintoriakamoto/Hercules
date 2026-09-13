@@ -100,9 +100,9 @@ jobs:
     uses: ./.github/workflows/uv-lockfile-check.yml
 
   docker-lint:
-    name: Lint Docker scripts
+    name: Lint Docker & shell scripts
     needs: detect
-    if: needs.detect.outputs.docker_meta == 'true'
+    if: needs.detect.outputs.docker_meta == 'true' || needs.detect.outputs.shell == 'true'
     uses: ./.github/workflows/docker-lint.yml
 
   docker:

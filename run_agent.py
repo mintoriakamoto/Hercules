@@ -5442,6 +5442,17 @@ class AIAgent:
             force=force,
         )
 
+    def get_compression_metrics(self) -> list:
+        """Get collected compression metrics (Phase 3B Integration).
+
+        Returns:
+            List of CompressionMetrics from the unified compressor, or empty list
+            if compression metrics collection is disabled or unavailable.
+        """
+        if hasattr(self, "compression_metrics") and self.compression_metrics:
+            return self.compression_metrics.get_metrics()
+        return []
+
     def _set_tool_guardrail_halt(self, decision: ToolGuardrailDecision) -> None:
         """Record the first guardrail decision that should stop this turn."""
         if decision.should_halt and self._tool_guardrail_halt_decision is None:

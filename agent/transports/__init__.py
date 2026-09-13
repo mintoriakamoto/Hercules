@@ -4,7 +4,14 @@ Usage:
     from agent.transports import get_transport
     transport = get_transport("anthropic_messages")
     result = transport.normalize_response(raw_response)
+
+Integration note:
+    This module now uses TransportFactory from agent/transports/unified.py
+    to provide explicit fallback handling instead of silent None returns.
+    See FallbackMode enum for configuration options.
 """
+
+import logging
 
 from agent.transports.types import (
     NormalizedResponse,
@@ -13,9 +20,13 @@ from agent.transports.types import (
     build_tool_call,
     map_finish_reason,
 )  # noqa: F401
+from agent.transports.unified import FallbackMode, TransportFactory
+
+logger = logging.getLogger(__name__)
 
 _REGISTRY: dict = {}
 _discovered: bool = False
+_factory: TransportFactory = None
 
 
 def register_transport(api_mode: str, transport_cls: type) -> None:
@@ -26,24 +37,47 @@ def register_transport(api_mode: str, transport_cls: type) -> None:
 def get_transport(api_mode: str):
     """Get a transport instance for the given api_mode.
 
-    Returns None if no transport is registered for this api_mode.
-    This allows gradual migration — call sites can check for None
-    and fall back to the legacy code path.
+    Uses explicit fallback handling via TransportFactory instead of
+    returning None. Behavior controlled by FallbackMode configuration.
+
+    Args:
+        api_mode: Provider API mode (e.g., 'anthropic_messages')
+
+    Returns:
+        Transport instance, or None if TRY_LEGACY mode and transport not found
+
+    Raises:
+        TransportError: If HARD_FAIL mode and transport not found
     """
-    global _discovered
+    global _factory, _discovered
+
+    if _factory is None:
+        _factory = TransportFactory(fallback_mode=FallbackMode.TRY_LEGACY)
+
     if not _discovered:
         _discover_transports()
+
     cls = _REGISTRY.get(api_mode)
     if cls is None:
-        # The registry can be partially populated when a specific transport
-        # module was imported directly (for example chat_completions before
-        # codex).  Discover on misses, not only when the registry is empty, so
-        # test/order-dependent imports do not make valid api_modes unavailable.
         _discover_transports()
         cls = _REGISTRY.get(api_mode)
-    if cls is None:
-        return None
-    return cls()
+
+    if cls is not None:
+        return cls()
+
+    return _factory.get_transport(api_mode)
+
+
+def get_fallback_stats() -> dict:
+    """Get statistics on transport fallback usage.
+
+    Returns:
+        Dict mapping api_mode to fallback count
+    """
+    global _factory
+    if _factory is None:
+        return {}
+    return _factory.get_fallback_stats()
 
 
 def _discover_transports() -> None:

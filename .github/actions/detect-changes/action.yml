@@ -15,6 +15,9 @@ outputs:
   docker_meta:
     description: Docker setup and meta files have changed.
     value: ${{ steps.classify.outputs.docker_meta }}
+  shell:
+    description: A shell script changed anywhere in the tree.
+    value: ${{ steps.classify.outputs.shell }}
   site:
     description: Build the Docusaurus docs site.
     value: ${{ steps.classify.outputs.site }}

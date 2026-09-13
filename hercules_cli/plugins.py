@@ -46,6 +46,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
+from agent.plugin_integrity import (
+    PluginIntegrityManager,
+    IntegrityError,
+)
 from hercules_constants import get_hercules_home
 from utils import env_var_enabled, fast_safe_load
 from hercules_cli.config import cfg_get
@@ -1862,6 +1866,32 @@ class PluginManager:
         module.__package__ = module_name
         module.__path__ = [str(plugin_dir)]  # type: ignore[attr-defined]
         sys.modules[module_name] = module
+
+        # Phase 3B Integration: Optional plugin integrity verification
+        # Feature flag: HERCULES_PLUGIN_INTEGRITY_CHECK (default: off for backward compat)
+        _verify_plugin_integrity = env_var_enabled(
+            "HERCULES_PLUGIN_INTEGRITY_CHECK"
+        )
+        if _verify_plugin_integrity:
+            try:
+                # Verify plugin integrity (hash check, signature if present)
+                # Note: This is non-blocking (logging only) — plugin loads
+                # even if integrity check fails. Use HERCULES_PLUGIN_INTEGRITY_STRICT
+                # to make it blocking (future work).
+                manager = PluginIntegrityManager()
+                manager.verify_plugin(plugin_dir, manifest.name or key)
+                logger.info(
+                    "Plugin integrity verified: %s", manifest.name or key
+                )
+            except IntegrityError as exc:
+                # Log warning but don't block plugin load (backward compatible)
+                logger.warning("Plugin integrity check failed: %s", exc)
+            except Exception as exc:
+                # Integrity check system error — log and continue
+                logger.debug(
+                    "Plugin integrity verification error: %s", exc
+                )
+
         spec.loader.exec_module(module)
         return module
 

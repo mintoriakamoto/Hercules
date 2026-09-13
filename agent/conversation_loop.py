@@ -1001,12 +1001,36 @@ def run_conversation(
                 f"📦 Pre-API compression: ~{request_pressure_tokens:,} tokens "
                 f"near the context/output limit. Compacting before the next model call."
             )
+            # Collect compression metrics (Phase 3B Integration)
+            _pre_compression_size = sum(
+                len(str(m.get("content", ""))) for m in messages
+            )
             messages, active_system_prompt = agent._compress_context(
                 messages,
                 system_message,
                 approx_tokens=request_pressure_tokens,
                 task_id=effective_task_id,
             )
+            # Log compression metrics if metrics collection is enabled
+            if hasattr(agent, "compression_metrics") and agent.compression_metrics:
+                _post_compression_size = sum(
+                    len(str(m.get("content", ""))) for m in messages
+                )
+                if _pre_compression_size > 0:
+                    _compressed_content = "messages"
+                    _compression_ratio = _post_compression_size / _pre_compression_size
+                    # Create a dummy compression operation for metrics tracking
+                    _ = agent.compression_metrics.compress(
+                        "[compressed context]",
+                        max_tokens=None,
+                        content_type="context",
+                    )
+                    # Update the metrics with actual numbers
+                    if agent.compression_metrics.metrics_log:
+                        _last_metric = agent.compression_metrics.metrics_log[-1]
+                        _last_metric.original_size = _pre_compression_size
+                        _last_metric.compressed_size = _post_compression_size
+                        _last_metric.ratio = _compression_ratio
             # Reset retry/empty-response state so the compacted request
             # gets a fresh chance instead of inheriting stale recovery
             # counters from the pre-compaction history.
@@ -3002,11 +3026,30 @@ def run_conversation(
                     compression_attempts += 1
                     if compression_attempts <= max_compression_attempts:
                         original_len = len(messages)
+                        _pre_compression_size = sum(
+                            len(str(m.get("content", ""))) for m in messages
+                        )
                         messages, active_system_prompt = agent._compress_context(
                             messages, system_message,
                             approx_tokens=approx_tokens,
                             task_id=effective_task_id,
                         )
+                        # Collect metrics (Phase 3B)
+                        if hasattr(agent, "compression_metrics") and agent.compression_metrics:
+                            _post_compression_size = sum(
+                                len(str(m.get("content", ""))) for m in messages
+                            )
+                            if _pre_compression_size > 0:
+                                _ = agent.compression_metrics.compress(
+                                    "[compressed context]",
+                                    max_tokens=None,
+                                    content_type="context",
+                                )
+                                if agent.compression_metrics.metrics_log:
+                                    _last_metric = agent.compression_metrics.metrics_log[-1]
+                                    _last_metric.original_size = _pre_compression_size
+                                    _last_metric.compressed_size = _post_compression_size
+                                    _last_metric.ratio = _post_compression_size / _pre_compression_size
                         conversation_history = conversation_history_after_compression(
                             agent, messages
                         )
@@ -3189,10 +3232,29 @@ def run_conversation(
 
                     original_len = len(messages)
                     original_tokens = estimate_messages_tokens_rough(messages)
+                    _pre_compression_size = sum(
+                        len(str(m.get("content", ""))) for m in messages
+                    )
                     messages, active_system_prompt = agent._compress_context(
                         messages, system_message, approx_tokens=approx_tokens,
                         task_id=effective_task_id,
                     )
+                    # Collect metrics (Phase 3B)
+                    if hasattr(agent, "compression_metrics") and agent.compression_metrics:
+                        _post_compression_size = sum(
+                            len(str(m.get("content", ""))) for m in messages
+                        )
+                        if _pre_compression_size > 0:
+                            _ = agent.compression_metrics.compress(
+                                "[compressed context]",
+                                max_tokens=None,
+                                content_type="context",
+                            )
+                            if agent.compression_metrics.metrics_log:
+                                _last_metric = agent.compression_metrics.metrics_log[-1]
+                                _last_metric.original_size = _pre_compression_size
+                                _last_metric.compressed_size = _post_compression_size
+                                _last_metric.ratio = _post_compression_size / _pre_compression_size
                     conversation_history = conversation_history_after_compression(
                         agent, messages
                     )
@@ -3412,10 +3474,29 @@ def run_conversation(
 
                     original_len = len(messages)
                     original_tokens = estimate_messages_tokens_rough(messages)
+                    _pre_compression_size = sum(
+                        len(str(m.get("content", ""))) for m in messages
+                    )
                     messages, active_system_prompt = agent._compress_context(
                         messages, system_message, approx_tokens=approx_tokens,
                         task_id=effective_task_id,
                     )
+                    # Collect metrics (Phase 3B)
+                    if hasattr(agent, "compression_metrics") and agent.compression_metrics:
+                        _post_compression_size = sum(
+                            len(str(m.get("content", ""))) for m in messages
+                        )
+                        if _pre_compression_size > 0:
+                            _ = agent.compression_metrics.compress(
+                                "[compressed context]",
+                                max_tokens=None,
+                                content_type="context",
+                            )
+                            if agent.compression_metrics.metrics_log:
+                                _last_metric = agent.compression_metrics.metrics_log[-1]
+                                _last_metric.original_size = _pre_compression_size
+                                _last_metric.compressed_size = _post_compression_size
+                                _last_metric.ratio = _post_compression_size / _pre_compression_size
                     conversation_history = conversation_history_after_compression(
                         agent, messages
                     )
@@ -4573,11 +4654,30 @@ def run_conversation(
 
                 if agent.compression_enabled and _compressor.should_compress(_real_tokens):
                     agent._safe_print("  ⟳ compacting context…")
+                    _pre_compression_size = sum(
+                        len(str(m.get("content", ""))) for m in messages
+                    )
                     messages, active_system_prompt = agent._compress_context(
                         messages, system_message,
                         approx_tokens=agent.context_compressor.last_prompt_tokens,
                         task_id=effective_task_id,
                     )
+                    # Collect metrics (Phase 3B)
+                    if hasattr(agent, "compression_metrics") and agent.compression_metrics:
+                        _post_compression_size = sum(
+                            len(str(m.get("content", ""))) for m in messages
+                        )
+                        if _pre_compression_size > 0:
+                            _ = agent.compression_metrics.compress(
+                                "[compressed context]",
+                                max_tokens=None,
+                                content_type="context",
+                            )
+                            if agent.compression_metrics.metrics_log:
+                                _last_metric = agent.compression_metrics.metrics_log[-1]
+                                _last_metric.original_size = _pre_compression_size
+                                _last_metric.compressed_size = _post_compression_size
+                                _last_metric.ratio = _post_compression_size / _pre_compression_size
                     conversation_history = conversation_history_after_compression(
                         agent, messages
                     )
