@@ -34,7 +34,7 @@
 - [ ] **3.2.4** Migrate gateway/run.py decomposition (extraction)
 - [x] **3.3** Integration: Compression Strategy → conversation_loop.py ✅ COMPLETE
 - [x] **3.4** Integration: Content Trust → tools/approval.py ✅ COMPLETE
-- [ ] **3.5** Integration: Plugin Integrity → hercules_cli/plugins.py
+- [x] **3.5** Integration: Plugin Integrity → hercules_cli/plugins.py ✅ COMPLETE
 
 ---
 
@@ -85,11 +85,19 @@
    - Hash-based approval caching with source tracking
    - Closes bypass where web content skipped approval gates
 
-8. ⏳ **NEXT PHASE: Infrastructure Integration**
-   - Plugin integrity integration into hercules_cli/plugins.py (high complexity)
+8. ✅ **Phase 3 Plugin Integrity Integration** (fa5f399)
+   - Integrated PluginIntegrityManager into hercules_cli/plugins.py
+   - Added optional integrity check in _load_directory_module()
+   - Feature flag: HERCULES_PLUGIN_INTEGRITY_CHECK (default: off)
+   - Non-blocking verification: Logs warnings without blocking plugin load
+   - Verifies content hash, signatures, and capability whitelist
+   - Foundation for future strict enforcement mode
+
+9. ⏳ **REMAINING WORK:**
    - Handler migration from main.py to command modules (implementations)
+   - Update gateway/run.py to use platform_manager
    - Consolidate compression modules (Phase 4)
-   - Document plugin integrity integration design
+   - Phase 4 Testing and Rollout
 
 ---
 
@@ -117,12 +125,26 @@
 3. ✅ CLI handlers ready for migration (stubs in place, registration working)
 
 ### Remaining Work
-⏳ **Phase 3B: Infrastructure Integration (1 week remaining)**
+⏳ **Phase 3B: Infrastructure Integration (COMPLETE - 3 of 4 integrations)**
 1. ✅ Compression strategy integration - COMPLETE
 2. ✅ Content trust integration - COMPLETE
-3. Plugin integrity integration into hercules_cli/plugins.py (complex due to dual manifest systems)
-4. Migrate handler implementations from main.py to commands/* (currently stubs)
-5. Update gateway/run.py to use platform_manager
+3. ✅ Plugin integrity integration - COMPLETE
+4. Handler migration from main.py to commands/* (medium effort, deferred to Phase 4)
+5. Update gateway/run.py to use platform_manager (low effort, deferred)
+
+⏳ **Phase 3C: Handler Migration (Future)**
+1. Migrate agent command handlers (start, run, switch-model, switch-provider)
+2. Migrate auth command handlers (login, logout, token management)
+3. Migrate web command handlers (start, stop, dashboard)
+4. Migrate config command handlers (get, set, list, show)
+5. Migrate mesh command handlers (join, status, peers, leave)
+
+⏳ **Phase 4: Testing and Rollout (1-2 weeks)**
+1. Comprehensive test suite for all new modules
+2. Regression testing for existing functionality
+3. Performance benchmarks (compression, transport, plugin loading)
+4. Integration testing for all Phase 3 integrations
+5. Feature flag rollout with canary deployment
 
 ⏳ **Testing (1 week):**
 - Unit tests for each new module
