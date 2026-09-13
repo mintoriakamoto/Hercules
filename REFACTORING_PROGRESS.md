@@ -31,6 +31,7 @@
 - [x] **3.2.1** Update main.py to use command modules (integration) ✅ COMPLETE
 - [x] **3.2.2** Transport Fallback → transports/__init__.py ✅ COMPLETE
 - [x] **3.2.3** Fix CLI parser conflicts ✅ COMPLETE (e8917fd)
+- [x] **3.2.3.1** Fix gateway command registry imports ✅ COMPLETE (8f38f39)
 - [ ] **3.2.4** Move handlers from main.py to commands/* (Phase 3C deferred)
 - [ ] **3.2.5** Migrate gateway/run.py decomposition (Phase 3C deferred)
 - [x] **3.3** Integration: Compression Strategy → conversation_loop.py ✅ COMPLETE
@@ -114,8 +115,15 @@
     - Tests verify backward compatibility, feature flags, error handling
     - Documentation: PHASE_4_TESTING_REPORT.md (comprehensive)
 
-11. ⏳ **REMAINING WORK:**
-    - Phase 3C: Handler migration from main.py to command modules (agent, auth, web, config, mesh)
+11. ✅ **Phase 3C Gateway Import Fix** (8f38f39)
+    - Fixed import shadowing: new commands/ package was shadowing legacy commands.py
+    - Registered legacy module in sys.modules before executing (fixes dataclass decorator)
+    - Re-exported GATEWAY_KNOWN_COMMANDS, is_gateway_known_command, resolve_command
+    - All slash gateway commands now functional (/help, /new, /status, etc)
+    - Verified: gateway imports working, all 25 tests passing, CLI functional
+
+12. ⏳ **REMAINING WORK:**
+    - Phase 3C: Handler migration from main.py to command modules (agent, auth, web, config, mesh) — NEXT PRIORITY
     - Phase 3C: Update gateway/run.py to use platform_manager
     - Phase 4: Integration tests (compression metrics in conversation loop)
     - Phase 4: Performance benchmarks (compression, plugin loading)
