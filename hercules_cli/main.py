@@ -12833,6 +12833,23 @@ def main():
     chat_parser.set_defaults(func=cmd_chat)
 
     # =========================================================================
+    # Modular command registration (Phase 3 Integration)
+    # =========================================================================
+    from hercules_cli.commands import (
+        add_agent_subcommands,
+        add_auth_subcommands,
+        add_web_subcommands,
+        add_config_subcommands,
+        add_mesh_subcommands,
+    )
+
+    add_agent_subcommands(subparsers)
+    add_auth_subcommands(subparsers)
+    add_web_subcommands(subparsers)
+    add_config_subcommands(subparsers)
+    add_mesh_subcommands(subparsers)
+
+    # =========================================================================
     # model command  (parser built in hercules_cli/subcommands/model.py)
     # =========================================================================
     build_model_parser(subparsers, cmd_model=cmd_model)

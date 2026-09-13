@@ -59,31 +59,31 @@ def add_auth_subcommands(subparsers: argparse._SubParsersAction) -> None:
     list_tokens.set_defaults(func=handle_token_list)
 
 
-async def handle_auth_login(args: argparse.Namespace) -> None:
+def handle_auth_login(args: argparse.Namespace) -> None:
     """Handle 'hercules auth login' command."""
     logger.info("Authenticating with provider: %s", args.provider or "default")
     # Implementation will be filled in
 
 
-async def handle_auth_logout(args: argparse.Namespace) -> None:
+def handle_auth_logout(args: argparse.Namespace) -> None:
     """Handle 'hercules auth logout' command."""
     logger.info("Logging out")
     # Implementation will be filled in
 
 
-async def handle_token_create(args: argparse.Namespace) -> None:
+def handle_token_create(args: argparse.Namespace) -> None:
     """Handle 'hercules auth token create' command."""
     logger.info("Creating token: %s", args.name)
     # Implementation will be filled in
 
 
-async def handle_token_revoke(args: argparse.Namespace) -> None:
+def handle_token_revoke(args: argparse.Namespace) -> None:
     """Handle 'hercules auth token revoke' command."""
     logger.info("Revoking token: %s", args.token_id)
     # Implementation will be filled in
 
 
-async def handle_token_list(args: argparse.Namespace) -> None:
+def handle_token_list(args: argparse.Namespace) -> None:
     """Handle 'hercules auth token list' command."""
     logger.info("Listing tokens")
     # Implementation will be filled in

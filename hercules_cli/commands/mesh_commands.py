@@ -56,25 +56,25 @@ def add_mesh_subcommands(subparsers: argparse._SubParsersAction) -> None:
     leave_parser.set_defaults(func=handle_mesh_leave)
 
 
-async def handle_mesh_join(args: argparse.Namespace) -> None:
+def handle_mesh_join(args: argparse.Namespace) -> None:
     """Handle 'hercules mesh join' command."""
     logger.info("Joining mesh network at %s", args.peer_address)
     # Implementation will be filled in
 
 
-async def handle_mesh_status(args: argparse.Namespace) -> None:
+def handle_mesh_status(args: argparse.Namespace) -> None:
     """Handle 'hercules mesh status' command."""
     logger.info("Showing mesh network status")
     # Implementation will be filled in
 
 
-async def handle_mesh_peers(args: argparse.Namespace) -> None:
+def handle_mesh_peers(args: argparse.Namespace) -> None:
     """Handle 'hercules mesh peers' command."""
     logger.info("Listing mesh peers")
     # Implementation will be filled in
 
 
-async def handle_mesh_leave(args: argparse.Namespace) -> None:
+def handle_mesh_leave(args: argparse.Namespace) -> None:
     """Handle 'hercules mesh leave' command."""
     logger.info("Leaving mesh network")
     # Implementation will be filled in

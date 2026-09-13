@@ -11,18 +11,16 @@ Modules:
   - mesh_commands: mesh networking, cluster operations
 """
 
-from hercules_cli.commands import (
-    agent_commands,
-    auth_commands,
-    config_commands,
-    mesh_commands,
-    web_commands,
-)
+from hercules_cli.commands.agent_commands import add_agent_subcommands
+from hercules_cli.commands.auth_commands import add_auth_subcommands
+from hercules_cli.commands.config_commands import add_config_subcommands
+from hercules_cli.commands.mesh_commands import add_mesh_subcommands
+from hercules_cli.commands.web_commands import add_web_subcommands
 
 __all__ = [
-    "agent_commands",
-    "auth_commands",
-    "config_commands",
-    "mesh_commands",
-    "web_commands",
+    "add_agent_subcommands",
+    "add_auth_subcommands",
+    "add_config_subcommands",
+    "add_mesh_subcommands",
+    "add_web_subcommands",
 ]

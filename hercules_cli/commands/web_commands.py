@@ -57,25 +57,25 @@ def add_web_subcommands(subparsers: argparse._SubParsersAction) -> None:
     dash_config.set_defaults(func=handle_dashboard_config)
 
 
-async def handle_web_start(args: argparse.Namespace) -> None:
+def handle_web_start(args: argparse.Namespace) -> None:
     """Handle 'hercules web start' command."""
     logger.info("Starting web server on %s:%d", args.host, args.port)
     # Implementation will be filled in
 
 
-async def handle_web_stop(args: argparse.Namespace) -> None:
+def handle_web_stop(args: argparse.Namespace) -> None:
     """Handle 'hercules web stop' command."""
     logger.info("Stopping web server")
     # Implementation will be filled in
 
 
-async def handle_dashboard_open(args: argparse.Namespace) -> None:
+def handle_dashboard_open(args: argparse.Namespace) -> None:
     """Handle 'hercules web dashboard open' command."""
     logger.info("Opening dashboard in browser")
     # Implementation will be filled in
 
 
-async def handle_dashboard_config(args: argparse.Namespace) -> None:
+def handle_dashboard_config(args: argparse.Namespace) -> None:
     """Handle 'hercules web dashboard config' command."""
     logger.info("Configuring dashboard: %s=%s", args.setting, args.value)
     # Implementation will be filled in

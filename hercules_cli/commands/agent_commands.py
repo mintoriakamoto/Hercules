@@ -68,25 +68,25 @@ def add_agent_subcommands(subparsers: argparse._SubParsersAction) -> None:
     provider_parser.set_defaults(func=handle_agent_switch_provider)
 
 
-async def handle_agent_start(args: argparse.Namespace) -> None:
+def handle_agent_start(args: argparse.Namespace) -> None:
     """Handle 'hercules agent start' command."""
     logger.info("Starting agent: model=%s, provider=%s", args.model, args.provider)
     # Implementation will be filled in during migration
 
 
-async def handle_agent_run(args: argparse.Namespace) -> None:
+def handle_agent_run(args: argparse.Namespace) -> None:
     """Handle 'hercules agent run' command."""
     logger.info("Running agent turn: %s", args.message)
     # Implementation will be filled in during migration
 
 
-async def handle_agent_switch_model(args: argparse.Namespace) -> None:
+def handle_agent_switch_model(args: argparse.Namespace) -> None:
     """Handle 'hercules agent switch-model' command."""
     logger.info("Switching model to: %s", args.model_name)
     # Implementation will be filled in during migration
 
 
-async def handle_agent_switch_provider(args: argparse.Namespace) -> None:
+def handle_agent_switch_provider(args: argparse.Namespace) -> None:
     """Handle 'hercules agent switch-provider' command."""
     logger.info("Switching provider to: %s", args.provider)
     # Implementation will be filled in during migration

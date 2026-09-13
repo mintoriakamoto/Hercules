@@ -57,25 +57,25 @@ def add_config_subcommands(subparsers: argparse._SubParsersAction) -> None:
     show_parser.set_defaults(func=handle_config_show)
 
 
-async def handle_config_get(args: argparse.Namespace) -> None:
+def handle_config_get(args: argparse.Namespace) -> None:
     """Handle 'hercules config get' command."""
     logger.info("Getting config: %s", args.key)
     # Implementation will be filled in
 
 
-async def handle_config_set(args: argparse.Namespace) -> None:
+def handle_config_set(args: argparse.Namespace) -> None:
     """Handle 'hercules config set' command."""
     logger.info("Setting config: %s=%s", args.key, args.value)
     # Implementation will be filled in
 
 
-async def handle_config_list(args: argparse.Namespace) -> None:
+def handle_config_list(args: argparse.Namespace) -> None:
     """Handle 'hercules config list' command."""
     logger.info("Listing all configuration")
     # Implementation will be filled in
 
 
-async def handle_config_show(args: argparse.Namespace) -> None:
+def handle_config_show(args: argparse.Namespace) -> None:
     """Handle 'hercules config show' command."""
     logger.info("Showing configuration file")
     # Implementation will be filled in
