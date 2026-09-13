@@ -118,7 +118,7 @@ class ContentApprovalManager:
     def _load_approvals(self, path: Path) -> None:
         """Load approval history from log file."""
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             for key, approvals in data.items():
                 self.approvals[key] = [
@@ -270,7 +270,7 @@ class ContentApprovalManager:
                 key: [a.to_dict() for a in approvals]
                 for key, approvals in self.approvals.items()
             }
-            with open(self.approval_log_path, 'w') as f:
+            with open(self.approval_log_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
             logger.debug("Saved approvals to %s", self.approval_log_path)
         except Exception as e:

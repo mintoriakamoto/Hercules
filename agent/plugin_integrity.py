@@ -334,7 +334,7 @@ class PluginIntegrityManager:
     def _load_manifest_file(self, path: Path) -> None:
         """Load manifest from JSON file."""
         try:
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             for name, manifest_data in data.items():
                 self.manifests[name] = PluginManifest.from_dict(manifest_data)
@@ -386,6 +386,6 @@ class PluginIntegrityManager:
             name: manifest.to_dict()
             for name, manifest in self.manifests.items()
         }
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
         logger.info("Saved %d manifests to %s", len(self.manifests), path)

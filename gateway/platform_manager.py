@@ -199,7 +199,7 @@ class PlatformManager:
             return
 
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
             for platform_name, platform_data in data.items():
