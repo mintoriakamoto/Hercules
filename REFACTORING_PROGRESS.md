@@ -1,6 +1,6 @@
 # Hercules Architecture Refactoring Progress
 
-## Status: PHASE 2 INFRASTRUCTURE COMPLETE ✅
+## Status: PHASE 3 INTEGRATION IN PROGRESS 🔄
 
 ### Phase 1: Foundation (Transport & Compression Unification) ✅ COMPLETE
 - [x] **1.1** Create unified compression interface (strategy pattern)
@@ -23,12 +23,16 @@
 - `hercules_agent/core_api.py` (340 lines) - Public SDK API
 - `gateway/platform_manager.py` (515 lines) - Unified gateway lifecycle
 
-### Phase 3: Structural Refactoring ⏳ STARTED
+### Phase 3: Structural Refactoring ⏳ IN PROGRESS
 - [x] **3.1** Extract gateway adapters (platform manager + structure)
 - [x] **3.2** Decompose CLI commands (modular command structure)
-- [ ] **3.2.1** Update main.py to use command modules (integration)
+- [x] **3.2.1** Update main.py to use command modules (integration) ✅ COMPLETE
 - [ ] **3.2.2** Move handlers from main.py to commands/* (migration)
 - [ ] **3.2.3** Migrate gateway/run.py decomposition (extraction)
+- [ ] **3.3** Integration: Compression Strategy → conversation_loop.py
+- [ ] **3.4** Integration: Transport Fallback → transports/__init__.py
+- [ ] **3.5** Integration: Plugin Integrity → tools/registry.py
+- [ ] **3.6** Integration: Content Trust → tools/approval.py
 
 ---
 
@@ -47,10 +51,21 @@
    - Modular command structure
    - 1,125 lines, 9 new modules
 
-3. ⏳ **NEXT: Phase 3 Integration**
-   - main.py refactoring with commands
-   - gateway/run.py decomposition
-   - Integration tests for all phases
+3. ✅ **Linting Fixes** (26ec0fd)
+   - Added encoding='utf-8' to all file operations
+   - Compliance with ruff PLW1514 rule
+
+4. ✅ **Phase 3 CLI Integration** (cc169c1)
+   - Integrated modular command structure into main.py
+   - Updated all command modules to use synchronous handlers
+   - Re-exported command registration functions from __init__.py
+   - main.py now calls add_*_subcommands() to register all 5 command groups
+
+5. ⏳ **NEXT: Phase 3 Infrastructure Integration**
+   - Compression strategy integration into conversation_loop.py
+   - Transport fallback integration into transports/__init__.py
+   - Plugin integrity integration into tools/registry.py
+   - Content trust integration into tools/approval.py
 
 ---
 
