@@ -8,7 +8,7 @@ from typing import Callable
 def build_doctor_parser(subparsers, *, cmd_doctor: Callable) -> None:
     doctor_parser = subparsers.add_parser(
         "doctor",
-        help="Check configuration, Cooklabs gateway, and Hermes mesh",
+        help="Check configuration, Cooklabs gateway, and Hercules mesh",
         description="Diagnose Cooklabs Hercules: local gateways first, no Nous portal",
     )
     doctor_parser.add_argument(

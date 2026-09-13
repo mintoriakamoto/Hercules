@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from hercules_cli.hermes_migrate import apply, plan
+from hercules_cli.hercules_migrate import apply, plan
 
 
 def test_plan_and_apply(tmp_path: Path):

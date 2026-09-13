@@ -18,7 +18,7 @@ HOME = Path.home()
 OFFICIAL = "https://github.com/mintoriakamoto/Hercules"
 
 MARKERS: tuple[tuple[str, tuple[str, ...], str], ...] = (
-    ("hermes-home", (".hermes",), "python -m hercules_cli.hermes_migrate"),
+    ("hermes-home", (".hermes",), "python -m hercules_cli.hercules_migrate"),
     ("hercules", (".hercules",), "this process"),
     ("claude", (".claude", ".config/claude"), "skills + CLAUDE.md + MCP"),
     ("opencode", (".opencode", ".config/opencode"), "MCP / CLI sidecar"),
@@ -198,7 +198,7 @@ def scan() -> dict:
         "home": str(HOME),
         "cwd": str(Path.cwd()),
         "official": OFFICIAL,
-        "mesh": "hermes",
+        "mesh": "hercules",
         "kinds": kinds,
         "hits": [asdict(h) for h in hits],
     }
@@ -206,7 +206,7 @@ def scan() -> dict:
 
 def format_report(data: dict) -> str:
     lines = [
-        "Hermes mesh (Cooklabs Hercules — Hermes-shaped, not Nous-owned)",
+        "Hercules mesh (Cooklabs Hercules — Hermes-shaped, not Nous-owned)",
         f"official: {data['official']}",
         f"home: {data['home']}",
         f"kinds: {', '.join(data['kinds']) or '(none)'}",
@@ -219,7 +219,7 @@ def format_report(data: dict) -> str:
         lines.append("  (no local agent trees found under HOME / cwd / PATH)")
     lines.append("")
     lines.append("Together: Hercules owns the loop; sidecars stay CLI/MCP.")
-    lines.append("Hermes Agent install → python -m hercules_cli.hermes_migrate")
+    lines.append("Hermes Agent install → python -m hercules_cli.hercules_migrate")
     lines.append("OpenClaw → hercules claw migrate")
     lines.append("TENSELERATE → http://127.0.0.1:8080/v1")
     lines.append("update → hercules update (mintoriakamoto/Hercules only)")
@@ -229,7 +229,7 @@ def format_report(data: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] in {"migrate", "--migrate"}:
-        from hercules_cli.hermes_migrate import main as migrate_main
+        from hercules_cli.hercules_migrate import main as migrate_main
 
         return migrate_main(argv[1:])
     data = scan()

@@ -15,4 +15,4 @@ Not Nous Research. Derived from their MIT Hercules Agent. We keep the license.
 See `docs/cooklabs-gateway.md` and `hercules_cli/cooklabs_gateway.py`.
 
 Personas Read / Coder / Developer: `optional-skills/cooklabs-personas/`.
-Hermes mesh: `python -m hercules_cli.hermes`.
+Hercules mesh: `python -m hercules_cli.mesh`.
