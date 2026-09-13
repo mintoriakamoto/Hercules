@@ -10,6 +10,7 @@ Lanes:
 
 * ``python``      — pytest / ruff / ty / footguns.
 * ``docker_meta`` — Dockerfiles etc.
+* ``shell``       — shellcheck + parse check for any ``*.sh`` in the tree.
 * ``frontend``    — TS typecheck matrix + desktop build.
 * ``site``        — Docusaurus + generated skill docs.
 * ``scan``        — supply-chain scan (Python files, .pth, setup hooks).
@@ -73,6 +74,10 @@ def classify(files: list[str]) -> dict[str, bool]:
     ret = {
         "python": any(not _py_irrelevant(f) for f in files),
         "docker_meta":  any(f.startswith(_DOCKER_META) for f in files),
+        # Every shell script, wherever it lives. install_hercules.sh sits at the
+        # repo root and was covered by no lane at all, which is how an
+        # unterminated here-document reached main: nothing ever parsed it.
+        "shell": any(f.endswith(".sh") for f in files),
         "frontend": any(f.startswith(_FRONTEND) or f in _ROOT_NPM for f in files),
         "site": any(f.startswith(_SITE) for f in files),
         "scan": any(_is_scan(f) for f in files),
@@ -82,6 +87,7 @@ def classify(files: list[str]) -> dict[str, bool]:
     if not files or any(f.startswith(".github/") for f in files):
         ret["python"] = True
         ret["docker_meta"] = True
+        ret["shell"] = True
         ret["frontend"] = True
         ret["site"] = True
         ret["scan"] = True
