@@ -59,6 +59,10 @@ log_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
+log_warn() {
+    echo -e "${YELLOW}!${NC} $1"
+}
+
 echo ""
 echo -e "${CYAN}=========================================="
 echo "  Hercules Agent - Complete Installation"
@@ -359,21 +363,78 @@ log_step "[7/8] Configuring AI models..."
 
 mkdir -p "$INSTALL_DIR/models"
 
-# Download Phi-2 model for offline inference (optional)
-log_step "Model download (can be skipped for API-only mode)..."
-if [ -z "$CI" ]; then  # Not in CI environment
-    python3 << 'PYEOF'
-try:
-    from huggingface_hub import snapshot_download
-    snapshot_download(
-        repo_id="microsoft/phi-2",
-        local_dir=f"{INSTALL_DIR}/models/phi-2",
-        ignore_patterns=["*.bin"]  # Skip large binary files on first pass
-    )
-    print("✓ Phi-2 model configured for offline use")
-except Exception as e:
-    print(f"⚠ Model download skipped: {e}")
-PYEOF
+# ----------------------------------------------------------------------------
+# Supported models
+# ----------------------------------------------------------------------------
+# This build runs exactly two models. Anything else is unsupported: the agent
+# loop, tool-call formatting and context budgets are tuned against these, and
+# silently accepting a third model produces failures that look like agent bugs
+# rather than a model mismatch.
+#
+# CONFIRM THESE TWO REPO IDs before first use -- a wrong id fails at download
+# time with a 404 that reads like a network problem.
+SUPPORTED_MODEL_PRIMARY="${HERCULES_MODEL_PRIMARY:-<qwen-27b-repo-id>}"
+SUPPORTED_MODEL_COMPACT="${HERCULES_MODEL_COMPACT:-<qwen-a3b-repo-id>}"
+
+# Detection-first: a machine that already holds one of these must never be
+# made to re-download tens of gigabytes. Scans the places local weights
+# actually live rather than assuming any one runtime.
+log_step "Checking for models already installed on this machine..."
+
+FOUND_MODELS=""
+_note_model() {  # $1 = where, $2 = what
+    FOUND_MODELS="${FOUND_MODELS}${1}|${2}\n"
+    log_success "Found (${1}): ${2}"
+}
+
+# Ollama
+if command -v ollama > /dev/null 2>&1; then
+    while IFS= read -r line; do
+        case "$line" in
+            *qwen*|*Qwen*) _note_model "ollama" "${line%% *}" ;;
+        esac
+    done < <(ollama list 2>/dev/null | tail -n +2)
+fi
+
+# GGUF weights: llama.cpp / LM Studio / Jan / a local models dir
+for dir in \
+    "$INSTALL_DIR/models" \
+    "$HOME/.cache/llama.cpp" \
+    "$HOME/.local/share/models" \
+    "$HOME/.lmstudio/models" \
+    "$HOME/.cache/lm-studio/models" \
+    "$HOME/.jan/models" \
+    "$HOME/models"
+do
+    [ -d "$dir" ] || continue
+    while IFS= read -r f; do
+        [ -n "$f" ] && _note_model "gguf" "$f"
+    done < <(find "$dir" -maxdepth 3 -type f -iname "*qwen*.gguf" 2>/dev/null | head -20)
+done
+
+# Hugging Face hub cache (repo dirs are named models--org--name)
+HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}/hub"
+if [ -d "$HF_CACHE" ]; then
+    while IFS= read -r d; do
+        [ -n "$d" ] && _note_model "hf-cache" "$(basename "$d")"
+    done < <(find "$HF_CACHE" -maxdepth 1 -type d -iname "models--*qwen*" 2>/dev/null | head -20)
+fi
+
+if [ -n "$FOUND_MODELS" ]; then
+    log_success "Using models already present — skipping download"
+    printf "%b" "$FOUND_MODELS" > "$INSTALL_DIR/models/DETECTED.txt"
+    echo "  (inventory written to $INSTALL_DIR/models/DETECTED.txt)"
+else
+    log_warn "No supported model found locally."
+    echo "  Hercules runs offline-first, but needs one of:"
+    echo "    primary : $SUPPORTED_MODEL_PRIMARY"
+    echo "    compact : $SUPPORTED_MODEL_COMPACT"
+    echo
+    echo "  These are large downloads, so the installer does not fetch them"
+    echo "  unattended. Pull one when ready:"
+    echo "    hf download $SUPPORTED_MODEL_PRIMARY --local-dir $INSTALL_DIR/models/primary"
+    echo "  or point Hercules at an existing copy:"
+    echo "    LOCAL_MODEL_PATH=/path/to/weights"
 fi
 
 log_success "AI models configured"
