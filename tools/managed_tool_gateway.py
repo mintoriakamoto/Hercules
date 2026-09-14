@@ -105,7 +105,6 @@ def read_nous_access_token() -> Optional[str]:
     explicit = os.getenv("TOOL_GATEWAY_USER_TOKEN")
     if isinstance(explicit, str) and explicit.strip():
         return explicit.strip()
-    nous_provider = _read_nous_provider_state() or {}
     cached_token = peek_nous_access_token()
 
     # The refresh-aware token path was removed with the Nous provider. Without

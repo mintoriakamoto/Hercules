@@ -30,7 +30,6 @@ def get_transport(api_mode: str):
     This allows gradual migration — call sites can check for None
     and fall back to the legacy code path.
     """
-    global _discovered
     if not _discovered:
         _discover_transports()
     cls = _REGISTRY.get(api_mode)

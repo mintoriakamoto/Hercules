@@ -34,7 +34,7 @@ it is the mechanism protecting the diversity the whole scheme rests on.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable
 
 from agent.consensus.proofs import VERIFIED_CLAIM, settle
 from agent.consensus.records import SignedRecord
