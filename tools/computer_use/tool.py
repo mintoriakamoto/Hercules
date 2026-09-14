@@ -290,7 +290,7 @@ def handle_computer_use(args: Dict[str, Any], **kwargs) -> Any:
 
 def _request_approval(action: str, args: Dict[str, Any]) -> Optional[str]:
     """Return None if approved, or a JSON error string if denied."""
-    global _session_auto_approve, _always_allow
+    global _session_auto_approve
     if _session_auto_approve:
         return None
     if action in _always_allow:

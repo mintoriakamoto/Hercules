@@ -2017,7 +2017,6 @@ def _generate_piper_tts(text: str, output_path: str, tts_config: Dict[str, Any])
     # PiperVoice instance serves all speakers, so it stays out of the cache
     # key. Multi-speaker workflows share one model load.
     cache_key = f"{model_path}::cuda={use_cuda}"
-    global _piper_voice_cache
     if cache_key not in _piper_voice_cache:
         logger.info("[Piper] Loading voice: %s", model_path)
         _piper_voice_cache[cache_key] = PiperVoice.load(model_path, use_cuda=use_cuda)
@@ -2114,7 +2113,6 @@ def _generate_kittentts(text: str, output_path: str, tts_config: Dict[str, Any])
     clean_text = kt_config.get("clean_text", True)
 
     # Use cached model instance if available
-    global _kittentts_model_cache
     if model_name not in _kittentts_model_cache:
         logger.info("[KittenTTS] Loading model: %s", model_name)
         _kittentts_model_cache[model_name] = KittenTTS(model_name)
