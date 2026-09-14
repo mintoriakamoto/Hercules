@@ -59,30 +59,45 @@ Branch naming: `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/`
 ### 3. Code Quality
 
 **Python:**
-- Use `ruff` for linting
+- `ruff check .` must pass. Only the rules in `pyproject.toml`
+  `[tool.ruff.lint] select` are enforced (currently `PLW1514`: every
+  text-mode `open()` / `read_text()` / `write_text()` needs an explicit
+  `encoding=`). No formatter and no `mypy` run in CI.
+- `python scripts/check-windows-footguns.py --all` must pass (Windows-unsafe
+  primitives such as `os.killpg`, `os.setsid`, bare `signal.SIGKILL`).
+- CI also posts an advisory ruff + `ty` diff against the target branch
+  (`scripts/lint_diff.py`). It never fails the build; treat new diagnostics
+  as review feedback.
 - Add type hints
-- Follow PEP 8
 - Target Python 3.11+
 
 **TypeScript:**
 - Use `eslint`
 - Write tests with Jest
-- Maintain type safety
+- Maintain type safety (`npm run --prefix <package> typecheck` is what CI runs)
 
 ### 4. Testing
 
 ```bash
-pytest                    # Run all tests
-pytest --cov=hercules_cli # With coverage
-ruff check .              # Lint
-mypy .                    # Type check
+scripts/run_tests.sh                          # Full suite, as CI runs it
+scripts/run_tests.sh tests/agent/             # One directory
+scripts/run_tests.sh tests/agent/test_foo.py  # One file
+ruff check .                                  # Lint (blocking in CI)
+python scripts/check-windows-footguns.py --all # Windows footguns (blocking in CI)
 ```
+
+Use `scripts/run_tests.sh`, not a bare `pytest tests/<dir>`. It runs each
+test file in its own subprocess, which is how CI runs them; a directory-level
+`pytest` shares module state across files and produces cross-test-pollution
+failures that do not reproduce in isolation (see `CLAUDE.md`, "Running
+tests"). CI installs `--extra all --extra dev`; tests for optional
+integrations that fail locally with `FeatureUnavailable` are not regressions.
 
 Requirements:
 - ✓ All tests pass
 - ✓ Minimum 80% coverage for new code
 - ✓ Deterministic tests
-- ✓ No linting errors
+- ✓ `ruff check .` and the Windows footgun checker pass
 
 ### 5. Commit & Push
 

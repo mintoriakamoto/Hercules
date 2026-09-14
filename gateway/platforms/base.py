@@ -3041,14 +3041,9 @@ class BasePlatformAdapter(ABC):
                     self.name, chat_id, message_id, e,
                 )
 
-        coro = _run_delete()
-        try:
-            asyncio.create_task(coro)
-        except RuntimeError:
-            # No running loop (e.g. unit tests that never reach the async
-            # path).  Close the coroutine cleanly so Python doesn't warn
-            # about it never being awaited, then drop silently.
-            coro.close()
+        # No running loop (e.g. unit tests that never reach the async
+        # path) closes the coroutine cleanly inside the helper.
+        self._spawn_background_task(_run_delete())
 
     async def send_slash_confirm(
         self,
@@ -3507,7 +3502,6 @@ class BasePlatformAdapter(ABC):
         ``MEDIA:`/path/to/file.png` ``) to avoid breaking path extraction.
         """
         chars = list(content)
-        n = len(chars)
 
         # Build list of (start, end) spans to mask
         spans: list = []
@@ -5366,6 +5360,35 @@ class BasePlatformAdapter(ABC):
         if session_key not in self._active_sessions:
             self._session_tasks.pop(session_key, None)
     
+    def _spawn_background_task(
+        self, coro: Any, *, name: Optional[str] = None
+    ) -> Optional["asyncio.Task"]:
+        """Schedule *coro* as a tracked fire-and-forget task.
+
+        ``asyncio.create_task`` only keeps a weak reference to the task; a
+        task nothing else references can be garbage-collected mid-flight.
+        Tracking it in ``_background_tasks`` keeps it alive until it
+        finishes and lets ``cancel_background_tasks`` cancel it on
+        disconnect. Returns ``None`` (and closes the coroutine) when no
+        event loop is running.
+        """
+        try:
+            task = asyncio.create_task(coro, name=name)
+        except RuntimeError:
+            coro.close()
+            return None
+        tasks = getattr(self, "_background_tasks", None)
+        if tasks is None:
+            tasks = self._background_tasks = set()
+        try:
+            tasks.add(task)
+        except TypeError:
+            # Tests stub create_task() with non-hashable sentinels.
+            return task
+        if hasattr(task, "add_done_callback"):
+            task.add_done_callback(tasks.discard)
+        return task
+
     async def cancel_background_tasks(self) -> None:
         """Cancel any in-flight background message-processing tasks.
 
