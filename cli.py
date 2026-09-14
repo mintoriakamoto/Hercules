@@ -46,6 +46,10 @@ from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# Strong references to scheduled prompt_toolkit print futures (asyncio holds
+# tasks weakly; an untracked one can be collected before it prints).
+_PT_PRINT_FUTURES: set = set()
+
 # Suppress startup messages for clean CLI experience
 os.environ["HERCULES_QUIET"] = "1"  # Our own modules
 
@@ -2681,7 +2685,9 @@ def _cprint(text: str):
             import inspect as _inspect
             coro = run_in_terminal(lambda: _pt_print(_PT_ANSI(text)))
             if coro is not None and (_inspect.isawaitable(coro) or _inspect.iscoroutine(coro)):
-                _aio.ensure_future(coro)
+                _fut = _aio.ensure_future(coro)
+                _PT_PRINT_FUTURES.add(_fut)
+                _fut.add_done_callback(_PT_PRINT_FUTURES.discard)
             # else: run_in_terminal ran the lambda synchronously; nothing more
             # to do (double-scheduling would print twice).
         except Exception:

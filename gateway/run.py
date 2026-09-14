@@ -273,6 +273,12 @@ def _is_transient_network_error(exc: BaseException) -> bool:
     return False
 
 
+# Strong references to signal-initiated shutdown tasks. asyncio only holds
+# tasks weakly, so an untracked ``create_task(runner.stop())`` could be
+# garbage-collected before the gateway finishes stopping.
+_SIGNAL_SHUTDOWN_TASKS: set = set()
+
+
 def _gateway_loop_exception_handler(
     loop: "asyncio.AbstractEventLoop", context: Dict[str, Any]
 ) -> None:
@@ -2823,6 +2829,13 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         # sites are untouched when multiplexing is off (this dict is empty).
         # Populated by _start_secondary_profile_adapters().
         self._profile_adapters: Dict[str, Dict[Platform, BasePlatformAdapter]] = {}
+        # Per-instance session state. The class-level defaults above exist
+        # only so partially-constructed test doubles can read them; a real
+        # runner must own its own dicts, otherwise every runner in a process
+        # would share (and mutate) the same class-level mappings.
+        self._running_agents_ts = {}
+        self._session_model_overrides = {}
+        self._session_reasoning_overrides = {}
         self._warn_if_docker_media_delivery_is_risky()
         _gateway_runner_ref = _weakref.ref(self)
 
@@ -20708,7 +20721,9 @@ async def start_gateway(config: Optional[GatewayConfig] = None, replace: bool = 
                 )
             except Exception as _e:
                 logger.debug("spawn_async_diagnostic failed: %s", _e)
-        asyncio.create_task(runner.stop())
+        _stop_task = asyncio.create_task(runner.stop())
+        _SIGNAL_SHUTDOWN_TASKS.add(_stop_task)
+        _stop_task.add_done_callback(_SIGNAL_SHUTDOWN_TASKS.discard)
 
     def restart_signal_handler():
         runner.request_restart(detached=False, via_service=True)
