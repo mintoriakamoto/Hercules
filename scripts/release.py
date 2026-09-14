@@ -2168,15 +2168,15 @@ def get_commits(since_tag=None):
     # Split on double-null to get each commit entry, since body ends with \0
     # and format ends with \0, each record ends with \0\0 between entries
     for entry in log.split("\0\0"):
-        entry = entry.strip()
-        if not entry:
+        record = entry.strip()
+        if not record:
             continue
         # Split on first null to separate "hash<US>name<US>email<US>subject" from "body"
-        if "\0" in entry:
-            header, body = entry.split("\0", 1)
+        if "\0" in record:
+            header, body = record.split("\0", 1)
             body = body.strip()
         else:
-            header = entry
+            header = record
             body = ""
         parts = header.split("\x1f", 3)
         if len(parts) != 4:
