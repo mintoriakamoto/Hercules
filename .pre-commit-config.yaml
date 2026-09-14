@@ -4,27 +4,43 @@
 # See https://pre-commit.com for more information
 
 repos:
-  # Python linting and formatting
+  # Python linting — mirrors the blocking `ruff check .` job in
+  # .github/workflows/lint.yml (only pyproject [tool.ruff.lint] select rules).
+  # rev tracks the ruff pin in pyproject [project.optional-dependencies] dev;
+  # older ruff's PLW1514 misses pathlib read_text()/write_text().
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.0
+    rev: v0.15.10
     hooks:
       - id: ruff
-        args: [--fix]
         stages: [commit]
-      - id: ruff-format
+      # ruff-format is not run in CI; left out so hooks match the real gates.
+      # - id: ruff-format
+      #   stages: [commit]
+
+  # Windows footguns — same checker as the blocking job in
+  # .github/workflows/lint.yml, which runs it with --all over the package
+  # roots. Here it gets the staged Python files (its designed pre-commit mode).
+  # The script is stdlib-only, so pre-commit's own interpreter suffices.
+  - repo: local
+    hooks:
+      - id: check-windows-footguns
+        name: check-windows-footguns
+        entry: python scripts/check-windows-footguns.py
+        language: python
+        types: [python]
         stages: [commit]
 
-  # Type checking
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.1
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - types-requests
-          - types-PyYAML
-          - types-setuptools
-        args: [--ignore-missing-imports]
-        stages: [commit]
+  # Type checking: mypy is not run in CI (typecheck.yml is TypeScript-only).
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.11.1
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies:
+  #         - types-requests
+  #         - types-PyYAML
+  #         - types-setuptools
+  #       args: [--ignore-missing-imports]
+  #       stages: [commit]
 
   # YAML validation
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -133,7 +149,7 @@ ci:
     chore: auto-fix code style issues
 
     - Run pre-commit hooks
-    - Fix linting, formatting, and type issues
+    - Fix whitespace, end-of-file and prettier issues
   autofix_prs: true
   autoupdate_branch: ''
   autoupdate_commit_msg: 'chore: update pre-commit hooks'

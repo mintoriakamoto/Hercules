@@ -181,8 +181,21 @@ and anonymous, so reputation has nothing to attach to.
   returns `None` and callers fall back to the legacy path.
 - `auxiliary_client.py` (6,897 lines) duplicates provider logic already in
   `transports/`, with sync *and* async twins of each adapter.
-- Four overlapping compression modules, plus root `trajectory_compressor.py`.
-- `agent/curator_backup.py` is a checked-in backup copy.
+- Three overlapping compression modules — `agent/context_compressor.py`
+  (3.3k), `agent/conversation_compression.py` (1.4k) and
+  `hercules_cli/partial_compress.py` (324, used by `cli.py` and
+  `gateway/slash_commands.py`) — plus root `trajectory_compressor.py` (1.6k).
+  `agent/manual_compression_feedback.py` is a 49-line message formatter, not
+  a compressor. The root module is a shipped `py-modules` entry in
+  `pyproject.toml` and is imported directly by `scripts/sample_and_compress.py`,
+  `tests/test_trajectory_compressor*.py`, `tests/hercules_cli/test_arcee_provider.py`
+  and `tests/tools/test_config_null_guard.py`; it cannot move without
+  changing all of those.
+- `agent/curator_backup.py` is *not* a backup copy — the filename misleads.
+  It is the curator's live snapshot/rollback subsystem (pre-run tarball
+  of `~/.hercules/skills/`, restore via `hercules curator rollback`),
+  imported by `agent/curator.py` and `hercules_cli/curator.py` and
+  covered by `tests/agent/test_curator_backup.py`.
 - God-files: `gateway/run.py` (21k), `hercules_cli/web_server.py` (17k),
   `hercules_cli/main.py` (14.7k).
 
