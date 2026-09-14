@@ -1008,9 +1008,11 @@ _AUTO_APPEND_MEDIA_TOOL_NAMES = {
 # implementation.  Re-exported under the historical private names so existing
 # call sites and tests keep working.
 from agent.replay_cleanup import (  # noqa: E402
+    is_interrupted_tool_result as _is_interrupted_tool_result,  # noqa: F401 — re-export
     strip_interrupted_tool_tails as _strip_interrupted_tool_tails,
     strip_dangling_tool_call_tail as _strip_dangling_tool_call_tail,
     strip_stale_dangerous_confirmations as _strip_stale_dangerous_confirmations,
+    is_dangerous_confirmation as _is_dangerous_confirmation,  # noqa: F401 — re-export
 )
 
 
