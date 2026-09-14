@@ -615,7 +615,8 @@ from hercules_cli import __version__, __release_date__
 # Provider model-selection wizard flows extracted to hercules_cli/model_setup_flows.py
 # (god-file decomposition Phase 2). Re-imported here so select_provider_and_model and
 # existing test monkeypatches (hercules_cli.main._model_flow_*) keep resolving unchanged.
-from hercules_cli.model_setup_flows import (
+from hercules_cli.model_setup_flows import (  # noqa: F401 — re-exports, see comment above
+    _prompt_auth_credentials_choice,
     _model_flow_openrouter,
     _model_flow_openai_codex,
     _model_flow_xai_oauth,
@@ -630,6 +631,7 @@ from hercules_cli.model_setup_flows import (
     _model_flow_copilot_acp,
     _model_flow_kimi,
     _model_flow_stepfun,
+    _model_flow_bedrock_api_key,
     _model_flow_bedrock,
     _model_flow_vertex,
     _model_flow_api_key_provider,
