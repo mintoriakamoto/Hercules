@@ -1446,7 +1446,7 @@ class WeixinAdapter(BasePlatformAdapter):
         context_token = str(message.get("context_token") or "").strip()
         if context_token:
             self._token_store.set(self._account_id, sender_id, context_token)
-        asyncio.create_task(self._maybe_fetch_typing_ticket(sender_id, context_token or None))
+        self._spawn_background_task(self._maybe_fetch_typing_ticket(sender_id, context_token or None))
 
         media_paths: List[str] = []
         media_types: List[str] = []
