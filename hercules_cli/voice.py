@@ -454,7 +454,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
     """
     global _continuous_active, _continuous_on_transcript, _continuous_stopping
     global _continuous_on_status, _continuous_on_silent_limit
-    global _continuous_recorder, _continuous_no_speech_count
+    global _continuous_no_speech_count
 
     with _continuous_lock:
         if not _continuous_active:
