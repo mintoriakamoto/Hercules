@@ -165,7 +165,7 @@ class IRCAdapter(BasePlatformAdapter):
 
         # Prevent two profiles from using the same IRC identity
         try:
-            from gateway.status import acquire_scoped_lock, release_scoped_lock
+            from gateway.status import acquire_scoped_lock
             lock_key = f"{self.server}:{self.nickname}"
             if not acquire_scoped_lock("irc", lock_key):
                 logger.error("IRC: %s@%s already in use by another profile", self.nickname, self.server)
@@ -308,30 +308,31 @@ class IRCAdapter(BasePlatformAdapter):
         for paragraph in content.split("\n"):
             if not paragraph.strip():
                 continue
+            remaining = paragraph
             while True:
-                para_bytes = paragraph.encode("utf-8")
+                para_bytes = remaining.encode("utf-8")
                 limit = min(user_limit, max_bytes)
                 if len(para_bytes) <= limit:
-                    if paragraph.strip():
-                        lines.append(paragraph)
+                    if remaining.strip():
+                        lines.append(remaining)
                     break
                 # Binary search for a safe character boundary <= limit
-                low, high = 1, len(paragraph)
+                low, high = 1, len(remaining)
                 best = 0
                 while low <= high:
                     mid = (low + high) // 2
-                    if len(paragraph[:mid].encode("utf-8")) <= limit:
+                    if len(remaining[:mid].encode("utf-8")) <= limit:
                         best = mid
                         low = mid + 1
                     else:
                         high = mid - 1
                 split_at = best
                 # Prefer a space boundary
-                space = paragraph.rfind(" ", 0, split_at)
+                space = remaining.rfind(" ", 0, split_at)
                 if space > split_at // 3:
                     split_at = space
-                lines.append(paragraph[:split_at].rstrip())
-                paragraph = paragraph[split_at:].lstrip()
+                lines.append(remaining[:split_at].rstrip())
+                remaining = remaining[split_at:].lstrip()
 
         return lines if lines else [""]
 
@@ -875,33 +876,33 @@ async def _standalone_send(
         max_bytes = 510 - overhead
         sent_any = False
         for paragraph in plain.split("\n"):
-            paragraph = _strip_irc_control_chars(paragraph).rstrip()
-            if not paragraph:
+            remaining = _strip_irc_control_chars(paragraph).rstrip()
+            if not remaining:
                 continue
-            while paragraph:
-                encoded = paragraph.encode("utf-8")
+            while remaining:
+                encoded = remaining.encode("utf-8")
                 if len(encoded) <= max_bytes:
-                    await _raw(f"PRIVMSG {target} :{paragraph}")
+                    await _raw(f"PRIVMSG {target} :{remaining}")
                     await asyncio.sleep(0.3)
                     sent_any = True
                     break
                 # Binary search for largest prefix that fits within max_bytes
-                low, high, best = 1, len(paragraph), 0
+                low, high, best = 1, len(remaining), 0
                 while low <= high:
                     mid = (low + high) // 2
-                    if len(paragraph[:mid].encode("utf-8")) <= max_bytes:
+                    if len(remaining[:mid].encode("utf-8")) <= max_bytes:
                         best = mid
                         low = mid + 1
                     else:
                         high = mid - 1
                 split_at = best
-                space = paragraph.rfind(" ", 0, split_at)
+                space = remaining.rfind(" ", 0, split_at)
                 if space > split_at // 3:
                     split_at = space
-                await _raw(f"PRIVMSG {target} :{paragraph[:split_at].rstrip()}")
+                await _raw(f"PRIVMSG {target} :{remaining[:split_at].rstrip()}")
                 await asyncio.sleep(0.3)
                 sent_any = True
-                paragraph = paragraph[split_at:].lstrip()
+                remaining = remaining[split_at:].lstrip()
 
         if not sent_any:
             return {"error": "IRC standalone send: empty message after stripping"}

@@ -37,7 +37,7 @@ class _Snowflake:
 
     __slots__ = ("id",)
 
-    def __init__(self, id: int) -> None:  # noqa: A002 - matches discord API
+    def __init__(self, id: int) -> None:
         self.id = id
 
 VALID_THREAD_AUTO_ARCHIVE_MINUTES = {60, 1440, 4320, 10080}
@@ -367,7 +367,7 @@ class VoiceReceiver:
     SAMPLE_RATE = 48000        # Discord native rate
     CHANNELS = 2               # Discord sends stereo
 
-    def __init__(self, voice_client, allowed_user_ids: set = None):
+    def __init__(self, voice_client, allowed_user_ids: Optional[set] = None):
         self._vc = voice_client
         self._allowed_user_ids = allowed_user_ids or set()
         self._running = False
@@ -540,7 +540,7 @@ class VoiceReceiver:
         encrypted = bytes(payload_with_nonce[:-4])
 
         try:
-            import nacl.secret  # noqa: E402 — delayed import, only in voice path
+            import nacl.secret
             box = nacl.secret.Aead(self._secret_key)
             decrypted = box.decrypt(encrypted, header, bytes(nonce))
         except Exception as e:
@@ -8139,8 +8139,8 @@ async def _standalone_send(
 def _clean_discord_user_ids(raw: str) -> list:
     """Strip common Discord mention prefixes from a comma-separated ID string."""
     cleaned = []
-    for uid in raw.replace(" ", "").split(","):
-        uid = uid.strip()
+    for raw_uid in raw.replace(" ", "").split(","):
+        uid = raw_uid.strip()
         if uid.startswith("<@") and uid.endswith(">"):
             uid = uid.lstrip("<@!").rstrip(">")
         if uid.lower().startswith("user:"):

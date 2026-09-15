@@ -575,7 +575,7 @@ def _validate_content_size(content: str, label: str = "SKILL.md") -> Optional[st
     return None
 
 
-def _resolve_skill_dir(name: str, category: str = None) -> Path:
+def _resolve_skill_dir(name: str, category: str | None = None) -> Path:
     """Build the directory path for a new skill, optionally under a category."""
     if category:
         return _skills_dir() / category / name
@@ -875,7 +875,7 @@ def _atomic_write_text(file_path: Path, content: str, encoding: str = "utf-8") -
 # =============================================================================
 
 def _create_skill(
-    name: str, content: str, category: str = None, force: bool = False
+    name: str, content: str, category: str | None = None, force: bool = False
 ) -> Dict[str, Any]:
     """Create a new user skill with SKILL.md content."""
     # Validate name
@@ -1021,7 +1021,7 @@ def _patch_skill(
     name: str,
     old_string: str,
     new_string: str,
-    file_path: str = None,
+    file_path: str | None = None,
     replace_all: bool = False,
 ) -> Dict[str, Any]:
     """Targeted find-and-replace within a skill file.
@@ -1470,15 +1470,15 @@ def _record_skill_feedback(name: str, helpful: Optional[bool]) -> str:
 def skill_manage(
     action: str,
     name: str,
-    content: str = None,
-    category: str = None,
-    file_path: str = None,
-    file_content: str = None,
-    old_string: str = None,
-    new_string: str = None,
+    content: str | None = None,
+    category: str | None = None,
+    file_path: str | None = None,
+    file_content: str | None = None,
+    old_string: str | None = None,
+    new_string: str | None = None,
     replace_all: bool = False,
-    absorbed_into: str = None,
-    helpful: bool = None,
+    absorbed_into: str | None = None,
+    helpful: bool | None = None,
     force: bool = False,
 ) -> str:
     """

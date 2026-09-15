@@ -106,7 +106,6 @@ _VISION_MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
 # through model_tools._run_async on a PER-THREAD event loop, so an asyncio
 # executor/semaphore bound to one loop cannot coordinate across them. A
 # ThreadPoolExecutor is loop- and thread-agnostic.
-import threading  # noqa: F401  (kept for downstream importers / patch targets)
 
 
 def _detect_host_cpus() -> int:
@@ -1063,7 +1062,7 @@ async def _vision_analyze_native(
 async def vision_analyze_tool(
     image_url: str,
     user_prompt: str,
-    model: str = None,
+    model: str | None = None,
     task_id: Optional[str] = None,
 ) -> str:
     """
@@ -1140,7 +1139,7 @@ async def vision_analyze_tool(
         try:
             resolved = await resolve_image_source(image_url, ResolveContext(task_id=task_id))
         except ImageResolutionError as exc:
-            raise ValueError(str(exc))
+            raise ValueError(str(exc)) from exc
 
         detected_mime_type = resolved.mime
         temp_dir = get_hercules_dir("cache/vision", "temp_vision_images")
@@ -1630,7 +1629,7 @@ async def _download_video(video_url: str, destination: Path, max_retries: int = 
 async def video_analyze_tool(
     video_url: str,
     user_prompt: str,
-    model: str = None,
+    model: str | None = None,
 ) -> str:
     """Analyze a video via multimodal LLM. Returns JSON {success, analysis}."""
     if not isinstance(user_prompt, str):

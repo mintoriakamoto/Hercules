@@ -41,7 +41,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, ClassVar, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 try:
@@ -1066,7 +1066,7 @@ class QQAdapter(BasePlatformAdapter):
     # layout (mobile-space constraint) collapses "session" and "always" into
     # a single "always" button; users wanting session-only approval can fall
     # back to the ``/approve session`` text command.
-    _APPROVAL_BUTTON_TO_CHOICE = {
+    _APPROVAL_BUTTON_TO_CHOICE: ClassVar = {
         "allow-once": "once",
         "allow-always": "always",
         "deny": "deny",

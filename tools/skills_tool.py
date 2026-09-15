@@ -212,11 +212,12 @@ def load_env() -> Dict[str, str]:
 
     with env_path.open(encoding="utf-8") as f:
         for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                if line.startswith("export "):
-                    line = line[7:]
-                key, _, value = line.partition("=")
+            stripped_line = line.strip()
+            if stripped_line and not stripped_line.startswith("#") and "=" in stripped_line:
+                content_line = stripped_line
+                if content_line.startswith("export "):
+                    content_line = content_line[7:]
+                key, _, value = content_line.partition("=")
                 env_vars[key.strip()] = value.strip().strip("\"'")
     return env_vars
 
@@ -640,7 +641,7 @@ def _get_session_platform() -> str:
         return ""
 
 
-def _is_skill_disabled(name: str, platform: str = None) -> bool:
+def _is_skill_disabled(name: str, platform: str | None = None) -> bool:
     """Check if a skill is disabled in config.
 
     Resolves the active platform from (in order of precedence):
@@ -743,9 +744,9 @@ def _find_all_skills(*, skip_disabled: bool = False) -> List[Dict[str, Any]]:
                 description = frontmatter.get("description", "")
                 if not description:
                     for line in body.strip().split("\n"):
-                        line = line.strip()
-                        if line and not line.startswith("#"):
-                            description = line
+                        stripped_line = line.strip()
+                        if stripped_line and not stripped_line.startswith("#"):
+                            description = stripped_line
                             break
 
                 if len(description) > MAX_DESCRIPTION_LENGTH:
@@ -863,7 +864,7 @@ def _rank_skills_by_query(skills: list, query: str) -> list:
     return [s for _score, s in scored]
 
 
-def skills_list(category: str = None, task_id: str = None, query: str = None) -> str:
+def skills_list(category: str | None = None, task_id: str | None = None, query: str | None = None) -> str:
     """
     List all available skills (progressive disclosure tier 1 - minimal metadata).
 
@@ -1058,8 +1059,8 @@ def _serve_plugin_skill(
 
 def skill_view(
     name: str,
-    file_path: str = None,
-    task_id: str = None,
+    file_path: str | None = None,
+    task_id: str | None = None,
     preprocess: bool = True,
 ) -> str:
     """

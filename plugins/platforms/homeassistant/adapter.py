@@ -19,7 +19,7 @@ import os
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional, Set
+from typing import Any, ClassVar, Dict, Optional, Set
 
 try:
     import aiohttp
@@ -60,7 +60,7 @@ class HomeAssistantAdapter(BasePlatformAdapter):
     MAX_MESSAGE_LENGTH = 4096
 
     # Reconnection backoff schedule (seconds)
-    _BACKOFF_STEPS = [5, 10, 30, 60]
+    _BACKOFF_STEPS: ClassVar = [5, 10, 30, 60]
 
     def __init__(self, config: PlatformConfig):
         super().__init__(config, Platform.HOMEASSISTANT)

@@ -1290,10 +1290,10 @@ def _iter_shell_command_starts(command: str):
 
     seen: set[int] = set()
     for start in starts:
-        start = _skip_shell_whitespace(command, start)
-        if start < len(command) and start not in seen:
-            seen.add(start)
-            yield start
+        skipped_start = _skip_shell_whitespace(command, start)
+        if skipped_start < len(command) and skipped_start not in seen:
+            seen.add(skipped_start)
+            yield skipped_start
 
 
 def _mark_command_starts(command: str) -> str:
@@ -1647,12 +1647,12 @@ def _command_matches_permanent_allowlist(command: str) -> bool:
     for pattern in patterns:
         if not isinstance(pattern, str):
             continue
-        pattern = pattern.strip()
-        if not pattern:
+        stripped_pattern = pattern.strip()
+        if not stripped_pattern:
             continue
-        if command == pattern:
+        if command == stripped_pattern:
             return True
-        if any(ch in pattern for ch in "*?[") and fnmatch.fnmatchcase(command, pattern):
+        if any(ch in stripped_pattern for ch in "*?[") and fnmatch.fnmatchcase(command, stripped_pattern):
             return True
     return False
 

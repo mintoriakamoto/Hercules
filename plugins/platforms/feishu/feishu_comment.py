@@ -1251,7 +1251,7 @@ async def handle_drive_comment_event(
                     nearest_self_index = idx
 
         if not current_text:
-            for i, (uid, text, is_self) in reversed(list(enumerate(timeline))):
+            for i, (_, text, is_self) in reversed(list(enumerate(timeline))):
                 if not is_self:
                     current_text = text
                     current_index = i
@@ -1316,7 +1316,7 @@ async def handle_drive_comment_event(
                 target_index = i
 
         if not target_text and timeline:
-            for i, (uid, text, is_self) in reversed(list(enumerate(timeline))):
+            for i, (uid, text, _) in reversed(list(enumerate(timeline))):
                 if uid == from_open_id:
                     target_text = text
                     target_index = i

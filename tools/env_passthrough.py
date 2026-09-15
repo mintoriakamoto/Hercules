@@ -105,20 +105,20 @@ def register_env_passthrough(var_names: Iterable[str]) -> None:
     pass through normally — they were never in the sandbox scrub list.
     """
     for name in var_names:
-        name = name.strip()
-        if not name:
+        name_stripped = name.strip()
+        if not name_stripped:
             continue
-        if _is_hercules_provider_credential(name):
+        if _is_hercules_provider_credential(name_stripped):
             logger.warning(
                 "env passthrough: refusing to register Hercules provider "
                 "credential %r (blocked by _HERCULES_PROVIDER_ENV_BLOCKLIST). "
                 "Skills must not override the execute_code sandbox's "
                 "credential scrubbing; see GHSA-rhgp-j443-p4rf.",
-                name,
+                name_stripped,
             )
             continue
-        _get_allowed().add(name)
-        logger.debug("env passthrough: registered %s", name)
+        _get_allowed().add(name_stripped)
+        logger.debug("env passthrough: registered %s", name_stripped)
 
 
 def _load_config_passthrough() -> frozenset[str]:

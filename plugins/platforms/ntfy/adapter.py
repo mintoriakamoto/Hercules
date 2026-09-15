@@ -273,11 +273,11 @@ class NtfyAdapter(BasePlatformAdapter):
             async for line in response.aiter_lines():
                 if not self._running:
                     return
-                line = line.strip()
-                if not line:
+                stripped_line = line.strip()
+                if not stripped_line:
                     continue
                 try:
-                    event = json.loads(line)
+                    event = json.loads(stripped_line)
                 except json.JSONDecodeError:
                     continue
                 if event.get("event") == "message":

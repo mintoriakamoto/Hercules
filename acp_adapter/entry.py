@@ -16,7 +16,7 @@ Usage::
 # IMPORTANT: hercules_bootstrap must be the very first import — UTF-8 stdio
 # on Windows.  No-op on POSIX.  See hercules_bootstrap.py for full rationale.
 try:
-    import hercules_bootstrap  # noqa: F401
+    import hercules_bootstrap
 except ModuleNotFoundError:
     # Graceful fallback when hercules_bootstrap isn't registered in the venv
     # yet — happens during partial ``hercules update`` where git-reset landed
@@ -153,8 +153,6 @@ def _print_version() -> None:
 
 
 def _run_check() -> None:
-    import acp  # noqa: F401
-    from acp_adapter.server import HerculesACPAgent  # noqa: F401
 
     print("Hercules ACP check OK")
 

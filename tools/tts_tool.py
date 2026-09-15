@@ -91,7 +91,7 @@ def _import_edge_tts():
     except ImportError:
         pass
     except Exception as e:
-        raise ImportError(str(e))
+        raise ImportError(str(e)) from e
     import edge_tts
     return edge_tts
 
@@ -105,14 +105,14 @@ def _import_elevenlabs():
     error-handling paths keep working.
     """
     try:
-        from tools.lazy_deps import FeatureUnavailable, ensure
+        from tools.lazy_deps import ensure
         ensure("tts.elevenlabs", prompt=False)
     except ImportError:
         # lazy_deps module itself missing — fall through to the raw import
         # so older code paths still get a clean ImportError.
         pass
     except Exception as e:  # FeatureUnavailable or any unexpected error
-        raise ImportError(str(e))
+        raise ImportError(str(e)) from e
     from elevenlabs.client import ElevenLabs
     return ElevenLabs
 
@@ -135,7 +135,7 @@ def _import_mistral_client():
     except ImportError:
         pass
     except Exception as e:  # FeatureUnavailable or any unexpected error
-        raise ImportError(str(e))
+        raise ImportError(str(e)) from e
     from mistralai.client import Mistral
     return Mistral
 
@@ -524,7 +524,7 @@ def _dispatch_to_plugin_provider(
             # recovery pattern.
             _ensure_plugins_discovered(force=True)
             plugin_provider = get_provider(key)
-    except Exception as exc:  # noqa: BLE001 — discovery failure is non-fatal
+    except Exception as exc:
         logger.debug("tts plugin dispatch skipped (discovery failed): %s", exc)
         return None
     if plugin_provider is None:
@@ -579,7 +579,7 @@ def _plugin_provider_is_voice_compatible(provider: str) -> bool:
         if plugin_provider is None:
             return False
         return bool(plugin_provider.voice_compatible)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug(
             "tts plugin voice_compatible check failed for '%s': %s", key, exc,
         )
@@ -1419,12 +1419,12 @@ def _generate_minimax_tts(text: str, output_path: str, tts_config: Dict[str, Any
             if status_code != 0:
                 status_msg = base_resp.get("status_msg", "unknown error")
                 raise RuntimeError(f"MiniMax TTS API error (code {status_code}): {status_msg}")
-        except Exception:
+        except Exception as exc:
             response.raise_for_status()
             raise RuntimeError(
                 f"MiniMax TTS returned unexpected Content-Type '{content_type}' "
                 f"({len(response.content)} bytes)"
-            )
+            ) from exc
 
         raise RuntimeError("MiniMax TTS returned no audio data")
 

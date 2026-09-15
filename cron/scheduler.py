@@ -130,8 +130,8 @@ def _resolve_cron_disabled_toolsets(cfg: dict) -> list[str]:
     disabled = ["cronjob", "messaging", "clarify"]
     agent_cfg = (cfg or {}).get("agent") or {}
     user_disabled = agent_cfg.get("disabled_toolsets") or []
-    for name in user_disabled:
-        name = str(name).strip()
+    for name_raw in user_disabled:
+        name = str(name_raw).strip()
         if name and name not in disabled:
             disabled.append(name)
     return disabled
@@ -460,7 +460,7 @@ _terminal_cwd_lock = _ReadWriteLock()
 
 def _get_parallel_pool(max_workers: Optional[int]) -> concurrent.futures.ThreadPoolExecutor:
     """Return (or create) the persistent parallel pool."""
-    global _parallel_pool, _parallel_pool_max_workers
+    global _parallel_pool, _parallel_pool_max_workers  # noqa: PLW0603
     if _parallel_pool is None or _parallel_pool_max_workers != max_workers:
         if _parallel_pool is not None:
             _parallel_pool.shutdown(wait=False, cancel_futures=False)
@@ -480,7 +480,7 @@ def _get_sequential_pool() -> concurrent.futures.ThreadPoolExecutor:
     sequential jobs to finish rather than corrupting their os.environ
     state.
     """
-    global _sequential_pool
+    global _sequential_pool  # noqa: PLW0603
     if _sequential_pool is None:
         _sequential_pool = concurrent.futures.ThreadPoolExecutor(
             max_workers=1,
@@ -491,7 +491,7 @@ def _get_sequential_pool() -> concurrent.futures.ThreadPoolExecutor:
 
 def _shutdown_parallel_pool() -> None:
     """Shut down the persistent pools on process exit."""
-    global _parallel_pool, _parallel_pool_max_workers, _sequential_pool
+    global _parallel_pool, _parallel_pool_max_workers, _sequential_pool  # noqa: PLW0603
     if _parallel_pool is not None:
         _parallel_pool.shutdown(wait=True, cancel_futures=False)
         _parallel_pool = None

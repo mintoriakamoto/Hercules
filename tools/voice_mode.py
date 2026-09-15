@@ -104,9 +104,9 @@ def _pulse_socket_reachable() -> bool:
     pulse_server = os.environ.get('PULSE_SERVER', '')
     # PULSE_SERVER may be "unix:/path", "unix:/path;..." or a bare path.
     for part in pulse_server.split(';'):
-        part = part.strip()
-        if part.startswith('unix:'):
-            candidates.append(part[len('unix:'):])
+        stripped_part = part.strip()
+        if stripped_part.startswith('unix:'):
+            candidates.append(stripped_part[len('unix:'):])
 
     pulse_runtime = os.environ.get('PULSE_RUNTIME_PATH')
     if pulse_runtime:
@@ -535,7 +535,7 @@ class AudioRecorder:
 
         sd, np = _import_audio()
 
-        def _callback(indata, frames, time_info, status):  # noqa: ARG001
+        def _callback(indata, frames, time_info, status):
             if status:
                 logger.debug("sounddevice status: %s", status)
             # When not recording the stream is idle — discard audio.

@@ -505,7 +505,7 @@ def _make_callback_handler() -> tuple[type, dict]:
     result: dict[str, Any] = {"auth_code": None, "state": None, "error": None}
 
     class _Handler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             params = parse_qs(urlparse(self.path).query)
             code = params.get("code", [None])[0]
             state = params.get("state", [None])[0]
@@ -653,13 +653,13 @@ async def _wait_for_callback() -> tuple[str, str | None]:
     # Start a temporary server on the known port
     try:
         server = HTTPServer(("127.0.0.1", _oauth_port), handler_cls)
-    except OSError:
+    except OSError as exc:
         # Port already in use — the server from build_oauth_auth is running.
         # Fall back to polling the server started by build_oauth_auth.
         raise OAuthNonInteractiveError(
             "OAuth callback timed out — could not bind callback port. "
             "Complete the authorization in a browser first, then retry."
-        )
+        ) from exc
 
     server_thread = threading.Thread(target=server.handle_request, daemon=True)
     server_thread.start()

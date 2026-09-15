@@ -67,12 +67,12 @@ def _content_payload(container: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(content, list):
         return {}
     for item in content:
-        item = _as_dict(item)
-        ctype = str(item.get("contentType") or item.get("content_type") or "").lower()
+        item_dict = _as_dict(item)
+        ctype = str(item_dict.get("contentType") or item_dict.get("content_type") or "").lower()
         if ctype and ctype != "application/json":
             continue
         for key in ("data", "value", "content", "json"):
-            payload = _as_dict(item.get(key))
+            payload = _as_dict(item_dict.get(key))
             if payload:
                 return payload
     return {}

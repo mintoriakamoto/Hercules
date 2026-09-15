@@ -2922,7 +2922,7 @@ class SlackAdapter(BasePlatformAdapter):
                         file=file_id
                     )
                     if info_resp.get("ok"):
-                        f = info_resp["file"]
+                        f = info_resp["file"]  # noqa: PLW2901 — intentional: enrich file object with API response
                     else:
                         detail = self._describe_slack_api_error(info_resp, file_obj=f)
                         if detail:

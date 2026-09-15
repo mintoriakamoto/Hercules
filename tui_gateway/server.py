@@ -969,7 +969,7 @@ _start_idle_reaper()
 
 
 def _get_db():
-    global _db, _db_error
+    global _db, _db_error  # noqa: PLW0603
     if _db is None:
         from hercules_state import SessionDB
 
@@ -1885,7 +1885,7 @@ _INDICATOR_DEFAULT = "kaomoji"
 
 
 def _load_cfg() -> dict:
-    global _cfg_cache, _cfg_mtime, _cfg_path
+    global _cfg_cache, _cfg_mtime, _cfg_path  # noqa: PLW0603
     try:
         import yaml
 
@@ -1936,7 +1936,7 @@ def _apply_managed(cfg: dict) -> dict:
 
 
 def _save_cfg(cfg: dict):
-    global _cfg_cache, _cfg_mtime, _cfg_path
+    global _cfg_cache, _cfg_mtime, _cfg_path  # noqa: PLW0603
 
     from hercules_cli.config import atomic_config_write
 
@@ -6518,7 +6518,7 @@ def _pet_frame_counts(spritesheet) -> dict:
         from agent.pet import render
 
         return render.state_frame_counts(str(spritesheet))
-    except Exception:  # noqa: BLE001 - cosmetic, never break the surface
+    except Exception:
         return {}
 
 
@@ -6531,7 +6531,7 @@ def _pet_sheet_revision(spritesheet) -> str:
     try:
         stat = spritesheet.stat()
         return f"{stat.st_mtime_ns}:{stat.st_size}"
-    except Exception:  # noqa: BLE001 - cosmetic, never break the surface
+    except Exception:
         return "0:0"
 
 
@@ -6539,7 +6539,7 @@ def _pet_payload_cache_key(pet, *, scale: float) -> tuple | None:
     """Cache key for the expensive sprite payload build."""
     try:
         stat = pet.spritesheet.stat()
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
     return (
         str(pet.spritesheet),
@@ -6587,7 +6587,7 @@ def _pet_row_frame_counts(spritesheet) -> dict:
                 count += 1
             out[name] = count
         return out
-    except Exception:  # noqa: BLE001 - cosmetic, never break the surface
+    except Exception:
         return {}
 
 
@@ -6602,7 +6602,7 @@ def _pet_config_scale() -> float:
         display = cfg.get("display", {}) if isinstance(cfg.get("display"), dict) else {}
         pet_cfg = display.get("pet", {}) if isinstance(display.get("pet"), dict) else {}
         return float(pet_cfg.get("scale", constants.DEFAULT_SCALE) or constants.DEFAULT_SCALE)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return constants.DEFAULT_SCALE
 
 
@@ -6684,7 +6684,7 @@ def _pet_state_rows(spritesheet) -> list[str]:
         with Image.open(spritesheet) as image:
             row_count = max(1, image.height // constants.FRAME_H)
         return list(constants.state_rows_for_grid(row_count))
-    except Exception:  # noqa: BLE001 - cosmetic, never break the surface
+    except Exception:
         from agent.pet import constants
 
         return list(constants.STATE_ROWS)
@@ -6711,7 +6711,7 @@ def _(rid, params: dict) -> dict:
             return _ok(rid, {"enabled": False})
 
         return _ok(rid, {"enabled": True, **_pet_sprite_payload(pet, scale=scale)})
-    except Exception as exc:  # noqa: BLE001 - cosmetic, never break the surface
+    except Exception as exc:
         logger.debug("pet.info failed: %s", exc)
         return _ok(rid, {"enabled": False})
 
@@ -6734,7 +6734,7 @@ def _(rid, params: dict) -> dict:
                 "spritesheetRevision": _pet_sheet_revision(pet.spritesheet),
             },
         )
-    except Exception as exc:  # noqa: BLE001 - cosmetic, never break the surface
+    except Exception as exc:
         logger.debug("pet.info.meta failed: %s", exc)
         return _ok(rid, {"enabled": False})
 
@@ -6839,7 +6839,7 @@ def _(rid, params: dict) -> dict:
                 "scale": scale,
             },
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.cells failed: %s", exc)
         return _ok(rid, {"enabled": False})
 
@@ -6898,7 +6898,7 @@ def _(rid, params: dict) -> dict:
                         "generated": entry.slug in installed and installed[entry.slug].generated,
                     }
                 )
-        except Exception as exc:  # noqa: BLE001 - offline: fall back to installed
+        except Exception as exc:
             logger.debug("pet.gallery manifest fetch failed: %s", exc)
 
         # Always include locally-installed pets even if the gallery is unreachable.
@@ -6922,7 +6922,7 @@ def _(rid, params: dict) -> dict:
                 "pets": gallery,
             },
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.gallery failed: %s", exc)
         return _ok(rid, {"enabled": False, "active": "", "pets": []})
 
@@ -6949,7 +6949,7 @@ def _(rid, params: dict) -> dict:
             return _err(rid, 5031, f"could not adopt '{slug}': {exc}")
         _set_active(slug)
         return _ok(rid, {"ok": True, "slug": slug, "displayName": pet.display_name})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.select failed: %s", exc)
         return _err(rid, 5031, f"pet.select failed: {exc}")
 
@@ -6975,11 +6975,11 @@ def _(rid, params: dict) -> dict:
         # If that was the active pet, stop surfaces pointing at a deleted sprite.
         try:
             _clear_active_if(slug)
-        except Exception as exc:  # noqa: BLE001 - removal already succeeded
+        except Exception as exc:
             logger.debug("pet.remove config update failed: %s", exc)
 
         return _ok(rid, {"ok": removed, "slug": slug})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.remove failed: %s", exc)
         return _err(rid, 5031, f"pet.remove failed: {exc}")
 
@@ -7006,7 +7006,7 @@ def _(rid, params: dict) -> dict:
             rid,
             {"ok": True, "filename": filename, "zipBase64": base64.standard_b64encode(data).decode("ascii")},
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.export failed: %s", exc)
         return _err(rid, 5031, f"pet.export failed: {exc}")
 
@@ -7040,11 +7040,11 @@ def _(rid, params: dict) -> dict:
                 from hercules_cli.pets import _rename_active_if
 
                 _rename_active_if(slug, new_slug)
-            except Exception as exc:  # noqa: BLE001 - rename already succeeded
+            except Exception as exc:
                 logger.debug("pet.rename config update failed: %s", exc)
 
         return _ok(rid, {"ok": True, "slug": new_slug, "displayName": name})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.rename failed: %s", exc)
         return _err(rid, 5031, f"pet.rename failed: {exc}")
 
@@ -7079,7 +7079,7 @@ def _(rid, params: dict) -> dict:
                 "dataUri": "data:image/png;base64," + base64.standard_b64encode(data).decode("ascii"),
             },
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.thumb failed: %s", exc)
         return _ok(rid, {"ok": False, "slug": slug})
 
@@ -7093,7 +7093,7 @@ def _(rid, params: dict) -> dict:
 
         _set_enabled(False)
         return _ok(rid, {"ok": True})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.disable failed: %s", exc)
         return _err(rid, 5031, f"pet.disable failed: {exc}")
 
@@ -7114,7 +7114,7 @@ def _(rid, params: dict) -> dict:
         if err:
             return _err(rid, 4004, err)
         return _ok(rid, {"ok": True, "scale": scale})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.scale failed: %s", exc)
         return _err(rid, 5031, f"pet.scale failed: {exc}")
 
@@ -7138,7 +7138,7 @@ def _pet_gen_sweep(root, *, max_age_s: float = 3600.0) -> None:
         for child in root.iterdir():
             if child.is_dir() and now - child.stat().st_mtime > max_age_s:
                 shutil.rmtree(child, ignore_errors=True)
-    except Exception as exc:  # noqa: BLE001 - cleanup is best-effort
+    except Exception as exc:
         logger.debug("pet-gen sweep failed: %s", exc)
 
 
@@ -7269,11 +7269,11 @@ def _(rid, params: dict) -> dict:
             available = False
         try:
             providers = list_sprite_providers()
-        except Exception as exc:  # noqa: BLE001 - picker is best-effort
+        except Exception as exc:
             logger.debug("pet provider list failed: %s", exc)
             providers = []
         return _ok(rid, {"available": available, "providers": providers})
-    except Exception as exc:  # noqa: BLE001 - never break the surface
+    except Exception as exc:
         logger.debug("pet.generate.status failed: %s", exc)
         return _ok(rid, {"available": False, "providers": []})
 
@@ -7341,7 +7341,7 @@ def _(rid, params: dict) -> dict:
         # fired before the first draft lands can still target this run.
         try:
             _emit("pet.generate.progress", "", {"token": token, "count": count})
-        except Exception as exc:  # noqa: BLE001 - streaming is best-effort
+        except Exception as exc:
             logger.debug("pet.generate init emit failed: %s", exc)
 
         def _on_draft(index: int, src) -> None:
@@ -7349,7 +7349,7 @@ def _(rid, params: dict) -> dict:
             try:
                 shutil.copyfile(src, dest)
                 data_uri = _pet_png_data_uri(dest)
-            except Exception as exc:  # noqa: BLE001 - skip a bad draft, keep the rest
+            except Exception as exc:
                 logger.debug("pet.generate draft %d failed: %s", index, exc)
                 return
             out.append({"index": index, "dataUri": data_uri})
@@ -7361,7 +7361,7 @@ def _(rid, params: dict) -> dict:
                     "",
                     {"token": token, "index": index, "dataUri": data_uri, "count": count},
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.debug("pet.generate progress emit failed: %s", exc)
 
         try:
@@ -7386,7 +7386,7 @@ def _(rid, params: dict) -> dict:
             return _err(rid, 5031, "generation produced no usable drafts")
         out.sort(key=lambda d: d["index"])
         return _ok(rid, {"ok": True, "token": token, "drafts": out})
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.generate failed: %s", exc)
         return _err(rid, 5031, f"pet.generate failed: {exc}")
 
@@ -7453,7 +7453,7 @@ def _(rid, params: dict) -> dict:
                 payload = {"event": "row", "state": state, "done": done, "total": total}
             try:
                 _emit("pet.hatch.progress", "", payload)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.debug("pet.hatch progress emit failed: %s", exc)
 
         try:
@@ -7485,7 +7485,7 @@ def _(rid, params: dict) -> dict:
                 "pet": payload,
             },
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("pet.hatch failed: %s", exc)
         return _err(rid, 5031, f"pet.hatch failed: {exc}")
 
@@ -9488,7 +9488,7 @@ def _format_ref_value(value: str) -> str:
     """
     import re as _re
 
-    global _ATTACHMENT_REF_NEEDS_QUOTING_RE
+    global _ATTACHMENT_REF_NEEDS_QUOTING_RE  # noqa: PLW0603
     if _ATTACHMENT_REF_NEEDS_QUOTING_RE is None:
         _ATTACHMENT_REF_NEEDS_QUOTING_RE = _re.compile(r"""[\s()\[\]{}<>"'`]""")
     if not value or not _ATTACHMENT_REF_NEEDS_QUOTING_RE.search(value):
@@ -12089,7 +12089,7 @@ _paste_counter = 0
 
 @method("paste.collapse")
 def _(rid, params: dict) -> dict:
-    global _paste_counter
+    global _paste_counter  # noqa: PLW0603
     text = params.get("text", "")
     if not text:
         return _err(rid, 4004, "empty paste")
@@ -13161,7 +13161,7 @@ def _(rid, params: dict) -> dict:
                 return _err(rid, 4015, "voice mode is off — enable with /voice on")
 
             with _voice_sid_lock:
-                global _voice_event_sid
+                global _voice_event_sid  # noqa: PLW0603
                 _voice_event_sid = params.get("session_id") or _voice_event_sid
 
             from hercules_cli.voice import start_continuous
@@ -13912,7 +13912,7 @@ def _(rid, params: dict) -> dict:
 
         payload = build_learning_graph()
         return _ok(rid, render_frames(payload, cols=max(20, cols), rows=max(10, rows), frames=frames))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _err(rid, 5000, f"learning.frames failed: {exc}")
 
 
@@ -13923,7 +13923,7 @@ def _(rid, params: dict) -> dict:
         from agent.learning_mutations import node_detail
 
         return _ok(rid, node_detail(str(params.get("id", ""))))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _err(rid, 5000, f"learning.detail failed: {exc}")
 
 
@@ -13934,7 +13934,7 @@ def _(rid, params: dict) -> dict:
         from agent.learning_mutations import delete_node
 
         return _ok(rid, delete_node(str(params.get("id", ""))))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _err(rid, 5000, f"learning.delete failed: {exc}")
 
 
@@ -13945,7 +13945,7 @@ def _(rid, params: dict) -> dict:
         from agent.learning_mutations import edit_node
 
         return _ok(rid, edit_node(str(params.get("id", "")), str(params.get("content", ""))))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return _err(rid, 5000, f"learning.edit failed: {exc}")
 
 

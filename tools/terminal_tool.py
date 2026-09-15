@@ -55,7 +55,6 @@ logger = logging.getLogger(__name__)
 # The terminal tool polls this during command execution so it can kill
 # long-running subprocesses immediately instead of blocking until timeout.
 # ---------------------------------------------------------------------------
-from tools.interrupt import is_interrupted, _interrupt_event  # noqa: F401 — re-exported
 # display_hercules_home imported lazily at call site (stale-module safety during hercules update)
 
 
@@ -1186,11 +1185,11 @@ def _parse_env_var(name: str, default: str, converter: Any = int, type_label: st
     raw = os.getenv(name, default)
     try:
         return converter(raw)
-    except (ValueError, json.JSONDecodeError):
+    except (ValueError, json.JSONDecodeError) as exc:
         raise ValueError(
             f"Invalid value for {name}: {raw!r} (expected {type_label}). "
             f"Check ~/.hercules/.env or environment variables."
-        )
+        ) from exc
 
 
 def _safe_getcwd() -> str:
@@ -1388,10 +1387,10 @@ def _get_modal_backend_state(modal_mode: object | None) -> Dict[str, Any]:
 
 
 def _create_environment(env_type: str, image: str, cwd: str, timeout: int,
-                        ssh_config: dict = None, container_config: dict = None,
-                        local_config: dict = None,
+                        ssh_config: dict | None = None, container_config: dict | None = None,
+                        local_config: dict | None = None,
                         task_id: str = "default",
-                        host_cwd: str = None):
+                        host_cwd: str | None = None):
     """
     Create an execution environment for sandboxed command execution.
     
@@ -2892,7 +2891,6 @@ def check_terminal_requirements() -> bool:
             return True
 
         elif env_type == "daytona":
-            from daytona import Daytona  # noqa: F401 — SDK presence check
             return os.getenv("DAYTONA_API_KEY") is not None
 
         else:

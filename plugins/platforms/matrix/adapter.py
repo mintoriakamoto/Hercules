@@ -63,7 +63,7 @@ from dataclasses import dataclass, field
 from html import escape as _html_escape
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any, ClassVar, Dict, Optional, Set
 
 try:
     from mautrix.types import (
@@ -207,12 +207,12 @@ def _normalize_matrix_bang_command(text: str) -> str:
 class _MatrixHtmlSanitizer(HTMLParser):
     """Allowlist sanitizer for Matrix-compatible formatted HTML."""
 
-    _ALLOWED_TAGS = {
+    _ALLOWED_TAGS: ClassVar = {
         "a", "b", "blockquote", "br", "code", "del", "em", "h1", "h2", "h3",
         "h4", "h5", "h6", "hr", "i", "li", "ol", "p", "pre", "s", "strike",
         "strong", "table", "tbody", "td", "th", "thead", "tr", "ul",
     }
-    _VOID_TAGS = {"br", "hr"}
+    _VOID_TAGS: ClassVar = {"br", "hr"}
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=False)
@@ -1589,7 +1589,7 @@ class MatrixAdapter(BasePlatformAdapter):
         chunks = self.truncate_message(formatted, MAX_MESSAGE_LENGTH)
 
         last_event_id = None
-        for i, chunk in enumerate(chunks):
+        for _, chunk in enumerate(chunks):
             msg_content = self._build_text_message_content(chunk)
 
             self._apply_relation_metadata(msg_content, reply_to=reply_to, metadata=metadata)
@@ -3923,7 +3923,7 @@ class MatrixAdapter(BasePlatformAdapter):
             return
 
         dm_room_ids: Set[str] = set()
-        for user_id, rooms in dm_data.items():
+        for _, rooms in dm_data.items():
             if isinstance(rooms, list):
                 dm_room_ids.update(str(r) for r in rooms if isinstance(r, str))
 

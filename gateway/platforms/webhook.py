@@ -38,7 +38,6 @@ import hmac
 import json
 import logging
 import re
-import subprocess  # noqa: F401 — tests patch gateway.platforms.webhook.subprocess.run
 import time
 from collections import deque
 from typing import Any, Deque, Dict, Optional

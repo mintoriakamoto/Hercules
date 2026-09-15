@@ -694,13 +694,13 @@ class SignManager:
     # -- Class-level shared state ------------------------------------------
 
     # key: app_key → {"token", "bot_id", "expire_ts", ...}
-    _cache: dict[str, dict[str, Any]] = {}
+    _cache: ClassVar[dict[str, dict[str, Any]]] = {}
 
     # Per-app_key refresh locks — prevents concurrent duplicate sign-token
     # requests.  Created lazily inside get_refresh_lock() which is only called
     # from async context, so the Lock is always bound to the correct loop.
     # disconnect() clears this dict to prevent stale locks across reconnects.
-    _locks: dict[str, asyncio.Lock] = {}
+    _locks: ClassVar[dict[str, asyncio.Lock]] = {}
 
     # -- Internal helpers --------------------------------------------------
 
@@ -3326,7 +3326,7 @@ class InboundPipelineBuilder:
     """
 
     # Default middleware sequence for Yuanbao inbound message processing.
-    _DEFAULT_MIDDLEWARES: list[type] = [
+    _DEFAULT_MIDDLEWARES: ClassVar[list[type]] = [
         DecodeMiddleware,
         ExtractFieldsMiddleware,
         RecallGuardMiddleware,

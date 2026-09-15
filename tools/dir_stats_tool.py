@@ -88,14 +88,15 @@ def directory_stats_tool(
                 continue
 
             # Filter hidden
+            files_to_process = files
             if not include_hidden:
                 dirs[:] = [d for d in dirs if not d.startswith(".")]
-                files = [f for f in files if not f.startswith(".")]
+                files_to_process = [f for f in files if not f.startswith(".")]
 
             total_dirs += len(dirs)
-            total_files += len(files)
+            total_files += len(files_to_process)
 
-            for filename in files:
+            for filename in files_to_process:
                 filepath = os.path.join(root, filename)
                 try:
                     size = os.path.getsize(filepath)

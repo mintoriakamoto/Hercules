@@ -26,17 +26,17 @@ __all__ = [
     "BasePlatformAdapter",
     "MessageEvent",
     "SendResult",
-    "QQAdapter",  # noqa: F822 — resolved lazily by __getattr__ below
-    "YuanbaoAdapter",  # noqa: F822
+    "QQAdapter",
+    "YuanbaoAdapter",
 ]
 
 
 def __getattr__(name):
     if name == "QQAdapter":
-        from .qqbot import QQAdapter  # noqa: F401
+        from .qqbot import QQAdapter
         return QQAdapter
     if name == "YuanbaoAdapter":
-        from .yuanbao import YuanbaoAdapter  # noqa: F401
+        from .yuanbao import YuanbaoAdapter
         return YuanbaoAdapter
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

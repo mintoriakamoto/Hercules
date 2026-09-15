@@ -28,7 +28,7 @@ from pathlib import Path, PurePosixPath
 from hercules_constants import get_hercules_home
 from hercules_cli._subprocess_compat import windows_hide_flags
 from agent.skill_utils import is_excluded_skill_path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Optional, Tuple, Union
 from urllib.parse import unquote, urljoin, urlparse, urlsplit, urlunparse
 
 import httpx
@@ -551,7 +551,7 @@ OWN_SKILLS_REPO = "mintoriakamoto/Hercules"
 class GitHubSource(SkillSource):
     """Fetch skills from GitHub repos via the Contents API."""
 
-    DEFAULT_TAPS = [
+    DEFAULT_TAPS: ClassVar[List[Dict[str, str]]] = [
         # NOTE: openai/skills moved its content into skills/.curated/ (and
         # skills/.system/ for system-level skills). _list_skills_in_repo
         # skips directories starting with "." or "_", so we point both
@@ -2746,7 +2746,7 @@ class ClaudeMarketplaceSource(SkillSource):
     Marketplace repos contain .claude-plugin/marketplace.json with plugin listings.
     """
 
-    KNOWN_MARKETPLACES = [
+    KNOWN_MARKETPLACES: ClassVar[List[str]] = [
         "anthropics/skills",
         "aiskillstore/marketplace",
     ]

@@ -43,7 +43,7 @@ import sqlite3
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 try:
     from aiohttp import web
@@ -384,7 +384,7 @@ class ResponseStore:
     if the on-disk path is unavailable.
     """
 
-    def __init__(self, max_size: int = MAX_STORED_RESPONSES, db_path: str = None):
+    def __init__(self, max_size: int = MAX_STORED_RESPONSES, db_path: str | None = None):
         self._max_size = max_size
         if db_path is None:
             try:
@@ -646,7 +646,7 @@ def _redact_api_error_text(value: Any, *, limit: int | None = None) -> str:
     return redacted
 
 
-def _openai_error(message: str, err_type: str = "invalid_request_error", param: str = None, code: str = None) -> Dict[str, Any]:
+def _openai_error(message: str, err_type: str = "invalid_request_error", param: str | None = None, code: str | None = None) -> Dict[str, Any]:
     """OpenAI-style error envelope."""
     return {
         "error": {
@@ -2018,7 +2018,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if delta:
                 _enqueue("assistant.delta", {"message_id": message_id, "delta": delta})
 
-        def _tool_progress(event_type: str, tool_name: str = None, preview: str = None, args=None, **kwargs) -> None:
+        def _tool_progress(event_type: str, tool_name: str | None = None, preview: str | None = None, args=None, **kwargs) -> None:
             if event_type == "reasoning.available":
                 _enqueue("tool.progress", {"message_id": message_id, "tool_name": tool_name or "_thinking", "delta": preview or ""})
             elif event_type in {"tool.started", "tool.completed", "tool.failed"}:
@@ -2456,8 +2456,8 @@ class APIServerAdapter(BasePlatformAdapter):
 
     async def _write_sse_chat_completion(
         self, request: "web.Request", completion_id: str, model: str,
-        created: int, stream_q, agent_task, agent_ref=None, session_id: str = None,
-        gateway_session_key: str = None,
+        created: int, stream_q, agent_task, agent_ref=None, session_id: str | None = None,
+        gateway_session_key: str | None = None,
     ) -> "web.StreamResponse":
         """Write real streaming SSE from agent's stream_delta_callback queue.
 
@@ -3069,7 +3069,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     final_response_text = agent_final
                 if isinstance(result, dict) and result.get("error") and not final_response_text:
                     agent_error = _redact_api_error_text(result["error"])
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 logger.error("Error running agent for streaming responses: %s", e, exc_info=True)
                 agent_error = _redact_api_error_text(e)
 
@@ -3576,7 +3576,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
     _JOB_ID_RE = __import__("re").compile(r"[a-f0-9]{12}")
     # Allowed fields for update — prevents clients injecting arbitrary keys
-    _UPDATE_ALLOWED_FIELDS = {"name", "schedule", "prompt", "deliver", "skills", "skill", "repeat", "enabled"}
+    _UPDATE_ALLOWED_FIELDS: ClassVar = {"name", "schedule", "prompt", "deliver", "skills", "skill", "repeat", "enabled"}
     _MAX_NAME_LENGTH = 200
     _MAX_PROMPT_LENGTH = 5000
 
@@ -4191,7 +4191,7 @@ class APIServerAdapter(BasePlatformAdapter):
             except Exception:
                 pass
 
-        def _callback(event_type: str, tool_name: str = None, preview: str = None, args=None, **kwargs):
+        def _callback(event_type: str, tool_name: str | None = None, preview: str | None = None, args=None, **kwargs):
             ts = time.time()
             if event_type == "tool.started":
                 _push({

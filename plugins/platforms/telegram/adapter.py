@@ -17,7 +17,7 @@ import html as _html
 import re
 import threading
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Set, Any
+from typing import Any, ClassVar, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -1871,7 +1871,7 @@ class TelegramAdapter(BasePlatformAdapter):
         try:
             # PTB 22.x: _request is a (get_updates, general) tuple;
             # no public accessor exists for the polling request.
-            polling_req = self._app.bot._request[0]  # noqa: SLF001
+            polling_req = self._app.bot._request[0]
         except Exception:
             return
         try:
@@ -1913,7 +1913,7 @@ class TelegramAdapter(BasePlatformAdapter):
             return
         try:
             # PTB 22.x: _request is (get_updates_request, general_request).
-            general_req = bot._request[1]  # noqa: SLF001
+            general_req = bot._request[1]
         except Exception:
             return
         async with self._get_general_request_drain_lock():
@@ -2122,10 +2122,10 @@ class TelegramAdapter(BasePlatformAdapter):
                     ),
                     timeout=_UPDATER_START_TIMEOUT,
                 )
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 raise RuntimeError(
                     "start_polling() timed out — connection pool may be wedged"
-                )
+                ) from e
             logger.info(
                 "[%s] Telegram polling resumed after network error (attempt %d)",
                 self.name, attempt,
@@ -2524,10 +2524,10 @@ class TelegramAdapter(BasePlatformAdapter):
                         ),
                         timeout=_UPDATER_START_TIMEOUT,
                     )
-                except asyncio.TimeoutError:
+                except asyncio.TimeoutError as e:
                     raise RuntimeError(
                         "start_polling() timed out — connection pool may be wedged"
-                    )
+                    ) from e
                 logger.info(
                     "[%s] Telegram polling resumed after conflict retry %d/%d",
                     self.name, self._polling_conflict_count, MAX_CONFLICT_RETRIES,
@@ -3225,7 +3225,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         on_abandon=lambda app=self._app: _shutdown_abandoned_app(app),
                     )
                     break
-                except asyncio.TimeoutError:
+                except asyncio.TimeoutError as e:
                     if _attempt < _max_connect - 1:
                         wait = min(2 ** _attempt, 15)
                         logger.warning(
@@ -3238,7 +3238,7 @@ class TelegramAdapter(BasePlatformAdapter):
                             f"Telegram initialization timed out after {_max_connect} attempts "
                             f"({_init_timeout:.0f}s each). Check network connectivity to api.telegram.org "
                             f"or set HERCULES_TELEGRAM_HTTP_CONNECT_TIMEOUT to a lower value."
-                        )
+                        ) from e
                 except OSError as init_err:
                     if _attempt < _max_connect - 1:
                         wait = min(2 ** _attempt, 15)
@@ -5679,7 +5679,7 @@ class TelegramAdapter(BasePlatformAdapter):
     # vip) that should leave the keyboard tappable for follow-on actions.
     # is_state=False is a per-email one-shot (send, archive, draft, spam) that
     # strips the keyboard on success.
-    _GT_VERB_DISPATCH = {
+    _GT_VERB_DISPATCH: ClassVar = {
         "send":         ("send-draft.sh",      [],         "✓ sent draft",         False),
         "archive":      ("archive.sh",         [],         "✓ archived",           False),
         "draft":        ("draft-blank.sh",     [],         "✓ drafted reply",      False),

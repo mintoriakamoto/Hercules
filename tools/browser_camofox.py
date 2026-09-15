@@ -455,7 +455,7 @@ def _post(path: str, body: dict, timeout: Optional[int] = None) -> dict:
     return resp.json()
 
 
-def _get(path: str, params: dict = None, timeout: Optional[int] = None) -> dict:
+def _get(path: str, params: Optional[dict] = None, timeout: Optional[int] = None) -> dict:
     """GET from camofox and return parsed response."""
     if timeout is None:
         timeout = _get_command_timeout()
@@ -465,7 +465,7 @@ def _get(path: str, params: dict = None, timeout: Optional[int] = None) -> dict:
     return resp.json()
 
 
-def _get_raw(path: str, params: dict = None, timeout: Optional[int] = None) -> requests.Response:
+def _get_raw(path: str, params: Optional[dict] = None, timeout: Optional[int] = None) -> requests.Response:
     """GET from camofox and return raw response (for binary data)."""
     if timeout is None:
         timeout = _get_command_timeout()
@@ -475,7 +475,7 @@ def _get_raw(path: str, params: dict = None, timeout: Optional[int] = None) -> r
     return resp
 
 
-def _delete(path: str, body: dict = None, timeout: Optional[int] = None) -> dict:
+def _delete(path: str, body: Optional[dict] = None, timeout: Optional[int] = None) -> dict:
     """DELETE to camofox and return parsed response."""
     if timeout is None:
         timeout = _get_command_timeout()

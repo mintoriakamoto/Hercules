@@ -682,10 +682,10 @@ class ProcessRegistry:
     def spawn_local(
         self,
         command: str,
-        cwd: str = None,
+        cwd: str | None = None,
         task_id: str = "",
         session_key: str = "",
-        env_vars: dict = None,
+        env_vars: dict | None = None,
         use_pty: bool = False,
     ) -> ProcessSession:
         """
@@ -822,7 +822,7 @@ class ProcessRegistry:
         self,
         env: Any,
         command: str,
-        cwd: str = None,
+        cwd: str | None = None,
         task_id: str = "",
         session_key: str = "",
         timeout: int = 10,
@@ -875,9 +875,9 @@ class ProcessRegistry:
             output = result.get("output", "").strip()
             # Try to extract the PID from the output
             for line in output.splitlines():
-                line = line.strip()
-                if line.isdigit():
-                    session.pid = int(line)
+                stripped_line = line.strip()
+                if stripped_line.isdigit():
+                    session.pid = int(stripped_line)
                     break
             # If the wrapper couldn't produce a PID (for example, syntax
             # error or broken redirect), treat it as a failed launch instead
@@ -1362,7 +1362,7 @@ class ProcessRegistry:
             self._completion_consumed.add(session_id)
         return result
 
-    def wait(self, session_id: str, timeout: int = None) -> dict:
+    def wait(self, session_id: str, timeout: int | None = None) -> dict:
         """
         Block until a process exits, timeout, or interrupt.
 
@@ -1617,7 +1617,7 @@ class ProcessRegistry:
         except Exception:
             return 0
 
-    def list_sessions(self, task_id: str = None, session_key: str = None) -> list:
+    def list_sessions(self, task_id: str | None = None, session_key: str | None = None) -> list:
         """List all running and recently-finished processes.
 
         When ``task_id`` is given, processes for that task are included. When
@@ -1737,7 +1737,7 @@ class ProcessRegistry:
         with self._lock:
             return any(not s.exited for s in self._running.values())
 
-    def kill_all(self, task_id: str = None) -> int:
+    def kill_all(self, task_id: str | None = None) -> int:
         """Kill all running processes, optionally filtered by task_id. Returns count killed."""
         with self._lock:
             targets = [

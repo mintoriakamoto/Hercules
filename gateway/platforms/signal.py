@@ -957,7 +957,7 @@ class SignalAdapter(BasePlatformAdapter):
         self,
         method: str,
         params: dict,
-        rpc_id: str = None,
+        rpc_id: str | None = None,
         *,
         log_failures: bool = True,
         raise_on_rate_limit: bool = False,

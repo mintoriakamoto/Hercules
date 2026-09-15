@@ -106,16 +106,16 @@ def _read_manifest() -> Dict[str, str]:
     try:
         result = {}
         for line in MANIFEST_FILE.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
+            stripped_line = line.strip()
+            if not stripped_line:
                 continue
-            if ":" in line:
+            if ":" in stripped_line:
                 # v2 format: name:hash
-                name, _, hash_val = line.partition(":")
+                name, _, hash_val = stripped_line.partition(":")
                 result[name.strip()] = hash_val.strip()
             else:
                 # v1 format: plain name — empty hash triggers migration
-                result[line] = ""
+                result[stripped_line] = ""
         return result
     except (OSError, IOError):
         return {}
@@ -139,9 +139,9 @@ def _read_suppressed_names() -> set:
         names = set()
         try:
             for line in path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    names.add(line)
+                stripped_line = line.strip()
+                if stripped_line and not stripped_line.startswith("#"):
+                    names.add(stripped_line)
         except OSError:
             pass
         return names

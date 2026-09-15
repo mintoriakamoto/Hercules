@@ -205,10 +205,10 @@ def _read_bundled_manifest_names() -> Set[str]:
     names: Set[str] = set()
     try:
         for line in manifest.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
+            stripped_line = line.strip()
+            if not stripped_line:
                 continue
-            name = line.split(":", 1)[0].strip()
+            name = stripped_line.split(":", 1)[0].strip()
             if name:
                 names.add(name)
     except OSError as e:
@@ -292,9 +292,9 @@ def read_suppressed_names() -> Set[str]:
     names: Set[str] = set()
     try:
         for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#"):
-                names.add(line)
+            stripped_line = line.strip()
+            if stripped_line and not stripped_line.startswith("#"):
+                names.add(stripped_line)
     except OSError as e:
         logger.debug("Failed to read curator suppression list: %s", e)
     return names

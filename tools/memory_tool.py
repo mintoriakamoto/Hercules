@@ -530,10 +530,10 @@ class MemoryStore:
             limit = self._char_limit(target)
 
             for i, op in enumerate(operations):
-                op = op or {}
-                act = op.get("action")
-                content = (op.get("content") or "").strip()
-                old_text = (op.get("old_text") or "").strip()
+                operation = op or {}
+                act = operation.get("action")
+                content = (operation.get("content") or "").strip()
+                old_text = (operation.get("old_text") or "").strip()
                 pos = f"Operation {i + 1} ({act or 'unknown'})"
 
                 if act == "add":
@@ -632,7 +632,7 @@ class MemoryStore:
         """Truncated one-line previews of entries for error feedback."""
         return [e[:width] + ("..." if len(e) > width else "") for e in entries]
 
-    def _success_response(self, target: str, message: str = None) -> Dict[str, Any]:
+    def _success_response(self, target: str, message: str | None = None) -> Dict[str, Any]:
         # A successful write means the consolidation loop made progress, so the
         # per-turn failure budget resets (the cap counts consecutive failures,
         # not lifetime ones within a turn) (#42405).
@@ -785,7 +785,7 @@ class MemoryStore:
                     pass
                 raise
         except (OSError, IOError) as e:
-            raise RuntimeError(f"Failed to write memory file {path}: {e}")
+            raise RuntimeError(f"Failed to write memory file {path}: {e}") from e
 
 
 def load_on_disk_store() -> "MemoryStore":
@@ -893,14 +893,14 @@ def _apply_batch_write_gate(target: str, operations: List[Dict[str, Any]]) -> Op
     summary = f"apply {len(operations)} op(s) to {label}"
     detail_lines = []
     for op in operations:
-        op = op or {}
-        act = op.get("action", "?")
+        operation = op or {}
+        act = operation.get("action", "?")
         if act == "remove":
-            detail_lines.append(f"- remove: {op.get('old_text', '')}")
+            detail_lines.append(f"- remove: {operation.get('old_text', '')}")
         elif act == "replace":
-            detail_lines.append(f"- replace: {op.get('old_text', '')} -> {op.get('content', '')}")
+            detail_lines.append(f"- replace: {operation.get('old_text', '')} -> {operation.get('content', '')}")
         else:
-            detail_lines.append(f"- {act}: {op.get('content', '')}")
+            detail_lines.append(f"- {act}: {operation.get('content', '')}")
     detail = "\n".join(detail_lines)
 
     decision = wa.evaluate_gate(wa.MEMORY, inline_summary=summary, inline_detail=detail)
@@ -957,10 +957,10 @@ def _missing_old_text_error(store: "MemoryStore", target: str, action: str) -> s
 
 
 def memory_tool(
-    action: str = None,
+    action: str | None = None,
     target: str = "memory",
-    content: str = None,
-    old_text: str = None,
+    content: str | None = None,
+    old_text: str | None = None,
     operations: Optional[List[Dict[str, Any]]] = None,
     store: Optional[MemoryStore] = None,
 ) -> str:
