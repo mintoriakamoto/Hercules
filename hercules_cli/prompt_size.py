@@ -138,7 +138,7 @@ def render_breakdown(data: Dict[str, Any]) -> str:
     lines.append(f"    user profile       : {up['bytes']:>8,} B  ({_fmt_kb(up['bytes'])})")
     lines.append("")
     lines.append("  Prompt tiers:")
-    for label, chars, byts in data["sections"]:
+    for label, _chars, byts in data["sections"]:
         lines.append(f"    {label:<36}: {byts:>8,} B  ({_fmt_kb(byts)})")
     lines.append("")
     tools = data["tools"]

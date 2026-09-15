@@ -1013,9 +1013,9 @@ def _file_lock(
                     lock_file.seek(0)
                     msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
                 break
-            except (BlockingIOError, OSError, PermissionError):
+            except (BlockingIOError, OSError, PermissionError) as exc:
                 if time.monotonic() >= deadline:
-                    raise TimeoutError(timeout_message)
+                    raise TimeoutError(timeout_message) from exc
                 time.sleep(0.05)
 
         holder.depth = 1
@@ -2541,13 +2541,13 @@ def _kimi_oauth_poll_device_token(
             return payload
         try:
             error_payload = response.json()
-        except Exception:
+        except Exception as exc:
             raise AuthError(
                 f"Kimi device-code polling returned a non-JSON error "
                 f"(HTTP {response.status_code}).",
                 provider="kimi-oauth",
                 code="kimi_device_token_failed",
-            )
+            ) from exc
         error_code = str(error_payload.get("error") or "")
         if error_code == "authorization_pending":
             time.sleep(current_interval)
@@ -3094,7 +3094,7 @@ def _gemini_google_loopback_login(authorize_url_for: Callable[[str], str],
     done = threading.Event()
 
     class _Handler(BaseHTTPRequestHandler):
-        def do_GET(self):  # noqa: N802 (BaseHTTPRequestHandler API)
+        def do_GET(self):  # BaseHTTPRequestHandler API
             parsed = urlparse(self.path)
             if parsed.path != "/oauth2callback":
                 self.send_response(404)
@@ -3434,7 +3434,7 @@ def _make_spotify_callback_handler(expected_path: str) -> tuple[type[BaseHTTPReq
     }
 
     class _SpotifyCallbackHandler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             parsed = urlparse(self.path)
             if parsed.path != expected_path:
                 self.send_response(404)
@@ -3457,7 +3457,7 @@ def _make_spotify_callback_handler(expected_path: str) -> tuple[type[BaseHTTPReq
                 body = "<html><body><h1>Spotify authorization received.</h1>You can close this tab.</body></html>"
             self.wfile.write(body.encode("utf-8"))
 
-        def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
+        def log_message(self, format: str, *args: Any) -> None:
             return
 
     return _SpotifyCallbackHandler, result
@@ -3777,9 +3777,9 @@ def _spotify_interactive_setup(redirect_uri_hint: str) -> str:
 
     try:
         raw = input("Spotify Client ID: ").strip()
-    except (EOFError, KeyboardInterrupt):
+    except (EOFError, KeyboardInterrupt) as exc:
         print()
-        raise SystemExit("Spotify setup cancelled.")
+        raise SystemExit("Spotify setup cancelled.") from exc
 
     if not raw:
         print()
@@ -4219,7 +4219,7 @@ def _sync_codex_pool_entries(
         entry["last_error_reset_at"] = None
 
 
-def _save_codex_tokens(tokens: Dict[str, str], last_refresh: str = None, label: str = None) -> None:
+def _save_codex_tokens(tokens: Dict[str, str], last_refresh: Optional[str] = None, label: Optional[str] = None) -> None:
     """Save Codex OAuth tokens to Hercules auth store (~/.hercules/auth.json)."""
     if last_refresh is None:
         last_refresh = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -5441,9 +5441,9 @@ def _poll_for_token(
 
         try:
             error_payload = response.json()
-        except Exception:
+        except Exception as exc:
             response.raise_for_status()
-            raise RuntimeError("Token endpoint returned a non-JSON error response")
+            raise RuntimeError("Token endpoint returned a non-JSON error response") from exc
 
         error_code = error_payload.get("error", "")
         if error_code == "authorization_pending":
@@ -6524,13 +6524,13 @@ def _xai_oauth_poll_device_token(
 
         try:
             error_payload = response.json()
-        except Exception:
+        except Exception as exc:
             response.raise_for_status()
             raise AuthError(
                 "xAI device-code token polling returned a non-JSON error response.",
                 provider="xai-oauth",
                 code="xai_device_token_failed",
-            )
+            ) from exc
         error_code = str(error_payload.get("error") or "")
         if error_code == "authorization_pending":
             time.sleep(current_interval)
@@ -6651,7 +6651,7 @@ def _codex_device_code_login() -> Dict[str, Any]:
             raise AuthError(
                 f"Failed to request device code: {exc}",
                 provider="openai-codex", code="device_code_request_failed",
-            )
+            ) from exc
 
         if resp.status_code != 429:
             break
@@ -6735,9 +6735,9 @@ def _codex_device_code_login() -> Dict[str, Any]:
                         f"Device auth polling returned status {poll_resp.status_code}.",
                         provider="openai-codex", code="device_code_poll_error",
                     )
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as err:
         print("\nLogin cancelled.")
-        raise SystemExit(130)
+        raise SystemExit(130) from err
 
     if code_resp is None:
         raise AuthError(
@@ -6773,7 +6773,7 @@ def _codex_device_code_login() -> Dict[str, Any]:
         raise AuthError(
             f"Token exchange failed: {exc}",
             provider="openai-codex", code="token_exchange_failed",
-        )
+        ) from exc
 
     if token_resp.status_code == 429:
         retry_after = _parse_retry_after_seconds(
@@ -7254,7 +7254,7 @@ def _login_minimax_oauth(args, pconfig: ProviderConfig) -> None:
         )
     except AuthError as exc:
         print(format_auth_error(exc))
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
 
 
 def logout_command(args) -> None:

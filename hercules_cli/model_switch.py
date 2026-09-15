@@ -638,7 +638,7 @@ def resolve_alias(
 
 def get_authenticated_provider_slugs(
     current_provider: str = "",
-    user_providers: dict = None,
+    user_providers: Optional[dict] = None,
     custom_providers: list | None = None,
 ) -> list[str]:
     """Return slugs of providers that have credentials.
@@ -801,7 +801,7 @@ def switch_model(
     current_api_key: str = "",
     is_global: bool = False,
     explicit_provider: str = "",
-    user_providers: dict = None,
+    user_providers: Optional[dict] = None,
     custom_providers: list | None = None,
 ) -> ModelSwitchResult:
     """Core model-switching pipeline shared between CLI and gateway.
@@ -1389,7 +1389,7 @@ def switch_model(
 # Process-level guard so the picker prewarm thread is spawned at most once per
 # process — mirrors run_agent's _openrouter_prewarm_done. Without a guard a
 # long-lived process (or repeated triggers) would leak one OS thread per call.
-import threading as _threading  # noqa: E402
+import threading as _threading
 
 _picker_prewarm_done = _threading.Event()
 
@@ -1471,7 +1471,7 @@ def prewarm_picker_cache_async() -> Optional["_threading.Thread"]:
 def list_authenticated_providers(
     current_provider: str = "",
     current_base_url: str = "",
-    user_providers: dict = None,
+    user_providers: Optional[dict] = None,
     custom_providers: list | None = None,
     *,
     force_fresh_nous_tier: bool = False,
@@ -2395,7 +2395,7 @@ def _prepend_moa_picker_provider(providers: List[dict], current_provider: str = 
 def list_picker_providers(
     current_provider: str = "",
     current_base_url: str = "",
-    user_providers: dict = None,
+    user_providers: Optional[dict] = None,
     custom_providers: list | None = None,
     max_models: int | None = None,
     current_model: str = "",
@@ -2434,17 +2434,19 @@ def list_picker_providers(
         providers = _prepend_moa_picker_provider(providers, current_provider=current_provider)
 
     filtered: List[dict] = []
-    for p in providers:
-        slug = str(p.get("slug", "")).lower()
+    for provider in providers:
+        slug = str(provider.get("slug", "")).lower()
         if slug == "openrouter":
             try:
                 live = fetch_openrouter_models()
                 live_ids = [mid for mid, _ in live]
             except Exception:
-                live_ids = list(p.get("models", []))
-            p = dict(p)
+                live_ids = list(provider.get("models", []))
+            p = dict(provider)
             p["models"] = live_ids[:max_models] if max_models is not None else live_ids
             p["total_models"] = len(live_ids)
+        else:
+            p = provider
 
         has_models = bool(p.get("models"))
         is_custom_endpoint = bool(p.get("is_user_defined")) and bool(p.get("api_url"))
