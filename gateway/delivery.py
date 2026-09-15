@@ -227,7 +227,7 @@ class DeliveryRouter:
     messages to the right platform adapters.
     """
     
-    def __init__(self, config: GatewayConfig, adapters: Dict[Platform, Any] = None,
+    def __init__(self, config: GatewayConfig, adapters: Optional[Dict[Platform, Any]] = None,
                  dead_targets: Optional[DeadTargetRegistry] = None):
         """
         Initialize the delivery router.
