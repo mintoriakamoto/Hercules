@@ -18,7 +18,7 @@ Usage:
 import json
 import random
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Optional, Tuple
 import fire
 
 # Load environment variables
@@ -95,8 +95,6 @@ def _count_tokens_for_entry(entry: Dict) -> Tuple[Dict, int]:
     Returns:
         Tuple of (entry, token_count)
     """
-    global _TOKENIZER
-    
     conversations = entry.get("conversations", [])
     if not conversations:
         return entry, 0
@@ -300,9 +298,9 @@ def merge_output_to_single_jsonl(input_dir: Path, output_file: Path):
             continue
         with open(jsonl_file, 'r', encoding='utf-8') as f:
             for line in f:
-                line = line.strip()
-                if line:
-                    all_entries.append(json.loads(line))
+                text = line.strip()
+                if text:
+                    all_entries.append(json.loads(text))
     
     # Write merged file
     with open(output_file, 'w', encoding='utf-8') as f:
@@ -316,7 +314,7 @@ def merge_output_to_single_jsonl(input_dir: Path, output_file: Path):
 def main(
     total_samples: int = 2500,
     output_name: str = "compressed_agentic",
-    datasets: str = None,
+    datasets: Optional[str] = None,
     config: str = "configs/trajectory_compression.yaml",
     seed: int = 42,
     batch_size: int = 100,

@@ -115,11 +115,11 @@ def summarize(log: Path, since_ts_ms: int) -> dict[str, Any]:
     if not log.exists():
         return {"error": f"no log at {log}", "react": [], "frame": []}
     for line in log.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
+        text = line.strip()
+        if not text:
             continue
         try:
-            row = json.loads(line)
+            row = json.loads(text)
         except json.JSONDecodeError:
             continue
         if int(row.get("ts", 0)) < since_ts_ms:
