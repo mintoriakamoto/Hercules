@@ -39,7 +39,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
 # ─── UI Helpers (shared with setup.py) ────────────────────────────────────────
 
-from hercules_cli.cli_output import (  # noqa: E402 — late import block
+from hercules_cli.cli_output import (  # late import block
     print_error as _print_error,
     print_info as _print_info,
     print_success as _print_success,
@@ -1945,7 +1945,7 @@ def _save_platform_tools(config: dict, platform: str, enabled_toolset_keys: Set[
 
 def _toolset_has_keys(
     ts_key: str,
-    config: dict = None,
+    config: Optional[dict] = None,
     *,
     force_fresh: bool = False,
 ) -> bool:
@@ -3621,7 +3621,7 @@ def _reconfigure_simple_requirements(ts_key: str):
 
 # ─── Main Entry Point ─────────────────────────────────────────────────────────
 
-def tools_command(args=None, first_install: bool = False, config: dict = None):
+def tools_command(args=None, first_install: bool = False, config: Optional[dict] = None):
     """Entry point for `hercules tools` and `hercules setup tools`.
 
     Args:

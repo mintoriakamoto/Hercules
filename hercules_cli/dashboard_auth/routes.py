@@ -19,7 +19,7 @@ import logging
 import threading
 import time
 from collections import defaultdict, deque
-from typing import Any, Deque, Dict, Tuple
+from typing import Any, Deque, Dict
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -213,7 +213,7 @@ async def auth_login(request: Request, provider: str, next: str = ""):
         raise HTTPException(
             status_code=503,
             detail=f"Provider unreachable: {e}",
-        )
+        ) from e
 
     audit_log(
         AuditEvent.LOGIN_START,
@@ -327,7 +327,7 @@ async def auth_callback(
             reason="invalid_code",
             ip=_client_ip(request),
         )
-        raise HTTPException(status_code=400, detail=f"Invalid code: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid code: {e}") from e
     except ProviderError as e:
         audit_log(
             AuditEvent.LOGIN_FAILURE,
@@ -338,7 +338,7 @@ async def auth_callback(
         raise HTTPException(
             status_code=503,
             detail=f"Provider unreachable: {e}",
-        )
+        ) from e
 
     audit_log(
         AuditEvent.LOGIN_SUCCESS,
@@ -508,7 +508,7 @@ async def auth_password_login(request: Request, body: _PasswordLoginBody):
         session = p.complete_password_login(
             username=body.username, password=body.password
         )
-    except InvalidCredentialsError:
+    except InvalidCredentialsError as exc:
         audit_log(
             AuditEvent.LOGIN_FAILURE,
             provider=body.provider,
@@ -516,11 +516,11 @@ async def auth_password_login(request: Request, body: _PasswordLoginBody):
             ip=ip,
         )
         # Generic message — never distinguish unknown-user from wrong-password.
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    except NotImplementedError:
+        raise HTTPException(status_code=401, detail="Invalid credentials") from exc
+    except NotImplementedError as exc:
         # supports_password was True but the method isn't actually
         # implemented — a provider bug, not a client error.
-        raise HTTPException(status_code=500, detail="Provider misconfigured")
+        raise HTTPException(status_code=500, detail="Provider misconfigured") from exc
     except ProviderError as e:
         audit_log(
             AuditEvent.LOGIN_FAILURE,
@@ -528,7 +528,7 @@ async def auth_password_login(request: Request, body: _PasswordLoginBody):
             reason="provider_unreachable",
             ip=ip,
         )
-        raise HTTPException(status_code=503, detail=f"Provider unreachable: {e}")
+        raise HTTPException(status_code=503, detail=f"Provider unreachable: {e}") from e
 
     audit_log(
         AuditEvent.LOGIN_SUCCESS,
@@ -563,7 +563,7 @@ async def auth_logout(request: Request):
         for provider in list_providers():
             try:
                 provider.revoke_session(refresh_token=rt)
-            except Exception as e:  # noqa: BLE001 — best-effort
+            except Exception as e:  # best-effort
                 _log.warning(
                     "dashboard-auth: revoke on %r failed: %s",
                     provider.name, e,

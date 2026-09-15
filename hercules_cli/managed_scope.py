@@ -99,7 +99,7 @@ def _cached_read(path: Path, cache: Dict[str, tuple], parse):
     try:
         with open(path, encoding="utf-8") as f:
             parsed = parse(f)
-    except Exception as exc:  # noqa: BLE001 — fail-open, but LOUD
+    except Exception as exc:  # fail-open, but LOUD
         logger.warning(
             "managed scope: failed to parse %s: %s — IGNORING this managed file. "
             "Admin policy from this file is NOT being applied. Fix and restart.",
@@ -172,15 +172,15 @@ def apply_managed_overlay(config: dict) -> dict:
             managed_expanded = dict(managed_expanded)
             managed_expanded["model"] = {"default": managed_expanded["model"]}
         return _deep_merge(config, managed_expanded)
-    except Exception:  # noqa: BLE001 — overlay must never break a caller
+    except Exception:  # overlay must never break a caller
         logger.warning("managed scope: failed to apply config overlay", exc_info=True)
         return config
 
 
 def _parse_env(f) -> Dict[str, str]:
     out: Dict[str, str] = {}
-    for line in f:
-        line = line.strip()
+    for raw_line in f:
+        line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")

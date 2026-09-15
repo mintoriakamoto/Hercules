@@ -1587,7 +1587,9 @@ def delete_profile(name: str, yes: bool = False) -> Path:
                         pass
                 func(path)
             else:
-                raise
+                # Not inside an ``except`` block here: a bare ``raise`` would
+                # itself fail with ``RuntimeError: No active exception``.
+                raise exc
 
         _rmtree_with_retry(profile_dir, _make_writable)
         print(f"✓ Removed {profile_dir}")
