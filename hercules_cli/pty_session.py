@@ -144,6 +144,8 @@ class PtySessionRegistry:
         self._buffer_cap = buffer_cap
         self._read_timeout = read_timeout
         self._sessions: Dict[str, PtySession] = {}
+        # Strong refs to in-flight close() tasks (asyncio holds tasks weakly).
+        self._close_tasks: set[asyncio.Task] = set()
 
     async def attach_or_spawn(self, key: str, *, spawn: Callable[[], object]
                               ) -> Tuple[PtySession, bool]:
@@ -188,7 +190,9 @@ class PtySessionRegistry:
             raise RegistryFull()
         oldest = min(idle, key=lambda s: s.last_detached_at or 0.0)
         self._sessions.pop(oldest.key, None)
-        asyncio.create_task(oldest.close())
+        close_task = asyncio.create_task(oldest.close())
+        self._close_tasks.add(close_task)
+        close_task.add_done_callback(self._close_tasks.discard)
 
     async def close_all(self) -> None:
         for key in list(self._sessions):

@@ -404,7 +404,6 @@ def _scan_gateway_pids(
 
             _no_window = {"creationflags": windows_hide_flags()}
             wmic_path = shutil.which("wmic")
-            used_fallback = False
             result = None
             if wmic_path is not None:
                 try:
@@ -451,12 +450,11 @@ def _scan_gateway_pids(
                     )
                 except (OSError, subprocess.TimeoutExpired):
                     return []
-                used_fallback = True
             if result.returncode != 0 or result.stdout is None:
                 return []
             current_cmd = ""
-            for line in result.stdout.split("\n"):
-                line = line.strip()
+            for raw_line in result.stdout.split("\n"):
+                line = raw_line.strip()
                 if line.startswith("CommandLine="):
                     current_cmd = line[len("CommandLine=") :]
                 elif line.startswith("ProcessId="):
@@ -576,7 +574,7 @@ def _filter_venv_launcher_stubs(pids: list[int]) -> list[int]:
 
     # For each child whose parent is also in our set, drop the parent.
     drop: set[int] = set()
-    for pid, ppid in parent_of.items():
+    for _pid, ppid in parent_of.items():
         if ppid is not None and ppid in pid_set:
             drop.add(ppid)
 
@@ -2124,7 +2122,7 @@ def print_legacy_unit_warning() -> None:
     if not legacy:
         return
     print_warning("Legacy Hercules gateway unit(s) detected from an older install:")
-    for name, path, is_system in legacy:
+    for _name, path, is_system in legacy:
         scope = "system" if is_system else "user"
         print_info(f"    {path}  ({scope} scope)")
     print_info("  These run alongside the current hercules-gateway service and")
@@ -2163,7 +2161,7 @@ def remove_legacy_hercules_units(
 
     print()
     print("Legacy Hercules gateway unit(s) found:")
-    for name, path, is_system in legacy:
+    for _name, path, is_system in legacy:
         scope = "system" if is_system else "user"
         print(f"  {path}  ({scope} scope)")
     print()
@@ -5355,8 +5353,8 @@ def _setup_standard_platform(platform: dict):
                 # For Discord, strip common prefixes (user:123, <@123>, <@!123>)
                 if "DISCORD" in var["name"]:
                     parts = []
-                    for uid in cleaned.split(","):
-                        uid = uid.strip()
+                    for raw_uid in cleaned.split(","):
+                        uid = raw_uid.strip()
                         if uid.startswith("<@") and uid.endswith(">"):
                             uid = uid.lstrip("<@!").rstrip(">")
                         if uid.lower().startswith("user:"):
@@ -6385,7 +6383,7 @@ def _dispatch_all_via_service_manager_if_s6(action: str) -> bool:
         service_name = f"gateway-{profile}"
         try:
             fn(service_name)
-        except Exception as exc:  # noqa: BLE001 — report and continue
+        except Exception as exc:  # report and continue
             errors.append((profile, exc))
     succeeded = len(profiles) - len(errors)
     verb = "stopped" if action == "stop" else "restarted"

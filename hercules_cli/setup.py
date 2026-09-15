@@ -21,7 +21,6 @@ import copy
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from utils import base_url_hostname
 from hercules_constants import get_optional_skills_dir
 
 logger = logging.getLogger(__name__)
@@ -156,13 +155,13 @@ def print_header(title: str):
     print(color(f"◆ {title}", Colors.CYAN, Colors.BOLD))
 
 
-from hercules_cli.cli_output import (  # noqa: E402
+from hercules_cli.cli_output import (
     print_error,
     print_info,
     print_success,
     print_warning,
 )
-from hercules_cli.secret_prompt import masked_secret_prompt  # noqa: E402
+from hercules_cli.secret_prompt import masked_secret_prompt
 
 
 def is_interactive_stdin() -> bool:
@@ -195,7 +194,7 @@ def print_noninteractive_setup_guidance(reason: str | None = None) -> None:
     print()
 
 
-def prompt(question: str, default: str = None, password: bool = False) -> str:
+def prompt(question: str, default: Optional[str] = None, password: bool = False) -> str:
     """Prompt for input with optional default."""
     if default:
         display = f"{question} [{default}]: "
@@ -332,7 +331,7 @@ def prompt_yes_no(question: str, default: bool = True) -> bool:
         print_error("Please enter 'y' or 'n'")
 
 
-def prompt_checklist(title: str, items: list, pre_selected: list = None) -> list:
+def prompt_checklist(title: str, items: list, pre_selected: Optional[list] = None) -> list:
     """
     Display a multi-select checklist and return the indices of selected items.
 
@@ -754,12 +753,6 @@ def setup_model_provider(config: dict, *, quick: bool = False):
     config.clear()
     config.update(_refreshed)
 
-    # Derive the selected provider for downstream steps (vision setup).
-    selected_provider = None
-    _m = config.get("model")
-    if isinstance(_m, dict):
-        selected_provider = _m.get("provider")
-
     # Credential rotation, vision-backend selection, and TTS provider are no
     # longer prompted here. They have safe defaults (rotation off, vision
     # auto-detected from the main provider, TTS = Edge) and are configurable
@@ -838,8 +831,6 @@ def _install_neutts_deps() -> bool:
 
 def _install_kittentts_deps() -> bool:
     """Install KittenTTS dependencies with user approval. Returns True on success."""
-    import subprocess
-    import sys
 
     wheel_url = (
         "https://github.com/KittenML/KittenTTS/releases/download/"
@@ -2862,7 +2853,6 @@ def _run_blank_slate_setup(config: dict, hercules_home, is_existing: bool):
 
     Either way nothing is enabled that the user did not explicitly choose.
     """
-    from hercules_cli.config import load_config
 
     print()
     print_header("Blank Slate Setup")
