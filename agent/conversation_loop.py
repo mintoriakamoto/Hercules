@@ -18,20 +18,16 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import random
 import re
 import ssl
-import threading
 import time
-import uuid
 from typing import Any, Dict, List, Optional
 
 from agent.codex_responses_adapter import _summarize_user_message_for_log
 from agent.conversation_compression import conversation_history_after_compression
 from agent.display import KawaiiSpinner
 from agent.error_classifier import FailoverReason, classify_api_error
-from agent.iteration_budget import IterationBudget
 from agent.turn_context import build_turn_context
 from agent.turn_retry_state import TurnRetryState
 from agent.memory_manager import build_memory_context_block
@@ -455,9 +451,9 @@ def _sync_failover_system_message(agent, api_messages, active_system_prompt):
 def run_conversation(
     agent,
     user_message: str,
-    system_message: str = None,
-    conversation_history: List[Dict[str, Any]] = None,
-    task_id: str = None,
+    system_message: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, Any]]] = None,
+    task_id: Optional[str] = None,
     stream_callback: Optional[callable] = None,
     persist_user_message: Optional[str] = None,
     persist_user_timestamp: Optional[float] = None,
@@ -894,10 +890,11 @@ def run_conversation(
                 continue
             new_tcs = []
             for tc in tcs:
+                normalized = tc
                 if isinstance(tc, dict) and "function" in tc:
                     try:
                         args_obj = json.loads(tc["function"]["arguments"])
-                        tc = {**tc, "function": {
+                        normalized = {**tc, "function": {
                             **tc["function"],
                             "arguments": json.dumps(
                                 args_obj, separators=(",", ":"),
@@ -909,7 +906,7 @@ def run_conversation(
                             tc["function"]["arguments"],
                             tc["function"].get("name", "?"),
                         )
-                new_tcs.append(tc)
+                new_tcs.append(normalized)
             _norm_cache[id(tcs)] = (_fingerprint, new_tcs)
             am["tool_calls"] = new_tcs
 
@@ -2667,33 +2664,33 @@ def run_conversation(
                     from agent.anthropic_adapter import _is_oauth_token
                     from agent.azure_identity_adapter import is_token_provider
                     if agent._try_refresh_anthropic_client_credentials():
-                        print(f"{agent.log_prefix}🔐 Anthropic credentials refreshed after 401. Retrying request...")
+                        agent._safe_print(f"{agent.log_prefix}🔐 Anthropic credentials refreshed after 401. Retrying request...")
                         continue
                     # Credential refresh didn't help — show diagnostic info
                     key = agent._anthropic_api_key
-                    print(f"{agent.log_prefix}🔐 Anthropic 401 — authentication failed.")
+                    agent._safe_print(f"{agent.log_prefix}🔐 Anthropic 401 — authentication failed.")
                     if is_token_provider(key):
                         # Azure Foundry Entra ID — the bearer token is
                         # minted per-request by an httpx event hook on a
                         # custom http_client passed to the SDK. The 401
                         # means Azure rejected the JWT (RBAC role missing,
                         # az login expired, IMDS unreachable, etc.).
-                        print(f"{agent.log_prefix}   Auth method: Microsoft Entra ID (httpx event hook)")
-                        print(f"{agent.log_prefix}   Run `hercules doctor` for credential-chain diagnostics, or")
-                        print(f"{agent.log_prefix}   `az login` if your developer session expired.")
+                        agent._safe_print(f"{agent.log_prefix}   Auth method: Microsoft Entra ID (httpx event hook)")
+                        agent._safe_print(f"{agent.log_prefix}   Run `hercules doctor` for credential-chain diagnostics, or")
+                        agent._safe_print(f"{agent.log_prefix}   `az login` if your developer session expired.")
                     else:
                         auth_method = "Bearer (OAuth/setup-token)" if _is_oauth_token(key) else "x-api-key (API key)"
-                        print(f"{agent.log_prefix}   Auth method: {auth_method}")
-                        print(f"{agent.log_prefix}   Token prefix: {key[:12]}..." if isinstance(key, str) and len(key) > 12 else f"{agent.log_prefix}   Token: (empty or short)")
-                    print(f"{agent.log_prefix}   Troubleshooting:")
+                        agent._safe_print(f"{agent.log_prefix}   Auth method: {auth_method}")
+                        agent._safe_print(f"{agent.log_prefix}   Token prefix: {key[:12]}..." if isinstance(key, str) and len(key) > 12 else f"{agent.log_prefix}   Token: (empty or short)")
+                    agent._safe_print(f"{agent.log_prefix}   Troubleshooting:")
                     from hercules_constants import display_hercules_home as _dhh_fn
                     _dhh = _dhh_fn()
-                    print(f"{agent.log_prefix}     • Check ANTHROPIC_TOKEN in {_dhh}/.env for Hercules-managed OAuth/setup tokens")
-                    print(f"{agent.log_prefix}     • Check ANTHROPIC_API_KEY in {_dhh}/.env for API keys or legacy token values")
-                    print(f"{agent.log_prefix}     • For API keys: verify at https://platform.claude.com/settings/keys")
-                    print(f"{agent.log_prefix}     • For Claude Code: run 'claude /login' to refresh, then retry")
-                    print(f"{agent.log_prefix}     • Legacy cleanup: hercules config set ANTHROPIC_TOKEN \"\"")
-                    print(f"{agent.log_prefix}     • Clear stale keys: hercules config set ANTHROPIC_API_KEY \"\"")
+                    agent._safe_print(f"{agent.log_prefix}     • Check ANTHROPIC_TOKEN in {_dhh}/.env for Hercules-managed OAuth/setup tokens")
+                    agent._safe_print(f"{agent.log_prefix}     • Check ANTHROPIC_API_KEY in {_dhh}/.env for API keys or legacy token values")
+                    agent._safe_print(f"{agent.log_prefix}     • For API keys: verify at https://platform.claude.com/settings/keys")
+                    agent._safe_print(f"{agent.log_prefix}     • For Claude Code: run 'claude /login' to refresh, then retry")
+                    agent._safe_print(f"{agent.log_prefix}     • Legacy cleanup: hercules config set ANTHROPIC_TOKEN \"\"")
+                    agent._safe_print(f"{agent.log_prefix}     • Clear stale keys: hercules config set ANTHROPIC_API_KEY \"\"")
 
                 # Thinking block signature recovery.
                 #
@@ -4024,7 +4021,7 @@ def run_conversation(
         # the `response` variable is still None. Break out cleanly.
         if response is None:
             _turn_exit_reason = "all_retries_exhausted_no_response"
-            print(f"{agent.log_prefix}❌ All API retries exhausted with no successful response.")
+            agent._safe_print(f"{agent.log_prefix}❌ All API retries exhausted with no successful response.")
             agent._persist_session(messages, conversation_history)
             break
 
@@ -4236,7 +4233,7 @@ def run_conversation(
                     if tc.function.name not in agent.valid_tool_names:
                         repaired = agent._repair_tool_call(tc.function.name)
                         if repaired:
-                            print(f"{agent.log_prefix}🔧 Auto-repaired tool name: '{tc.function.name}' -> '{repaired}'")
+                            agent._safe_print(f"{agent.log_prefix}🔧 Auto-repaired tool name: '{tc.function.name}' -> '{repaired}'")
                             tc.function.name = repaired
                 invalid_tool_calls = [
                     tc.function.name for tc in assistant_message.tool_calls
