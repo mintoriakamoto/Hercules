@@ -1289,8 +1289,8 @@ def _iter_shell_command_starts(command: str):
         i += 1
 
     seen: set[int] = set()
-    for start in starts:
-        start = _skip_shell_whitespace(command, start)
+    for _start in starts:
+        start = _skip_shell_whitespace(command, _start)
         if start < len(command) and start not in seen:
             seen.add(start)
             yield start
@@ -1644,10 +1644,10 @@ def _command_matches_permanent_allowlist(command: str) -> bool:
     with _lock:
         patterns = tuple(_permanent_approved)
 
-    for pattern in patterns:
-        if not isinstance(pattern, str):
+    for _pattern in patterns:
+        if not isinstance(_pattern, str):
             continue
-        pattern = pattern.strip()
+        pattern = _pattern.strip()
         if not pattern:
             continue
         if command == pattern:

@@ -211,8 +211,8 @@ def load_env() -> Dict[str, str]:
         return env_vars
 
     with env_path.open(encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
+        for _line in f:
+            line = _line.strip()
             if line and not line.startswith("#") and "=" in line:
                 if line.startswith("export "):
                     line = line[7:]
@@ -640,7 +640,7 @@ def _get_session_platform() -> str:
         return ""
 
 
-def _is_skill_disabled(name: str, platform: str = None) -> bool:
+def _is_skill_disabled(name: str, platform: Optional[str] = None) -> bool:
     """Check if a skill is disabled in config.
 
     Resolves the active platform from (in order of precedence):
@@ -742,8 +742,8 @@ def _find_all_skills(*, skip_disabled: bool = False) -> List[Dict[str, Any]]:
 
                 description = frontmatter.get("description", "")
                 if not description:
-                    for line in body.strip().split("\n"):
-                        line = line.strip()
+                    for _line in body.strip().split("\n"):
+                        line = _line.strip()
                         if line and not line.startswith("#"):
                             description = line
                             break
@@ -863,7 +863,7 @@ def _rank_skills_by_query(skills: list, query: str) -> list:
     return [s for _score, s in scored]
 
 
-def skills_list(category: str = None, task_id: str = None, query: str = None) -> str:
+def skills_list(category: Optional[str] = None, task_id: Optional[str] = None, query: Optional[str] = None) -> str:
     """
     List all available skills (progressive disclosure tier 1 - minimal metadata).
 
@@ -1058,8 +1058,8 @@ def _serve_plugin_skill(
 
 def skill_view(
     name: str,
-    file_path: str = None,
-    task_id: str = None,
+    file_path: Optional[str] = None,
+    task_id: Optional[str] = None,
     preprocess: bool = True,
 ) -> str:
     """
