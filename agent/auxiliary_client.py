@@ -63,7 +63,7 @@ from urllib.parse import urlparse, parse_qs, urlunparse
 #       (which is harmless — annotations aren't type-checked at runtime).
 # See tests/agent/test_auxiliary_client.py for patch patterns this supports.
 if TYPE_CHECKING:
-    from openai import OpenAI  # noqa: F401 — type hints only
+    from openai import OpenAI  # — type hints only
 
 _OPENAI_CLS_CACHE: Optional[type] = None
 
@@ -1066,7 +1066,7 @@ class _CodexCompletionsAdapter:
             # Extract text and tool calls from the Responses output.
             # Items may be SimpleNamespace (raw-event path) or dicts
             # (some legacy fallback paths), so handle both shapes.
-            def _item_get(obj: Any, key: str, default: Any = None) -> Any:
+            def _item_get(obj: Any, key: str, default: Optional[Any] = None) -> Any:
                 val = getattr(obj, key, None)
                 if val is None and isinstance(obj, dict):
                     val = obj.get(key, default)
@@ -1749,7 +1749,7 @@ def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
 
 
 
-def _try_openrouter(explicit_api_key: str = None, model: str = None) -> Tuple[Optional[OpenAI], Optional[str]]:
+def _try_openrouter(explicit_api_key: Optional[str] = None, model: Optional[str] = None) -> Tuple[Optional[OpenAI], Optional[str]]:
     pool_present, entry = _select_pool_entry("openrouter")
     if pool_present:
         or_key = explicit_api_key or _pool_runtime_api_key(entry)
@@ -2291,7 +2291,7 @@ def _try_azure_foundry(
     return client, final_model
 
 
-def _try_anthropic(explicit_api_key: str = None) -> Tuple[Optional[Any], Optional[str]]:
+def _try_anthropic(explicit_api_key: Optional[str] = None) -> Tuple[Optional[Any], Optional[str]]:
     try:
         from agent.anthropic_adapter import build_anthropic_client, resolve_anthropic_token
     except ImportError:
@@ -3372,7 +3372,7 @@ async def _call_fallback_candidate_async(
 
 def _try_payment_fallback(
     failed_provider: str,
-    task: str = None,
+    task: Optional[str] = None,
     reason: str = "payment error",
 ) -> Tuple[Optional[Any], Optional[str], str]:
     """Try alternative providers after a payment/credit or connection error.
@@ -3427,7 +3427,7 @@ def _try_payment_fallback(
 
 def _try_main_agent_model_fallback(
     failed_provider: str,
-    task: str = None,
+    task: Optional[str] = None,
     reason: str = "error",
 ) -> Tuple[Optional[Any], Optional[str], str]:
     """Last-resort fallback to the user's main agent provider + model.
@@ -4048,12 +4048,12 @@ def _normalize_resolved_model(model_name: Optional[str], provider: str) -> Optio
 
 def resolve_provider_client(
     provider: str,
-    model: str = None,
+    model: Optional[str] = None,
     async_mode: bool = False,
     raw_codex: bool = False,
-    explicit_base_url: str = None,
-    explicit_api_key: str = None,
-    api_mode: str = None,
+    explicit_base_url: Optional[str] = None,
+    explicit_api_key: Optional[str] = None,
+    api_mode: Optional[str] = None,
     main_runtime: Optional[Dict[str, Any]] = None,
     is_vision: bool = False,
     task: Optional[str] = None,
@@ -5247,7 +5247,7 @@ def shutdown_cached_clients() -> None:
     import inspect
 
     with _client_cache_lock:
-        for key, entry in list(_client_cache.items()):
+        for _key, entry in list(_client_cache.items()):
             client = entry[0]
             if client is None:
                 continue
@@ -5310,11 +5310,11 @@ def _compat_model(client: Any, model: Optional[str], cached_default: Optional[st
 
 def _get_cached_client(
     provider: str,
-    model: str = None,
+    model: Optional[str] = None,
     async_mode: bool = False,
-    base_url: str = None,
-    api_key: str = None,
-    api_mode: str = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    api_mode: Optional[str] = None,
     main_runtime: Optional[Dict[str, Any]] = None,
     is_vision: bool = False,
     task: Optional[str] = None,
@@ -5446,11 +5446,11 @@ _AUX_DIRECT_API_BASE_URLS: Dict[str, str] = {
 
 
 def _resolve_task_provider_model(
-    task: str = None,
-    provider: str = None,
-    model: str = None,
-    base_url: str = None,
-    api_key: str = None,
+    task: Optional[str] = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
 ) -> Tuple[str, Optional[str], Optional[str], Optional[str], Optional[str]]:
     """Determine provider + model for a call.
 
@@ -5873,7 +5873,7 @@ def _build_call_kwargs(
     return kwargs
 
 
-def _validate_llm_response(response: Any, task: str = None) -> Any:
+def _validate_llm_response(response: Any, task: Optional[str] = None) -> Any:
     """Validate that an LLM response has the expected .choices[0].message shape.
 
     Fails fast with a clear error instead of letting malformed payloads
@@ -5958,7 +5958,7 @@ def _extract_aux_response_text(response: Any) -> str:
     return "\n".join(parts).strip()
 
 
-def _obj_get(obj: Any, key: str, default: Any = None) -> Any:
+def _obj_get(obj: Any, key: str, default: Optional[Any] = None) -> Any:
     value = getattr(obj, key, default)
     if value is default and isinstance(obj, dict):
         value = obj.get(key, default)
@@ -5966,22 +5966,22 @@ def _obj_get(obj: Any, key: str, default: Any = None) -> Any:
 
 
 def call_llm(
-    task: str = None,
+    task: Optional[str] = None,
     *,
-    provider: str = None,
-    model: str = None,
-    base_url: str = None,
-    api_key: str = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
     main_runtime: Optional[Dict[str, Any]] = None,
     messages: list,
     temperature: Optional[float] = None,
-    max_tokens: int = None,
-    tools: list = None,
-    timeout: float = None,
-    extra_body: dict = None,
-    api_mode: str = None,
+    max_tokens: Optional[int] = None,
+    tools: Optional[list] = None,
+    timeout: Optional[float] = None,
+    extra_body: Optional[dict] = None,
+    api_mode: Optional[str] = None,
     stream: bool = False,
-    stream_options: dict = None,
+    stream_options: Optional[dict] = None,
 ) -> Any:
     """Centralized synchronous LLM call.
 
@@ -6186,7 +6186,7 @@ def call_llm(
                         raise
                     _last_transient = retry_transient
             # Retries exhausted — fall through to first_err fallback handling.
-            raise _last_transient
+            raise _last_transient from None
     except Exception as first_err:
         if "temperature" in kwargs and _is_unsupported_temperature_error(first_err):
             retry_kwargs = dict(kwargs)
@@ -6531,19 +6531,19 @@ def extract_content_or_reasoning(response) -> str:
 
 
 async def async_call_llm(
-    task: str = None,
+    task: Optional[str] = None,
     *,
-    provider: str = None,
-    model: str = None,
-    base_url: str = None,
-    api_key: str = None,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
     main_runtime: Optional[Dict[str, Any]] = None,
     messages: list,
     temperature: Optional[float] = None,
-    max_tokens: int = None,
-    tools: list = None,
-    timeout: float = None,
-    extra_body: dict = None,
+    max_tokens: Optional[int] = None,
+    tools: Optional[list] = None,
+    timeout: Optional[float] = None,
+    extra_body: Optional[dict] = None,
 ) -> Any:
     """Centralized asynchronous LLM call.
 

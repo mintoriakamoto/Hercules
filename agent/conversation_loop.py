@@ -451,9 +451,9 @@ def _sync_failover_system_message(agent, api_messages, active_system_prompt):
 def run_conversation(
     agent,
     user_message: str,
-    system_message: str = None,
-    conversation_history: List[Dict[str, Any]] = None,
-    task_id: str = None,
+    system_message: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, Any]]] = None,
+    task_id: Optional[str] = None,
     stream_callback: Optional[callable] = None,
     persist_user_message: Optional[str] = None,
     persist_user_timestamp: Optional[float] = None,

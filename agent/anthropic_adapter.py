@@ -627,8 +627,8 @@ def _common_betas_for_base_url(
 
 def _build_anthropic_client_with_bearer_hook(
     token_provider,
-    base_url: str = None,
-    timeout: float = None,
+    base_url: Optional[str] = None,
+    timeout: Optional[float] = None,
     *,
     drop_context_1m_beta: bool = False,
 ):
@@ -703,8 +703,8 @@ def _build_anthropic_client_with_bearer_hook(
 
 def build_anthropic_client(
     api_key,
-    base_url: str = None,
-    timeout: float = None,
+    base_url: Optional[str] = None,
+    timeout: Optional[float] = None,
     *,
     drop_context_1m_beta: bool = False,
 ):
@@ -1445,7 +1445,7 @@ def run_hercules_oauth_login_pure() -> Optional[Dict[str, Any]]:
     try:
         from hercules_cli.auth import _can_open_graphical_browser as _can_open_gui
     except Exception:
-        _can_open_gui = lambda: True  # noqa: E731 — degrade to prior behavior
+        _can_open_gui = lambda: True  # — degrade to prior behavior
 
     if _can_open_gui():
         try:

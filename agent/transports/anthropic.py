@@ -4,7 +4,7 @@ Delegates to the existing adapter functions in agent/anthropic_adapter.py.
 This transport owns format conversion and normalization — NOT client lifecycle.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 
 from agent.transports.base import ProviderTransport
 from agent.transports.types import NormalizedResponse
@@ -231,7 +231,7 @@ class AnthropicTransport(ProviderTransport):
         return None
 
     # Promote the adapter's canonical mapping to module level so it's shared
-    _STOP_REASON_MAP = {
+    _STOP_REASON_MAP: ClassVar[Dict[str, str]] = {
         "end_turn": "stop",
         "tool_use": "tool_calls",
         "max_tokens": "length",
@@ -246,6 +246,6 @@ class AnthropicTransport(ProviderTransport):
 
 
 # Auto-register on import
-from agent.transports import register_transport  # noqa: E402
+from agent.transports import register_transport
 
 register_transport("anthropic_messages", AnthropicTransport)
