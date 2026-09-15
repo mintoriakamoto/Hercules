@@ -39,7 +39,6 @@ import signal
 import tempfile
 import threading
 import time
-import sqlite3
 from collections import OrderedDict
 from contextvars import copy_context
 from pathlib import Path
@@ -52,7 +51,6 @@ from typing import Callable, Dict, Optional, Any, List, Union
 # `gateway.run.fetch_account_usage` as a module-level attribute. The
 # gateway is a long-running daemon, so its boot cost matters less than
 # preserving the established test-patch surface.
-from agent.account_usage import fetch_account_usage, render_account_usage_lines
 from agent.async_utils import safe_schedule_threadsafe
 from agent.conversation_loop import INTERRUPT_WAITING_FOR_MODEL_PREFIX
 from agent.i18n import t
@@ -273,6 +271,12 @@ def _is_transient_network_error(exc: BaseException) -> bool:
     return False
 
 
+# Strong references to signal-initiated shutdown tasks. asyncio only holds
+# tasks weakly, so an untracked ``create_task(runner.stop())`` could be
+# garbage-collected before the gateway finishes stopping.
+_SIGNAL_SHUTDOWN_TASKS: set = set()
+
+
 def _gateway_loop_exception_handler(
     loop: "asyncio.AbstractEventLoop", context: Dict[str, Any]
 ) -> None:
@@ -288,7 +292,6 @@ def _gateway_loop_exception_handler(
     """
     exc = context.get("exception")
     if exc is not None and _is_transient_network_error(exc):
-        message = context.get("message") or "transient network error"
         task = context.get("future") or context.get("task")
         task_name = ""
         if task is not None:
@@ -1005,11 +1008,11 @@ _AUTO_APPEND_MEDIA_TOOL_NAMES = {
 # implementation.  Re-exported under the historical private names so existing
 # call sites and tests keep working.
 from agent.replay_cleanup import (  # noqa: E402
-    is_interrupted_tool_result as _is_interrupted_tool_result,
+    is_interrupted_tool_result as _is_interrupted_tool_result,  # noqa: F401 — re-export
     strip_interrupted_tool_tails as _strip_interrupted_tool_tails,
     strip_dangling_tool_call_tail as _strip_dangling_tool_call_tail,
     strip_stale_dangerous_confirmations as _strip_stale_dangerous_confirmations,
-    is_dangerous_confirmation as _is_dangerous_confirmation,
+    is_dangerous_confirmation as _is_dangerous_confirmation,  # noqa: F401 — re-export
 )
 
 
@@ -1303,7 +1306,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Resolve Hercules home directory (respects HERCULES_HOME override)
 from hercules_constants import get_hercules_home, get_hercules_home_override
-from utils import atomic_json_write, atomic_yaml_write, base_url_host_matches, is_truthy_value
+from utils import atomic_json_write, is_truthy_value
 _hercules_home = get_hercules_home()
 
 # Load environment variables from ~/.hercules/.env first.
@@ -1742,8 +1745,6 @@ from gateway.config import (
     Platform,
     _BUILTIN_PLATFORM_VALUES,
     GatewayConfig,
-    HomeChannel,
-    PlatformConfig,
     load_gateway_config,
 )
 from gateway.session import (
@@ -1780,9 +1781,7 @@ from gateway.restart import (
 
 from gateway.whatsapp_identity import (
     canonical_whatsapp_identifier as _canonical_whatsapp_identifier,  # noqa: F401
-    expand_whatsapp_aliases as _expand_whatsapp_auth_aliases,
-    normalize_whatsapp_identifier as _normalize_whatsapp_identifier,
-)
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -2823,6 +2822,13 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         # sites are untouched when multiplexing is off (this dict is empty).
         # Populated by _start_secondary_profile_adapters().
         self._profile_adapters: Dict[str, Dict[Platform, BasePlatformAdapter]] = {}
+        # Per-instance session state. The class-level defaults above exist
+        # only so partially-constructed test doubles can read them; a real
+        # runner must own its own dicts, otherwise every runner in a process
+        # would share (and mutate) the same class-level mappings.
+        self._running_agents_ts = {}
+        self._session_model_overrides = {}
+        self._session_reasoning_overrides = {}
         self._warn_if_docker_media_delivery_is_risky()
         _gateway_runner_ref = _weakref.ref(self)
 
@@ -20708,7 +20714,9 @@ async def start_gateway(config: Optional[GatewayConfig] = None, replace: bool = 
                 )
             except Exception as _e:
                 logger.debug("spawn_async_diagnostic failed: %s", _e)
-        asyncio.create_task(runner.stop())
+        _stop_task = asyncio.create_task(runner.stop())
+        _SIGNAL_SHUTDOWN_TASKS.add(_stop_task)
+        _stop_task.add_done_callback(_SIGNAL_SHUTDOWN_TASKS.discard)
 
     def restart_signal_handler():
         runner.request_restart(detached=False, via_service=True)
