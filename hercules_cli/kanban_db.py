@@ -3279,7 +3279,7 @@ def _has_sticky_block(conn: sqlite3.Connection, task_id: str) -> bool:
 
 
 def recompute_ready(
-    conn: sqlite3.Connection, failure_limit: int = None,
+    conn: sqlite3.Connection, failure_limit: Optional[int] = None,
 ) -> int:
     """Promote ``todo`` tasks to ``ready`` when all parents are ``done`` or ``archived``.
 
@@ -4618,7 +4618,6 @@ def block_task(
         raise ValueError(
             f"block kind must be one of {sorted(VALID_BLOCK_KINDS)} or None"
         )
-    routed_to = "blocked"
     recurrences = 0
     with write_txn(conn):
         cur_row = conn.execute(
@@ -4669,7 +4668,6 @@ def block_task(
                 conn, task_id, "dependency_wait",
                 {"reason": reason, "kind": kind}, run_id=run_id,
             )
-            routed_to = "todo"
             _blocked_task = get_task(conn, task_id)
             _fire_kanban_lifecycle_hook(
                 "kanban_task_blocked",
@@ -4729,7 +4727,6 @@ def block_task(
                 },
                 run_id=run_id,
             )
-            routed_to = "triage"
         else:
             if expected_run_id is None:
                 cur = conn.execute(
@@ -5135,7 +5132,7 @@ def decompose_triage_task(
         # link them under the root AFTER creation so the dispatcher
         # sees a coherent state, and recompute_ready() at the end
         # promotes parent-free children to 'ready'.
-        for idx, child in enumerate(children):
+        for _idx, child in enumerate(children):
             new_id = _new_task_id()
             title = child["title"].strip()
             body = child.get("body")
@@ -5493,7 +5490,7 @@ def _ensure_git_worktree(repo_root: Path, target: Path, branch_name: str) -> Non
             timeout=timeout_s,
             check=False,
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as exc:
         # A raw TimeoutExpired here used to surface as an opaque traceback and
         # a stranded task. Convert it to the same actionable RuntimeError the
         # dispatcher already handles, and point at the override knob.
@@ -5501,7 +5498,7 @@ def _ensure_git_worktree(repo_root: Path, target: Path, branch_name: str) -> Non
             f"git worktree add for {target} on branch {branch_name} timed out "
             f"after {timeout_s}s. On a very large repository, raise the limit "
             f"via HERCULES_KANBAN_WORKTREE_TIMEOUT_SECONDS."
-        )
+        ) from exc
     if result.returncode != 0:
         stderr = (result.stderr or result.stdout or "").strip()
         raise RuntimeError(
@@ -6314,7 +6311,6 @@ def detect_stale_running(
 
 
     now = int(time.time())
-    host_prefix = f"{_claimer_id().split(':', 1)[0]}:"
     reclaimed: list[str] = []
 
     rows = conn.execute(
@@ -6624,7 +6620,7 @@ def _record_task_failure(
     error: str,
     *,
     outcome: str,
-    failure_limit: int = None,
+    failure_limit: Optional[int] = None,
     release_claim: bool = False,
     end_run: bool = False,
     event_payload_extra: Optional[dict] = None,
@@ -6674,7 +6670,6 @@ def _record_task_failure(
         if row is None:
             return False
         failures = int(row["consecutive_failures"]) + 1
-        cur_status = row["status"]
 
         # Per-task override wins over both caller-supplied and default
         # thresholds. None (the common case) falls through.
@@ -6779,7 +6774,7 @@ def _record_spawn_failure(
     task_id: str,
     error: str,
     *,
-    failure_limit: int = None,
+    failure_limit: Optional[int] = None,
 ) -> bool:
     return _record_task_failure(
         conn, task_id, error,
@@ -7913,7 +7908,7 @@ def _default_spawn(
     # Use 'a' so a re-run on unblock appends rather than overwrites.
     log_f = open(log_path, "ab")
     try:
-        proc = subprocess.Popen(  # noqa: S603 -- argv is a fixed list built above
+        proc = subprocess.Popen(  # argv is a fixed list built above
             cmd,
             cwd=workspace if os.path.isdir(workspace) else None,
             stdin=subprocess.DEVNULL,
@@ -7923,12 +7918,12 @@ def _default_spawn(
             start_new_session=True,
             creationflags=subprocess.CREATE_NO_WINDOW if _IS_WINDOWS else 0,
         )
-    except FileNotFoundError:
+    except FileNotFoundError as exc:
         log_f.close()
         raise RuntimeError(
             "`hercules` executable not found on PATH. "
             "Install Hercules Agent or activate its venv before running the kanban dispatcher."
-        )
+        ) from exc
     # NOTE: we intentionally do NOT close log_f here — we want Popen's
     # child process to keep writing after this function returns.  The
     # handle is kept alive by the child's inheritance.  The parent's

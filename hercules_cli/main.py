@@ -280,7 +280,6 @@ from pathlib import Path
 from typing import Optional
 
 
-from hercules_cli.subcommands._shared import add_accept_hooks_flag as _add_accept_hooks_flag
 from hercules_cli.subcommands.cron import build_cron_parser
 from hercules_cli.subcommands.gateway import build_gateway_parser
 from hercules_cli.subcommands.profile import build_profile_parser
@@ -616,7 +615,7 @@ from hercules_cli import __version__, __release_date__
 # Provider model-selection wizard flows extracted to hercules_cli/model_setup_flows.py
 # (god-file decomposition Phase 2). Re-imported here so select_provider_and_model and
 # existing test monkeypatches (hercules_cli.main._model_flow_*) keep resolving unchanged.
-from hercules_cli.model_setup_flows import (
+from hercules_cli.model_setup_flows import (  # noqa: F401 — re-exports, see comment above
     _prompt_auth_credentials_choice,
     _model_flow_openrouter,
     _model_flow_openai_codex,
@@ -8535,10 +8534,8 @@ def _cmd_update_check(branch: str = "main", *, branch_explicit: bool = False):
                 capture_output=True,
                 text=True,
             )
-            upstream_exists = False
             compare_branch = f"origin/{branch}"
         else:
-            upstream_exists = True
             compare_branch = f"upstream/{branch}"
     else:
         # Non-default branch: compare against origin/<branch> directly.
@@ -8549,7 +8546,6 @@ def _cmd_update_check(branch: str = "main", *, branch_explicit: bool = False):
             capture_output=True,
             text=True,
         )
-        upstream_exists = False
         compare_branch = f"origin/{branch}"
 
     if fetch_result.returncode != 0:
