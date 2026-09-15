@@ -256,7 +256,7 @@ def _print_rows_text(rows: List[_Row]) -> None:
     future = [d for d in diags if d[1] == "future_manifest"]
     if future:
         print()
-        for name, _, msg in future:
+        for name, _, _msg in future:
             print(color(
                 f"  ⚠ '{name}' requires a newer Hercules — run `hercules update` "
                 "to install this entry.",

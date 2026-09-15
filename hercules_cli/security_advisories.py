@@ -341,10 +341,10 @@ def _read_banner_cache() -> dict[str, float]:
     out: dict[str, float] = {}
     try:
         for line in p.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
+            stripped = line.strip()
+            if not stripped:
                 continue
-            parts = line.split(None, 1)
+            parts = stripped.split(None, 1)
             if len(parts) != 2:
                 continue
             advisory_id, ts = parts
