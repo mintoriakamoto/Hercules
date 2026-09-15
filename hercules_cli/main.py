@@ -223,9 +223,8 @@ def _is_termux_fast_version_argv(argv: list[str]) -> bool:
 
 def _read_openai_version_fast() -> str | None:
     """Read OpenAI SDK version without importing ``importlib.metadata``."""
-    for base in sys.path:
-        if not base:
-            base = os.getcwd()
+    for entry in sys.path:
+        base = entry or os.getcwd()
         version_file = os.path.join(base, "openai", "_version.py")
         try:
             with open(version_file, encoding="utf-8") as handle:
@@ -842,8 +841,8 @@ def _has_any_provider_configured() -> bool:
     env_file = get_env_path()
     if env_file.exists():
         try:
-            for line in env_file.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
+            for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
                 if line.startswith("#") or "=" not in line:
                     continue
                 if line.startswith("export "):
@@ -5916,8 +5915,8 @@ def _find_stale_dashboard_pids(
             if result.returncode != 0 or result.stdout is None:
                 return []
             current_cmd = ""
-            for line in result.stdout.split("\n"):
-                line = line.strip()
+            for raw_line in result.stdout.split("\n"):
+                line = raw_line.strip()
                 if line.startswith("CommandLine="):
                     current_cmd = line[len("CommandLine=") :]
                 elif line.startswith("ProcessId="):
@@ -6123,8 +6122,8 @@ def _kill_stale_dashboard_processes(
         # The desktop may manage several backends (one per active profile) and
         # passes them comma-separated; a lone int still parses for back-compat.
         parsed: set[int] = set()
-        for part in raw_pid.split(","):
-            part = part.strip()
+        for raw_part in raw_pid.split(","):
+            part = raw_part.strip()
             if not part:
                 continue
             try:
@@ -11016,7 +11015,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
             if supports_systemd_services() and has_legacy_hercules_units():
                 print()
                 print("⚠ Legacy Hercules gateway unit(s) detected:")
-                for name, path, is_sys in _find_legacy_hercules_units():
+                for _name, path, is_sys in _find_legacy_hercules_units():
                     scope = "system" if is_sys else "user"
                     print(f"    {path}  ({scope} scope)")
                 print()
@@ -12918,7 +12917,7 @@ def main():
     _secrets_cli.register_cli(secrets_bw)
     _op_secrets_cli.register_cli(secrets_op)
 
-    def _dispatch_secrets(args):  # noqa: ANN001
+    def _dispatch_secrets(args):
         sub = getattr(args, "secrets_command", None)
         bw_sub = getattr(args, "secrets_bw_command", None)
         op_sub = getattr(args, "secrets_op_command", None)
@@ -12982,7 +12981,7 @@ def main():
     try:
         from agent.lsp.cli import register_subparser as _lsp_register
         _lsp_register(subparsers)
-    except Exception as _lsp_err:  # noqa: BLE001
+    except Exception as _lsp_err:
         # LSP is optional infrastructure — never let a registration
         # failure break the CLI overall.
         logger.debug("LSP CLI registration failed: %s", _lsp_err)
@@ -13464,7 +13463,7 @@ def main():
                 if not st["installed"]:
                     print("cua-driver: not installed. Run: hercules computer-use install")
                     sys.exit(1)
-                glyph = lambda v: "✅" if v is True else ("❌" if v is False else "•")  # noqa: E731
+                glyph = lambda v: "✅" if v is True else ("❌" if v is False else "•")
                 print(f"cua-driver: {st['version'] or 'installed'} ({st['platform']})")
                 if st["can_grant"]:  # macOS TCC permissions
                     print(f"  {glyph(st['accessibility'])} Accessibility")

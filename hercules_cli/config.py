@@ -713,8 +713,8 @@ def get_container_exec_info() -> Optional[dict]:
     try:
         info = {}
         with open(container_mode_file, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
+            for raw_line in f:
+                line = raw_line.strip()
                 if "=" in line and not line.startswith("#"):
                     key, _, value = line.partition("=")
                     info[key.strip()] = value.strip()
@@ -740,7 +740,7 @@ def get_container_exec_info() -> Optional[dict]:
 # =============================================================================
 
 # Re-export from hercules_constants — canonical definition lives there.
-from hercules_constants import get_hercules_home  # noqa: F811,E402
+from hercules_constants import get_hercules_home
 from utils import atomic_replace, fast_safe_load
 
 def get_config_path() -> Path:
@@ -4508,18 +4508,18 @@ def _set_nested(config, dotted_key: str, value):
         if isinstance(current, list):
             try:
                 idx = int(part)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as exc:
                 raise TypeError(
                     f"Cannot navigate into list at key {dotted_key!r}: "
                     f"segment {part!r} is not a numeric index"
-                )
+                ) from exc
             try:
                 current = current[idx]
-            except IndexError:
+            except IndexError as exc:
                 raise IndexError(
                     f"List index {idx} at key {dotted_key!r} is out of range "
                     f"(list has {len(current)} item(s))"
-                )
+                ) from exc
         elif isinstance(current, dict):
             existing = current.get(part)
             # Preserve dicts and lists; replace missing/scalar with a fresh dict.
@@ -4534,16 +4534,16 @@ def _set_nested(config, dotted_key: str, value):
     if isinstance(current, list):
         try:
             current[int(last)] = value
-        except ValueError:
+        except ValueError as exc:
             raise TypeError(
                 f"Cannot set list element at key {dotted_key!r}: "
                 f"segment {last!r} is not a numeric index"
-            )
-        except IndexError:
+            ) from exc
+        except IndexError as exc:
             raise IndexError(
                 f"List index {last} at key {dotted_key!r} is out of range "
                 f"(list has {len(current)} item(s))"
-            )
+            ) from exc
     else:
         current[last] = value
 
@@ -7258,7 +7258,6 @@ def load_env() -> Dict[str, str]:
     menu paint on top of the OAuth-refresh slowness. The mtime check
     invalidates the cache when the user edits .env mid-process.
     """
-    global _env_cache
     env_path = get_env_path()
 
     try:
@@ -7270,8 +7269,9 @@ def load_env() -> Dict[str, str]:
     except Exception:
         cache_key = None
 
-    if cache_key is not None and _env_cache is not None:
-        cached_key, cached_vars = _env_cache
+    cached = _env_cache["entry"]
+    if cache_key is not None and cached is not None:
+        cached_key, cached_vars = cached
         if cached_key == cache_key:
             return dict(cached_vars)
 
@@ -7287,8 +7287,8 @@ def load_env() -> Dict[str, str]:
         # Sanitize before parsing: split concatenated lines & drop stale
         # placeholders so corrupted .env files don't produce invalid tokens.
         lines = _sanitize_env_lines(raw_lines)
-        for line in lines:
-            line = line.strip()
+        for raw_line in lines:
+            line = raw_line.strip()
             if line and not line.startswith('#') and '=' in line:
                 # Strip the bash-compatible ``export `` prefix so lines like
                 # ``export API_KEY=...`` parse as ``API_KEY`` rather than being
@@ -7299,7 +7299,7 @@ def load_env() -> Dict[str, str]:
                 env_vars[key.strip()] = _parse_env_value(value)
 
     if cache_key is not None:
-        _env_cache = (cache_key, dict(env_vars))
+        _env_cache["entry"] = (cache_key, dict(env_vars))
 
     return env_vars
 
@@ -7308,8 +7308,11 @@ def load_env() -> Dict[str, str]:
 # Editing .env bumps mtime → next load_env() rebuilds. invalidate_env_cache()
 # is the explicit knob for writers that update .env via this module
 # (set_env_value, save_env, etc.) without relying on filesystem mtime
-# resolution.
-_env_cache: Optional[Tuple[Tuple[str, Optional[float], Optional[int]], Dict[str, str]]] = None
+# resolution. Single-slot holder mutated in place so neither reader nor
+# writer needs a ``global`` statement.
+_env_cache: Dict[
+    str, Optional[Tuple[Tuple[str, Optional[float], Optional[int]], Dict[str, str]]]
+] = {"entry": None}
 
 
 def invalidate_env_cache() -> None:
@@ -7320,8 +7323,7 @@ def invalidate_env_cache() -> None:
     filesystems with coarse mtime resolution. Reads invalidate naturally
     via the mtime/size check.
     """
-    global _env_cache
-    _env_cache = None
+    _env_cache["entry"] = None
 
 
 _STRUCTURED_VALUE_MARKERS = ("://", "?", "&")
@@ -8350,7 +8352,9 @@ def config_command(args):
 # gets its env_vars exposed in OPTIONAL_ENV_VARS without editing this file.
 # Runs once at import time.
 
-_profile_env_vars_injected = False
+# Idempotency flags for the two OPTIONAL_ENV_VARS injectors below, held in one
+# dict mutated in place so the injectors need no ``global`` statement.
+_env_var_injection_done = {"profile": False, "platform_plugin": False}
 
 
 def _inject_profile_env_vars() -> None:
@@ -8358,10 +8362,9 @@ def _inject_profile_env_vars() -> None:
 
     Called once at module load time. Idempotent — repeated calls are no-ops.
     """
-    global _profile_env_vars_injected
-    if _profile_env_vars_injected:
+    if _env_var_injection_done["profile"]:
         return
-    _profile_env_vars_injected = True
+    _env_var_injection_done["profile"] = True
     try:
         from providers import list_providers
         for _pp in list_providers():
@@ -8407,8 +8410,6 @@ _inject_profile_env_vars()
 # An optional ``optional_env`` block surfaces non-required vars the same way
 # (e.g. allowlist, home channel).
 
-_platform_plugin_env_vars_injected = False
-
 
 def _inject_platform_plugin_env_vars() -> None:
     """Populate OPTIONAL_ENV_VARS from bundled platform plugin manifests.
@@ -8416,10 +8417,9 @@ def _inject_platform_plugin_env_vars() -> None:
     Called once at module load time. Idempotent — repeated calls are no-ops.
     Failures are swallowed so a malformed plugin.yaml can't break CLI import.
     """
-    global _platform_plugin_env_vars_injected
-    if _platform_plugin_env_vars_injected:
+    if _env_var_injection_done["platform_plugin"]:
         return
-    _platform_plugin_env_vars_injected = True
+    _env_var_injection_done["platform_plugin"] = True
     try:
 
         # Resolve the bundled plugins dir from this file's location so the
