@@ -75,7 +75,7 @@ def _score_trust_learning(base_dir: Path) -> float:
     p = _provider(base_dir, "trust")
     try:
         good = p._store.add_fact("The API gateway rate limit is 100 requests per minute")
-        rival = p._store.add_fact("The API gateway rate limit is still under review")
+        p._store.add_fact("The API gateway rate limit is still under review")
         for _ in range(3):
             p._store.record_feedback(good, helpful=True)
         ranked = _top_ids(p, "api gateway rate limit", k=2)
@@ -91,7 +91,7 @@ def _score_confidence_calibration(base_dir: Path) -> float:
         proven = p._store.add_fact("The billing service reconciles invoices nightly at 0200 UTC")
         for _ in range(4):
             p._store.record_feedback(proven, helpful=True)
-        fresh = p._store.add_fact("A freshly noted, never-rated detail about webhooks")
+        p._store.add_fact("A freshly noted, never-rated detail about webhooks")
 
         proven_conf = _search(p, "billing service reconciles invoices nightly")["results"]
         fresh_conf = _search(p, "freshly noted webhooks detail")["results"]

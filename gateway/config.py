@@ -8,6 +8,7 @@ Handles loading and validating configuration for:
 - Delivery preferences
 """
 
+import functools
 import logging
 import os
 import json
@@ -206,7 +207,9 @@ def _getenv_int(name: str, default: int) -> int:
 
 # Module-level cache for bundled platform plugin names (lives outside the
 # enum so it doesn't become an accidental enum member).
-_Platform__bundled_plugin_names: Optional[set] = None
+@functools.lru_cache(maxsize=1)
+def _bundled_plugin_platform_names() -> set:
+    return Platform._scan_bundled_plugin_platforms()
 
 
 class Platform(Enum):
@@ -259,10 +262,7 @@ class Platform(Enum):
 
         # Only create pseudo-members for bundled plugin platforms (discovered
         # via filesystem scan) or runtime-registered plugin platforms.
-        global _Platform__bundled_plugin_names
-        if _Platform__bundled_plugin_names is None:
-            _Platform__bundled_plugin_names = cls._scan_bundled_plugin_platforms()
-        if value in _Platform__bundled_plugin_names:
+        if value in _bundled_plugin_platform_names():
             pseudo = object.__new__(cls)
             pseudo._value_ = value
             pseudo._name_ = value.upper().replace("-", "_").replace(" ", "_")

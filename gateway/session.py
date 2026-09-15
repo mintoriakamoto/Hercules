@@ -1020,7 +1020,7 @@ class SessionStore:
             from hercules_state import SessionDB
             self._db = SessionDB()
         except Exception as e:
-            print(f"[gateway] Warning: SQLite session store unavailable, falling back to JSONL: {e}")
+            logger.warning("SQLite session store unavailable, falling back to JSONL: %s", e)
     
     def _ensure_loaded(self) -> None:
         """Load sessions index from disk if not already loaded."""
@@ -1118,7 +1118,7 @@ class SessionStore:
                         imported, "y" if imported == 1 else "ies",
                     )
             except Exception as e:
-                print(f"[gateway] Warning: Failed to load sessions: {e}")
+                logger.warning("Failed to load sessions: %s", e)
 
         self._loaded = True
 
@@ -2014,14 +2014,14 @@ class SessionStore:
                     display_name=entry.display_name,
                 )
             except Exception as e:
-                print(f"[gateway] Warning: Failed to create SQLite session: {e}")
+                logger.warning("Failed to create SQLite session: %s", e)
 
         return entry
 
     def update_session(
         self,
         session_key: str,
-        last_prompt_tokens: int = None,
+        last_prompt_tokens: Optional[int] = None,
     ) -> None:
         """Update lightweight session metadata after an interaction."""
         with self._lock:
