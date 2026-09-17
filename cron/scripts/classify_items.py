@@ -37,12 +37,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from typing import Any, Dict, List, Optional
 
+logger = logging.getLogger(__name__)
+
 
 def _eprint(*args: Any) -> None:
-    print(*args, file=sys.stderr)
+    logger.error(" ".join(str(arg) for arg in args))
 
 
 def _load_items(input_file: Optional[str]) -> List[Dict[str, Any]]:

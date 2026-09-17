@@ -40,7 +40,7 @@ def relay_url() -> Optional[str]:
         url = (url or "").strip()
         if url:
             return url.rstrip("/")
-    except Exception:  # noqa: BLE001 - config absence/parse must never crash registration
+    except Exception:  # config absence/parse must never crash registration
         pass
     return None
 
@@ -92,7 +92,7 @@ def _relay_bot_ids_map() -> dict:
     try:
         parsed = json.loads(raw)
         return parsed if isinstance(parsed, dict) else {}
-    except Exception:  # noqa: BLE001 - a bad map must not crash boot
+    except Exception:  # a bad map must not crash boot
         logging.getLogger("gateway.relay").warning(
             "GATEWAY_RELAY_BOT_IDS is not valid JSON; treating as empty"
         )

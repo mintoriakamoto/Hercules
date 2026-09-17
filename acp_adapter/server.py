@@ -13,7 +13,7 @@ import os
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Deque, Optional
+from typing import Any, ClassVar, Deque, Optional
 from urllib.parse import unquote, urlparse
 
 import acp
@@ -464,7 +464,7 @@ def _content_blocks_to_openai_user_content(
 class HerculesACPAgent(acp.Agent):
     """ACP Agent implementation wrapping Hercules AIAgent."""
 
-    _SLASH_COMMANDS = {
+    _SLASH_COMMANDS: ClassVar[dict[str, str]] = {
         "help": "Show available commands",
         "model": "Show or change current model",
         "tools": "List available tools",
@@ -523,12 +523,12 @@ class HerculesACPAgent(acp.Agent):
     _MODE_DEFAULT = "default"
     _MODE_ACCEPT_EDITS = "accept_edits"
     _MODE_DONT_ASK = "dont_ask"
-    _MODE_TO_EDIT_APPROVAL_POLICY = {
+    _MODE_TO_EDIT_APPROVAL_POLICY: ClassVar[dict[str, str]] = {
         _MODE_DEFAULT: "ask",
         _MODE_ACCEPT_EDITS: "workspace_session",
         _MODE_DONT_ASK: "session",
     }
-    _EDIT_APPROVAL_POLICY_TO_MODE = {
+    _EDIT_APPROVAL_POLICY_TO_MODE: ClassVar[dict[str, str]] = {
         value: key for key, value in _MODE_TO_EDIT_APPROVAL_POLICY.items()
     }
 

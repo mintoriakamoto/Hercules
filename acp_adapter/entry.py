@@ -16,7 +16,7 @@ Usage::
 # IMPORTANT: hercules_bootstrap must be the very first import — UTF-8 stdio
 # on Windows.  No-op on POSIX.  See hercules_bootstrap.py for full rationale.
 try:
-    import hercules_bootstrap  # noqa: F401
+    import hercules_bootstrap
 except ModuleNotFoundError:
     # Graceful fallback when hercules_bootstrap isn't registered in the venv
     # yet — happens during partial ``hercules update`` where git-reset landed
@@ -36,6 +36,7 @@ import sys
 from pathlib import Path
 from hercules_constants import get_hercules_home
 
+logger = logging.getLogger(__name__)
 
 # Methods clients send as periodic liveness probes. They are not part of the
 # ACP schema, so the acp router correctly returns JSON-RPC -32601 to the
@@ -199,18 +200,17 @@ def _run_setup_browser(assume_yes: bool = False) -> int:
     try:
         node_ok = ensure_dependency("node", interactive=not assume_yes)
         if not node_ok:
-            print("Node.js installation failed — cannot proceed with browser tools.",
-                  file=sys.stderr)
+            logger.warning("Node.js installation failed — cannot proceed with browser tools.")
             return 1
 
         browser_ok = ensure_dependency("browser", interactive=not assume_yes)
         if not browser_ok:
-            print("Browser tools installation failed.", file=sys.stderr)
+            logger.warning("Browser tools installation failed.")
             return 1
 
         return 0
     except OSError as exc:
-        print(f"Browser bootstrap failed: {exc}", file=sys.stderr)
+        logger.warning("Browser bootstrap failed: %s", exc)
         return 1
 
 
