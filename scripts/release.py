@@ -1959,6 +1959,7 @@ AUTHOR_MAP = {
     "i@dex.moe": "dexhunter",  # PR #60339 salvage (skills snapshot manifest speedup)
     "1torhan@protonmail.com": "uzaylisak",  # PR #29988 salvage (detect_local_server_type process-lifetime cache)
     "zhchl@hercules-agent.local": "8294",  # PR #50572 salvage (honor config context_length on banner)
+    "silasmintori@gmail.com": "Claude",  # batch static-analysis cleanup PRs
 }
 
 
