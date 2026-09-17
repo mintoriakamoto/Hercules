@@ -1006,6 +1006,7 @@ from agent.replay_cleanup import (
     strip_interrupted_tool_tails as _strip_interrupted_tool_tails,
     strip_dangling_tool_call_tail as _strip_dangling_tool_call_tail,
     strip_stale_dangerous_confirmations as _strip_stale_dangerous_confirmations,
+    is_dangerous_confirmation as _is_dangerous_confirmation,  # noqa: F401 — re-exported for tests
 )
 
 
