@@ -616,6 +616,7 @@ from hercules_cli import __version__, __release_date__
 # (god-file decomposition Phase 2). Re-imported here so select_provider_and_model and
 # existing test monkeypatches (hercules_cli.main._model_flow_*) keep resolving unchanged.
 from hercules_cli.model_setup_flows import (
+    _prompt_auth_credentials_choice,  # noqa: F401 — re-exported for test monkeypatches
     _model_flow_openrouter,
     _model_flow_openai_codex,
     _model_flow_xai_oauth,
