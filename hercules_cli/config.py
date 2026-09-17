@@ -312,7 +312,6 @@ _EXTRA_ENV_KEYS = frozenset({
     "LANGFUSE_SECRET_KEY",
     "LANGFUSE_BASE_URL",
 })
-import yaml
 
 from hercules_cli.colors import Colors, color
 from hercules_cli.default_soul import DEFAULT_SOUL_MD, is_legacy_template_soul
@@ -741,7 +740,7 @@ def get_container_exec_info() -> Optional[dict]:
 # =============================================================================
 
 # Re-export from hercules_constants — canonical definition lives there.
-from hercules_constants import get_hercules_home  # noqa: F811,E402
+from hercules_constants import get_hercules_home
 from utils import atomic_replace, fast_safe_load
 
 def get_config_path() -> Path:
@@ -8422,7 +8421,6 @@ def _inject_platform_plugin_env_vars() -> None:
         return
     _platform_plugin_env_vars_injected = True
     try:
-        import yaml  # type: ignore
 
         # Resolve the bundled plugins dir from this file's location so the
         # injector works regardless of CWD.

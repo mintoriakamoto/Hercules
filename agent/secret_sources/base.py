@@ -252,7 +252,7 @@ def run_secret_cli(
     env.setdefault("NO_COLOR", "1")
 
     try:
-        proc = subprocess.run(  # noqa: S603 — argv list, no shell
+        proc = subprocess.run(
             list(argv),
             env=env,
             capture_output=True,

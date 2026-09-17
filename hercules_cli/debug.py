@@ -11,8 +11,6 @@ Currently supports:
                           to disable.
 """
 
-import datetime
-import gzip
 import io
 import json
 import logging

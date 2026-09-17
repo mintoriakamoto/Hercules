@@ -280,7 +280,6 @@ from pathlib import Path
 from typing import Optional
 
 
-from hercules_cli.subcommands._shared import add_accept_hooks_flag as _add_accept_hooks_flag
 from hercules_cli.subcommands.cron import build_cron_parser
 from hercules_cli.subcommands.gateway import build_gateway_parser
 from hercules_cli.subcommands.profile import build_profile_parser
@@ -617,7 +616,6 @@ from hercules_cli import __version__, __release_date__
 # (god-file decomposition Phase 2). Re-imported here so select_provider_and_model and
 # existing test monkeypatches (hercules_cli.main._model_flow_*) keep resolving unchanged.
 from hercules_cli.model_setup_flows import (
-    _prompt_auth_credentials_choice,
     _model_flow_openrouter,
     _model_flow_openai_codex,
     _model_flow_xai_oauth,
@@ -632,7 +630,6 @@ from hercules_cli.model_setup_flows import (
     _model_flow_copilot_acp,
     _model_flow_kimi,
     _model_flow_stepfun,
-    _model_flow_bedrock_api_key,
     _model_flow_bedrock,
     _model_flow_vertex,
     _model_flow_api_key_provider,
@@ -12922,7 +12919,7 @@ def main():
     _secrets_cli.register_cli(secrets_bw)
     _op_secrets_cli.register_cli(secrets_op)
 
-    def _dispatch_secrets(args):  # noqa: ANN001
+    def _dispatch_secrets(args):
         sub = getattr(args, "secrets_command", None)
         bw_sub = getattr(args, "secrets_bw_command", None)
         op_sub = getattr(args, "secrets_op_command", None)
@@ -12986,7 +12983,7 @@ def main():
     try:
         from agent.lsp.cli import register_subparser as _lsp_register
         _lsp_register(subparsers)
-    except Exception as _lsp_err:  # noqa: BLE001
+    except Exception as _lsp_err:
         # LSP is optional infrastructure — never let a registration
         # failure break the CLI overall.
         logger.debug("LSP CLI registration failed: %s", _lsp_err)
@@ -13468,7 +13465,7 @@ def main():
                 if not st["installed"]:
                     print("cua-driver: not installed. Run: hercules computer-use install")
                     sys.exit(1)
-                glyph = lambda v: "✅" if v is True else ("❌" if v is False else "•")  # noqa: E731
+                glyph = lambda v: "✅" if v is True else ("❌" if v is False else "•")
                 print(f"cua-driver: {st['version'] or 'installed'} ({st['platform']})")
                 if st["can_grant"]:  # macOS TCC permissions
                     print(f"  {glyph(st['accessibility'])} Accessibility")

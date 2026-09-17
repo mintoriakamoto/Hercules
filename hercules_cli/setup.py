@@ -21,7 +21,6 @@ import copy
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from utils import base_url_hostname
 from hercules_constants import get_optional_skills_dir
 
 logger = logging.getLogger(__name__)
@@ -156,13 +155,13 @@ def print_header(title: str):
     print(color(f"◆ {title}", Colors.CYAN, Colors.BOLD))
 
 
-from hercules_cli.cli_output import (  # noqa: E402
+from hercules_cli.cli_output import (
     print_error,
     print_info,
     print_success,
     print_warning,
 )
-from hercules_cli.secret_prompt import masked_secret_prompt  # noqa: E402
+from hercules_cli.secret_prompt import masked_secret_prompt
 
 
 def is_interactive_stdin() -> bool:
@@ -838,8 +837,6 @@ def _install_neutts_deps() -> bool:
 
 def _install_kittentts_deps() -> bool:
     """Install KittenTTS dependencies with user approval. Returns True on success."""
-    import subprocess
-    import sys
 
     wheel_url = (
         "https://github.com/KittenML/KittenTTS/releases/download/"
@@ -2862,7 +2859,6 @@ def _run_blank_slate_setup(config: dict, hercules_home, is_existing: bool):
 
     Either way nothing is enabled that the user did not explicitly choose.
     """
-    from hercules_cli.config import load_config
 
     print()
     print_header("Blank Slate Setup")

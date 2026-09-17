@@ -164,14 +164,14 @@ def _ensure_builtin_sources() -> None:
         from agent.secret_sources.bitwarden import BitwardenSource
 
         register_source(BitwardenSource())
-    except Exception:  # noqa: BLE001 — never block startup
+    except Exception:
         logger.warning("Failed to register bundled Bitwarden secret source",
                        exc_info=True)
     try:
         from agent.secret_sources.onepassword import OnePasswordSource
 
         register_source(OnePasswordSource())
-    except Exception:  # noqa: BLE001 — never block startup
+    except Exception:
         logger.warning("Failed to register bundled 1Password secret source",
                        exc_info=True)
 
@@ -216,7 +216,7 @@ def _fetch_with_timeout(
             )
             res.error_kind = ErrorKind.TIMEOUT
             return res
-        except Exception as exc:  # noqa: BLE001 — contract violation, contain it
+        except Exception as exc:
             res = FetchResult()
             res.error = f"fetch raised {type(exc).__name__}: {exc}"
             res.error_kind = ErrorKind.INTERNAL
@@ -269,7 +269,7 @@ def _ordered_enabled_sources(secrets_cfg: dict) -> List[SecretSource]:
         try:
             if source.is_enabled(cfg):
                 enabled.append(source)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.warning("Secret source '%s' is_enabled() raised; skipping",
                            name, exc_info=True)
     return enabled
@@ -318,7 +318,7 @@ def apply_all(secrets_cfg: dict, home_path: Path,
         try:
             for var in source.protected_env_vars(cfg):
                 protected.setdefault(var, source.name)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
     # Apply phase — sequential, first-wins, fully attributed.
@@ -333,7 +333,7 @@ def apply_all(secrets_cfg: dict, home_path: Path,
 
         try:
             override = source.override_existing(cfg)
-        except Exception:  # noqa: BLE001
+        except Exception:
             override = False
 
         for var, value in result.secrets.items():

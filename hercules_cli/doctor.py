@@ -494,7 +494,7 @@ def managed_scope_check() -> None:
     try:
         from hercules_cli import managed_scope
         managed_dir = managed_scope.get_managed_dir()
-    except Exception:  # noqa: BLE001 — diagnostics must never crash
+    except Exception:
         return
     if managed_dir is None:
         return

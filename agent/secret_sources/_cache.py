@@ -43,7 +43,7 @@ __all__ = [
 # here so backends that import from ``_cache`` keep working.
 # ---------------------------------------------------------------------------
 
-from agent.secret_sources.base import (  # noqa: E402
+from agent.secret_sources.base import (
     FetchResult,
     is_valid_env_name,
 )

@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
@@ -3093,7 +3093,7 @@ def _gemini_google_loopback_login(authorize_url_for: Callable[[str], str],
     done = threading.Event()
 
     class _Handler(BaseHTTPRequestHandler):
-        def do_GET(self):  # noqa: N802 (BaseHTTPRequestHandler API)
+        def do_GET(self):
             parsed = urlparse(self.path)
             if parsed.path != "/oauth2callback":
                 self.send_response(404)
@@ -3433,7 +3433,7 @@ def _make_spotify_callback_handler(expected_path: str) -> tuple[type[BaseHTTPReq
     }
 
     class _SpotifyCallbackHandler(BaseHTTPRequestHandler):
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             parsed = urlparse(self.path)
             if parsed.path != expected_path:
                 self.send_response(404)
@@ -3456,7 +3456,7 @@ def _make_spotify_callback_handler(expected_path: str) -> tuple[type[BaseHTTPReq
                 body = "<html><body><h1>Spotify authorization received.</h1>You can close this tab.</body></html>"
             self.wfile.write(body.encode("utf-8"))
 
-        def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
+        def log_message(self, format: str, *args: Any) -> None:
             return
 
     return _SpotifyCallbackHandler, result

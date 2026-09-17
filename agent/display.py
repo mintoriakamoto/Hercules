@@ -1449,7 +1449,7 @@ def get_cute_tool_message(
     """Render a completion label without letting cosmetic failures escape."""
     try:
         return _get_cute_tool_message(tool_name, args, duration, result=result)
-    except Exception as exc:  # noqa: BLE001 — display must never abort a turn
+    except Exception as exc:
         logger.debug("Tool completion label failed for %s: %s", tool_name, exc)
         safe_name = tool_name[:9] if isinstance(tool_name, str) and tool_name else "tool"
         safe_duration = f"{duration:.1f}s" if isinstance(duration, (int, float)) else "done"

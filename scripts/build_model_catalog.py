@@ -33,7 +33,7 @@ sys.path.insert(0, REPO_ROOT)
 # Ensure HERCULES_HOME is set for imports that touch it at module level.
 os.environ.setdefault("HERCULES_HOME", os.path.join(os.path.expanduser("~"), ".hercules"))
 
-from hercules_cli.models import OPENROUTER_MODELS  # noqa: E402
+from hercules_cli.models import OPENROUTER_MODELS
 
 OUTPUT_PATH = os.path.join(REPO_ROOT, "website", "static", "api", "model-catalog.json")
 CATALOG_VERSION = 1

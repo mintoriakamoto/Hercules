@@ -39,7 +39,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
 # ─── UI Helpers (shared with setup.py) ────────────────────────────────────────
 
-from hercules_cli.cli_output import (  # noqa: E402 — late import block
+from hercules_cli.cli_output import (
     print_error as _print_error,
     print_info as _print_info,
     print_success as _print_success,

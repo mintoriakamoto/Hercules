@@ -22,7 +22,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from hercules_constants import get_hercules_home, _get_platform_default_hercules_home
+from hercules_constants import _get_platform_default_hercules_home
 from typing import Any, Optional
 from utils import atomic_json_write
 

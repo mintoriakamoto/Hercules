@@ -223,7 +223,7 @@ from plugins.platforms.telegram.telegram_network import (
     discover_fallback_ips,
     parse_fallback_ip_env,
 )
-from utils import atomic_replace, env_float, env_int
+from utils import env_float, env_int
 
 _TELEGRAM_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 _TELEGRAM_IMAGE_MIME_TO_EXT = {
@@ -1871,7 +1871,7 @@ class TelegramAdapter(BasePlatformAdapter):
         try:
             # PTB 22.x: _request is a (get_updates, general) tuple;
             # no public accessor exists for the polling request.
-            polling_req = self._app.bot._request[0]  # noqa: SLF001
+            polling_req = self._app.bot._request[0]
         except Exception:
             return
         try:
@@ -1913,7 +1913,7 @@ class TelegramAdapter(BasePlatformAdapter):
             return
         try:
             # PTB 22.x: _request is (get_updates_request, general_request).
-            general_req = bot._request[1]  # noqa: SLF001
+            general_req = bot._request[1]
         except Exception:
             return
         async with self._get_general_request_drain_lock():

@@ -172,7 +172,6 @@ _capability_bg_lock = threading.Lock()
 
 
 def _capability_disk_cache_path() -> "Path":
-    from pathlib import Path
 
     from hercules_constants import get_hercules_home
 

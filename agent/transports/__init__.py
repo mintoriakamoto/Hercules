@@ -7,12 +7,12 @@ Usage:
 """
 
 from agent.transports.types import (
-    NormalizedResponse,
-    ToolCall,
-    Usage,
-    build_tool_call,
-    map_finish_reason,
-)  # noqa: F401
+    NormalizedResponse as NormalizedResponse,
+    ToolCall as ToolCall,
+    Usage as Usage,
+    build_tool_call as build_tool_call,
+    map_finish_reason as map_finish_reason,
+)
 
 _REGISTRY: dict = {}
 _discovered: bool = False
@@ -51,15 +51,15 @@ def _discover_transports() -> None:
     global _discovered
     _discovered = True
     try:
-        import agent.transports.anthropic  # noqa: F401
+        import agent.transports.anthropic
     except ImportError:
         pass
     try:
-        import agent.transports.codex  # noqa: F401
+        import agent.transports.codex
     except ImportError:
         pass
     try:
-        import agent.transports.chat_completions  # noqa: F401
+        import agent.transports.chat_completions
     except ImportError:
         pass
     try:

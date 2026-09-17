@@ -259,7 +259,7 @@ def _get_pty_active_session_files(app: "FastAPI") -> dict[str, Path]:
 app = FastAPI(title="Hercules Agent", version=__version__, lifespan=_lifespan)
 
 # Memory-provider OAuth connect routes live in the memory layer, not here.
-from hercules_cli.memory_oauth import router as _memory_oauth_router  # noqa: E402
+from hercules_cli.memory_oauth import router as _memory_oauth_router
 
 app.include_router(_memory_oauth_router)
 
@@ -2284,7 +2284,7 @@ async def fs_default_cwd():
 # these are thin, executor-offloaded wrappers (git/gh can block).
 # ---------------------------------------------------------------------------
 
-from hercules_cli import web_git as _web_git  # noqa: E402
+from hercules_cli import web_git as _web_git
 
 
 async def _git_op(fn, *args):
@@ -9026,7 +9026,6 @@ def _codex_full_login_worker(session_id: str) -> None:
         from hercules_cli.auth import (
             CODEX_OAUTH_CLIENT_ID,
             CODEX_OAUTH_TOKEN_URL,
-            DEFAULT_CODEX_BASE_URL,
         )
         issuer = "https://auth.openai.com"
 
@@ -13971,7 +13970,7 @@ _PTY_READ_CHUNK_TIMEOUT = 0.2
 
 # Keep-alive PTY sessions: a terminal connecting with ``?attach=<token>`` is
 # bound to a process that survives disconnect/refresh and is reattachable.
-from hercules_cli.pty_session import PtySessionRegistry, RegistryFull, run_reaper  # noqa: E402
+from hercules_cli.pty_session import PtySessionRegistry, RegistryFull, run_reaper
 
 PTY_REGISTRY = PtySessionRegistry(
     ttl=30 * 60,
@@ -16646,7 +16645,7 @@ _mount_plugin_api_routes()
 # SPA catch-all so /{full_path:path} doesn't swallow them.  These are
 # always mounted — the gate middleware decides whether to enforce auth,
 # not whether the routes exist.
-from hercules_cli.dashboard_auth.routes import router as _dashboard_auth_router  # noqa: E402
+from hercules_cli.dashboard_auth.routes import router as _dashboard_auth_router
 app.include_router(_dashboard_auth_router)
 
 mount_spa(app)

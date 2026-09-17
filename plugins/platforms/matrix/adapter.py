@@ -4426,8 +4426,6 @@ async def _standalone_send(
 def interactive_setup() -> None:
     """Configure Matrix credentials. Replaces hercules_cli/setup.py::_setup_matrix
     and the static _PLATFORMS["matrix"] dict. CLI helpers are lazy-imported."""
-    import shutil
-    import sys as _sys
     from hercules_cli.config import get_env_value, save_env_value
     from hercules_cli.cli_output import (
         prompt,

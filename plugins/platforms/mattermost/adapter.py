@@ -1099,7 +1099,7 @@ async def _standalone_send(
             }
     except aiohttp.ClientError as exc:
         return {"error": f"Mattermost send failed (network): {exc}"}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"error": f"Mattermost send failed: {exc}"}
 
 

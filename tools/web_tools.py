@@ -49,7 +49,7 @@ import httpx  # noqa: F401 — kept at module top so tests can patch tools.web_t
 # code, integration tests, and unit-test patches reach for so the public
 # surface stays stable.
 if TYPE_CHECKING:
-    from firecrawl import Firecrawl  # noqa: F401 — type hints only
+    from firecrawl import Firecrawl
 from plugins.web.firecrawl.provider import (
     Firecrawl,  # noqa: F401  # re-exported for tests that mock.patch("tools.web_tools.Firecrawl")
     _firecrawl_backend_help_suffix,
@@ -187,7 +187,7 @@ def _registered_web_provider(backend: str):
         from agent.web_search_registry import get_provider
 
         return get_provider(backend)
-    except Exception as exc:  # noqa: BLE001 — registry optional; never fatal
+    except Exception as exc:
         logger.debug("web provider registry lookup failed for %r: %s", backend, exc)
         return None
 
@@ -204,7 +204,7 @@ def _registered_web_provider_available(backend: str):
         return None
     try:
         return bool(provider.is_available())
-    except Exception as exc:  # noqa: BLE001 — a broken provider is "unavailable"
+    except Exception as exc:
         logger.debug("web provider %r.is_available() raised: %s", backend, exc)
         return False
 
@@ -215,7 +215,7 @@ def _list_registered_web_providers():
         from agent.web_search_registry import list_providers
 
         return list_providers()
-    except Exception as exc:  # noqa: BLE001 — registry optional; never fatal
+    except Exception as exc:
         logger.debug("web provider registry list failed: %s", exc)
         return []
 
@@ -264,7 +264,7 @@ def _get_backend() -> str:
         try:
             if provider.is_available():
                 return provider.name
-        except Exception as exc:  # noqa: BLE001 — a broken provider is skipped
+        except Exception as exc:
             logger.debug("web provider %r.is_available() raised: %s", provider.name, exc)
 
     return "firecrawl"  # default (backward compat)
@@ -508,7 +508,7 @@ def _store_full_text(url: str, content: str) -> Optional[str]:
             )
         path.write_text(content, encoding="utf-8")
         return str(path)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("Failed to store full web_extract text for %s: %s", url, exc)
         return None
 
@@ -608,7 +608,7 @@ def _ensure_web_plugins_loaded() -> None:
         from hercules_cli.plugins import _ensure_plugins_discovered
 
         _ensure_plugins_discovered()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # Warning, not debug: if a plugin import is genuinely broken the
         # user otherwise hits the misleading "No web extract provider
         # configured" error this helper is meant to eliminate, with no
@@ -1080,7 +1080,7 @@ def check_web_api_key() -> bool:
             get_active_search_provider() is not None
             or get_active_extract_provider() is not None
         )
-    except Exception as exc:  # noqa: BLE001 — registry optional; never fatal
+    except Exception as exc:
         logger.debug("web provider registry availability check failed: %s", exc)
         return False
 

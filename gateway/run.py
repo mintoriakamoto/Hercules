@@ -39,7 +39,6 @@ import signal
 import tempfile
 import threading
 import time
-import sqlite3
 from collections import OrderedDict
 from contextvars import copy_context
 from pathlib import Path
@@ -52,7 +51,6 @@ from typing import Callable, Dict, Optional, Any, List, Union
 # `gateway.run.fetch_account_usage` as a module-level attribute. The
 # gateway is a long-running daemon, so its boot cost matters less than
 # preserving the established test-patch surface.
-from agent.account_usage import fetch_account_usage, render_account_usage_lines
 from agent.async_utils import safe_schedule_threadsafe
 from agent.conversation_loop import INTERRUPT_WAITING_FOR_MODEL_PREFIX
 from agent.i18n import t
@@ -1004,12 +1002,10 @@ _AUTO_APPEND_MEDIA_TOOL_NAMES = {
 # surface (this messaging gateway AND the TUI/WebUI gateway) shares one
 # implementation.  Re-exported under the historical private names so existing
 # call sites and tests keep working.
-from agent.replay_cleanup import (  # noqa: E402
-    is_interrupted_tool_result as _is_interrupted_tool_result,
+from agent.replay_cleanup import (
     strip_interrupted_tool_tails as _strip_interrupted_tool_tails,
     strip_dangling_tool_call_tail as _strip_dangling_tool_call_tail,
     strip_stale_dangerous_confirmations as _strip_stale_dangerous_confirmations,
-    is_dangerous_confirmation as _is_dangerous_confirmation,
 )
 
 
@@ -1303,7 +1299,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Resolve Hercules home directory (respects HERCULES_HOME override)
 from hercules_constants import get_hercules_home, get_hercules_home_override
-from utils import atomic_json_write, atomic_yaml_write, base_url_host_matches, is_truthy_value
+from utils import atomic_json_write, is_truthy_value
 _hercules_home = get_hercules_home()
 
 # Load environment variables from ~/.hercules/.env first.
@@ -1742,8 +1738,6 @@ from gateway.config import (
     Platform,
     _BUILTIN_PLATFORM_VALUES,
     GatewayConfig,
-    HomeChannel,
-    PlatformConfig,
     load_gateway_config,
 )
 from gateway.session import (
@@ -1780,9 +1774,7 @@ from gateway.restart import (
 
 from gateway.whatsapp_identity import (
     canonical_whatsapp_identifier as _canonical_whatsapp_identifier,  # noqa: F401
-    expand_whatsapp_aliases as _expand_whatsapp_auth_aliases,
-    normalize_whatsapp_identifier as _normalize_whatsapp_identifier,
-)
+    )
 
 
 logger = logging.getLogger(__name__)
@@ -4129,7 +4121,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
 
             if active_count() > 0:
                 return True
-        except Exception:  # noqa: BLE001 - never let the idle check raise
+        except Exception:
             logger.debug("scale-to-zero async-delegation check failed", exc_info=True)
         try:
             from tools.process_registry import process_registry
@@ -4138,7 +4130,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 return True
             if process_registry.pending_watchers:
                 return True
-        except Exception:  # noqa: BLE001 - never let the idle check raise
+        except Exception:
             logger.debug("scale-to-zero bg-work check failed", exc_info=True)
         return False
 
@@ -4152,7 +4144,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
             stz = gw.get("scale_to_zero") if isinstance(gw, dict) else None
             if isinstance(stz, dict):
                 raw = stz.get("idle_timeout_minutes")
-        except Exception:  # noqa: BLE001
+        except Exception:
             raw = None
         return parse_idle_timeout_seconds(raw)
 
@@ -4175,7 +4167,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                     max_restarts = rlg["max_restarts"]
                 if isinstance(rlg.get("window_seconds"), int) and rlg["window_seconds"] > 0:
                     window_seconds = rlg["window_seconds"]
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         return max_restarts, window_seconds
 
@@ -4203,11 +4195,11 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 if self.config
                 else []
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             platforms = []
         try:
             wake_url = relay_wake_url()
-        except Exception:  # noqa: BLE001
+        except Exception:
             wake_url = None
         return should_arm(
             enabled=scale_to_zero_enabled(),
@@ -4243,12 +4235,12 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                     if self.config
                     else []
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 active = []
             relay_only = messaging_is_relay_only_or_absent(active)
             try:
                 wake_url = relay_wake_url()
-            except Exception:  # noqa: BLE001
+            except Exception:
                 wake_url = None
             logger.info(
                 "scale-to-zero: NOT armed despite opt-in — "
@@ -4258,7 +4250,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 active or "none",
                 "set" if wake_url else "MISSING",
             )
-        except Exception:  # noqa: BLE001 - diagnostics must never block startup
+        except Exception:
             logger.debug("scale-to-zero: not-armed reason logging failed", exc_info=True)
 
     def _scale_to_zero_is_idle(self) -> bool:
@@ -4284,7 +4276,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         if getattr(self, "_scale_to_zero_cooldown_until", 0.0) > 0:
             try:
                 self._update_runtime_status("running")
-            except Exception:  # noqa: BLE001 - status restoration is best-effort
+            except Exception:
                 logger.debug("scale-to-zero: status restore failed", exc_info=True)
             self._scale_to_zero_cooldown_until = 0.0
 
@@ -4292,7 +4284,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         """Return the connected RELAY adapter, if any (the one go_dormant targets)."""
         try:
             from gateway.platforms.base import Platform
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
         return self.adapters.get(Platform.RELAY)
 
@@ -4336,13 +4328,13 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 )
                 try:
                     self._update_runtime_status("draining")
-                except Exception:  # noqa: BLE001 - status is best-effort
+                except Exception:
                     logger.debug("scale-to-zero: status mark failed", exc_info=True)
                 try:
                     result = go_dormant()
                     if asyncio.iscoroutine(result):
                         await result
-                except Exception:  # noqa: BLE001 - dormancy is best-effort
+                except Exception:
                     logger.debug("scale-to-zero: go_dormant failed", exc_info=True)
                 # 0.F: after a wake the drained inbound updates _last_inbound_at,
                 # but give it a window so we don't immediately re-go-dormant on the
@@ -4350,7 +4342,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 self._scale_to_zero_cooldown_until = time.time() + max(interval, 60.0)
             except asyncio.CancelledError:
                 raise
-            except Exception:  # noqa: BLE001 - the watcher must never crash the gateway
+            except Exception:
                 logger.debug("scale-to-zero watcher iteration error", exc_info=True)
 
     def _status_action_label(self) -> str:
@@ -5221,10 +5213,10 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
     @staticmethod
     def _lookup_session_id_under_store_lock(session_store, session_key: str):
         """Sync helper run in the thread pool: read session_id under the store lock."""
-        # noqa: SLF001 — intentional private access; runs off the event loop.
-        with session_store._lock:  # noqa: SLF001
-            session_store._ensure_loaded_locked()  # noqa: SLF001
-            entry = session_store._entries.get(session_key)  # noqa: SLF001
+
+        with session_store._lock:
+            session_store._ensure_loaded_locked()
+            entry = session_store._entries.get(session_key)
         return getattr(entry, "session_id", None) if entry is not None else None
 
     # Hard cap on per-session pending follow-ups for busy_input_mode=queue
@@ -6567,10 +6559,10 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
         """
         window = _auto_continue_freshness_window()
         try:
-            with self.session_store._lock:  # noqa: SLF001 — snapshot under lock
-                self.session_store._ensure_loaded_locked()  # noqa: SLF001
+            with self.session_store._lock:
+                self.session_store._ensure_loaded_locked()
                 candidates = [
-                    entry for entry in self.session_store._entries.values()  # noqa: SLF001
+                    entry for entry in self.session_store._entries.values()
                     if entry.resume_pending
                     and not entry.suspended
                     and entry.origin is not None
@@ -6598,7 +6590,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 _max_restarts, _window = self._restart_loop_guard_config()
                 if _rlg.check_and_record(_max_restarts, _window):
                     return 0
-            except Exception as exc:  # noqa: BLE001 — breaker must fail OPEN
+            except Exception as exc:
                 logger.debug("Restart-loop guard check skipped: %s", exc)
 
         now = datetime.now()
@@ -7394,7 +7386,7 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
                 # not arming is normal — stay silent there). Without this, a failed
                 # arm is invisible and "why won't it suspend/wake?" needs a box-dive.
                 self._log_scale_to_zero_not_armed_reason()
-        except Exception:  # noqa: BLE001 - arming must never block startup
+        except Exception:
             logger.debug("scale-to-zero: arm check failed at startup", exc_info=True)
 
         # Start background drain-control watcher — reconciles the gateway's

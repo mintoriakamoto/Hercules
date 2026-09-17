@@ -338,7 +338,7 @@ def _prompt_plugin_env_vars(manifest: dict, console) -> None:
     if not requires_env:
         return
 
-    from hercules_cli.config import get_env_value, save_env_value  # noqa: F811
+    from hercules_cli.config import get_env_value, save_env_value
     from hercules_constants import display_hercules_home
 
     # Normalise to list-of-dicts

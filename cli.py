@@ -49,7 +49,6 @@ logger = logging.getLogger(__name__)
 # Suppress startup messages for clean CLI experience
 os.environ["HERCULES_QUIET"] = "1"  # Our own modules
 
-import yaml
 
 from hercules_cli.fallback_config import get_fallback_chain
 from hercules_cli.cli_agent_setup_mixin import CLIAgentSetupMixin
@@ -169,9 +168,6 @@ _COMMAND_SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧
 # User-managed env files should override stale shell exports on restart.
 from hercules_constants import get_hercules_home, display_hercules_home
 from hercules_cli.browser_connect import (
-    DEFAULT_BROWSER_CDP_URL,
-    is_browser_debug_ready,
-    manual_chrome_debug_command,
     try_launch_chrome_debug,
 )
 from hercules_cli.env_loader import load_hercules_dotenv
@@ -3100,7 +3096,7 @@ def _apply_bracketed_paste_timeout_patch() -> None:
         _vt100_mod.Vt100Parser.feed = _patched_vt100_feed
         _vt100_mod._hercules_bp_timeout_patched = True
         logger.debug("Applied Vt100Parser bracketed-paste timeout patch (#16263)")
-    except Exception as exc:  # noqa: BLE001 — defensive: never break startup
+    except Exception as exc:
         logger.debug("Bracketed-paste timeout patch skipped: %s", exc)
 
 
@@ -15365,7 +15361,7 @@ def main(
                         _build_parts = None
                         try:
                             from agent.image_routing import (
-                                build_native_content_parts as _build_parts,  # noqa: F811
+                                build_native_content_parts as _build_parts,
                             )
                             from agent.image_routing import decide_image_input_mode
                             from hercules_cli.config import load_config

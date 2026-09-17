@@ -268,7 +268,7 @@ def _run_op_read(
     cmd += ["--", reference]
 
     try:
-        proc = subprocess.run(  # noqa: S603 — op path is user-trusted, argv list
+        proc = subprocess.run(
             cmd,
             env=_op_child_env(token_value),
             capture_output=True,
