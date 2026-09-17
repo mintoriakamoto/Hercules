@@ -115,9 +115,8 @@ def _acp_stderr_print(*args, **kwargs) -> None:
     ACP reserves stdout for JSON-RPC frames, so any incidental CLI/status output
     from AIAgent must be redirected away from stdout. Route it to stderr instead.
     """
-    kwargs = dict(kwargs)
-    kwargs.setdefault("file", sys.stderr)
-    print(*args, **kwargs)
+    msg = " ".join(str(arg) for arg in args)
+    logger.warning(msg)
 
 
 def _register_task_cwd(task_id: str, cwd: str) -> None:

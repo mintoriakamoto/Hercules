@@ -7,6 +7,8 @@ to the client via ``conn.session_update()`` using
 thread while the event loop lives on the main thread).
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -131,7 +133,7 @@ def make_tool_progress_cb(
     ``reasoning.available``) are silently ignored.
     """
 
-    def _tool_progress(event_type: str, name: str = None, preview: str = None, args: Any = None, **kwargs) -> None:
+    def _tool_progress(event_type: str, name: str | None = None, preview: str | None = None, args: Any | None = None, **kwargs) -> None:
         # Only emit ACP ToolCallStart for tool.started; ignore other event types
         if event_type != "tool.started":
             return
