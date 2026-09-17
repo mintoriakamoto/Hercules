@@ -38,6 +38,7 @@ import hmac
 import json
 import logging
 import re
+import subprocess  # noqa: F401 — patch target for the "never blocks on subprocess.run" guard test
 import time
 from collections import deque
 from typing import Any, Deque, Dict, Optional
