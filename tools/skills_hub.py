@@ -35,7 +35,7 @@ import httpx
 import yaml
 
 from tools.skills_guard import (
-    ScanResult, content_hash, TRUSTED_REPOS,
+    ScanResult, content_hash, content_hashes_match, TRUSTED_REPOS,
 )
 from tools.url_safety import is_safe_url
 from tools.website_policy import check_website_access
@@ -3710,7 +3710,13 @@ def uninstall_skill(skill_name: str) -> Tuple[bool, str]:
 
 
 def bundle_content_hash(bundle: SkillBundle) -> str:
-    """Compute a deterministic hash for an in-memory skill bundle."""
+    """Compute a deterministic hash for an in-memory skill bundle.
+
+    Stays symmetric with ``tools.skills_guard.content_hash``: same digest for
+    the same skill, one computed on disk and one in memory. Compare recorded
+    hashes with ``content_hashes_match`` rather than ``==`` so legacy
+    truncated records still match.
+    """
     h = hashlib.sha256()
     for rel_path in sorted(bundle.files):
         # Include the path so swapping file contents between two paths
@@ -3722,7 +3728,7 @@ def bundle_content_hash(bundle: SkillBundle) -> str:
             h.update(content)
         else:
             h.update(content.encode("utf-8"))
-    return f"sha256:{h.hexdigest()[:16]}"
+    return f"sha256:{h.hexdigest()}"
 
 
 def _source_matches(source: SkillSource, source_name: str) -> bool:
@@ -3775,7 +3781,11 @@ def check_for_skill_updates(
 
         current_hash = entry.get("content_hash", "")
         latest_hash = bundle_content_hash(bundle)
-        status = "up_to_date" if current_hash == latest_hash else "update_available"
+        status = (
+            "up_to_date"
+            if content_hashes_match(current_hash, latest_hash)
+            else "update_available"
+        )
         results.append({
             "name": entry.get("name", ""),
             "identifier": identifier,

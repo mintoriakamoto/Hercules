@@ -1185,6 +1185,7 @@ class TestCheckForSkillUpdates:
         digest = bundle_content_hash(bundle)
 
         assert digest.startswith("sha256:")
+        assert len(digest.partition(":")[2]) == 64
 
     def test_bundle_content_hash_bytes_matches_str_equivalent(self):
         """Bytes content must hash identically to its str-decoded form."""
@@ -1282,6 +1283,68 @@ class TestCheckForSkillUpdates:
         results = check_for_skill_updates(lock=lock, sources=[source])
 
         assert results[0]["status"] == "up_to_date"
+
+    def test_legacy_truncated_lock_hash_is_not_an_update(self):
+        """A lock written before the digest was widened must not churn.
+
+        Records carried the first 16 hex characters of the SHA-256; the same
+        unchanged skill must still read as up to date.
+        """
+        bundle = SkillBundle(
+            name="demo-skill",
+            files={"SKILL.md": "same content"},
+            source="github",
+            identifier="owner/repo/demo-skill",
+            trust_level="community",
+        )
+        full = bundle_content_hash(bundle)
+        lock = MagicMock()
+        lock.list_installed.return_value = [{
+            "name": "demo-skill",
+            "source": "github",
+            "identifier": "owner/repo/demo-skill",
+            "content_hash": f"sha256:{full.partition(':')[2][:16]}",
+            "install_path": "demo-skill",
+        }]
+        source = MagicMock()
+        source.source_id.return_value = "github"
+        source.fetch.return_value = bundle
+
+        results = check_for_skill_updates(lock=lock, sources=[source])
+
+        assert results[0]["status"] == "up_to_date"
+
+    def test_legacy_truncated_lock_hash_still_detects_a_change(self):
+        """Prefix tolerance must not mask a real upstream edit."""
+        installed = SkillBundle(
+            name="demo-skill",
+            files={"SKILL.md": "old content"},
+            source="github",
+            identifier="owner/repo/demo-skill",
+            trust_level="community",
+        )
+        upstream = SkillBundle(
+            name="demo-skill",
+            files={"SKILL.md": "new content"},
+            source="github",
+            identifier="owner/repo/demo-skill",
+            trust_level="community",
+        )
+        lock = MagicMock()
+        lock.list_installed.return_value = [{
+            "name": "demo-skill",
+            "source": "github",
+            "identifier": "owner/repo/demo-skill",
+            "content_hash": f"sha256:{bundle_content_hash(installed).partition(':')[2][:16]}",
+            "install_path": "demo-skill",
+        }]
+        source = MagicMock()
+        source.source_id.return_value = "github"
+        source.fetch.return_value = upstream
+
+        results = check_for_skill_updates(lock=lock, sources=[source])
+
+        assert results[0]["status"] == "update_available"
 
 
 class TestCreateSourceRouter:

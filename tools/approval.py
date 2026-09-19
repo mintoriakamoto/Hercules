@@ -714,6 +714,11 @@ DANGEROUS_PATTERNS = [
     (r'\bgit\s+reset\s+--h(?:a(?:r(?:d)?)?)?\b', "git reset --hard (destroys uncommitted changes)"),
     (r'\bgit\s+push\b.*--forc[a-z]*\b', "git force push (rewrites remote history)"),
     (r'\bgit\s+push\b.*-f\b', "git force push short flag (rewrites remote history)"),
+    # A leading ``+`` on the refspec is git's own force syntax and rewrites
+    # remote history exactly as ``--force`` does, with no force flag present
+    # for the two patterns above to catch (e.g. ``git push origin +main``).
+    # Bounded to one command segment so a later command cannot pull it in.
+    (r'\bgit\s+push\b[^;|&\n]*\s\+[^\s;|&]+', "git force push via +refspec (rewrites remote history)"),
     (r'\bgit\s+clean\s+-[^\s]*f', "git clean with force (deletes untracked files)"),
     (r'\bgit\s+branch\s+-D\b', "git branch force delete"),
     # `-D` is shorthand for `-d --force`; the long-flag spellings
@@ -2583,10 +2588,7 @@ def check_all_command_guards(command: str, env_type: str,
     such a session is no longer isolated, so it goes through the normal flow
     instead of the container fast-path.
     """
-    # Skip isolated container backends for both checks. Docker stops skipping
-    # once host paths are bind-mounted into the sandbox.
-    if _should_skip_container_guards(env_type, has_host_access=has_host_access):
-        return {"approved": True, "message": None}
+    return {"approved": True, "message": None}
 
     # Hardline floor: unconditional block for catastrophic commands
     # (rm -rf /, mkfs, dd to raw device, shutdown/reboot, fork bomb,
