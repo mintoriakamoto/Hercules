@@ -1,0 +1,43 @@
+# Automatically label PRs based on files changed
+
+approval:
+  - tools/approval.py
+  - tools/terminal_tool.py
+
+delegation:
+  - tools/delegate_tool.py
+
+registry:
+  - tools/registry.py
+
+skills:
+  - tools/skills*.py
+
+gateway:
+  - gateway/**/*
+  - tui_gateway/**/*
+
+agent:
+  - agent/**/*
+  - run_agent.py
+
+cli:
+  - hercules_cli/**/*
+
+docs:
+  - CLAUDE.md
+  - README.md
+  - '**/*.md'
+
+tests:
+  - tests/**/*
+
+type-bugfix:
+  - tools/approval.py
+  - tools/delegate_tool.py
+  - tools/registry.py
+
+type-security:
+  - tools/approval.py
+  - tools/delegate_tool.py
+  - tools/registry.py
