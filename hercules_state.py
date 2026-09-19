@@ -943,7 +943,7 @@ class SessionDB:
     # merge cost is amortised far below the checkpoint cadence.
     _OPTIMIZE_EVERY_N_WRITES = 1000
 
-    def __init__(self, db_path: Path = None, read_only: bool = False):
+    def __init__(self, db_path: Optional[Path] = None, read_only: bool = False):
         self.db_path = db_path or DEFAULT_DB_PATH
         self.read_only = read_only
 
@@ -1685,16 +1685,16 @@ class SessionDB:
         self,
         session_id: str,
         source: str,
-        model: str = None,
-        model_config: Dict[str, Any] = None,
-        system_prompt: str = None,
-        user_id: str = None,
-        session_key: str = None,
-        chat_id: str = None,
-        chat_type: str = None,
-        thread_id: str = None,
-        parent_session_id: str = None,
-        cwd: str = None,
+        model: Optional[str] = None,
+        model_config: Optional[Dict[str, Any]] = None,
+        system_prompt: Optional[str] = None,
+        user_id: Optional[str] = None,
+        session_key: Optional[str] = None,
+        chat_id: Optional[str] = None,
+        chat_type: Optional[str] = None,
+        thread_id: Optional[str] = None,
+        parent_session_id: Optional[str] = None,
+        cwd: Optional[str] = None,
     ) -> None:
         """Insert a session row, enriching NULL metadata on conflict.
 
@@ -1759,13 +1759,13 @@ class SessionDB:
         session_id: str,
         *,
         source: str,
-        user_id: str = None,
-        session_key: str = None,
-        chat_id: str = None,
-        chat_type: str = None,
-        thread_id: str = None,
-        display_name: str = None,
-        origin_json: str = None,
+        user_id: Optional[str] = None,
+        session_key: Optional[str] = None,
+        chat_id: Optional[str] = None,
+        chat_type: Optional[str] = None,
+        thread_id: Optional[str] = None,
+        display_name: Optional[str] = None,
+        origin_json: Optional[str] = None,
     ) -> None:
         """Persist the gateway routing peer for an existing session row.
 
@@ -2124,7 +2124,7 @@ class SessionDB:
         self._execute_write(_do)
 
     def update_session_cwd(
-        self, session_id: str, cwd: str, git_branch: str = None, git_repo_root: str = None
+        self, session_id: str, cwd: str, git_branch: Optional[str] = None, git_repo_root: Optional[str] = None
     ) -> None:
         """Persist the session working directory when a frontend knows it.
 
@@ -2495,7 +2495,7 @@ class SessionDB:
         session_id: str,
         input_tokens: int = 0,
         output_tokens: int = 0,
-        model: str = None,
+        model: Optional[str] = None,
         cache_read_tokens: int = 0,
         cache_write_tokens: int = 0,
         reasoning_tokens: int = 0,
@@ -2748,7 +2748,7 @@ class SessionDB:
         self,
         session_id: str,
         source: str = "unknown",
-        model: str = None,
+        model: Optional[str] = None,
         **kwargs,
     ) -> str:
         """Ensure a session row exists (INSERT OR IGNORE). Accepts optional kwargs."""
@@ -3238,9 +3238,9 @@ class SessionDB:
 
     def list_sessions_rich(
         self,
-        source: str = None,
-        exclude_sources: List[str] = None,
-        cwd_prefix: str = None,
+        source: Optional[str] = None,
+        exclude_sources: Optional[List[str]] = None,
+        cwd_prefix: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
         include_children: bool = False,
@@ -3249,8 +3249,8 @@ class SessionDB:
         order_by_last_active: bool = False,
         include_archived: bool = False,
         archived_only: bool = False,
-        id_query: str = None,
-        search_query: str = None,
+        id_query: Optional[str] = None,
+        search_query: Optional[str] = None,
         compact_rows: bool = False,
     ) -> List[Dict[str, Any]]:
         """List sessions with preview (first user message) and last active timestamp.
@@ -3683,18 +3683,18 @@ class SessionDB:
         self,
         session_id: str,
         role: str,
-        content: str = None,
-        tool_name: str = None,
+        content: Optional[str] = None,
+        tool_name: Optional[str] = None,
         tool_calls: Any = None,
-        tool_call_id: str = None,
-        token_count: int = None,
-        finish_reason: str = None,
-        reasoning: str = None,
-        reasoning_content: str = None,
+        tool_call_id: Optional[str] = None,
+        token_count: Optional[int] = None,
+        finish_reason: Optional[str] = None,
+        reasoning: Optional[str] = None,
+        reasoning_content: Optional[str] = None,
         reasoning_details: Any = None,
         codex_reasoning_items: Any = None,
         codex_message_items: Any = None,
-        platform_message_id: str = None,
+        platform_message_id: Optional[str] = None,
         observed: bool = False,
         effect_disposition: Optional[str] = None,
         timestamp: Any = None,
@@ -4758,12 +4758,12 @@ class SessionDB:
     def search_messages(
         self,
         query: str,
-        source_filter: List[str] = None,
-        exclude_sources: List[str] = None,
-        role_filter: List[str] = None,
+        source_filter: Optional[List[str]] = None,
+        exclude_sources: Optional[List[str]] = None,
+        role_filter: Optional[List[str]] = None,
         limit: int = 20,
         offset: int = 0,
-        sort: str = None,
+        sort: Optional[str] = None,
         include_inactive: bool = False,
     ) -> List[Dict[str, Any]]:
         """
@@ -5125,7 +5125,7 @@ class SessionDB:
 
     def search_sessions(
         self,
-        source: str = None,
+        source: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
     ) -> List[Dict[str, Any]]:
@@ -5165,13 +5165,13 @@ class SessionDB:
 
     def session_count(
         self,
-        source: str = None,
-        cwd_prefix: str = None,
+        source: Optional[str] = None,
+        cwd_prefix: Optional[str] = None,
         min_message_count: int = 0,
         include_archived: bool = False,
         archived_only: bool = False,
         exclude_children: bool = False,
-        exclude_sources: List[str] = None,
+        exclude_sources: Optional[List[str]] = None,
     ) -> int:
         """Count sessions, optionally filtered by source.
 
@@ -5221,7 +5221,7 @@ class SessionDB:
             cursor = self._conn.execute(f"SELECT COUNT(*) FROM sessions s{where_sql}", params)
             return cursor.fetchone()[0]
 
-    def message_count(self, session_id: str = None) -> int:
+    def message_count(self, session_id: Optional[str] = None) -> int:
         """Count messages, optionally for a specific session."""
         with self._lock:
             if session_id:
@@ -5340,7 +5340,7 @@ class SessionDB:
         base["messages"] = [msg for seg in segments for msg in (seg.get("messages") or [])]
         return base
 
-    def export_all(self, source: str = None) -> List[Dict[str, Any]]:
+    def export_all(self, source: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Export all sessions (with messages) as a list of dicts.
         Suitable for writing to a JSONL file for backup/analysis.
@@ -5772,7 +5772,7 @@ class SessionDB:
     def list_prune_candidates(
         self,
         older_than_days: Optional[float] = None,
-        source: str = None,
+        source: Optional[str] = None,
         **filters,
     ) -> List[Dict[str, Any]]:
         """Return the sessions a matching :meth:`prune_sessions` /
@@ -5800,7 +5800,7 @@ class SessionDB:
     def archive_sessions(
         self,
         older_than_days: Optional[float] = None,
-        source: str = None,
+        source: Optional[str] = None,
         **filters,
     ) -> int:
         """Bulk-archive (soft-hide) every session matching the filters.
@@ -5826,7 +5826,7 @@ class SessionDB:
     def prune_sessions(
         self,
         older_than_days: Optional[float] = 90,
-        source: str = None,
+        source: Optional[str] = None,
         sessions_dir: Optional[Path] = None,
         **filters,
     ) -> int:

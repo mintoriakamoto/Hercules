@@ -62,11 +62,11 @@ from typing import Optional, Sequence
 # module (class declaration, ``isinstance`` checks, docstring) working
 # unchanged. See #44873.
 if sys.platform == "win32":
-    from concurrent_log_handler import (  # noqa: E402
+    from concurrent_log_handler import (
         ConcurrentRotatingFileHandler as RotatingFileHandler,
     )
 else:
-    from logging.handlers import RotatingFileHandler  # noqa: E402
+    from logging.handlers import RotatingFileHandler
 
 
 from hercules_constants import get_config_path, get_hercules_home
