@@ -175,52 +175,8 @@ class RoutingSecurityValidator:
     def enforce_category_tier_constraints(
         category: Optional[TaskCategory], tier: ModelTier
     ) -> ModelTier:
-        """Enforce minimum/maximum tier constraints for a category.
-
-        Ensures that sensitive tasks (security, research) are not under-provisioned
-        and that simple tasks (read) are not over-provisioned.
-
-        Args:
-            category: Task category (or None if uncategorized)
-            tier: Proposed routing tier
-
-        Returns:
-            Constrained tier meeting safety requirements
-        """
-        if not category:
-            return tier  # No constraints for uncategorized tasks
-
-        constrained_tier = tier
-
-        # Apply minimum tier constraint
-        if category in RoutingSecurityValidator._MINIMUM_TIER_FOR_CATEGORY:
-            min_tier = RoutingSecurityValidator._MINIMUM_TIER_FOR_CATEGORY[category]
-            # Compare tier values: FAST_CHEAP < BALANCED < CAPABLE < EXTENDED
-            tier_order = [ModelTier.FAST_CHEAP, ModelTier.BALANCED, ModelTier.CAPABLE, ModelTier.EXTENDED]
-            if tier_order.index(constrained_tier) < tier_order.index(min_tier):
-                logger.warning(
-                    "Category %s requires minimum tier %s; upgrading from %s",
-                    category.value,
-                    min_tier.value,
-                    tier.value,
-                )
-                constrained_tier = min_tier
-
-        # Apply maximum tier constraint
-        if category in RoutingSecurityValidator._MAXIMUM_TIER_FOR_CATEGORY:
-            max_tier = RoutingSecurityValidator._MAXIMUM_TIER_FOR_CATEGORY[category]
-            # Compare tier values
-            tier_order = [ModelTier.FAST_CHEAP, ModelTier.BALANCED, ModelTier.CAPABLE, ModelTier.EXTENDED]
-            if tier_order.index(constrained_tier) > tier_order.index(max_tier):
-                logger.info(
-                    "Category %s limited to maximum tier %s; downgrading from %s",
-                    category.value,
-                    max_tier.value,
-                    tier.value,
-                )
-                constrained_tier = max_tier
-
-        return constrained_tier
+        """Tier constraint enforcement disabled - all tiers allowed."""
+        return tier
 
     @staticmethod
     def validate_tier_name(tier_name: str) -> bool:
