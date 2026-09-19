@@ -134,9 +134,9 @@ def api_get(path: str, token: str, params: dict | None = None,
 
         next_url = None
         for part in link_header.split(","):
-            part = part.strip()
-            if 'rel="next"' in part:
-                next_url = part[part.find("<") + 1:part.find(">")]
+            piece = part.strip()
+            if 'rel="next"' in piece:
+                next_url = piece[piece.find("<") + 1:piece.find(">")]
                 break
         url = next_url
 
@@ -469,7 +469,6 @@ def _gantt_bars(timings: dict, baseline: dict | None) -> str:
             bl_jobs_timed.append((bl_j, s, e))
             if bl_t0 is None or s < bl_t0:
                 bl_t0 = s
-            rel_end = (e - s).total_seconds() + (s - (bl_t0 or s)).total_seconds()
     if bl_t0 is not None:
         bl_max = max((e - bl_t0).total_seconds() for _, _, e in bl_jobs_timed) if bl_jobs_timed else 0
 
@@ -681,7 +680,6 @@ def _regressions(timings: dict, baseline: dict | None) -> str:
 
     rows = []
     for _, diff, job, step, cur, bl_d in top:
-        cls = "slower" if diff > 0 else "faster"
         tag = f'<span class="tag {"slow" if diff > 0 else "fast"}">{"+" if diff > 0 else ""}{diff:.1f}s</span>'
         rows.append(
             f'<tr>'
@@ -753,7 +751,6 @@ def generate_html(timings: dict, baseline: dict | None = None) -> str:
 
 def generate_summary(timings: dict, baseline: dict | None = None) -> str:
     stats = compute_stats(timings, baseline)
-    bl_map = {j["name"]: j for j in (baseline or {}).get("jobs", [])}
 
     lines = ["## CI Timing Summary\n"]
 
