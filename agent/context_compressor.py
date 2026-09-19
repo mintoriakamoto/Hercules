@@ -266,10 +266,36 @@ def _extract_tool_call_name_and_args(tool_call: Any) -> tuple[str, str]:
     return str(getattr(fn, "name", None) or "unknown"), str(getattr(fn, "arguments", None) or "")
 
 
-def _extract_tool_call_id(tool_call: Any) -> str:
+def _extract_tool_call_ids(tool_call: Any) -> list[str]:
+    """Every id a tool result could legitimately use to reference this call.
+
+    A tool_call may carry ``call_id`` and ``id`` with *different* values: the
+    Codex Responses shape pairs on ``call_id`` while ``id`` holds the response
+    item id (see ``agent.codex_responses_adapter``). A lookup table keyed on
+    one of them alone silently misses whenever the other is the one the tool
+    result quotes, so index under the superset of both, exactly as
+    ``agent.agent_runtime_helpers.repair_message_sequence`` does (#58168).
+
+    ``call_id`` comes first because it is the canonical pairing key.
+    """
     if isinstance(tool_call, dict):
-        return str(tool_call.get("id") or "")
-    return str(getattr(tool_call, "id", "") or "")
+        raw = (tool_call.get("call_id"), tool_call.get("id"))
+    else:
+        raw = (getattr(tool_call, "call_id", None), getattr(tool_call, "id", None))
+    ids: list[str] = []
+    for value in raw:
+        if not value:
+            continue
+        text = str(value)
+        if text and text not in ids:
+            ids.append(text)
+    return ids
+
+
+def _extract_tool_call_id(tool_call: Any) -> str:
+    """The canonical id for a tool_call: ``call_id`` when present, else ``id``."""
+    ids = _extract_tool_call_ids(tool_call)
+    return ids[0] if ids else ""
 
 
 def _collect_path_mentions(text: str, relevant_files: list[str], *, limit: int = 12) -> None:
@@ -1365,21 +1391,27 @@ class ContextCompressor(ContextEngine):
         result = [m.copy() for m in messages]
         pruned = 0
 
-        # Build index: tool_call_id -> (tool_name, arguments_json)
+        # Build index: tool_call_id -> (tool_name, arguments_json).
+        # Registered under every id the call carries (see
+        # ``_extract_tool_call_ids``) so a result quoting ``call_id`` still
+        # resolves when ``id`` holds a different value. A miss here is silent:
+        # the lookup falls back to ("unknown", ""), which makes
+        # ``_summarize_tool_result`` emit a generic line instead of the
+        # per-tool summary this pass exists to produce.
         call_id_to_tool: Dict[str, tuple] = {}
         for msg in result:
             if msg.get("role") == "assistant":
                 for tc in msg.get("tool_calls") or []:
                     if isinstance(tc, dict):
-                        cid = tc.get("id", "")
                         fn = tc.get("function", {})
-                        call_id_to_tool[cid] = (fn.get("name", "unknown"), fn.get("arguments", ""))
+                        entry = (fn.get("name", "unknown"), fn.get("arguments", ""))
                     else:
-                        cid = getattr(tc, "id", "") or ""
                         fn = getattr(tc, "function", None)
                         name = getattr(fn, "name", "unknown") if fn else "unknown"
                         args_str = getattr(fn, "arguments", "") if fn else ""
-                        call_id_to_tool[cid] = (name, args_str)
+                        entry = (name, args_str)
+                    for cid in _extract_tool_call_ids(tc):
+                        call_id_to_tool[cid] = entry
 
         # Determine the prune boundary
         if protect_tail_tokens is not None and protect_tail_tokens > 0:
@@ -1649,8 +1681,9 @@ class ContextCompressor(ContextEngine):
                 for tc in msg.get("tool_calls") or []:
                     name, raw_args = _extract_tool_call_name_and_args(tc)
                     args = redact_sensitive_text(raw_args)
-                    call_id = _extract_tool_call_id(tc)
-                    if call_id:
+                    # Every id the call carries, so a result quoting
+                    # ``call_id`` resolves even when ``id`` differs.
+                    for call_id in _extract_tool_call_ids(tc):
                         call_id_to_tool[call_id] = (name, args)
                     if args:
                         try:
@@ -2353,10 +2386,12 @@ This compaction should PRIORITISE preserving all information related to the focu
 
     @staticmethod
     def _get_tool_call_id(tc) -> str:
-        """Extract the call ID from a tool_call entry (dict or SimpleNamespace)."""
-        if isinstance(tc, dict):
-            return tc.get("call_id", "") or tc.get("id", "") or ""
-        return getattr(tc, "call_id", "") or getattr(tc, "id", "") or ""
+        """Extract the call ID from a tool_call entry (dict or SimpleNamespace).
+
+        Delegates to the module-level extractor so this file has one
+        definition of ``call_id || id`` rather than two that can drift.
+        """
+        return _extract_tool_call_id(tc)
 
     def _sanitize_tool_pairs(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Fix orphaned tool_call / tool_result pairs after compression.

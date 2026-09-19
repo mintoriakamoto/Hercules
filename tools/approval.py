@@ -714,6 +714,11 @@ DANGEROUS_PATTERNS = [
     (r'\bgit\s+reset\s+--h(?:a(?:r(?:d)?)?)?\b', "git reset --hard (destroys uncommitted changes)"),
     (r'\bgit\s+push\b.*--forc[a-z]*\b', "git force push (rewrites remote history)"),
     (r'\bgit\s+push\b.*-f\b', "git force push short flag (rewrites remote history)"),
+    # A leading ``+`` on the refspec is git's own force syntax and rewrites
+    # remote history exactly as ``--force`` does, with no force flag present
+    # for the two patterns above to catch (e.g. ``git push origin +main``).
+    # Bounded to one command segment so a later command cannot pull it in.
+    (r'\bgit\s+push\b[^;|&\n]*\s\+[^\s;|&]+', "git force push via +refspec (rewrites remote history)"),
     (r'\bgit\s+clean\s+-[^\s]*f', "git clean with force (deletes untracked files)"),
     (r'\bgit\s+branch\s+-D\b', "git branch force delete"),
     # `-D` is shorthand for `-d --force`; the long-flag spellings
