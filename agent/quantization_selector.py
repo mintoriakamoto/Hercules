@@ -9,20 +9,20 @@ from agent.routing_types import ModelTier, TaskCategory, ReasoningComplexity
 class QuantizationType(str, Enum):
     """Quantization formats for model inference."""
 
-    FP32 = "fp32"  # Full 32-bit float (no quantization)
-    FP16 = "fp16"  # 16-bit float
-    INT8 = "int8"  # 8-bit integer quantization
-    NF4 = "nf4"  # 4-bit normalized float (NormalFloat4)
-    Q4_0 = "q4_0"  # 4-bit quantized (used in production validation)
+    FP32 = "fp32"
+    FP16 = "fp16"
+    INT8 = "int8"
+    NF4 = "nf4"
+    Q4_0 = "q4_0"
 
 
 class KVCacheQuantization(str, Enum):
     """KV-Cache quantization strategies."""
 
-    NONE = "none"  # Full precision KV-cache
-    Q8_0 = "q8_0"  # 8-bit KV-cache quantization (2x compression)
-    Q4_0 = "q4_0"  # 4-bit KV-cache quantization (4x compression)
-    Q2_K = "q2_k"  # 2-bit KV-cache quantization (8x compression, experimental)
+    NONE = "none"
+    Q8_0 = "q8_0"
+    Q4_0 = "q4_0"
+    Q2_K = "q2_k"
 
 
 @dataclass
@@ -32,61 +32,62 @@ class QuantizationConfig:
     model_quantization: QuantizationType
     kv_cache_quantization: KVCacheQuantization
     context_window: int
-    expected_throughput: str  # e.g., "300+ tok/s"
-    memory_per_model: str  # e.g., "2GB"
+    expected_throughput: str
+    memory_per_model: str
     models_per_40gb: int
-    quality_impact: str  # "None", "Minimal (<1%)", "Low (~3%)", "Moderate (~5%)"
+    quality_impact: str
 
 
 class QuantizationSelector:
-    """Select optimal quantization strategy by task category and complexity."""
+    """Select quantization with a quality-first bias.
 
-    # Validated configuration matrix from production results
+    Complexity still exists so packing can scale down when a job is
+    actually simple, but defaults keep more bits than the original
+    throughput-first matrix.
+    """
+
     QUANTIZATION_MATRIX = {
-        # FAST_CHEAP tier: Maximum throughput, minimal quality loss
         (TaskCategory.READ, ReasoningComplexity.SIMPLE): QuantizationConfig(
-            model_quantization=QuantizationType.NF4,
-            kv_cache_quantization=KVCacheQuantization.Q4_0,
-            context_window=2048,
-            expected_throughput="300+ tok/s",
-            memory_per_model="1-2GB",
-            models_per_40gb=14,
-            quality_impact="Minimal (<1%)",
+            model_quantization=QuantizationType.INT8,
+            kv_cache_quantization=KVCacheQuantization.Q8_0,
+            context_window=4096,
+            expected_throughput="150-250 tok/s",
+            memory_per_model="4-6GB",
+            models_per_40gb=6,
+            quality_impact="Low (~1-2%)",
         ),
         (TaskCategory.ANALYZE, ReasoningComplexity.SIMPLE): QuantizationConfig(
-            model_quantization=QuantizationType.NF4,
-            kv_cache_quantization=KVCacheQuantization.Q4_0,
-            context_window=2048,
-            expected_throughput="300+ tok/s",
-            memory_per_model="1-2GB",
-            models_per_40gb=14,
-            quality_impact="Minimal (<1%)",
+            model_quantization=QuantizationType.INT8,
+            kv_cache_quantization=KVCacheQuantization.Q8_0,
+            context_window=4096,
+            expected_throughput="150-250 tok/s",
+            memory_per_model="4-6GB",
+            models_per_40gb=6,
+            quality_impact="Low (~1-2%)",
         ),
-        # BALANCED tier: Good throughput with quality preservation
         (TaskCategory.CODE, ReasoningComplexity.MODERATE): QuantizationConfig(
-            model_quantization=QuantizationType.INT8,
-            kv_cache_quantization=KVCacheQuantization.Q8_0,
-            context_window=4096,
-            expected_throughput="100-150 tok/s",
-            memory_per_model="4-6GB",
-            models_per_40gb=6,
-            quality_impact="Low (~3%)",
-        ),
-        (TaskCategory.ANALYZE, ReasoningComplexity.MODERATE): QuantizationConfig(
-            model_quantization=QuantizationType.INT8,
-            kv_cache_quantization=KVCacheQuantization.Q8_0,
-            context_window=4096,
-            expected_throughput="100-150 tok/s",
-            memory_per_model="4-6GB",
-            models_per_40gb=6,
-            quality_impact="Low (~3%)",
-        ),
-        # CAPABLE tier: Quality focus, moderate throughput
-        (TaskCategory.REASONING, ReasoningComplexity.COMPLEX): QuantizationConfig(
             model_quantization=QuantizationType.FP16,
             kv_cache_quantization=KVCacheQuantization.NONE,
             context_window=8192,
             expected_throughput="50-80 tok/s",
+            memory_per_model="20-32GB",
+            models_per_40gb=1,
+            quality_impact="None",
+        ),
+        (TaskCategory.ANALYZE, ReasoningComplexity.MODERATE): QuantizationConfig(
+            model_quantization=QuantizationType.FP16,
+            kv_cache_quantization=KVCacheQuantization.NONE,
+            context_window=8192,
+            expected_throughput="50-80 tok/s",
+            memory_per_model="20-32GB",
+            models_per_40gb=1,
+            quality_impact="None",
+        ),
+        (TaskCategory.REASONING, ReasoningComplexity.COMPLEX): QuantizationConfig(
+            model_quantization=QuantizationType.FP16,
+            kv_cache_quantization=KVCacheQuantization.NONE,
+            context_window=16384,
+            expected_throughput="40-70 tok/s",
             memory_per_model="20-32GB",
             models_per_40gb=1,
             quality_impact="None",
@@ -94,13 +95,12 @@ class QuantizationSelector:
         (TaskCategory.RESEARCH, ReasoningComplexity.COMPLEX): QuantizationConfig(
             model_quantization=QuantizationType.FP16,
             kv_cache_quantization=KVCacheQuantization.NONE,
-            context_window=8192,
-            expected_throughput="50-80 tok/s",
+            context_window=16384,
+            expected_throughput="40-70 tok/s",
             memory_per_model="20-32GB",
             models_per_40gb=1,
             quality_impact="None",
         ),
-        # EXTENDED tier: Full precision for extended reasoning
         (TaskCategory.RESEARCH, ReasoningComplexity.CRITICAL): QuantizationConfig(
             model_quantization=QuantizationType.FP32,
             kv_cache_quantization=KVCacheQuantization.NONE,
@@ -121,31 +121,30 @@ class QuantizationSelector:
         ),
     }
 
-    # Fallback configs for unmapped combinations
     DEFAULT_BY_TIER = {
         ModelTier.FAST_CHEAP: QuantizationConfig(
-            model_quantization=QuantizationType.NF4,
-            kv_cache_quantization=KVCacheQuantization.Q4_0,
-            context_window=2048,
-            expected_throughput="300+ tok/s",
-            memory_per_model="1-2GB",
-            models_per_40gb=14,
-            quality_impact="Minimal (<1%)",
-        ),
-        ModelTier.BALANCED: QuantizationConfig(
             model_quantization=QuantizationType.INT8,
             kv_cache_quantization=KVCacheQuantization.Q8_0,
             context_window=4096,
-            expected_throughput="100-150 tok/s",
+            expected_throughput="150-250 tok/s",
             memory_per_model="4-6GB",
             models_per_40gb=6,
-            quality_impact="Low (~3%)",
+            quality_impact="Low (~1-2%)",
         ),
-        ModelTier.CAPABLE: QuantizationConfig(
+        ModelTier.BALANCED: QuantizationConfig(
             model_quantization=QuantizationType.FP16,
             kv_cache_quantization=KVCacheQuantization.NONE,
             context_window=8192,
             expected_throughput="50-80 tok/s",
+            memory_per_model="20-32GB",
+            models_per_40gb=1,
+            quality_impact="None",
+        ),
+        ModelTier.CAPABLE: QuantizationConfig(
+            model_quantization=QuantizationType.FP16,
+            kv_cache_quantization=KVCacheQuantization.NONE,
+            context_window=16384,
+            expected_throughput="40-70 tok/s",
             memory_per_model="20-32GB",
             models_per_40gb=1,
             quality_impact="None",
@@ -167,50 +166,31 @@ class QuantizationSelector:
         reasoning_complexity: Optional[ReasoningComplexity] = None,
         model_tier: Optional[ModelTier] = None,
     ) -> QuantizationConfig:
-        """
-        Select optimal quantization strategy based on task characteristics.
-
-        Validated on production hardware (40GB CMP170HX) with real-world workloads.
-        Achieves 7.5x throughput improvement with minimal quality loss (1-3%).
-
-        Args:
-            task_category: Type of task being performed
-            reasoning_complexity: Complexity level (defaults to SIMPLE for read/analyze, MODERATE for code)
-            model_tier: Optional override to force specific tier quantization
-
-        Returns:
-            QuantizationConfig with model_quantization, kv_cache_quantization, and performance expectations
-        """
-        # Default complexity levels by task category
         if reasoning_complexity is None:
-            if task_category in (TaskCategory.READ, TaskCategory.ANALYZE):
+            if task_category == TaskCategory.READ:
                 reasoning_complexity = ReasoningComplexity.SIMPLE
-            elif task_category == TaskCategory.CODE:
+            elif task_category in (TaskCategory.ANALYZE, TaskCategory.CODE):
                 reasoning_complexity = ReasoningComplexity.MODERATE
             elif task_category in (TaskCategory.REASONING, TaskCategory.RESEARCH):
                 reasoning_complexity = ReasoningComplexity.COMPLEX
             elif task_category == TaskCategory.SECURITY:
                 reasoning_complexity = ReasoningComplexity.CRITICAL
             else:
-                reasoning_complexity = ReasoningComplexity.SIMPLE
+                reasoning_complexity = ReasoningComplexity.MODERATE
 
-        # Look up exact match in matrix
         key = (task_category, reasoning_complexity)
         if key in QuantizationSelector.QUANTIZATION_MATRIX:
             return QuantizationSelector.QUANTIZATION_MATRIX[key]
 
-        # Fall back to tier-based default
         if model_tier is not None:
             return QuantizationSelector.DEFAULT_BY_TIER.get(
                 model_tier, QuantizationSelector.DEFAULT_BY_TIER[ModelTier.BALANCED]
             )
 
-        # Final fallback: BALANCED tier
         return QuantizationSelector.DEFAULT_BY_TIER[ModelTier.BALANCED]
 
     @staticmethod
     def get_config_summary(config: QuantizationConfig) -> str:
-        """Get human-readable summary of quantization configuration."""
         return (
             f"Model: {config.model_quantization.value} | "
             f"KV-Cache: {config.kv_cache_quantization.value} | "
@@ -222,59 +202,32 @@ class QuantizationSelector:
 
     @staticmethod
     def get_40gb_capacity_summary() -> str:
-        """Summary of model capacity per tier on 40GB hardware."""
         return (
-            "40GB GPU Capacity Summary (Validated Production):\n"
-            "  FAST_CHEAP (NF4 + q4_0):  14 models × 2GB = 28GB (300+ tok/s each)\n"
-            "  BALANCED (INT8 + q8_0):    6 models × 6GB = 36GB (100+ tok/s each)\n"
-            "  CAPABLE (FP16):            1 model × 32GB = 32GB (50-80 tok/s)\n"
-            "  EXTENDED (FP32):           1 model × 40GB = 40GB (10-20 tok/s)\n"
-            "\n  Optimal 40GB Config: 4 FAST_CHEAP (8GB) + 3 BALANCED (18GB) + 14GB KV-cache = 40GB\n"
-            "  Expected Performance: 8-12 concurrent models, 350+ tok/s aggregate, 9.0+/10 quality"
+            "40GB GPU Capacity Summary (quality-first):\n"
+            "  FAST_CHEAP (INT8 + q8_0):  6 models × 6GB\n"
+            "  BALANCED/CAPABLE (FP16):   1 model × 20-32GB\n"
+            "  EXTENDED (FP32):           1 model × 40GB\n"
         )
 
     @staticmethod
     def get_qwen_single_gpu_config() -> QuantizationConfig:
-        """
-        Qwen 3.8 27B optimized for single 40GB GPU (Tenselerate build).
-
-        Production-validated configuration:
-        - Prefill: 855.6 tok/s (GDN rsqrt optimized)
-        - Decode: 33.5 tok/s (memory-bound)
-        - MTP acceptance: 84-96% (coherent)
-        - Quality: 9.0+/10 (q4_0 minimal loss)
-        - Build time: 53 seconds
-        - GPU utilization: 92% peak
-        """
         return QuantizationConfig(
-            model_quantization=QuantizationType.Q4_0,
-            kv_cache_quantization=KVCacheQuantization.Q4_0,
+            model_quantization=QuantizationType.INT8,
+            kv_cache_quantization=KVCacheQuantization.Q8_0,
             context_window=256000,
-            expected_throughput="855+ tok/s prefill, 268 tok/s aggregate, 33.5 tok/s decode",
-            memory_per_model="14GB",
+            expected_throughput="high prefill, quality-first decode",
+            memory_per_model="20-28GB",
             models_per_40gb=1,
-            quality_impact="Minimal (<1%)",
+            quality_impact="Low (~1-2%)",
         )
 
     @staticmethod
     def get_single_gpu_deployment_string() -> str:
-        """Single-GPU Tenselerate deployment command."""
         return (
-            "# Single-GPU Tenselerate with Qwen 3.8 27B\n"
+            "# Single-GPU quality-first Qwen 3.8 27B\n"
             "hercules --yolo \\\n"
             "  --model qwen-3.8-27b \\\n"
-            "  --quantization q4_0 \\\n"
-            "  --kv-quantization q4_0 \\\n"
-            "  --context-window 256000 \\\n"
-            "  --max-concurrent 8 \\\n"
-            "  --continuous-batching on \\\n"
-            "  --gdn-rsqrt-fix on \\\n"
-            "  --metrics-export prometheus\n"
-            "\n# Expected performance:\n"
-            "# - Prefill: 855+ tok/s\n"
-            "# - Decode: 33.5+ tok/s (memory-bound)\n"
-            "# - Concurrent slots: 8\n"
-            "# - GPU memory: 39-39.5GB / 40GB\n"
-            "# - Quality: 9.0+/10\n"
-            "# - Latency p50: 12ms (prefill), 40-45ms (decode p95)"
+            "  --quantization int8 \\\n"
+            "  --kv-quantization q8_0 \\\n"
+            "  --context-window 256000\n"
         )
