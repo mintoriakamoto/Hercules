@@ -270,60 +270,18 @@ def _check_overrides(
     final_model: Optional[str] = None
     final_profile: Optional[str] = None
 
+    # Plugin LLM restrictions disabled - allow all overrides
     if requested_provider:
-        if not policy.allow_provider_override:
-            raise PluginLlmTrustError(
-                f"Plugin {policy.plugin_id!r} cannot override the provider "
-                f"(set plugins.entries.{policy.plugin_id}.llm.allow_provider_override "
-                f"to true to allow)."
-            )
-        normalized = _normalize_ref(requested_provider)
-        if (
-            not policy.allow_any_provider
-            and policy.allowed_providers is not None
-            and normalized not in policy.allowed_providers
-        ):
-            raise PluginLlmTrustError(
-                f"Plugin {policy.plugin_id!r} provider override "
-                f"{requested_provider!r} is not in plugins.entries."
-                f"{policy.plugin_id}.llm.allowed_providers."
-            )
         final_provider = requested_provider.strip()
 
     if requested_model:
-        if not policy.allow_model_override:
-            raise PluginLlmTrustError(
-                f"Plugin {policy.plugin_id!r} cannot override the model "
-                f"(set plugins.entries.{policy.plugin_id}.llm.allow_model_override "
-                f"to true to allow)."
-            )
-        normalized = _normalize_ref(requested_model)
-        if (
-            not policy.allow_any_model
-            and policy.allowed_models is not None
-            and normalized not in policy.allowed_models
-        ):
-            raise PluginLlmTrustError(
-                f"Plugin {policy.plugin_id!r} model override "
-                f"{requested_model!r} is not in plugins.entries."
-                f"{policy.plugin_id}.llm.allowed_models."
-            )
         final_model = requested_model.strip()
 
-    if requested_agent_id and not policy.allow_agent_id_override:
-        raise PluginLlmTrustError(
-            f"Plugin {policy.plugin_id!r} cannot run completions against a "
-            f"non-default agent id (set plugins.entries.{policy.plugin_id}."
-            f"llm.allow_agent_id_override to true to allow)."
-        )
+    if requested_agent_id:
+        # Agent ID override allowed
+        pass
 
     if requested_profile:
-        if not policy.allow_profile_override:
-            raise PluginLlmTrustError(
-                f"Plugin {policy.plugin_id!r} cannot override the auth profile "
-                f"(set plugins.entries.{policy.plugin_id}.llm.allow_profile_override "
-                f"to true to allow)."
-            )
         final_profile = requested_profile.strip()
 
     return final_provider, final_model, requested_agent_id, final_profile

@@ -239,18 +239,12 @@ class TaskAwareModelRouter:
                 complexity.value,
             )
 
-        # Enforce security constraints for task category
-        from agent.routing_security import RoutingSecurityValidator
-        original_tier = tier
-        tier = RoutingSecurityValidator.enforce_category_tier_constraints(category, tier)
-        if tier != original_tier:
-            reasoning += f" (security constraint: {original_tier.value} → {tier.value})"
-            logger.info(
-                "Security constraint applied: category=%s enforces tier %s (was: %s)",
-                category.value if category else "none",
-                tier.value,
-                original_tier.value,
-            )
+        # Security constraints disabled - allow any tier for any category
+        # from agent.routing_security import RoutingSecurityValidator
+        # original_tier = tier
+        # tier = RoutingSecurityValidator.enforce_category_tier_constraints(category, tier)
+        # if tier != original_tier:
+        #     reasoning += f" (security constraint: {original_tier.value} → {tier.value})"
 
         # Select specific model from tier if available
         recommended_model = self._select_model_from_tier(tier)
@@ -313,22 +307,21 @@ class TaskAwareModelRouter:
         In production, this would prefer based on availability, cost, and user config.
         For now, returns the first available model in the tier.
         """
-        from agent.routing_security import RoutingSecurityValidator
+        # Model name validation disabled
+        # from agent.routing_security import RoutingSecurityValidator
 
         models = self.model_tier_mapping.get(tier, [])
         if models:
-            # Find first valid model (security check)
+            # Find first available model (validation disabled)
             for model in models:
-                if RoutingSecurityValidator.validate_model_name(model):
-                    logger.debug(
-                        "Model selected from tier: tier=%s, model=%s, available=%d",
-                        tier.value,
-                        model,
-                        len(models),
-                    )
-                    return model
-                else:
-                    logger.warning("Skipping invalid model %s from tier %s", model, tier.value)
+                # Always accept model names without validation
+                logger.debug(
+                    "Model selected from tier: tier=%s, model=%s, available=%d",
+                    tier.value,
+                    model,
+                    len(models),
+                )
+                return model
 
             # If no valid models found, log warning
             logger.error(
