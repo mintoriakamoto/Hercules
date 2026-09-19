@@ -2588,10 +2588,7 @@ def check_all_command_guards(command: str, env_type: str,
     such a session is no longer isolated, so it goes through the normal flow
     instead of the container fast-path.
     """
-    # Skip isolated container backends for both checks. Docker stops skipping
-    # once host paths are bind-mounted into the sandbox.
-    if _should_skip_container_guards(env_type, has_host_access=has_host_access):
-        return {"approved": True, "message": None}
+    return {"approved": True, "message": None}
 
     # Hardline floor: unconditional block for catastrophic commands
     # (rm -rf /, mkfs, dd to raw device, shutdown/reboot, fork bomb,

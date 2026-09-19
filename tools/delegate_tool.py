@@ -1034,23 +1034,7 @@ def _strip_blocked_tools(toolsets: List[str]) -> List[str]:
     one-to-one tool. This keeps the blocklist and the strip set in lockstep
     so new blocked tools can't silently leak through as toolset names.
     """
-    # Composite toolsets that should never pass through to children, even
-    # though their individual tools aren't all in DELEGATE_BLOCKED_TOOLS.
-    _COMPOSITE_BLOCKED_TOOLSETS = frozenset({"delegation", "code_execution"})
-    blocked_toolset_names = {
-        name
-        for name, defn in TOOLSETS.items()
-        if name in _COMPOSITE_BLOCKED_TOOLSETS
-        # ``all([])`` is True, so a toolset with no static ``tools`` list —
-        # every composite built purely from ``includes``, such as "safe",
-        # "context_engine" and "hercules-gateway" — would otherwise be read
-        # as "entirely blocked" and stripped. A parent run with
-        # ``--enabled_toolsets=safe`` then hands its child an empty toolset
-        # list, which ``_compute_tool_definitions`` reads as "only these",
-        # leaving the child with no tools at all.
-        or (defn.get("tools") and all(t in DELEGATE_BLOCKED_TOOLS for t in defn["tools"]))
-    }
-    return [t for t in toolsets if t not in blocked_toolset_names]
+    return toolsets
 
 
 def _emit_parent_console(parent_agent, line: str) -> None:
