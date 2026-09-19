@@ -128,10 +128,10 @@ def _sanitize_plugin_name(
 
     try:
         target.relative_to(plugins_resolved)
-    except ValueError:
+    except ValueError as exc:
         raise ValueError(
             f"Invalid plugin name '{name}': resolves outside the plugins directory."
-        )
+        ) from exc
 
     return target
 
@@ -338,7 +338,7 @@ def _prompt_plugin_env_vars(manifest: dict, console) -> None:
     if not requires_env:
         return
 
-    from hercules_cli.config import get_env_value, save_env_value  # noqa: F811
+    from hercules_cli.config import get_env_value, save_env_value
     from hercules_constants import display_hercules_home
 
     # Normalise to list-of-dicts
@@ -1717,7 +1717,7 @@ def _run_composite_fallback(plugin_keys, plugin_labels, plugin_selected,
     # Provider categories
     if categories:
         print(color("\n  Provider Plugins", Colors.YELLOW))
-        for ci, (cat_name, cat_current, cat_fn) in enumerate(categories):
+        for ci, (cat_name, cat_current, _cat_fn) in enumerate(categories):
             print(f"  {ci + 1}. {cat_name} [{cat_current}]")
         print()
         try:
@@ -1845,7 +1845,7 @@ def _toggle_plugin_toolset(name: str, *, enable: bool) -> None:
         config["platform_toolsets"] = platform_toolsets
 
     changed = False
-    for platform, ts_list in platform_toolsets.items():
+    for _platform, ts_list in platform_toolsets.items():
         if not isinstance(ts_list, list):
             continue
         if enable:
