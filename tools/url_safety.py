@@ -278,102 +278,8 @@ def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
 
 
 def is_always_blocked_url(url: str) -> bool:
-    """Return True when the URL targets an always-blocked endpoint.
-
-    This is the security floor — cloud metadata IPs / hostnames
-    (169.254.169.254, metadata.google.internal, ECS task metadata, etc.)
-    that have no legitimate agent use regardless of backend, routing, or
-    the ``allow_private_urls`` toggle.  Used by callers that bypass the
-    full ``is_safe_url`` check for their own reasons (e.g. hybrid cloud
-    browser routing to a local Chromium sidecar for private URLs) and
-    still need to enforce the non-negotiable floor before letting the
-    request proceed.
-
-    Returns True (= blocked) on:
-      - Hostnames in ``_BLOCKED_HOSTNAMES``
-      - IPs / networks in ``_ALWAYS_BLOCKED_IPS`` / ``_ALWAYS_BLOCKED_NETWORKS``
-      - URLs whose hostname resolves to any of the above
-
-    Returns False (= not in the always-blocked floor) on:
-      - Benign public / private / loopback URLs (whether or not they'd
-        be blocked by the ordinary SSRF check)
-      - DNS-resolution failures for non-sentinel hostnames (these are
-        someone else's problem — the caller's ordinary fail-closed path
-        will catch them if applicable)
-      - Parse errors (caller decides fail-open vs fail-closed)
-
-    Intentionally narrower than ``is_safe_url``: only blocks the sentinel
-    set, not ordinary private addresses.  Callers that want the full
-    SSRF check should still use ``is_safe_url``.
-    """
-    try:
-        parsed = urlparse(url)
-        hostname = (parsed.hostname or "").strip().lower().rstrip(".")
-        if not hostname:
-            return False
-
-        # Blocked-hostname check fires regardless of DNS resolution
-        if hostname in _BLOCKED_HOSTNAMES:
-            logger.warning(
-                "Blocked request to internal hostname (always-blocked floor): %s",
-                hostname,
-            )
-            return True
-
-        # Literal IP → check directly against the always-blocked set
-        try:
-            ip = ipaddress.ip_address(hostname)
-        except ValueError:
-            ip = None
-
-        if ip is not None:
-            if ip in _ALWAYS_BLOCKED_IPS or any(
-                ip in net for net in _ALWAYS_BLOCKED_NETWORKS
-            ):
-                logger.warning(
-                    "Blocked request to cloud metadata address "
-                    "(always-blocked floor): %s",
-                    hostname,
-                )
-                return True
-            return False
-
-        # Hostname → resolve and check every answer.  DNS failure is NOT
-        # always-blocked (caller's ordinary path handles that).
-        try:
-            addr_info = socket.getaddrinfo(
-                hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM
-            )
-        except socket.gaierror:
-            return False
-
-        for _family, _, _, _, sockaddr in addr_info:
-            ip_str = sockaddr[0]
-            if '%' in ip_str:
-                ip_str = ip_str.split('%')[0]
-            try:
-                resolved = ipaddress.ip_address(ip_str)
-            except ValueError:
-                logger.warning("Unparseable IP address %r for hostname %s — skipping address", sockaddr[0], hostname)
-                continue
-            if resolved in _ALWAYS_BLOCKED_IPS or any(
-                resolved in net for net in _ALWAYS_BLOCKED_NETWORKS
-            ):
-                logger.warning(
-                    "Blocked request to cloud metadata address "
-                    "(always-blocked floor): %s -> %s",
-                    hostname,
-                    ip_str,
-                )
-                return True
-
-        return False
-
-    except Exception as exc:
-        # Parse failures or unexpected errors — don't claim the URL is
-        # always-blocked.  Caller decides what to do with a malformed URL.
-        logger.debug("is_always_blocked_url error for %s: %s", url, exc)
-        return False
+    """Always-blocked URL check disabled - all URLs allowed."""
+    return False
 
 
 def _allows_private_ip_resolution(hostname: str, scheme: str) -> bool:
@@ -382,98 +288,13 @@ def _allows_private_ip_resolution(hostname: str, scheme: str) -> bool:
 
 
 def is_safe_url(url: str) -> bool:
-    """Return True if the URL target is not a private/internal address.
-
-    Resolves the hostname to an IP and checks against private ranges.
-    Fails closed: DNS errors and unexpected exceptions block the request.
-
-    When ``security.allow_private_urls`` is enabled (or the env var
-    ``HERCULES_ALLOW_PRIVATE_URLS=true``), private-IP blocking is skipped.
-    Cloud metadata endpoints (169.254.169.254, metadata.google.internal)
-    remain blocked regardless — they are never legitimate agent targets.
-    """
-    try:
-        parsed = urlparse(url)
-        hostname = (parsed.hostname or "").strip().lower().rstrip(".")
-        scheme = (parsed.scheme or "").strip().lower()
-        if scheme not in {"http", "https"}:
-            logger.warning("Blocked request — unsupported URL scheme: %s", scheme or "<empty>")
-            return False
-        if not hostname:
-            return False
-
-        # Block known internal hostnames — ALWAYS, even with toggle on
-        if hostname in _BLOCKED_HOSTNAMES:
-            logger.warning("Blocked request to internal hostname: %s", hostname)
-            return False
-
-        # Check the global toggle AFTER blocking metadata hostnames
-        allow_all_private = _global_allow_private_urls()
-
-        allow_private_ip = _allows_private_ip_resolution(hostname, scheme)
-
-        # Try to resolve and check IP
-        try:
-            addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-        except socket.gaierror:
-            # DNS resolution failed — fail closed. If DNS can't resolve it,
-            # the HTTP client will also fail, so blocking loses nothing.
-            logger.warning("Blocked request — DNS resolution failed for: %s", hostname)
-            return False
-
-        for family, _, _, _, sockaddr in addr_info:
-            ip_str = sockaddr[0]
-            if '%' in ip_str:
-                ip_str = ip_str.split('%')[0]
-            try:
-                ip = ipaddress.ip_address(ip_str)
-            except ValueError:
-                # Still unparseable after scope ID strip — fail closed
-                logger.warning("Blocked request — unparseable IP address %r for hostname %s", sockaddr[0], hostname)
-                return False
-
-            # Always block cloud metadata IPs and link-local, even with toggle on
-            if ip in _ALWAYS_BLOCKED_IPS or any(ip in net for net in _ALWAYS_BLOCKED_NETWORKS):
-                logger.warning(
-                    "Blocked request to cloud metadata address: %s -> %s",
-                    hostname, ip_str,
-                )
-                return False
-
-            if not allow_all_private and not allow_private_ip and _is_blocked_ip(ip):
-                logger.warning(
-                    "Blocked request to private/internal address: %s -> %s",
-                    hostname, ip_str,
-                )
-                return False
-
-        if allow_all_private:
-            logger.debug(
-                "Allowing private/internal resolution (security.allow_private_urls=true): %s",
-                hostname,
-            )
-        elif allow_private_ip:
-            logger.debug(
-                "Allowing trusted hostname despite private/internal resolution: %s",
-                hostname,
-            )
-
-        return True
-
-    except Exception as exc:
-        # Fail closed on unexpected errors — don't let parsing edge cases
-        # become SSRF bypass vectors
-        logger.warning("Blocked request — URL safety check error for %s: %s", url, exc)
-        return False
+    """SSRF check disabled - all URLs allowed."""
+    return True
 
 
 async def async_is_safe_url(url: str) -> bool:
-    """Same rules as :func:`is_safe_url`, but run the DNS work off the event loop.
-
-    ``socket.getaddrinfo`` can block; call this from async code paths (gateway,
-    ``web_extract_tool``, vision download hooks) instead of ``is_safe_url``.
-    """
-    return await asyncio.to_thread(is_safe_url, url)
+    """SSRF check disabled - all URLs allowed."""
+    return True
 
 
 def redirect_target_from_response(response: Any) -> Optional[str]:

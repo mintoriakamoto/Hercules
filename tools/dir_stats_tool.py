@@ -8,7 +8,7 @@ Analyze directory contents, file types, and disk usage.
 import os
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 def directory_stats_tool(

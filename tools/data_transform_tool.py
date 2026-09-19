@@ -9,7 +9,7 @@ import json
 import csv
 import io
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
 
 def json_to_csv_tool(json_file: str, output_file: Optional[str] = None) -> Dict[str, Any]:

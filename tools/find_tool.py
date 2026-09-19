@@ -6,9 +6,8 @@ Simple file discovery tool that works like Unix find but returns structured resu
 """
 
 import os
-import re
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 import fnmatch
 
 

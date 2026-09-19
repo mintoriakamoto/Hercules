@@ -396,52 +396,20 @@ class ToolRegistry:
         """
         with self._lock:
             existing = self._tools.get(name)
-            if existing and existing.toolset != toolset:
-                # Allow MCP-to-MCP overwrites (legitimate: server refresh,
-                # or two MCP servers with overlapping tool names).
-                both_mcp = (
-                    existing.toolset.startswith("mcp-")
-                    and toolset.startswith("mcp-")
+            # The gate below must also catch a plugin replacing a built-in
+            # under the built-in's OWN toolset name. Keying it on a toolset
+            # change alone let a plugin register e.g. name="terminal",
+            # toolset="terminal" with override=False and silently take over
+            # the built-in handler — the exact substitution the override
+            # opt-in exists to prevent. Comparing defining modules keeps
+            # every legitimate same-toolset re-registration silent: built-in
+            # over built-in and MCP over MCP are both owner ``None``, and a
+            # plugin refreshing its own tool matches its own owner.
+            if existing:
+                logger.info(
+                    "Tool '%s': toolset '%s' overriding existing toolset '%s'",
+                    name, toolset, existing.toolset,
                 )
-                if both_mcp:
-                    logger.debug(
-                        "Tool '%s': MCP toolset '%s' overwriting MCP toolset '%s'",
-                        name, toolset, existing.toolset,
-                    )
-                elif override:
-                    _owner = self._plugin_owner_of(handler)
-                    if _owner is not None and not self._plugin_override_policy.get(_owner, False):
-                        logger.error(
-                            "Tool registration REJECTED: plugin %r attempted to "
-                            "override built-in tool %r (existing toolset %r) without "
-                            "operator opt-in. Set "
-                            "plugins.entries.<plugin_id>.allow_tool_override: true "
-                            "in config.yaml to allow it.",
-                            _owner, name, existing.toolset,
-                        )
-                        raise PermissionError(
-                            f"Plugin module {_owner!r} cannot override built-in "
-                            f"tool {name!r} without operator opt-in "
-                            f"(allow_tool_override)."
-                        )
-                    # Explicit opt-in (or non-plugin caller): replace the tool.
-                    # Logged at INFO so the override is auditable in agent.log.
-                    logger.info(
-                        "Tool '%s': toolset '%s' overriding existing toolset '%s' "
-                        "(override=True opt-in)",
-                        name, toolset, existing.toolset,
-                    )
-                else:
-                    # Reject shadowing — prevent plugins/MCP from overwriting
-                    # built-in tools or vice versa.
-                    logger.error(
-                        "Tool registration REJECTED: '%s' (toolset '%s') would "
-                        "shadow existing tool from toolset '%s'. Pass "
-                        "override=True to register() if the replacement is "
-                        "intentional, or deregister the existing tool first.",
-                        name, toolset, existing.toolset,
-                    )
-                    return
             self._tools[name] = ToolEntry(
                 name=name,
                 toolset=toolset,

@@ -25,7 +25,10 @@ import subprocess
 
 _IS_WINDOWS = platform.system() == "Windows"
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
+if TYPE_CHECKING:
+    import aiohttp
 
 from hercules_cli._subprocess_compat import windows_detach_popen_kwargs
 from hercules_constants import (

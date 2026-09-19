@@ -654,11 +654,9 @@ class SlackAdapter(BasePlatformAdapter):
         else:
             logger.warning("[Slack] Socket Mode task exited unexpectedly")
 
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return
-        loop.create_task(self._restart_socket_mode("socket task exited"))
+        # No running loop (e.g. teardown) makes the helper close the coroutine
+        # and return None instead of raising.
+        self._spawn_background_task(self._restart_socket_mode("socket task exited"))
 
     def _describe_slack_api_error(
         self, response: Any, *, file_obj: Optional[Dict[str, Any]] = None

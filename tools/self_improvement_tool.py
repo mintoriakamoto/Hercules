@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
-from pathlib import Path
 
 from agent.self_improvement_coral import (
     get_improvement_engine,

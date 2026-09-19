@@ -164,6 +164,9 @@ class LSPClient:
         self._proc: Optional[asyncio.subprocess.Process] = None
         self._stderr_task: Optional[asyncio.Task] = None
         self._reader_task: Optional[asyncio.Task] = None
+        # Server->client request handlers run as tasks; hold strong refs so
+        # they are not garbage-collected mid-flight.
+        self._request_tasks: set[asyncio.Task] = set()
 
         # Request/response correlation
         self._next_id: int = 0
@@ -318,7 +321,9 @@ class LSPClient:
                 if kind == "response":
                     self._dispatch_response(key, msg)
                 elif kind == "request":
-                    asyncio.create_task(self._dispatch_request(key, msg))
+                    req_task = asyncio.create_task(self._dispatch_request(key, msg))
+                    self._request_tasks.add(req_task)
+                    req_task.add_done_callback(self._request_tasks.discard)
                 elif kind == "notification":
                     self._dispatch_notification(key, msg)
                 else:

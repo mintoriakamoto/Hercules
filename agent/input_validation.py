@@ -155,7 +155,7 @@ def validate_string(
             pattern = re.compile(pattern)
         if not pattern.match(value):
             raise ValidationError(
-                field, f"string does not match required pattern", value
+                field, "string does not match required pattern", value
             )
 
     return value
@@ -205,7 +205,7 @@ def validate_path(
         raise ValidationError(field, "relative paths not allowed", path_str)
 
     if must_exist and not path.exists():
-        raise ValidationError(field, f"path does not exist", path_str)
+        raise ValidationError(field, "path does not exist", path_str)
 
     return path
 

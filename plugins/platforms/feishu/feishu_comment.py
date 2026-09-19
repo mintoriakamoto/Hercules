@@ -29,6 +29,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+# Strong references to fire-and-forget reaction tasks (see RUF006).
+_REACTION_TASKS: set = set()
+
 # ---------------------------------------------------------------------------
 # Lark SDK helpers (lazy-imported)
 # ---------------------------------------------------------------------------
@@ -1184,7 +1187,7 @@ async def handle_drive_comment_event(
 
     logger.info("[Feishu-Comment] Access granted: user=%s policy=%s rule=%s", from_open_id, rule.policy, rule.match_source)
     if reply_id:
-        asyncio.ensure_future(
+        reaction_task = asyncio.ensure_future(
             add_comment_reaction(
                 client,
                 file_token=file_token,
@@ -1193,6 +1196,9 @@ async def handle_drive_comment_event(
                 reaction_type="OK",
             )
         )
+        # Keep a strong reference: the loop only holds tasks weakly.
+        _REACTION_TASKS.add(reaction_task)
+        reaction_task.add_done_callback(_REACTION_TASKS.discard)
 
     # Step 2: Parallel fetch -- doc meta + comment details
     logger.info("[Feishu-Comment] [Step 2/5] Parallel fetch: doc meta + comment batch_query")

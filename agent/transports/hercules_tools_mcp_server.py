@@ -44,11 +44,13 @@ Spawned by: CodexAppServerSession.ensure_started() when the runtime is
 
 from __future__ import annotations
 
+import inspect
 import json
+import keyword
 import logging
 import os
 import sys
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +107,79 @@ EXPOSED_TOOLS: tuple[str, ...] = (
 )
 
 
+def _make_handler(
+    tool_name: str,
+    description: str,
+    params_schema: dict,
+    dispatch: Callable[[str, dict], Any],
+) -> Callable[..., str]:
+    """Build a FastMCP-compatible callable whose signature mirrors *params_schema*.
+
+    FastMCP derives a tool's argument model from ``inspect.signature`` of the
+    registered callable. A bare ``**kwargs`` handler therefore registers as a
+    tool with a single required string field literally named ``kwargs`` and
+    every real call fails argument validation. Synthesising keyword-only
+    parameters from the JSON schema's ``properties`` makes the generated model
+    accept the tool's actual arguments; the authoritative schema itself is
+    published separately by :func:`_publish_input_schema`.
+    """
+    props = params_schema.get("properties") or {}
+    required = set(params_schema.get("required") or [])
+
+    def _dispatch(**kwargs: Any) -> str:
+        # Optional parameters the client omitted arrive as ``None`` from the
+        # synthesised defaults; drop them so the tool only sees what was sent.
+        args = {k: v for k, v in kwargs.items() if v is not None or k in required}
+        try:
+            return dispatch(tool_name, args)
+        except Exception as exc:
+            logger.exception("tool %s raised", tool_name)
+            return json.dumps({"error": str(exc), "tool": tool_name})
+
+    _dispatch.__name__ = tool_name
+    _dispatch.__doc__ = description
+
+    if all(p.isidentifier() and not keyword.iskeyword(p) for p in props):
+        parameters = [
+            inspect.Parameter(
+                prop,
+                inspect.Parameter.KEYWORD_ONLY,
+                default=inspect.Parameter.empty if prop in required else None,
+                annotation=Any,
+            )
+            for prop in props
+        ]
+        _dispatch.__signature__ = inspect.Signature(  # type: ignore[attr-defined]
+            parameters, return_annotation=str
+        )
+    else:
+        logger.warning(
+            "tool %s has parameter names that are not Python identifiers; "
+            "MCP argument validation may reject calls",
+            tool_name,
+        )
+    return _dispatch
+
+
+def _publish_input_schema(mcp: Any, name: str, params_schema: dict) -> None:
+    """Advertise Hercules' own JSON schema as the tool's MCP ``inputSchema``.
+
+    The synthesised signature only gives FastMCP a permissive argument model;
+    clients should still see the real property types, descriptions and enums.
+    Best-effort: silently skipped on SDK versions without a tool manager.
+    """
+    manager = getattr(mcp, "_tool_manager", None)
+    get_tool = getattr(manager, "get_tool", None)
+    if not callable(get_tool):
+        return
+    try:
+        tool = get_tool(name)
+    except Exception:
+        return
+    if tool is not None and hasattr(tool, "parameters"):
+        tool.parameters = params_schema
+
+
 def _build_server() -> Any:
     """Create the FastMCP server with Hercules tools attached. Lazy imports
     so the module can be imported without the mcp package installed
@@ -154,35 +229,13 @@ def _build_server() -> Any:
         description = spec.get("description") or f"Hercules {name} tool"
         params_schema = spec.get("parameters") or {"type": "object", "properties": {}}
 
-        # FastMCP wants a Python callable. Build a closure that takes the
-        # arguments dict, dispatches via handle_function_call, and returns
-        # the result string. We use add_tool() for full control over the
-        # input schema (FastMCP's @tool() decorator inspects type hints,
-        # which we can't get from a JSON schema at runtime).
-        def _make_handler(tool_name: str):
-            def _dispatch(**kwargs: Any) -> str:
-                try:
-                    return handle_function_call(tool_name, kwargs or {})
-                except Exception as exc:
-                    logger.exception("tool %s raised", tool_name)
-                    return json.dumps({"error": str(exc), "tool": tool_name})
-            _dispatch.__name__ = tool_name
-            _dispatch.__doc__ = description
-            return _dispatch
-
+        handler = _make_handler(name, description, params_schema, handle_function_call)
         try:
-            mcp.add_tool(
-                _make_handler(name),
-                name=name,
-                description=description,
-                # FastMCP accepts JSON schema directly via the
-                # input_schema parameter on newer versions; older
-                # versions use parameters_schema. Try both for compat.
-            )
+            mcp.add_tool(handler, name=name, description=description)
         except TypeError:
             # Older mcp SDK signature — fall back to decorator-style.
-            handler = _make_handler(name)
-            handler = mcp.tool(name=name, description=description)(handler)
+            mcp.tool(name=name, description=description)(handler)
+        _publish_input_schema(mcp, name, params_schema)
 
         exposed_count += 1
 

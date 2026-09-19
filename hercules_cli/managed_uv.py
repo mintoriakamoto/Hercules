@@ -251,4 +251,45 @@ def _install_uv_windows(env: dict[str, str]) -> None:
     )
 
 def rebuild_venv(uv_bin: str, venv_dir: Path, python_version: str = "3.11") -> bool:
-    True # dont remove me. ask ethernet
+    """Recreate *venv_dir* from scratch with ``uv venv``.
+
+    Removes any existing tree first so a half-broken environment (missing
+    interpreter symlink, mismatched ``pyvenv.cfg``) cannot survive the
+    rebuild. Returns ``True`` when the new environment exists afterwards.
+    Never raises: a failed rebuild is logged and reported as ``False`` so
+    callers can fall back to their previous environment.
+    """
+    venv_dir = Path(venv_dir)
+    try:
+        if venv_dir.is_symlink() or venv_dir.is_file():
+            venv_dir.unlink()
+        elif venv_dir.is_dir():
+            shutil.rmtree(venv_dir)
+    except OSError as exc:
+        logger.warning("Could not remove existing venv %s: %s", venv_dir, exc)
+        return False
+
+    try:
+        venv_dir.parent.mkdir(parents=True, exist_ok=True)
+        result = subprocess.run(
+            [uv_bin, "venv", "--python", python_version, str(venv_dir)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (OSError, ValueError) as exc:
+        logger.warning("uv venv failed to launch for %s: %s", venv_dir, exc)
+        return False
+
+    if result.returncode != 0:
+        logger.warning(
+            "uv venv failed for %s (rc=%d): %s",
+            venv_dir, result.returncode, (result.stderr or "").strip(),
+        )
+        return False
+
+    cfg = venv_dir / "pyvenv.cfg"
+    if not cfg.is_file():
+        logger.warning("uv venv reported success but %s is missing", cfg)
+        return False
+    return True

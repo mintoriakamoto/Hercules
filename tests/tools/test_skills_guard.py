@@ -27,6 +27,8 @@ from tools.skills_guard import (
     should_allow_install,
     format_scan_report,
     content_hash,
+    content_hashes_match,
+    full_content_hash,
     _determine_verdict,
     _resolve_trust_level,
     _check_structure,
@@ -499,6 +501,72 @@ class TestContentHash:
         f.write_text("version2")
         h2 = content_hash(tmp_path)
         assert h1 != h2
+
+    def test_hash_is_the_full_sha256_digest(self, tmp_path):
+        """A ``sha256:`` label must carry all 256 bits.
+
+        The digest was previously truncated to 16 hex characters (64 bits),
+        which is under the collision resistance an integrity record needs.
+        """
+        (tmp_path / "file.txt").write_text("payload")
+        algo, _, digest = content_hash(tmp_path).partition(":")
+        assert algo == "sha256"
+        assert len(digest) == 64
+        assert content_hash(tmp_path) == full_content_hash(tmp_path)
+
+
+class TestContentHashesMatch:
+    def test_identical_full_hashes_match(self, tmp_path):
+        (tmp_path / "file.txt").write_text("payload")
+        digest = content_hash(tmp_path)
+        assert content_hashes_match(digest, digest)
+
+    def test_legacy_truncated_record_matches_current_digest(self, tmp_path):
+        """Lock files written before the widening stay valid."""
+        (tmp_path / "file.txt").write_text("payload")
+        digest = content_hash(tmp_path)
+        legacy = f"sha256:{digest.partition(':')[2][:16]}"
+        assert content_hashes_match(legacy, digest)
+
+    def test_legacy_record_for_other_content_does_not_match(self, tmp_path):
+        (tmp_path / "file.txt").write_text("payload")
+        digest = content_hash(tmp_path)
+        assert not content_hashes_match("sha256:" + "0" * 16, digest)
+
+    def test_differing_full_hashes_do_not_match(self, tmp_path):
+        (tmp_path / "file.txt").write_text("one")
+        first = content_hash(tmp_path)
+        (tmp_path / "file.txt").write_text("two")
+        second = content_hash(tmp_path)
+        assert not content_hashes_match(first, second)
+
+    def test_empty_operands_never_match(self, tmp_path):
+        (tmp_path / "file.txt").write_text("payload")
+        digest = content_hash(tmp_path)
+        assert not content_hashes_match("", digest)
+        assert not content_hashes_match(digest, "")
+        assert not content_hashes_match("", "")
+
+    def test_prefix_tolerance_does_not_apply_to_other_lengths(self, tmp_path):
+        """Only the one legacy length is accepted as a prefix."""
+        (tmp_path / "file.txt").write_text("payload")
+        digest = content_hash(tmp_path)
+        body = digest.partition(":")[2]
+        assert not content_hashes_match(f"sha256:{body[:8]}", digest)
+        assert not content_hashes_match(f"sha256:{body[:32]}", digest)
+
+    def test_algorithm_label_must_agree(self, tmp_path):
+        (tmp_path / "file.txt").write_text("payload")
+        digest = content_hash(tmp_path)
+        legacy_body = digest.partition(":")[2][:16]
+        assert not content_hashes_match(f"md5:{legacy_body}", digest)
+
+    def test_non_ascii_recorded_hash_is_rejected_not_raised(self, tmp_path):
+        """Lock files are attacker-influenced; a bad value must not crash."""
+        (tmp_path / "file.txt").write_text("payload")
+        digest = content_hash(tmp_path)
+        assert not content_hashes_match("sha256:\u00e9" * 4, digest)
+        assert not content_hashes_match(digest, "sha256:\u00e9" * 4)
 
 
 # ---------------------------------------------------------------------------

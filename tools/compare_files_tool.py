@@ -7,7 +7,7 @@ Compare two files and show differences in a human-readable format.
 
 import difflib
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 def compare_files_tool(

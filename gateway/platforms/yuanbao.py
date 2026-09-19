@@ -3917,7 +3917,7 @@ class ConnectionManager:
     def schedule_reconnect(self) -> None:
         """Schedule a reconnect only if running and not already reconnecting."""
         if self._adapter._running and not self._reconnecting:
-            asyncio.create_task(self._reconnect_with_backoff())
+            self._adapter._spawn_background_task(self._reconnect_with_backoff())
 
     async def _reconnect_with_backoff(self) -> bool:
         """Reconnect with exponential backoff (1s, 2s, 4s, … up to 60s)."""

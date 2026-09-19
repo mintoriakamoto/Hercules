@@ -737,7 +737,7 @@ def check_command_security(command: str) -> dict:
     Returns:
         {"action": "allow"|"warn"|"block", "findings": [...], "summary": str}
     """
-    global _crash_count, _circuit_open
+    global _crash_count
 
     cfg = _load_security_config()
 

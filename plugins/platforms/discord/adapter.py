@@ -959,7 +959,7 @@ class DiscordAdapter(BasePlatformAdapter):
                     exc_info=True,
                 )
 
-        asyncio.create_task(_notify())
+        self._spawn_background_task(_notify())
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
         """Connect to Discord and start receiving events."""
@@ -3560,7 +3560,7 @@ class DiscordAdapter(BasePlatformAdapter):
 
         # Fire-and-forget: don't block the interaction handler on Telegram I/O.
         try:
-            asyncio.create_task(self._notify_unauthorized_slash(
+            self._spawn_background_task(self._notify_unauthorized_slash(
                 user_name, user_id, chan_id, guild_id, command_text, reason,
             ))
         except Exception as e:

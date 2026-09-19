@@ -971,7 +971,7 @@ class LineAdapter(BasePlatformAdapter):
 
         # Best-effort typing indicator (DM only).
         if chat_type == "dm" and self._client:
-            asyncio.create_task(self._client.loading(chat_id))
+            self._spawn_background_task(self._client.loading(chat_id))
 
         source_obj = self.build_source(
             chat_id=chat_id,

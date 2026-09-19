@@ -135,10 +135,12 @@ fail locally with `FeatureUnavailable` and pass in CI, which installs
   includes anything dropped into the repo `plugins/` tree.
 - `GATEWAY_ALLOW_ALL_USERS` and per-platform equivalents are plain truthy-env
   bypasses of the allowlist.
-- Known and unfixed: `bundle_content_hash` in `skills_hub.py` truncates
-  SHA-256 to 64 bits while labelled `sha256:`; fetched web/browser content
-  reaches exec planning without the untrusted framing `approval.py` applies to
-  agent-supplied commands.
+- Skill content hashes are the full SHA-256. They used to be truncated to 64
+  bits while still labelled `sha256:`. Compare recorded hashes with
+  `skills_guard.content_hashes_match`, never `==` — locks written before the
+  widening still hold the 16-hex form and are accepted as a prefix.
+- Known and unfixed: fetched web/browser content reaches exec planning without
+  the untrusted framing `approval.py` applies to agent-supplied commands.
 
 ## Delegation
 

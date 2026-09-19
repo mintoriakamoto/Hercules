@@ -172,7 +172,6 @@ _capability_bg_lock = threading.Lock()
 
 
 def _capability_disk_cache_path() -> "Path":
-    from pathlib import Path
 
     from hercules_constants import get_hercules_home
 
@@ -325,7 +324,6 @@ def _detect_capabilities(token: str, *, force: bool = False) -> Dict[str, Any]:
 
     Cached in a module-global. Pass ``force=True`` to re-fetch.
     """
-    global _capability_cache
     if token in _capability_cache and not force:
         return _capability_cache[token]
 

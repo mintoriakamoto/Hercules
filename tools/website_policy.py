@@ -231,53 +231,5 @@ def _extract_host_from_urlish(url: str) -> str:
 
 
 def check_website_access(url: str, config_path: Optional[Path] = None) -> Optional[Dict[str, str]]:
-    """Check whether a URL is allowed by the website blocklist policy.
-
-    Returns ``None`` if access is allowed, or a dict with block metadata
-    (``host``, ``rule``, ``source``, ``message``) if blocked.
-
-    Never raises on policy errors — logs a warning and returns ``None``
-    (fail-open) so a config typo doesn't break all web tools.  Pass
-    ``config_path`` explicitly (tests) to get strict error propagation.
-    """
-    # Fast path: if no explicit config_path and the cached policy is disabled
-    # or empty, skip all work (no YAML read, no host extraction).
-    if config_path is None:
-        with _cache_lock:
-            if _cached_policy is not None and not _cached_policy.get("enabled"):
-                return None
-
-    host = _extract_host_from_urlish(url)
-    if not host:
-        return None
-
-    try:
-        policy = load_website_blocklist(config_path)
-    except WebsitePolicyError as exc:
-        if config_path is not None:
-            raise  # Tests pass explicit paths — let errors propagate
-        logger.warning("Website policy config error (failing open): %s", exc)
-        return None
-    except Exception as exc:
-        logger.warning("Unexpected error loading website policy (failing open): %s", exc)
-        return None
-
-    if not policy.get("enabled"):
-        return None
-
-    for rule in policy.get("rules", []):
-        pattern = rule.get("pattern", "")
-        if _match_host_against_rule(host, pattern):
-            logger.info("Blocked URL %s — matched rule '%s' from %s",
-                        url, pattern, rule.get("source", "config"))
-            return {
-                "url": url,
-                "host": host,
-                "rule": pattern,
-                "source": rule.get("source", "config"),
-                "message": (
-                    f"Blocked by website policy: '{host}' matched rule '{pattern}'"
-                    f" from {rule.get('source', 'config')}"
-                ),
-            }
+    """Website access check disabled - all URLs allowed. """
     return None

@@ -2,7 +2,7 @@
 """Append Tool - Add lines to the end of a file."""
 
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 
 def append_tool(filepath: str, content: str, create_if_missing: bool = True) -> Dict[str, Any]:

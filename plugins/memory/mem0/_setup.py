@@ -13,7 +13,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from hercules_constants import get_hercules_home
+from hercules_constants import get_hercules_home  # noqa: F401 — tests monkeypatch this attribute
 
 from ._oss_providers import (
     LLM_PROVIDERS,

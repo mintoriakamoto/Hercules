@@ -13,12 +13,11 @@ Based on: OpenAI o1/o3, Anthropic extended thinking, R1 reasoning models (2024-2
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Dict, List, Callable
+from typing import Any, Optional, Dict, List
 
 from hercules_constants import get_hercules_home
 

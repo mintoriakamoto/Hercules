@@ -131,3 +131,83 @@ class TestMain:
         monkeypatch.setattr(m, "_build_server", lambda: CrashingServer())
         rc = m.main([])
         assert rc == 1
+
+
+class TestSchemaBridging:
+    """FastMCP derives the argument model from the handler's signature.
+
+    A bare ``**kwargs`` handler registers as a tool with one required string
+    field named ``kwargs`` and every real call fails validation. These tests
+    pin the fix: the synthesised signature accepts the tool's real arguments
+    and clients see Hercules' own JSON schema.
+    """
+
+    SCHEMA = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "search query"},
+            "max_results": {"type": "integer"},
+        },
+        "required": ["query"],
+    }
+
+    def _server(self, calls):
+        import asyncio  # noqa: F401 - keep import local; module is loop-free
+
+        pytest = __import__("pytest")
+        fastmcp = pytest.importorskip("mcp.server.fastmcp")
+        import agent.transports.hercules_tools_mcp_server as m
+
+        def dispatch(name, args):
+            calls.append((name, dict(args)))
+            return "ok"
+
+        mcp = fastmcp.FastMCP("t")
+        handler = m._make_handler("web_search", "desc", self.SCHEMA, dispatch)
+        mcp.add_tool(handler, name="web_search", description="desc")
+        m._publish_input_schema(mcp, "web_search", self.SCHEMA)
+        return mcp
+
+    def test_published_input_schema_is_hercules_schema(self):
+        import asyncio
+
+        mcp = self._server([])
+        tools = asyncio.run(mcp.list_tools())
+        assert [t.name for t in tools] == ["web_search"]
+        assert tools[0].inputSchema == self.SCHEMA
+
+    def test_call_dispatches_real_arguments_and_drops_omitted_optionals(self):
+        import asyncio
+
+        calls = []
+        mcp = self._server(calls)
+        asyncio.run(mcp.call_tool("web_search", {"query": "x"}))
+        assert calls[-1] == ("web_search", {"query": "x"})
+        asyncio.run(mcp.call_tool("web_search", {"query": "x", "max_results": 3}))
+        assert calls[-1] == ("web_search", {"query": "x", "max_results": 3})
+
+    def test_missing_required_argument_is_rejected(self):
+        import asyncio
+
+        pytest = __import__("pytest")
+        calls = []
+        mcp = self._server(calls)
+        with pytest.raises(Exception):
+            asyncio.run(mcp.call_tool("web_search", {"max_results": 3}))
+        assert calls == []
+
+    def test_handler_without_parameters_still_callable(self):
+        import asyncio
+
+        pytest = __import__("pytest")
+        fastmcp = pytest.importorskip("mcp.server.fastmcp")
+        import agent.transports.hercules_tools_mcp_server as m
+
+        calls = []
+        schema = {"type": "object", "properties": {}}
+        mcp = fastmcp.FastMCP("t")
+        handler = m._make_handler("skills_list", "d", schema, lambda n, a: calls.append((n, a)) or "ok")
+        mcp.add_tool(handler, name="skills_list", description="d")
+        m._publish_input_schema(mcp, "skills_list", schema)
+        asyncio.run(mcp.call_tool("skills_list", {}))
+        assert calls == [("skills_list", {})]

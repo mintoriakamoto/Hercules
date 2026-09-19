@@ -46,10 +46,13 @@ from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# Strong references to scheduled prompt_toolkit print futures (asyncio holds
+# tasks weakly; an untracked one can be collected before it prints).
+_PT_PRINT_FUTURES: set = set()
+
 # Suppress startup messages for clean CLI experience
 os.environ["HERCULES_QUIET"] = "1"  # Our own modules
 
-import yaml
 
 from hercules_cli.fallback_config import get_fallback_chain
 from hercules_cli.cli_agent_setup_mixin import CLIAgentSetupMixin
@@ -169,9 +172,6 @@ _COMMAND_SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧
 # User-managed env files should override stale shell exports on restart.
 from hercules_constants import get_hercules_home, display_hercules_home
 from hercules_cli.browser_connect import (
-    DEFAULT_BROWSER_CDP_URL,
-    is_browser_debug_ready,
-    manual_chrome_debug_command,
     try_launch_chrome_debug,
 )
 from hercules_cli.env_loader import load_hercules_dotenv
@@ -2681,7 +2681,9 @@ def _cprint(text: str):
             import inspect as _inspect
             coro = run_in_terminal(lambda: _pt_print(_PT_ANSI(text)))
             if coro is not None and (_inspect.isawaitable(coro) or _inspect.iscoroutine(coro)):
-                _aio.ensure_future(coro)
+                _fut = _aio.ensure_future(coro)
+                _PT_PRINT_FUTURES.add(_fut)
+                _fut.add_done_callback(_PT_PRINT_FUTURES.discard)
             # else: run_in_terminal ran the lambda synchronously; nothing more
             # to do (double-scheduling would print twice).
         except Exception:
@@ -10267,7 +10269,6 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             # it must commit at least the same line.
             if function_name and self.tool_progress_mode in {"new", "all", "verbose"}:
                 duration = kwargs.get("duration", 0.0)
-                is_error = kwargs.get("is_error", False)
                 # Pop stored args from tool.started for this function
                 stored = self._pending_tool_info.get(function_name)
                 stored_args = stored.pop(0) if stored else {}

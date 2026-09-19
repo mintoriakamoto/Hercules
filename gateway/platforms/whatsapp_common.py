@@ -35,6 +35,7 @@ import json
 import logging
 import os
 import re
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 
@@ -471,11 +472,10 @@ def resolve_whatsapp_bridge_dir() -> Path:
     Returns the resolved bridge directory path.
     """
     import shutil
-    from pathlib import Path as _Path
 
     # Default location in install tree (may be read-only)
     from hercules_constants import get_hercules_home
-    install_bridge = _Path(__file__).resolve().parents[2] / "scripts" / "whatsapp-bridge"
+    install_bridge = Path(__file__).resolve().parents[2] / "scripts" / "whatsapp-bridge"
 
     # Try HERCULES_HOME location first
     hercules_home = get_hercules_home()

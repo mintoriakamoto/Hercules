@@ -95,8 +95,6 @@ def _count_tokens_for_entry(entry: Dict) -> Tuple[Dict, int]:
     Returns:
         Tuple of (entry, token_count)
     """
-    global _TOKENIZER
-    
     conversations = entry.get("conversations", [])
     if not conversations:
         return entry, 0

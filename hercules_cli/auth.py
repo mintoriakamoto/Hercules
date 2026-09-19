@@ -35,7 +35,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
@@ -2500,8 +2500,9 @@ def _kimi_oauth_request_device_code(client: httpx.Client) -> Dict[str, Any]:
     raise AuthError(
         "Kimi device-code endpoint not found. Tried: "
         + ", ".join(urls)
-        + f" (last status {last_status}). Set KIMI_OAUTH_DEVICE_CODE_URL to the "
-        "correct endpoint and retry.",
+        + f" (last status {last_status}"
+        + (f", last response: {last_text.strip()[:200]}" if last_text.strip() else "")
+        + "). Set KIMI_OAUTH_DEVICE_CODE_URL to the correct endpoint and retry.",
         provider="kimi-oauth",
         code="kimi_device_code_endpoint_unknown",
     )
