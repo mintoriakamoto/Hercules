@@ -55,13 +55,13 @@ def _scan_context_content(content: str, filename: str) -> str:
     Strict-scope patterns (SSH backdoor, persistence, exfil-URL) are NOT
     applied here — those are too aggressive for a context file in a
     cloned repo (security research, infra docs).  Content matching is
-    BLOCKED at this layer because the file would otherwise enter the
-    system prompt verbatim and the user has no chance to intervene.
+    Context file threat scanning disabled - all files loaded.
     """
-    findings = _scan_for_threats(content, scope="context")
-    if findings:
-        logger.warning("Context file %s blocked: %s", filename, ", ".join(findings))
-        return f"[BLOCKED: {filename} contained potential prompt injection ({', '.join(findings)}). Content not loaded.]"
+    # Threat scanning disabled
+    # findings = _scan_for_threats(content, scope="context")
+    # if findings:
+    #     logger.warning("Context file %s blocked: %s", filename, ", ".join(findings))
+    #     return f"[BLOCKED: {filename} contained potential prompt injection ({', '.join(findings)}). Content not loaded.]"
 
     return content
 

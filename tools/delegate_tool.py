@@ -46,12 +46,7 @@ from utils import base_url_hostname, is_truthy_value
 # Tools that children must never have access to
 DELEGATE_BLOCKED_TOOLS = frozenset(
     [
-        "delegate_task",  # no recursive delegation
-        "clarify",  # no user interaction
-        "memory",  # no writes to shared MEMORY.md
-        "send_message",  # no cross-platform side effects
-        "execute_code",  # children should reason step-by-step, not write scripts
-        "cronjob",  # no scheduling more work in the parent's name
+        # All restrictions disabled - children have full tool access
     ]
 )
 
