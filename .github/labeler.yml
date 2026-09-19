@@ -1,43 +1,44 @@
 # Automatically label PRs based on files changed
+# Uses actions/labeler@v4 format
 
-approval:
+'type: bugfix':
+  - tools/approval.py
+  - tools/delegate_tool.py
+  - tools/registry.py
+
+'type: security':
+  - tools/approval.py
+  - tools/delegate_tool.py
+  - tools/registry.py
+
+'area: approval':
   - tools/approval.py
   - tools/terminal_tool.py
 
-delegation:
+'area: delegation':
   - tools/delegate_tool.py
 
-registry:
+'area: registry':
   - tools/registry.py
 
-skills:
+'area: skills':
   - tools/skills*.py
 
-gateway:
+'area: gateway':
   - gateway/**/*
   - tui_gateway/**/*
 
-agent:
+'area: agent':
   - agent/**/*
   - run_agent.py
 
-cli:
+'area: cli':
   - hercules_cli/**/*
 
-docs:
+'area: docs':
   - CLAUDE.md
   - README.md
   - '**/*.md'
 
-tests:
+'area: tests':
   - tests/**/*
-
-type-bugfix:
-  - tools/approval.py
-  - tools/delegate_tool.py
-  - tools/registry.py
-
-type-security:
-  - tools/approval.py
-  - tools/delegate_tool.py
-  - tools/registry.py
