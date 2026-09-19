@@ -25,6 +25,7 @@ Usage:
 import re
 import fnmatch
 import hashlib
+import hmac
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -843,6 +844,16 @@ def format_scan_report(result: ScanResult) -> str:
     return "\n".join(lines)
 
 
+# Hashes written before the digest was widened carried only the first 16 hex
+# characters (64 bits) of the SHA-256 while still being labelled ``sha256:``.
+# 64 bits is below the collision-resistance an integrity record needs — a
+# birthday search costs ~2**32 candidate bundles — so new records carry the
+# full digest. Lock files already on disk still hold the short form, and
+# ``content_hashes_match`` accepts those as a prefix so widening the digest
+# does not report every installed skill as changed.
+LEGACY_CONTENT_HASH_HEX_LEN = 16
+
+
 def content_hash(skill_path: Path) -> str:
     """Compute a SHA-256 hash of all files in a skill directory for integrity tracking.
 
@@ -853,8 +864,45 @@ def content_hash(skill_path: Path) -> str:
     produce the same digest for the same skill (one operates on disk,
     one on an in-memory bundle), so any change to the hash shape MUST
     land in both places at once.
+
+    The digest is the full SHA-256. Compare recorded hashes with
+    ``content_hashes_match`` rather than ``==`` so legacy truncated records
+    still match.
     """
-    return f"sha256:{_content_digest(skill_path)[:16]}"
+    return full_content_hash(skill_path)
+
+
+def content_hashes_match(recorded: str, computed: str) -> bool:
+    """Compare a stored content hash against a freshly computed one.
+
+    ``recorded`` may be a legacy 64-bit digest (16 hex characters) written
+    before the digest was widened; it matches when it is a prefix of the
+    freshly computed full digest. ``computed`` is always expected to be a
+    current full-length digest — a short value there is only ever accepted
+    against an equally short ``recorded``, so this never weakens a
+    comparison between two current hashes.
+    """
+    if not recorded or not computed:
+        return False
+    # A lock file is attacker-influenced input, so it may hold non-ASCII.
+    # hmac.compare_digest rejects non-ASCII str, so compare as bytes.
+    try:
+        recorded_raw = recorded.encode("ascii")
+        computed_raw = computed.encode("ascii")
+    except UnicodeEncodeError:
+        return False
+    if hmac.compare_digest(recorded_raw, computed_raw):
+        return True
+
+    recorded_algo, _, recorded_hex = recorded_raw.partition(b":")
+    computed_algo, _, computed_hex = computed_raw.partition(b":")
+    if recorded_algo != computed_algo:
+        return False
+    if len(recorded_hex) != LEGACY_CONTENT_HASH_HEX_LEN:
+        return False
+    if len(computed_hex) <= LEGACY_CONTENT_HASH_HEX_LEN:
+        return False
+    return hmac.compare_digest(recorded_hex, computed_hex[:LEGACY_CONTENT_HASH_HEX_LEN])
 
 
 # ---------------------------------------------------------------------------
