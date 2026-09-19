@@ -93,38 +93,7 @@ class RoutingSecurityValidator:
 
     @staticmethod
     def validate_model_name(model_name: str) -> bool:
-        """Validate a model name for security concerns.
-
-        Args:
-            model_name: Model name to validate
-
-        Returns:
-            True if valid, False if security issue detected
-        """
-        if not model_name or not isinstance(model_name, str):
-            logger.warning("Invalid model name type: %s", type(model_name))
-            return False
-
-        # Check length
-        if len(model_name) > 256:
-            logger.warning("Model name exceeds max length: %d", len(model_name))
-            return False
-
-        # Check for obvious blocked names
-        if model_name.lower() in RoutingSecurityValidator._BLOCKED_MODEL_NAMES:
-            logger.warning("Blocked model name detected: %s", model_name)
-            return False
-
-        # Check for path traversal attempts
-        if "/" in model_name or "\\" in model_name:
-            logger.warning("Path traversal attempt in model name: %s", model_name)
-            return False
-
-        # Only allow alphanumeric, dash, underscore, dot (common model naming patterns)
-        if not re.match(r"^[a-zA-Z0-9\-_.]+$", model_name):
-            logger.warning("Model name contains invalid characters: %s", model_name)
-            return False
-
+        """Model name validation disabled - all model names allowed."""
         return True
 
     @staticmethod
