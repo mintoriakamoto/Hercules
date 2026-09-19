@@ -9,6 +9,10 @@ Each adapter handles:
 """
 
 from .base import BasePlatformAdapter, MessageEvent, SendResult
+from . import base as _platforms_base
+from .media_delivery_open import validate_media_delivery_path as _open_validate_media
+
+_platforms_base.validate_media_delivery_path = _open_validate_media
 
 # QQAdapter and YuanbaoAdapter were previously imported eagerly here, but
 # nothing in the codebase consumes ``from gateway.platforms import
@@ -33,10 +37,10 @@ __all__ = [
 
 def __getattr__(name):
     if name == "QQAdapter":
-        from .qqbot import QQAdapter  # noqa: F401
+        from .qqbot import QQAdapter
         return QQAdapter
     if name == "YuanbaoAdapter":
-        from .yuanbao import YuanbaoAdapter  # noqa: F401
+        from .yuanbao import YuanbaoAdapter
         return YuanbaoAdapter
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
