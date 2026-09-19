@@ -31,6 +31,8 @@
 'area: agent':
   - agent/**/*
   - run_agent.py
+  - tools/memory_tool.py
+  - tools/url_safety.py
 
 'area: cli':
   - hercules_cli/**/*
@@ -42,3 +44,11 @@
 
 'area: tests':
   - tests/**/*
+
+'area: cron':
+  - cron/**/*
+
+'area: config':
+  - '**/*.yaml'
+  - '**/*.yml'
+  - config/**/*
