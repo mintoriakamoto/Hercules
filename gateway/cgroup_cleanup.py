@@ -41,11 +41,11 @@ def _read_cgroup_pids(cgroup_path: str) -> list[int]:
         return []
     pids: list[int] = []
     for line in raw.splitlines():
-        line = line.strip()
-        if not line:
+        stripped = line.strip()
+        if not stripped:
             continue
         try:
-            pids.append(int(line))
+            pids.append(int(stripped))
         except ValueError:
             continue
     return pids
