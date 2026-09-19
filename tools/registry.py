@@ -396,7 +396,20 @@ class ToolRegistry:
         """
         with self._lock:
             existing = self._tools.get(name)
-            if existing and existing.toolset != toolset:
+            # The gate below must also catch a plugin replacing a built-in
+            # under the built-in's OWN toolset name. Keying it on a toolset
+            # change alone let a plugin register e.g. name="terminal",
+            # toolset="terminal" with override=False and silently take over
+            # the built-in handler — the exact substitution the override
+            # opt-in exists to prevent. Comparing defining modules keeps
+            # every legitimate same-toolset re-registration silent: built-in
+            # over built-in and MCP over MCP are both owner ``None``, and a
+            # plugin refreshing its own tool matches its own owner.
+            if existing and (
+                existing.toolset != toolset
+                or self._plugin_owner_of(handler)
+                != self._plugin_owner_of(existing.handler)
+            ):
                 # Allow MCP-to-MCP overwrites (legitimate: server refresh,
                 # or two MCP servers with overlapping tool names).
                 both_mcp = (

@@ -38,6 +38,7 @@ _RUNTIME_PROVIDER_CUSTOM = "custom"
 from tools import file_state
 from tools.daemon_pool import DaemonThreadPoolExecutor
 from tools.terminal_tool import set_approval_callback as _set_subagent_approval_cb
+from tools.thread_context import propagate_context_to_thread
 from agent.task_aware_model_router import route_task_to_model
 from utils import base_url_hostname, is_truthy_value
 
@@ -1040,7 +1041,14 @@ def _strip_blocked_tools(toolsets: List[str]) -> List[str]:
         name
         for name, defn in TOOLSETS.items()
         if name in _COMPOSITE_BLOCKED_TOOLSETS
-        or all(t in DELEGATE_BLOCKED_TOOLS for t in defn.get("tools", []))
+        # ``all([])`` is True, so a toolset with no static ``tools`` list —
+        # every composite built purely from ``includes``, such as "safe",
+        # "context_engine" and "hercules-gateway" — would otherwise be read
+        # as "entirely blocked" and stripped. A parent run with
+        # ``--enabled_toolsets=safe`` then hands its child an empty toolset
+        # list, which ``_compute_tool_definitions`` reads as "only these",
+        # leaving the child with no tools at all.
+        or (defn.get("tools") and all(t in DELEGATE_BLOCKED_TOOLS for t in defn["tools"]))
     }
     return [t for t in toolsets if t not in blocked_toolset_names]
 
@@ -2237,7 +2245,14 @@ def _run_single_child(
                 stream_callback=_relay_child_text,
             )
 
-        _child_future = _timeout_executor.submit(_run_with_thread_capture)
+        # Wrapped so the child's own worker thread keeps the approval session
+        # ContextVars. Without it the child starts with an empty context,
+        # ``check_all_command_guards`` sees neither a CLI nor a gateway
+        # session, and every dangerous command it runs takes the fail-open
+        # branch. See ``tools.thread_context``.
+        _child_future = _timeout_executor.submit(
+            propagate_context_to_thread(_run_with_thread_capture)
+        )
         try:
             result = _child_future.result(timeout=child_timeout)
         except Exception as _timeout_exc:
@@ -2793,7 +2808,7 @@ def _run_verification_wave(
     with _create_delegation_executor(max_workers=max_children) as executor:
         futures = {
             executor.submit(
-                _run_single_child,
+                propagate_context_to_thread(_run_single_child),
                 task_index=e["task_index"],
                 goal="verify",
                 child=child,
@@ -2856,7 +2871,7 @@ def _run_children_pairs(
     with _create_delegation_executor(max_workers=max(1, max_children)) as executor:
         futures = {
             executor.submit(
-                _run_single_child,
+                propagate_context_to_thread(_run_single_child),
                 task_index=e["task_index"],
                 goal=goal_label,
                 child=child,
@@ -3189,7 +3204,7 @@ def _run_dag_batch(
                     break
                 if (deps.get(i) or set()) <= done:
                     fut = executor.submit(
-                        _run_single_child,
+                        propagate_context_to_thread(_run_single_child),
                         task_index=i,
                         goal=_compose_goal(i),
                         child=child,
@@ -3554,7 +3569,7 @@ def delegate_task(
                 futures = {}
                 for i, t, child in children:
                     future = executor.submit(
-                        _run_single_child,
+                        propagate_context_to_thread(_run_single_child),
                         task_index=i,
                         goal=t["goal"],
                         child=child,
