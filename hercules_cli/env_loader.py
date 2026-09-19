@@ -87,7 +87,7 @@ def format_secret_source_suffix(env_var: str) -> str:
         registered = get_source(source)
         if registered is not None and registered.label:
             return f" (from {registered.label})"
-    except Exception:  # noqa: BLE001 — label lookup must never raise
+    except Exception:  # label lookup must never raise
         pass
     return f" (from {source})"
 
@@ -291,7 +291,7 @@ def _apply_managed_env() -> None:
         from hercules_cli import managed_scope
 
         managed_dir = managed_scope.get_managed_dir()
-    except Exception:  # noqa: BLE001 — managed scope must never block startup
+    except Exception:  # managed scope must never block startup
         return
     if managed_dir is None:
         return
@@ -332,7 +332,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
 
     try:
         cfg = _load_secrets_config(home_path)
-    except Exception:  # noqa: BLE001 — config errors must not block startup
+    except Exception:  # config errors must not block startup
         return
     if not cfg:
         return
@@ -344,7 +344,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
 
     try:
         report = apply_all(cfg, home_path)
-    except Exception:  # noqa: BLE001 — belt-and-braces; apply_all shouldn't raise
+    except Exception:  # belt-and-braces; apply_all shouldn't raise
         return
 
     if report.applied_any:
@@ -385,12 +385,12 @@ def _load_secrets_config(home_path: Path) -> dict:
     if not config_path.exists():
         return {}
     try:
-        import yaml  # type: ignore
+        import yaml  # type: ignore  # noqa: F401 — availability probe
     except ImportError:
         return {}
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             data = fast_safe_load(f) or {}
-    except Exception:  # noqa: BLE001
+    except Exception:
         return {}
     return data.get("secrets") or {}
