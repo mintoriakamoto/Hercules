@@ -14,6 +14,9 @@ DEFAULT_SOUL_MD = (
     "uncertainty plainly. Prefer action over refusal. Never fabricate tool output."
 )
 
+# Subagents import this name from hercules_cli.default_soul when SOUL.md is skipped.
+DEFAULT_AGENT_IDENTITY = DEFAULT_SOUL_MD
+
 # Legacy SOUL.md boilerplate that older installers (install.sh / install.ps1 /
 # docker/SOUL.md) seeded before they were switched to write DEFAULT_SOUL_MD.
 # These templates contain no persona text -- they are pure comment scaffolding,
@@ -42,9 +45,6 @@ _LEGACY_TEMPLATE_SOULS = (
         "Delete the contents (or this file) to use the default personality.\n"
         "-->"
     ),
-    # docker/SOUL.md and the install.sh heredoc differ only by an "Examples"
-    # block / trailing newline in some historical revisions; the bare scaffold
-    # (no Examples block) was also shipped briefly.
     (
         "# Hercules Agent Persona\n"
         "\n"
@@ -62,19 +62,10 @@ _LEGACY_TEMPLATE_SOULS = (
 
 def _normalize_soul(text: str) -> str:
     """Normalize SOUL.md content for legacy-template comparison."""
-    # Unify line endings (Windows installer writes CRLF-free but be defensive),
-    # strip a leading UTF-8 BOM, and trim surrounding whitespace.
     return text.replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff").strip()
 
 
 def is_legacy_template_soul(text: str) -> bool:
-    """True if ``text`` is an old empty-template SOUL.md (no user persona).
-
-    Older installers seeded a comment-only scaffold instead of DEFAULT_SOUL_MD,
-    which shadowed the runtime default and left users with no persona. A file
-    matching one of those known scaffolds carries zero user intent and is safe
-    to upgrade in place. Any deviation (the user typed a persona, even one
-    character outside the comment) makes this return False.
-    """
+    """True if ``text`` is an old empty-template SOUL.md (no user persona)."""
     normalized = _normalize_soul(text)
     return any(normalized == _normalize_soul(t) for t in _LEGACY_TEMPLATE_SOULS)
