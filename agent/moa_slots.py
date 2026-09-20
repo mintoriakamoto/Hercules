@@ -19,12 +19,26 @@ and the Codex backend answers::
 model) fails with it. The preset asked for a model the session was never able
 to run.
 
-This module closes that gap by resolving each slot against real credential
-state before the call: a slot whose provider is not authenticated is realigned
-onto the provider/model the session is actually running, so a fan-out degrades
-to "several passes on the model I have" instead of failing wholesale. Slots
-whose provider *is* authenticated are returned untouched, so a genuinely
-multi-provider install keeps its configured diversity.
+This module closes that gap by resolving each slot against the real runtime
+before the call: a slot the session cannot actually serve is realigned onto
+the provider/model it IS running, so a fan-out degrades to "several passes on
+the model I have" instead of failing wholesale. Slots the session *can* serve
+are returned untouched, so a genuinely multi-provider install keeps its
+configured diversity.
+
+The pick is automatic in both directions, decided on the RESOLVED endpoint
+rather than on provider names:
+
+* **API session** (the reported case) — slots realign onto the authenticated
+  cloud provider's model.
+* **Local session** (Ollama, vLLM, llama-server, LM Studio, or ``auto`` plus a
+  ``model.base_url`` on a loopback/LAN address) — slots realign onto the local
+  model. A local slot needs no credentials, so what decides it is whether the
+  server is listening; a dead local port hands the turn back to whatever
+  provider is running instead of failing every advisor against it.
+* **``providers.local_only``** — a slot that resolves to a cloud endpoint is
+  treated as unusable rather than left to raise ``LocalOnlyModeError`` in the
+  middle of the fan-out.
 
 Nothing here raises: every helper degrades to "assume available / leave the
 slot alone", which reproduces the pre-alignment behaviour.
@@ -34,16 +48,19 @@ from __future__ import annotations
 
 import logging
 import os
+import socket
 import threading
 import time
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Providers that serve a local inference server and need no credentials. An
-# auth-store lookup reports them as unconfigured, which would realign a
-# deliberately-local advisor onto a cloud model — exactly backwards for a
-# user who picked a local provider on purpose.
+# Provider slugs that address a local inference server. This is only a cheap
+# pre-check for the no-credentials question: whether a slot is *actually*
+# local is decided on its RESOLVED endpoint via runtime_provider's own
+# _is_local_endpoint, the same authority local-only mode gates on, so a
+# "custom" provider pointed at localhost is recognised and a local-sounding
+# alias pointed at a public URL is not.
 _LOCAL_PROVIDERS = frozenset({
     "ollama",
     "ollama-local",
@@ -54,6 +71,8 @@ _LOCAL_PROVIDERS = frozenset({
     "localai",
     "jan",
     "koboldcpp",
+    "tabbyapi",
+    "exllamav2",
     "text-generation-webui",
 })
 
@@ -63,10 +82,16 @@ _VIRTUAL_PROVIDERS = frozenset({"moa"})
 
 # Credential state changes only on login/logout, but a MoA turn resolves slots
 # on every tool-loop iteration. Cache the per-provider answer briefly so a
-# fan-out does not re-read the auth store once per advisor per iteration.
+# fan-out does not re-read the auth store (or re-probe a local server) once
+# per advisor per iteration.
 _AVAILABILITY_TTL_SECONDS = 30.0
-_availability_cache: dict[str, tuple[float, bool]] = {}
+_availability_cache: dict[tuple[str, str], tuple[float, bool]] = {}
 _availability_lock = threading.Lock()
+
+# A local inference server is either listening or it is not — no credential
+# tells us. One short TCP connect answers it; anything longer would add
+# per-advisor latency to the very turn we are trying to keep working.
+_LOCAL_PROBE_TIMEOUT_SECONDS = 0.6
 
 
 def clear_availability_cache() -> None:
@@ -79,12 +104,30 @@ def _normalize(provider: Any) -> str:
     return str(provider or "").strip().lower()
 
 
-def _probe_provider(provider: str) -> bool:
-    """Uncached credential probe for one provider slug."""
-    if not provider or provider in _VIRTUAL_PROVIDERS:
+def _local_server_is_up(base_url: str) -> bool:
+    """True when something is listening at a local endpoint.
+
+    A local slot needs no credentials, so the only question that decides
+    whether it can serve this turn is whether the server is running. If it is
+    not, the slot must realign onto whatever the session IS using (an API
+    provider, typically) rather than fail every advisor against a dead port.
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse((base_url or "").strip())
+    host = parsed.hostname
+    if not host:
         return False
-    if provider in _LOCAL_PROVIDERS:
-        return True
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        with socket.create_connection((host, port), timeout=_LOCAL_PROBE_TIMEOUT_SECONDS):
+            return True
+    except OSError:
+        return False
+
+
+def _credentials_configured(provider: str) -> bool:
+    """Auth-store / env-key view of whether *provider* is logged in."""
     if provider == "custom" or provider.startswith("custom:"):
         try:
             from hercules_cli.config import load_config
@@ -115,27 +158,80 @@ def _probe_provider(provider: str) -> bool:
     return bool(status.get("logged_in") or status.get("configured"))
 
 
-def provider_is_available(provider: Any) -> bool:
-    """Return True when *provider* has usable credentials right now.
+def _probe_provider(provider: str, model: str = "") -> bool:
+    """Uncached usability probe for one slot's provider.
 
-    Fails OPEN (True) on any lookup error: a broken probe must never strip a
+    Decided on the RESOLVED endpoint wherever resolution succeeds, because
+    that is what the call will actually hit:
+
+    * Local endpoint → usable iff the server is listening. No credentials are
+      involved, so liveness is the whole question, and a dead local port must
+      hand the turn back to whatever provider IS running.
+    * Cloud endpoint under ``providers.local_only`` → unusable. Resolution
+      raises ``LocalOnlyModeError`` there anyway; catching it here realigns
+      the slot instead of killing the turn mid-fan-out.
+    * Resolution landing on a DIFFERENT provider than the one requested →
+      unusable. That fallback is precisely the failure this module exists for:
+      the endpoint changes, the slot's model name does not, and the call goes
+      out as a model the resolved route cannot serve.
+    * Otherwise → the auth store / env key decides.
+    """
+    if not provider or provider in _VIRTUAL_PROVIDERS:
+        return False
+    try:
+        from hercules_cli.runtime_provider import (
+            LocalOnlyModeError,
+            _is_local_endpoint,
+            resolve_runtime_provider,
+        )
+    except Exception:  # pragma: no cover - resolver import failure
+        return provider in _LOCAL_PROVIDERS or _credentials_configured(provider)
+
+    try:
+        runtime = resolve_runtime_provider(requested=provider, target_model=model or None)
+    except LocalOnlyModeError:
+        # Local-only mode is on and this slot is not local. Keeping it would
+        # raise the same error mid-turn, on the advisor call.
+        return False
+    except Exception as exc:
+        logger.debug("MoA slot resolution failed for %s: %s", provider, exc)
+        return provider in _LOCAL_PROVIDERS or _credentials_configured(provider)
+
+    base_url = str(runtime.get("base_url") or "")
+    if base_url and _is_local_endpoint(base_url):
+        return _local_server_is_up(base_url)
+
+    resolved = _normalize(runtime.get("provider"))
+    if resolved and resolved != provider and provider not in _LOCAL_PROVIDERS:
+        # Credentials for the requested provider were not found; resolution
+        # silently substituted another route.
+        return False
+
+    return _credentials_configured(provider)
+
+
+def provider_is_available(provider: Any, model: Any = "") -> bool:
+    """Return True when this slot's provider can serve the call right now.
+
+    Fails OPEN (True) on any probe error: a broken lookup must never strip a
     working advisor out of a preset.
     """
     slug = _normalize(provider)
     if not slug:
         return False
+    key = (slug, str(model or "").strip())
     now = time.monotonic()
     with _availability_lock:
-        hit = _availability_cache.get(slug)
+        hit = _availability_cache.get(key)
         if hit is not None and (now - hit[0]) < _AVAILABILITY_TTL_SECONDS:
             return hit[1]
     try:
-        available = _probe_provider(slug)
+        available = _probe_provider(key[0], key[1])
     except Exception as exc:  # pragma: no cover - probe must never decide by crashing
         logger.debug("MoA credential probe failed for %s: %s", slug, exc)
         available = True
     with _availability_lock:
-        _availability_cache[slug] = (time.monotonic(), available)
+        _availability_cache[key] = (time.monotonic(), available)
     return available
 
 
@@ -162,17 +258,26 @@ def session_slot() -> Optional[dict[str, str]]:
             return None
         provider = _normalize(model_cfg.get("provider"))
         model = str(model_cfg.get("default") or model_cfg.get("model") or "").strip()
+        base_url = str(model_cfg.get("base_url") or "").strip()
     except Exception:  # pragma: no cover - config read failure
         return None
 
-    if not provider or provider in _VIRTUAL_PROVIDERS or provider == "auto":
+    if provider in _VIRTUAL_PROVIDERS:
         # A session parked on a MoA preset records provider "moa" and, as its
         # model, the PRESET NAME — never a model any backend can serve. Drop
-        # the model with the virtual provider and re-derive both from the auth
-        # store, or the fallback would be as unrunnable as the slot it
+        # both, or the fallback would be as unrunnable as the slot it
         # replaces.
-        if provider in _VIRTUAL_PROVIDERS:
-            model = ""
+        provider = ""
+        model = ""
+
+    if provider == "auto" and base_url:
+        # "auto" + an explicit base_url is how a local server (Ollama, vLLM,
+        # llama-server, LM Studio) is configured. Keep the provider as-is:
+        # resolve_runtime_provider resolves "auto" to exactly the route the
+        # session is running, so the advisors land on the local model rather
+        # than on a cloud account that also happens to be authenticated.
+        pass
+    elif not provider or provider == "auto":
         try:
             from hercules_cli.auth import get_active_provider
 
@@ -181,7 +286,7 @@ def session_slot() -> Optional[dict[str, str]]:
             provider = ""
     if not provider or provider in _VIRTUAL_PROVIDERS:
         return None
-    if not provider_is_available(provider):
+    if not provider_is_available(provider, model):
         return None
     if not model:
         # Provider known, model unknown (MoA-parked session, or a provider
@@ -193,6 +298,9 @@ def session_slot() -> Optional[dict[str, str]]:
             model = str(get_default_model_for_provider(provider) or "").strip()
         except Exception:
             model = ""
+        # A local endpoint serves whatever it has loaded; there is no catalog
+        # to take a default from, so an unknown model there means no fallback
+        # rather than a guessed slug the server would reject.
     if not model:
         return None
     return {"provider": provider, "model": model}
@@ -219,7 +327,7 @@ def align_slot(
     fb_model = str(fallback.get("model") or "").strip()
     if not fb_provider or not fb_model:
         return current, None
-    if provider and model and provider_is_available(provider):
+    if provider and model and provider_is_available(provider, model):
         return current, None
     if provider == fb_provider and model == fb_model:
         return current, None

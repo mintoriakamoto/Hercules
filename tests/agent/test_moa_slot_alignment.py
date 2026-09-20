@@ -21,7 +21,7 @@ def _clear_cache():
 
 def _available(*names):
     allowed = {n.lower() for n in names}
-    return lambda provider: provider.lower() in allowed
+    return lambda provider, model="": provider.lower() in allowed
 
 
 def test_unauthenticated_slot_is_realigned_to_session_model(monkeypatch):
@@ -90,15 +90,56 @@ def test_duplicate_advisors_after_realignment_are_dropped(monkeypatch):
     assert any("duplicate" in n for n in notes)
 
 
-def test_local_providers_need_no_credentials():
-    # A deliberately local advisor (Ollama / LM Studio) must never be
-    # realigned onto a cloud model just because the auth store has no row.
-    assert moa_slots._probe_provider("ollama") is True
-    assert moa_slots._probe_provider("lmstudio") is True
+def test_live_local_endpoint_needs_no_credentials(monkeypatch):
+    # A deliberately local advisor (Ollama / LM Studio / vLLM) must never be
+    # realigned onto a cloud model just because the auth store has no row —
+    # what decides it is whether the server is listening.
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider",
+        lambda **kw: {"provider": "ollama", "base_url": "http://localhost:11434/v1"},
+    )
+    monkeypatch.setattr(moa_slots, "_local_server_is_up", lambda url: True)
+    assert moa_slots._probe_provider("ollama", "qwen3") is True
+
+
+def test_dead_local_endpoint_is_unusable(monkeypatch):
+    # Nothing listening: the slot must hand the turn back to whatever
+    # provider IS running rather than fail every advisor against a dead port.
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider",
+        lambda **kw: {"provider": "lmstudio", "base_url": "http://localhost:1234/v1"},
+    )
+    monkeypatch.setattr(moa_slots, "_local_server_is_up", lambda url: False)
+    assert moa_slots._probe_provider("lmstudio", "qwen3") is False
+
+
+def test_local_only_mode_rejects_a_cloud_slot(monkeypatch):
+    # Resolution raises LocalOnlyModeError for a cloud endpoint under
+    # providers.local_only; realigning beats raising mid-fan-out.
+    from hercules_cli.runtime_provider import LocalOnlyModeError
+
+    def _raise(**kw):
+        raise LocalOnlyModeError("not local")
+
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _raise
+    )
+    assert moa_slots._probe_provider("openrouter", "anthropic/claude-opus-4.8") is False
+
+
+def test_resolution_landing_on_another_provider_is_unusable(monkeypatch):
+    # The exact reported failure: no OpenRouter credentials, so resolution
+    # substitutes the Codex route while the Claude model name rides along.
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider",
+        lambda **kw: {"provider": "openai-codex",
+                      "base_url": "https://chatgpt.com/backend-api/codex"},
+    )
+    assert moa_slots._probe_provider("openrouter", "anthropic/claude-opus-4.8") is False
 
 
 def test_availability_probe_fails_open(monkeypatch):
-    def _boom(provider):
+    def _boom(provider, model=""):
         raise RuntimeError("auth store unreadable")
 
     monkeypatch.setattr(moa_slots, "_probe_provider", _boom)
@@ -136,3 +177,47 @@ def test_session_slot_reads_configured_provider_and_model(monkeypatch):
         "provider": "openai-codex",
         "model": "gpt-6-astra",
     }
+
+
+def test_local_session_realigns_slots_onto_the_local_model(monkeypatch):
+    # Mirror image of the API case: a session running a local server must
+    # pull its advisors onto the local model, not onto a cloud account that
+    # merely happens to be authenticated too.
+    monkeypatch.setattr(moa_slots, "provider_is_available", _available("ollama"))
+    monkeypatch.setattr(
+        "hercules_cli.config.load_config",
+        lambda *a, **k: {"model": {"provider": "ollama", "default": "qwen3:14b"}},
+    )
+    fallback = moa_slots.session_slot()
+    assert fallback == {"provider": "ollama", "model": "qwen3:14b"}
+
+    refs, agg, notes = moa_slots.align_preset_slots(
+        [
+            {"provider": "openai-codex", "model": "gpt-5.5"},
+            {"provider": "openrouter", "model": "deepseek/deepseek-v4-pro"},
+        ],
+        {"provider": "openrouter", "model": "anthropic/claude-opus-4.8"},
+        fallback=fallback,
+    )
+    assert refs == [{"provider": "ollama", "model": "qwen3:14b"}]
+    assert agg == {"provider": "ollama", "model": "qwen3:14b"}
+    # two advisor realignments + the duplicate advisor dropped + the
+    # aggregator realignment
+    assert len(notes) == 4
+
+
+def test_auto_provider_with_local_base_url_is_kept_as_the_route(monkeypatch):
+    # "auto" + an explicit local base_url IS the session's route; replacing it
+    # with the auth store's active provider would send advisors to the cloud.
+    monkeypatch.setattr(moa_slots, "provider_is_available", _available("auto"))
+    monkeypatch.setattr(
+        "hercules_cli.config.load_config",
+        lambda *a, **k: {
+            "model": {
+                "provider": "auto",
+                "default": "qwen3:14b",
+                "base_url": "http://localhost:11434/v1",
+            }
+        },
+    )
+    assert moa_slots.session_slot() == {"provider": "auto", "model": "qwen3:14b"}
