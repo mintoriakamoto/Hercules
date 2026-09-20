@@ -512,6 +512,11 @@ def build_system_prompt(agent: Any, system_message: Optional[str] = None) -> str
     one cached block — Hercules never rebuilds or reinjects parts of it
     mid-session, which is the only way to keep upstream prompt caches
     warm across turns.
+
+    Note: Memory content (MEMORY.md, USER.md) is prioritized and protected
+    from truncation when tool schemas dominate the context window. Tools are
+    essential but should not consume more than 70% of available space relative
+    to memory.
     """
     parts = build_system_prompt_parts(agent, system_message=system_message)
     joined = "\n\n".join(p for p in (parts["stable"], parts["context"], parts["volatile"]) if p)
