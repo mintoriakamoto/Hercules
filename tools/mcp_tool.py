@@ -103,9 +103,8 @@ import shutil
 import sys
 import threading
 import time
-from typing import Callable
+from typing import Any, Callable, ClassVar, Coroutine, Dict, List, Optional
 from datetime import datetime
-from typing import Any, Coroutine, Dict, List, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -252,7 +251,7 @@ try:
     # authorization). Missing types just disable the feature; everything
     # else keeps working.
     try:
-        from mcp.types import ElicitRequestParams, ElicitResult
+        from mcp.types import ElicitResult
         _MCP_ELICITATION_TYPES = True
     except ImportError:
         logger.debug("MCP elicitation types not available -- elicitation disabled")
@@ -1033,7 +1032,7 @@ class SamplingHandler:
     it doesn't block the event loop.
     """
 
-    _STOP_REASON_MAP = {"stop": "endTurn", "length": "maxTokens", "tool_calls": "toolUse"}
+    _STOP_REASON_MAP: ClassVar[Dict[str, str]] = {"stop": "endTurn", "length": "maxTokens", "tool_calls": "toolUse"}
 
     def __init__(self, server_name: str, config: dict):
         self.server_name = server_name

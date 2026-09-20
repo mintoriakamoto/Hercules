@@ -262,71 +262,71 @@ def _merge_custom_provider_extra_body(agent, custom_providers: List[Dict[str, An
 
 def init_agent(
     agent,
-    base_url: str = None,
-    api_key: str = None,
-    provider: str = None,
-    api_mode: str = None,
-    acp_command: str = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    provider: Optional[str] = None,
+    api_mode: Optional[str] = None,
+    acp_command: Optional[str] = None,
     acp_args: list[str] | None = None,
-    command: str = None,
+    command: Optional[str] = None,
     args: list[str] | None = None,
     model: str = "",
     max_iterations: int = 90,  # Default tool-calling iterations (shared with subagents)
     tool_delay: float = 1.0,
-    enabled_toolsets: List[str] = None,
-    disabled_toolsets: List[str] = None,
+    enabled_toolsets: Optional[List[str]] = None,
+    disabled_toolsets: Optional[List[str]] = None,
     save_trajectories: bool = False,
     verbose_logging: bool = False,
     quiet_mode: bool = False,
     tool_progress_mode: str = "all",
-    ephemeral_system_prompt: str = None,
+    ephemeral_system_prompt: Optional[str] = None,
     log_prefix_chars: int = 100,
     log_prefix: str = "",
-    providers_allowed: List[str] = None,
-    providers_ignored: List[str] = None,
-    providers_order: List[str] = None,
-    provider_sort: str = None,
+    providers_allowed: Optional[List[str]] = None,
+    providers_ignored: Optional[List[str]] = None,
+    providers_order: Optional[List[str]] = None,
+    provider_sort: Optional[str] = None,
     provider_require_parameters: bool = False,
-    provider_data_collection: str = None,
+    provider_data_collection: Optional[str] = None,
     openrouter_min_coding_score: Optional[float] = None,
-    session_id: str = None,
-    tool_progress_callback: callable = None,
-    tool_start_callback: callable = None,
-    tool_complete_callback: callable = None,
-    thinking_callback: callable = None,
-    reasoning_callback: callable = None,
-    clarify_callback: callable = None,
-    read_terminal_callback: callable = None,
-    step_callback: callable = None,
-    stream_delta_callback: callable = None,
-    interim_assistant_callback: callable = None,
-    tool_gen_callback: callable = None,
-    status_callback: callable = None,
-    notice_callback: callable = None,
-    notice_clear_callback: callable = None,
+    session_id: Optional[str] = None,
+    tool_progress_callback: Optional[callable] = None,
+    tool_start_callback: Optional[callable] = None,
+    tool_complete_callback: Optional[callable] = None,
+    thinking_callback: Optional[callable] = None,
+    reasoning_callback: Optional[callable] = None,
+    clarify_callback: Optional[callable] = None,
+    read_terminal_callback: Optional[callable] = None,
+    step_callback: Optional[callable] = None,
+    stream_delta_callback: Optional[callable] = None,
+    interim_assistant_callback: Optional[callable] = None,
+    tool_gen_callback: Optional[callable] = None,
+    status_callback: Optional[callable] = None,
+    notice_callback: Optional[callable] = None,
+    notice_clear_callback: Optional[callable] = None,
     event_callback: Optional[Callable[[str, dict], None]] = None,
     reaction_callback: Optional[Callable[[str], None]] = None,
-    max_tokens: int = None,
-    reasoning_config: Dict[str, Any] = None,
-    service_tier: str = None,
-    request_overrides: Dict[str, Any] = None,
-    prefill_messages: List[Dict[str, Any]] = None,
-    platform: str = None,
-    user_id: str = None,
-    user_id_alt: str = None,
-    user_name: str = None,
-    chat_id: str = None,
-    chat_name: str = None,
-    chat_type: str = None,
-    thread_id: str = None,
-    gateway_session_key: str = None,
+    max_tokens: Optional[int] = None,
+    reasoning_config: Optional[Dict[str, Any]] = None,
+    service_tier: Optional[str] = None,
+    request_overrides: Optional[Dict[str, Any]] = None,
+    prefill_messages: Optional[List[Dict[str, Any]]] = None,
+    platform: Optional[str] = None,
+    user_id: Optional[str] = None,
+    user_id_alt: Optional[str] = None,
+    user_name: Optional[str] = None,
+    chat_id: Optional[str] = None,
+    chat_name: Optional[str] = None,
+    chat_type: Optional[str] = None,
+    thread_id: Optional[str] = None,
+    gateway_session_key: Optional[str] = None,
     skip_context_files: bool = False,
     load_soul_identity: bool = False,
     skip_memory: bool = False,
     session_db=None,
-    parent_session_id: str = None,
+    parent_session_id: Optional[str] = None,
     iteration_budget: "IterationBudget" = None,
-    fallback_model: Dict[str, Any] = None,
+    fallback_model: Optional[Dict[str, Any]] = None,
     credential_pool=None,
     checkpoints_enabled: bool = False,
     checkpoint_max_snapshots: int = 20,
@@ -760,7 +760,7 @@ def init_agent(
             agent.client = None
             agent._client_kwargs = {}
             if not agent.quiet_mode:
-                print(f"🤖 AI Agent initialized with model: {agent.model} (AWS Bedrock + AnthropicBedrock SDK, {_br_region})")
+                agent._safe_print(f"🤖 AI Agent initialized with model: {agent.model} (AWS Bedrock + AnthropicBedrock SDK, {_br_region})")
         else:
             # Only fall back to ANTHROPIC_TOKEN when the provider is actually Anthropic.
             # Other anthropic_messages providers (MiniMax, Alibaba, etc.) must use their own API key.
@@ -784,7 +784,7 @@ def init_agent(
                 try:
                     from hercules_cli.auth import build_minimax_oauth_token_provider
                     effective_key = build_minimax_oauth_token_provider()
-                except Exception as _mm_exc:  # noqa: BLE001 — never block startup on this
+                except Exception as _mm_exc:  # never block startup on this
                     import logging as _logging
                     _logging.getLogger(__name__).warning(
                         "MiniMax OAuth: failed to install per-request token provider "
@@ -809,7 +809,7 @@ def init_agent(
             agent.client = None
             agent._client_kwargs = {}
             if not agent.quiet_mode:
-                print(f"🤖 AI Agent initialized with model: {agent.model} (Anthropic native)")
+                agent._safe_print(f"🤖 AI Agent initialized with model: {agent.model} (Anthropic native)")
                 # ``effective_key`` may be a callable Entra ID bearer
                 # provider for Azure Foundry anthropic_messages mode.
                 # The Anthropic adapter installs an httpx event hook
@@ -818,9 +818,9 @@ def init_agent(
                 from agent.azure_identity_adapter import is_token_provider
 
                 if is_token_provider(effective_key):
-                    print("🔑 Using credentials: Microsoft Entra ID")
+                    agent._safe_print("🔑 Using credentials: Microsoft Entra ID")
                 elif isinstance(effective_key, str) and len(effective_key) > 12:
-                    print(f"🔑 Using token: {effective_key[:8]}...{effective_key[-4:]}")
+                    agent._safe_print(f"🔑 Using token: {effective_key[:8]}...{effective_key[-4:]}")
     elif agent.provider == "moa":
         from agent.moa_loop import MoAClient
         agent.api_mode = "chat_completions"
@@ -869,7 +869,7 @@ def init_agent(
         agent.api_key = api_key or "moa-virtual-provider"
         agent.base_url = "moa://local"
         if not agent.quiet_mode:
-            print(f"🤖 AI Agent initialized with MoA preset: {agent.model}")
+            agent._safe_print(f"🤖 AI Agent initialized with MoA preset: {agent.model}")
     elif agent.api_mode == "bedrock_converse":
         # AWS Bedrock — uses boto3 directly, no OpenAI client needed.
         # Region is extracted from the base_url or defaults to us-east-1.
@@ -895,7 +895,7 @@ def init_agent(
         agent._client_kwargs = {}
         if not agent.quiet_mode:
             _gr_label = " + Guardrails" if agent._bedrock_guardrail_config else ""
-            print(f"🤖 AI Agent initialized with model: {agent.model} (AWS Bedrock, {agent._bedrock_region}{_gr_label})")
+            agent._safe_print(f"🤖 AI Agent initialized with model: {agent.model} (AWS Bedrock, {agent._bedrock_region}{_gr_label})")
     else:
         if api_key and base_url:
             # Explicit credentials from CLI/gateway — construct directly.
@@ -1119,9 +1119,9 @@ def init_agent(
             # ``agent.agent_runtime_helpers.create_openai_client``.
             agent.client = agent._create_openai_client(client_kwargs, reason="agent_init", shared=True)
             if not agent.quiet_mode:
-                print(f"🤖 AI Agent initialized with model: {agent.model}")
+                agent._safe_print(f"🤖 AI Agent initialized with model: {agent.model}")
                 if base_url:
-                    print(f"🔗 Using custom base URL: {base_url}")
+                    agent._safe_print(f"🔗 Using custom base URL: {base_url}")
                 # ``api_key`` may be a callable Entra ID bearer
                 # provider (Azure Foundry). The OpenAI SDK mints a
                 # fresh JWT per request internally — the banner
@@ -1130,13 +1130,13 @@ def init_agent(
 
                 key_used = client_kwargs.get("api_key", "none")
                 if is_token_provider(key_used):
-                    print("🔑 Using credentials: Microsoft Entra ID")
+                    agent._safe_print("🔑 Using credentials: Microsoft Entra ID")
                 elif isinstance(key_used, str) and key_used and key_used != "dummy-key" and len(key_used) > 12:
-                    print(f"🔑 Using API key: {key_used[:8]}...{key_used[-4:]}")
+                    agent._safe_print(f"🔑 Using API key: {key_used[:8]}...{key_used[-4:]}")
                 else:
-                    print("⚠️  Warning: API key appears invalid or missing")
+                    agent._safe_print("⚠️  Warning: API key appears invalid or missing")
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize OpenAI client: {e}")
+            raise RuntimeError(f"Failed to initialize OpenAI client: {e}") from e
     
     # Provider fallback chain — ordered list of backup providers tried
     # when the primary is exhausted (rate-limit, overload, connection
@@ -1158,10 +1158,10 @@ def init_agent(
     if agent._fallback_chain and not agent.quiet_mode:
         if len(agent._fallback_chain) == 1:
             fb = agent._fallback_chain[0]
-            print(f"🔄 Fallback model: {fb['model']} ({fb['provider']})")
+            agent._safe_print(f"🔄 Fallback model: {fb['model']} ({fb['provider']})")
         else:
-            print(f"🔄 Fallback chain ({len(agent._fallback_chain)} providers): " +
-                  " → ".join(f"{f['model']} ({f['provider']})" for f in agent._fallback_chain))
+            agent._safe_print(f"🔄 Fallback chain ({len(agent._fallback_chain)} providers): " +
+                              " → ".join(f"{f['model']} ({f['provider']})" for f in agent._fallback_chain))
 
     # Get available tools with filtering. Capture the registry generation this
     # snapshot is derived from FIRST, so a later concurrent refresh can tell
@@ -1183,14 +1183,14 @@ def init_agent(
         agent.valid_tool_names = {tool["function"]["name"] for tool in agent.tools}
         tool_names = sorted(agent.valid_tool_names)
         if not agent.quiet_mode:
-            print(f"🛠️  Loaded {len(agent.tools)} tools: {', '.join(tool_names)}")
+            agent._safe_print(f"🛠️  Loaded {len(agent.tools)} tools: {', '.join(tool_names)}")
             # Show filtering info if applied
             if enabled_toolsets:
-                print(f"   ✅ Enabled toolsets: {', '.join(enabled_toolsets)}")
+                agent._safe_print(f"   ✅ Enabled toolsets: {', '.join(enabled_toolsets)}")
             if disabled_toolsets:
-                print(f"   ❌ Disabled toolsets: {', '.join(disabled_toolsets)}")
+                agent._safe_print(f"   ❌ Disabled toolsets: {', '.join(disabled_toolsets)}")
     elif not agent.quiet_mode:
-        print("🛠️  No tools loaded (all tools filtered out or unavailable)")
+        agent._safe_print("🛠️  No tools loaded (all tools filtered out or unavailable)")
 
     # Kanban worker/orchestrator lifecycle guidance is session-static:
     # the dispatcher decides at spawn time whether this process is a kanban
@@ -1208,16 +1208,16 @@ def init_agent(
         requirements = _ra().check_toolset_requirements()
         missing_reqs = [name for name, available in requirements.items() if not available]
         if missing_reqs:
-            print(f"⚠️  Some tools may not work due to missing requirements: {missing_reqs}")
+            agent._safe_print(f"⚠️  Some tools may not work due to missing requirements: {missing_reqs}")
     
     # Show trajectory saving status
     if agent.save_trajectories and not agent.quiet_mode:
-        print("📝 Trajectory saving enabled")
+        agent._safe_print("📝 Trajectory saving enabled")
     
     # Show ephemeral system prompt status
     if agent.ephemeral_system_prompt and not agent.quiet_mode:
         prompt_preview = agent.ephemeral_system_prompt[:60] + "..." if len(agent.ephemeral_system_prompt) > 60 else agent.ephemeral_system_prompt
-        print(f"🔒 Ephemeral system prompt: '{prompt_preview}' (not saved to trajectories)")
+        agent._safe_print(f"🔒 Ephemeral system prompt: '{prompt_preview}' (not saved to trajectories)")
     
     # Show prompt caching status
     if agent._use_prompt_caching and not agent.quiet_mode:
@@ -1227,7 +1227,7 @@ def init_agent(
             source = "Anthropic-compatible endpoint"
         else:
             source = "Claude via OpenRouter"
-        print(f"💾 Prompt caching: ENABLED ({source}, {agent._cache_ttl} TTL)")
+        agent._safe_print(f"💾 Prompt caching: ENABLED ({source}, {agent._cache_ttl} TTL)")
     
     # Session logging setup - auto-save conversation trajectories for debugging
     agent.session_start = datetime.now()
@@ -1634,7 +1634,7 @@ def init_agent(
                     "Falling back to provider default.",
                     _config_max_tokens,
                 )
-                print(
+                agent._safe_print(
                     f"\n⚠ Invalid model.max_tokens in config.yaml: {_config_max_tokens!r}\n"
                     f"  Must be a positive integer (e.g. 4096).\n"
                     f"  Falling back to provider default.\n",
@@ -1657,7 +1657,7 @@ def init_agent(
                 "Falling back to auto-detection.",
                 _config_context_length,
             )
-            print(
+            agent._safe_print(
                 f"\n⚠ Invalid model.context_length in config.yaml: {_config_context_length!r}\n"
                 f"  Must be a plain integer (e.g. 256000, not '256K').\n"
                 f"  Falling back to auto-detected context window.\n",
@@ -1721,7 +1721,7 @@ def init_agent(
                                         "Falling back to auto-detection.",
                                         agent.model, _cp_ctx,
                                     )
-                                    print(
+                                    agent._safe_print(
                                         f"\n⚠ Invalid context_length for model {agent.model!r} in custom_providers: {_cp_ctx!r}\n"
                                         f"  Must be a positive integer (e.g. 256000, not '256K').\n"
                                         f"  Falling back to auto-detected context window.\n",
@@ -1887,7 +1887,7 @@ def init_agent(
                 if hasattr(agent, "_emit_warning"):
                     agent._emit_warning(_user_msg)
                 else:
-                    print(f"\n{_user_msg}\n", file=sys.stderr)
+                    agent._safe_print(f"\n{_user_msg}\n", file=sys.stderr)
                 _ra().logger.warning(_hercules_warn)
         except Exception:
             pass
@@ -2050,14 +2050,14 @@ def init_agent(
             _active_threshold_pct = getattr(
                 agent.context_compressor, "threshold_percent", compression_threshold
             )
-            print(f"📊 Context limit: {agent.context_compressor.context_length:,} tokens (compress at {int(_active_threshold_pct*100)}% = {agent.context_compressor.threshold_tokens:,})")
+            agent._safe_print(f"📊 Context limit: {agent.context_compressor.context_length:,} tokens (compress at {int(_active_threshold_pct*100)}% = {agent.context_compressor.threshold_tokens:,})")
         else:
-            print(f"📊 Context limit: {agent.context_compressor.context_length:,} tokens (auto-compression disabled)")
+            agent._safe_print(f"📊 Context limit: {agent.context_compressor.context_length:,} tokens (auto-compression disabled)")
         # Notice with the exact opt-back-out command. Printed inline at startup
         # for CLI users; gateway users get the same text replayed via
         # _compression_warning on turn 1 (set below).
         if _show_autoraise_notice:
-            print(_build_codex_gpt5_autoraise_notice(_autoraise))
+            agent._safe_print(_build_codex_gpt5_autoraise_notice(_autoraise))
 
     # Check immediately so CLI users see the warning at startup.
     # Gateway status_callback is not yet wired, so any warning is stored

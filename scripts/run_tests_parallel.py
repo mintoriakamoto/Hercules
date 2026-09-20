@@ -332,21 +332,21 @@ def _parse_pytest_summary(output: str) -> dict[str, int]:
     result: dict[str, int] = {}
     # Walk backwards from the end — the summary line is always near the tail.
     for line in reversed(output.splitlines()):
-        line = line.strip()
-        if not line:
+        text = line.strip()
+        if not text:
             continue
         # Match "N passed", "N failed", "N skipped", "N errors", "N xfailed", "N xpassed"
-        for m in re.finditer(r"(\d+)\s+(passed|failed|skipped|errors|xfailed|xpassed)", line):
+        for m in re.finditer(r"(\d+)\s+(passed|failed|skipped|errors|xfailed|xpassed)", text):
             result[m.group(2)] = int(m.group(1))
         # Also match "N error" (singular — pytest uses this sometimes).
-        for m in re.finditer(r"(\d+)\s+error\b", line):
+        for m in re.finditer(r"(\d+)\s+error\b", text):
             result.setdefault("errors", result.get("errors", 0) + int(m.group(1)))
         if result:
             # Found the counts line — done.
             break
         # Stop at the short test summary header (if any) — everything above
         # that is individual failure details, not the counts line.
-        if line.startswith("FAILED") or line.startswith("SHORT TEST SUMMARY"):
+        if text.startswith("FAILED") or text.startswith("SHORT TEST SUMMARY"):
             break
     return result
 
@@ -481,7 +481,7 @@ def _load_durations(repo_root: Path) -> dict[str, float]:
     try:
         return json.loads(path.read_text())
     except (json.JSONDecodeError, OSError) as e:
-        print("[ERROR] Failed to load json durations file! {e}")
+        print(f"[ERROR] Failed to load json durations file! {e}")
         return {}
 
 
@@ -834,7 +834,7 @@ def main() -> int:
         n_tests = test_counts.get(file, 0)
         try:
             fpath, rc, output, summary, subproc_wall = fut.result()
-        except Exception as exc:  # noqa: BLE001 — must always advance counter
+        except Exception as exc:  # must always advance counter
             with lock:
                 files_done += 1
                 tests_done += n_tests
@@ -951,7 +951,7 @@ def main() -> int:
                 print(f"  {_format_file(file, repo_root)}  ({s.get('passed', 0)} passed)")
         if no_tests_ran:
             print(f"=== {len(no_tests_ran)} file{'s' if len(no_tests_ran) != 1 else ''} where no tests ran (collection/import error, timeout before collection, etc.) ===")
-            for file, s in no_tests_ran:
+            for file, _s in no_tests_ran:
                 print(f"  {_format_file(file, repo_root)}")
         return 1
 

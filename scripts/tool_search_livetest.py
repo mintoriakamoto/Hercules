@@ -30,7 +30,7 @@ import tempfile
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 # Force-isolate the test environment BEFORE any hercules imports.
 ORIGINAL_HOME = os.environ.get("HERCULES_HOME")

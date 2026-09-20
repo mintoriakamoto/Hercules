@@ -931,7 +931,7 @@ _cleanup_done = False
 _single_query_finalize_attempted_session_ids: set[str | None] = set()
 # Weak reference to the active AIAgent for memory provider shutdown at exit
 _active_agent_ref = None
-_deferred_agent_startup_done = False
+_deferred_agent_startup_state = {"done": False}
 # Set True once the TUI's prompt_toolkit app starts (which enables focus
 # reporting + mouse tracking). Gates the on-exit terminal reset so non-TUI
 # one-shot CLI runs — which also register _run_cleanup via atexit — don't emit
@@ -947,12 +947,11 @@ def _mark_tui_input_modes_active() -> None:
 
 def _prepare_deferred_agent_startup() -> None:
     """Run Termux-deferred agent discovery before the first real agent turn."""
-    global _deferred_agent_startup_done
-    if _deferred_agent_startup_done:
+    if _deferred_agent_startup_state["done"]:
         return
     if os.environ.get("HERCULES_DEFER_AGENT_STARTUP") != "1":
         return
-    _deferred_agent_startup_done = True
+    _deferred_agent_startup_state["done"] = True
     _accept_hooks = os.environ.get("HERCULES_ACCEPT_HOOKS", "").lower() in {
         "1",
         "true",
@@ -1403,9 +1402,9 @@ def _resolve_worktree_base(repo_root: str) -> tuple:
             # origin/HEAD not set locally; ask the remote.
             show = _git(["remote", "show", "origin"], timeout=30)
             for line in show.stdout.splitlines():
-                line = line.strip()
-                if line.startswith("HEAD branch:"):
-                    _branch = line.split(":", 1)[1].strip()
+                stripped = line.strip()
+                if stripped.startswith("HEAD branch:"):
+                    _branch = stripped.split(":", 1)[1].strip()
                     # A remote with no default branch reports "(unknown)";
                     # don't construct a bogus "origin/(unknown)" ref from it.
                     if _branch and _branch != "(unknown)":
@@ -1422,7 +1421,7 @@ def _resolve_worktree_base(repo_root: str) -> tuple:
     return "HEAD", "HEAD (local — could not reach remote)"
 
 
-def _setup_worktree(repo_root: str = None, sync_base: bool = True) -> Optional[Dict[str, str]]:
+def _setup_worktree(repo_root: Optional[str] = None, sync_base: bool = True) -> Optional[Dict[str, str]]:
     """Create an isolated git worktree for this CLI session.
 
     Returns a dict with worktree metadata on success, None on failure.
@@ -1704,7 +1703,7 @@ def _worktree_lock_is_live(repo_root: str, worktree_path: str, timeout: int = 10
     return None
 
 
-def _cleanup_worktree(info: Dict[str, str] = None) -> None:
+def _cleanup_worktree(info: Optional[Dict[str, str]] = None) -> None:
     """Remove a worktree and its branch on exit.
 
     Preserves the worktree only if it has unpushed commits (real work
@@ -3102,7 +3101,7 @@ def _apply_bracketed_paste_timeout_patch() -> None:
         _vt100_mod.Vt100Parser.feed = _patched_vt100_feed
         _vt100_mod._hercules_bp_timeout_patched = True
         logger.debug("Applied Vt100Parser bracketed-paste timeout patch (#16263)")
-    except Exception as exc:  # noqa: BLE001 — defensive: never break startup
+    except Exception as exc:  # defensive: never break startup
         logger.debug("Bracketed-paste timeout patch skipped: %s", exc)
 
 
@@ -3683,15 +3682,15 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
     
     def __init__(
         self,
-        model: str = None,
-        toolsets: List[str] = None,
-        provider: str = None,
-        api_key: str = None,
-        base_url: str = None,
-        max_turns: int = None,
+        model: Optional[str] = None,
+        toolsets: Optional[List[str]] = None,
+        provider: Optional[str] = None,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        max_turns: Optional[int] = None,
         verbose: Optional[bool] = None,
         compact: bool = False,
-        resume: str = None,
+        resume: Optional[str] = None,
         checkpoints: bool = False,
         pass_session_id: bool = False,
         ignore_rules: bool = False,
@@ -8798,7 +8797,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         loaded = {}
 
                     print(f"User plugins ({len(user_entries)}):")
-                    for name, version, _desc, source, _dir, key in sorted(user_entries):
+                    for name, version, _desc, _source, _dir, key in sorted(user_entries):
                         state = _plugin_status(name, enabled, disabled, key=key)
                         glyph = {"enabled": "✓", "disabled": "✗"}.get(state, "○")
                         ver = f" v{version}" if version else ""
@@ -9211,9 +9210,8 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     for entry in list(pending.queue):
                         # Bundled payloads are (text, images) tuples;
                         # unpack for inspection.
-                        if isinstance(entry, tuple) and entry:
-                            entry = entry[0]
-                        if isinstance(entry, str) and _looks_like_slash_command(entry):
+                        candidate = entry[0] if isinstance(entry, tuple) and entry else entry
+                        if isinstance(candidate, str) and _looks_like_slash_command(candidate):
                             continue
                         has_real_message = True
                         break
@@ -10202,7 +10200,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
     # Tool progress callback (audio cues for voice mode)
     # ====================================================================
 
-    def _on_tool_progress(self, event_type: str, function_name: str = None, preview: str = None, function_args: dict = None, **kwargs):
+    def _on_tool_progress(self, event_type: str, function_name: Optional[str] = None, preview: Optional[str] = None, function_args: Optional[dict] = None, **kwargs):
         """Called on tool lifecycle events (tool.started, tool.completed, reasoning.available, etc.).
 
         Updates the TUI spinner widget so the user can see what the agent
@@ -11331,7 +11329,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             except Exception:
                 pass
 
-    def chat(self, message, images: list = None) -> Optional[str]:
+    def chat(self, message, images: Optional[list] = None) -> Optional[str]:
         """
         Send a message to the agent and get a response.
         
@@ -15021,23 +15019,23 @@ def _run_kanban_goal_loop_q(cli: "HerculesCLI", first_response: str) -> None:
 
 
 def main(
-    query: str = None,
-    q: str = None,
-    image: str = None,
-    toolsets: str = None,
-    skills: str | list[str] | tuple[str, ...] = None,
-    model: str = None,
-    provider: str = None,
-    api_key: str = None,
-    base_url: str = None,
-    max_turns: int = None,
+    query: Optional[str] = None,
+    q: Optional[str] = None,
+    image: Optional[str] = None,
+    toolsets: Optional[str] = None,
+    skills: str | list[str] | tuple[str, ...] | None = None,
+    model: Optional[str] = None,
+    provider: Optional[str] = None,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
+    max_turns: Optional[int] = None,
     verbose: Optional[bool] = None,
     quiet: bool = False,
     compact: bool = False,
     list_tools: bool = False,
     list_toolsets: bool = False,
     gateway: bool = False,
-    resume: str = None,
+    resume: Optional[str] = None,
     worktree: bool = False,
     w: bool = False,
     checkpoints: bool = False,
@@ -15366,7 +15364,7 @@ def main(
                         _build_parts = None
                         try:
                             from agent.image_routing import (
-                                build_native_content_parts as _build_parts,  # noqa: F811
+                                build_native_content_parts as _build_parts,
                             )
                             from agent.image_routing import decide_image_input_mode
                             from hercules_cli.config import load_config

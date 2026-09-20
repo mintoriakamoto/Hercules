@@ -351,7 +351,7 @@ class PairingStore:
                 return True
         return False
 
-    def list_approved(self, platform: str = None) -> list:
+    def list_approved(self, platform: Optional[str] = None) -> list:
         """List approved users, optionally filtered by platform."""
         results = []
         platforms = [platform] if platform else self._all_platforms("approved")
@@ -536,7 +536,7 @@ class PairingStore:
                 "user_name": matched_entry.get("user_name", ""),
             }
 
-    def list_pending(self, platform: str = None) -> list:
+    def list_pending(self, platform: Optional[str] = None) -> list:
         """List pending pairing requests, optionally filtered by platform.
 
         Codes are stored hashed — the ``code`` field is replaced with the
@@ -551,7 +551,7 @@ class PairingStore:
             for p in platforms:
                 self._cleanup_expired(p)
                 pending = self._load_json(self._pending_path(p))
-                for entry_id, info in pending.items():
+                for _entry_id, info in pending.items():
                     if not isinstance(info, dict):
                         continue
                     created_at = info.get("created_at")
@@ -569,7 +569,7 @@ class PairingStore:
                     })
         return results
 
-    def clear_pending(self, platform: str = None) -> int:
+    def clear_pending(self, platform: Optional[str] = None) -> int:
         """Clear all pending requests. Returns count removed."""
         with self._lock:
             count = 0
@@ -618,8 +618,10 @@ class PairingStore:
             lockout_key = f"_lockout:{platform}"
             limits[lockout_key] = time.time() + LOCKOUT_SECONDS
             limits[fail_key] = 0  # Reset counter
-            print(f"[pairing] Platform {platform} locked out for {LOCKOUT_SECONDS}s "
-                  f"after {MAX_FAILED_ATTEMPTS} failed attempts", flush=True)
+            logger.warning(
+                "[pairing] Platform %s locked out for %ss after %s failed attempts",
+                platform, LOCKOUT_SECONDS, MAX_FAILED_ATTEMPTS,
+            )
         self._save_json(self._rate_limit_path(), limits)
 
     # ----- Cleanup -----

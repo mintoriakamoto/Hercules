@@ -52,11 +52,11 @@ def _apply_channel_aliases(platforms: Dict[str, Any]) -> None:
         entries = platforms.setdefault(plat_name, [])
         if not isinstance(entries, list):
             continue
-        for chat_id, friendly in id_map.items():
-            if not isinstance(friendly, str) or not friendly.strip():
+        for raw_id, raw_name in id_map.items():
+            if not isinstance(raw_name, str) or not raw_name.strip():
                 continue
-            chat_id = str(chat_id)
-            friendly = friendly.strip()
+            chat_id = str(raw_id)
+            friendly = raw_name.strip()
             matched = False
             for e in entries:
                 if isinstance(e, dict) and e.get("id") == chat_id:

@@ -163,8 +163,8 @@ class MiniSWERunner:
     def __init__(
         self,
         model: str = "anthropic/claude-sonnet-4.6",
-        base_url: str = None,
-        api_key: str = None,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
         env_type: str = "local",
         image: str = "python:3.11-slim",
         cwd: str = "/tmp",
@@ -254,7 +254,7 @@ class MiniSWERunner:
                 self.env.stop()
             self.env = None
     
-    def _execute_command(self, command: str, timeout: int = None) -> Dict[str, Any]:
+    def _execute_command(self, command: str, timeout: Optional[int] = None) -> Dict[str, Any]:
         """
         Execute a command in the environment.
         
@@ -628,12 +628,12 @@ Complete the user's task step by step."""
 # ============================================================================
 
 def main(
-    task: str = None,
-    prompts_file: str = None,
+    task: Optional[str] = None,
+    prompts_file: Optional[str] = None,
     output_file: str = "swe-runner-test1.jsonl",
     model: str = "claude-sonnet-4-20250514",
-    base_url: str = None,
-    api_key: str = None,
+    base_url: Optional[str] = None,
+    api_key: Optional[str] = None,
     env: str = "local",
     image: str = "python:3.11-slim",
     cwd: str = "/tmp",
@@ -709,13 +709,13 @@ def main(
         prompts = []
         with open(prompts_file, 'r', encoding='utf-8') as f:
             for line in f:
-                line = line.strip()
-                if line:
+                stripped = line.strip()
+                if stripped:
                     try:
-                        entry = json.loads(line)
+                        entry = json.loads(stripped)
                         prompts.append(entry.get("prompt", entry.get("task", "")))
                     except json.JSONDecodeError:
-                        prompts.append(line)
+                        prompts.append(stripped)
         
         if not prompts:
             print(f"❌ No prompts found in {prompts_file}")

@@ -171,7 +171,6 @@ def _process_delegation_worker(
         task_index = serialized_args["task_index"]
         goal = serialized_args["goal"]
         child = serialized_args["child"]
-        parent_agent_state = serialized_args["parent_agent_state"]
 
         # Call the actual worker function in this process
         # Note: parent_agent is None in subprocess; child doesn't need it

@@ -1118,7 +1118,7 @@ def _build_child_progress_callback(
         return kw
 
     def _relay(
-        event_type: str, tool_name: str = None, preview: str = None, args=None, **kwargs
+        event_type: str, tool_name: Optional[str] = None, preview: Optional[str] = None, args: Optional[Any] = None, **kwargs
     ):
         if not parent_cb:
             return
@@ -1130,7 +1130,7 @@ def _build_child_progress_callback(
             logger.debug("Parent callback failed: %s", e)
 
     def _callback(
-        event_type, tool_name: str = None, preview: str = None, args=None, **kwargs
+        event_type, tool_name: Optional[str] = None, preview: Optional[str] = None, args: Optional[Any] = None, **kwargs
     ):
         # Lifecycle events emitted by the orchestrator itself — handled
         # before enum normalisation since they are not part of DelegateEvent.
@@ -3176,7 +3176,7 @@ def _run_dag_batch(
             if getattr(parent_agent, "_interrupt_requested", False) is True:
                 interrupted = True
                 break
-            for i, t, child in children:
+            for i, _t, child in children:
                 if i in submitted:
                     continue
                 if len(in_flight) >= max_children:
@@ -3217,7 +3217,7 @@ def _run_dag_batch(
                 _emit_line(entry)
 
     results = list(results_by_index.values())
-    for i, t, child in children:
+    for i, _t, child in children:
         if i not in done:
             results.append(
                 {

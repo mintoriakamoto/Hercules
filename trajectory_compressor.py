@@ -364,7 +364,7 @@ class TrajectoryCompressor:
             )
             print(f"✅ Loaded tokenizer: {self.config.tokenizer_name}")
         except Exception as e:
-            raise RuntimeError(f"Failed to load tokenizer '{self.config.tokenizer_name}': {e}")
+            raise RuntimeError(f"Failed to load tokenizer '{self.config.tokenizer_name}': {e}") from e
     
     def _init_summarizer(self):
         """Initialize LLM routing for summarization (sync and async).
@@ -1113,10 +1113,10 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
         for file_path in jsonl_files:
             with open(file_path, 'r', encoding='utf-8') as f:
                 for line_num, line in enumerate(f):
-                    line = line.strip()
-                    if line:
+                    stripped = line.strip()
+                    if stripped:
                         try:
-                            entry = json.loads(line)
+                            entry = json.loads(stripped)
                             all_entries.append((file_path, line_num, entry))
                         except json.JSONDecodeError as e:
                             self.logger.warning(f"Skipping invalid JSON at {file_path}:{line_num}: {e}")
@@ -1395,11 +1395,11 @@ Write only the summary, starting with "[CONTEXT SUMMARY]:" prefix."""
 
 def main(
     input: str,
-    output: str = None,
+    output: Optional[str] = None,
     config: str = "configs/trajectory_compression.yaml",
-    target_max_tokens: int = None,
-    tokenizer: str = None,
-    sample_percent: float = None,
+    target_max_tokens: Optional[int] = None,
+    tokenizer: Optional[str] = None,
+    sample_percent: Optional[float] = None,
     seed: int = 42,
     dry_run: bool = False,
 ):
@@ -1483,10 +1483,10 @@ def main(
         entries = []
         with open(input_path, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
-                line = line.strip()
-                if line:
+                stripped = line.strip()
+                if stripped:
                     try:
-                        entries.append(json.loads(line))
+                        entries.append(json.loads(stripped))
                     except json.JSONDecodeError as e:
                         print(f"⚠️  Skipping invalid JSON at line {line_num}: {e}")
         
@@ -1567,10 +1567,10 @@ def main(
                     entries = []
                     with open(jsonl_file, 'r', encoding='utf-8') as f:
                         for line in f:
-                            line = line.strip()
-                            if line:
+                            stripped = line.strip()
+                            if stripped:
                                 try:
-                                    entries.append(json.loads(line))
+                                    entries.append(json.loads(stripped))
                                 except json.JSONDecodeError:
                                     pass
                     

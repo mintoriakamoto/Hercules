@@ -4,20 +4,37 @@ from enum import Enum
 
 
 class ModelTier(str, Enum):
-    """Model capability tiers for task routing."""
+    """Which class of model to use for a task.
 
-    FAST_CHEAP = "fast_cheap"  # e.g., GPT-4o mini, Claude Haiku — speed/cost focused
-    BALANCED = "balanced"  # e.g., Claude Sonnet, GPT-4o — general purpose
-    CAPABLE = "capable"  # e.g., Claude Opus, o1 — advanced reasoning
-    EXTENDED = "extended"  # e.g., o1-pro — extended thinking, research
+    This is not a permission gate. It is a capability/cost hint for the
+    router and the local quantization picker.
+    """
+
+    FAST_CHEAP = "fast_cheap"  # small/fast: Haiku, GPT-4o-mini, local 7B
+    BALANCED = "balanced"  # general: Sonnet, GPT-4o, local 14-32B
+    CAPABLE = "capable"  # hard reasoning: Opus, o1-class, large local
+    EXTENDED = "extended"  # long-horizon research / full-precision local
 
 
 class TaskCategory(str, Enum):
-    """Task categories for routing decisions."""
+    """What kind of work the task is."""
 
-    READ = "read"  # Information retrieval, file reading
-    ANALYZE = "analyze"  # Analysis, summarization, simple classification
-    CODE = "code"  # Programming, code generation, debugging
-    REASONING = "reasoning"  # Complex reasoning, planning, design
-    RESEARCH = "research"  # Deep research, exploration, comprehensive analysis
-    SECURITY = "security"  # Security testing, vulnerability analysis
+    READ = "read"
+    ANALYZE = "analyze"
+    CODE = "code"
+    REASONING = "reasoning"
+    RESEARCH = "research"
+    SECURITY = "security"
+
+
+class ReasoningComplexity(str, Enum):
+    """How hard the task is, independent of category.
+
+    Used by QuantizationSelector to pick weight/KV precision.
+    Higher complexity keeps more bits (better accuracy, more VRAM).
+    """
+
+    SIMPLE = "simple"
+    MODERATE = "moderate"
+    COMPLEX = "complex"
+    CRITICAL = "critical"

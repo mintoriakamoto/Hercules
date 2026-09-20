@@ -1,6 +1,7 @@
 """Shared utility functions for hercules-agent."""
 
 import errno
+import functools
 import json
 import logging
 import os
@@ -220,7 +221,7 @@ class IndentDumper(yaml.SafeDumper):
     serializers so all write paths emit byte-identical layouts (#31999).
     """
 
-    def increase_indent(self, flow=False, indentless=False):  # noqa: ARG002
+    def increase_indent(self, flow=False, indentless=False):
         return super().increase_indent(flow, False)
 
 
@@ -383,14 +384,9 @@ def safe_json_loads(text: str, default: Any = None) -> Any:
 # manifest with the slow path, costing ~0.9s of cold-start time. The C loader
 # is a true drop-in for ``safe_load`` (same restricted tag set), so prefer it
 # and fall back to the pure-Python loader only when libyaml isn't compiled in.
-_fast_yaml_loader = None
-
-
+@functools.lru_cache(maxsize=1)
 def _get_fast_yaml_loader():
-    global _fast_yaml_loader
-    if _fast_yaml_loader is None:
-        _fast_yaml_loader = getattr(yaml, "CSafeLoader", None) or yaml.SafeLoader
-    return _fast_yaml_loader
+    return getattr(yaml, "CSafeLoader", None) or yaml.SafeLoader
 
 
 def fast_safe_load(stream: Any) -> Any:

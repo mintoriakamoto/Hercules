@@ -536,22 +536,22 @@ class BatchRunner:
         run_name: str,
         distribution: str = "default",
         max_iterations: int = 10,
-        base_url: str = None,
-        api_key: str = None,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
         model: str = "claude-opus-4-20250514",
         num_workers: int = 4,
         verbose: bool = False,
-        ephemeral_system_prompt: str = None,
+        ephemeral_system_prompt: Optional[str] = None,
         log_prefix_chars: int = 100,
-        providers_allowed: List[str] = None,
-        providers_ignored: List[str] = None,
-        providers_order: List[str] = None,
-        provider_sort: str = None,
+        providers_allowed: Optional[List[str]] = None,
+        providers_ignored: Optional[List[str]] = None,
+        providers_order: Optional[List[str]] = None,
+        provider_sort: Optional[str] = None,
         openrouter_min_coding_score: Optional[float] = None,
-        max_tokens: int = None,
-        reasoning_config: Dict[str, Any] = None,
-        prefill_messages: List[Dict[str, Any]] = None,
-        max_samples: int = None,
+        max_tokens: Optional[int] = None,
+        reasoning_config: Optional[Dict[str, Any]] = None,
+        prefill_messages: Optional[List[Dict[str, Any]]] = None,
+        max_samples: Optional[int] = None,
     ):
         """
         Initialize the batch runner.
@@ -652,12 +652,12 @@ class BatchRunner:
         dataset = []
         with open(self.dataset_file, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
-                line = line.strip()
-                if not line:
+                stripped = line.strip()
+                if not stripped:
                     continue
                 
                 try:
-                    entry = json.loads(line)
+                    entry = json.loads(stripped)
                     if 'prompt' not in entry:
                         print(f"⚠️  Warning: Line {line_num} missing 'prompt' field, skipping")
                         continue
@@ -1145,29 +1145,29 @@ class BatchRunner:
 
 
 def main(
-    dataset_file: str = None,
-    batch_size: int = None,
-    run_name: str = None,
+    dataset_file: Optional[str] = None,
+    batch_size: Optional[int] = None,
+    run_name: Optional[str] = None,
     distribution: str = "default",
     model: str = "anthropic/claude-sonnet-4.6",
-    api_key: str = None,
+    api_key: Optional[str] = None,
     base_url: str = "https://openrouter.ai/api/v1",
     max_turns: int = 10,
     num_workers: int = 4,
     resume: bool = False,
     verbose: bool = False,
     list_distributions: bool = False,
-    ephemeral_system_prompt: str = None,
+    ephemeral_system_prompt: Optional[str] = None,
     log_prefix_chars: int = 100,
-    providers_allowed: str = None,
-    providers_ignored: str = None,
-    providers_order: str = None,
-    provider_sort: str = None,
-    max_tokens: int = None,
-    reasoning_effort: str = None,
+    providers_allowed: Optional[str] = None,
+    providers_ignored: Optional[str] = None,
+    providers_order: Optional[str] = None,
+    provider_sort: Optional[str] = None,
+    max_tokens: Optional[int] = None,
+    reasoning_effort: Optional[str] = None,
     reasoning_disabled: bool = False,
-    prefill_messages_file: str = None,
-    max_samples: int = None,
+    prefill_messages_file: Optional[str] = None,
+    max_samples: Optional[int] = None,
 ):
     """
     Run batch processing of agent prompts from a dataset.

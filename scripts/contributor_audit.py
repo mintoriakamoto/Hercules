@@ -29,7 +29,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from release import resolve_author  # noqa: E402
+from release import resolve_author
 
 REPO_ROOT = SCRIPT_DIR.parent
 
@@ -270,10 +270,6 @@ def collect_salvaged_contributors(since_tag, until="HEAD"):
         body = pr.get("body") or ""
         pr_number = pr.get("number", "?")
 
-        # Also credit the PR author
-        pr_author = pr.get("author", {})
-        pr_author_login = pr_author.get("login", "") if isinstance(pr_author, dict) else ""
-
         for pattern in SALVAGE_PATTERNS:
             for match in pattern.finditer(body):
                 value = match.group(1)
@@ -441,7 +437,7 @@ def main():
             print(f"=== STRICT MODE FAILURE: {len(new_unknowns)} new unmapped email(s) ===")
             print("Add these to AUTHOR_MAP in scripts/release.py before merging:")
             print()
-            for email, name in sorted(new_unknowns.items()):
+            for email, _name in sorted(new_unknowns.items()):
                 print(f'    "{email}": "<github-username>",')
             print()
             print("To find the GitHub username:")

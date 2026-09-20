@@ -414,71 +414,71 @@ class AIAgent:
 
     def __init__(
         self,
-        base_url: str = None,
-        api_key: str = None,
-        provider: str = None,
-        api_mode: str = None,
-        acp_command: str = None,
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        provider: Optional[str] = None,
+        api_mode: Optional[str] = None,
+        acp_command: Optional[str] = None,
         acp_args: list[str] | None = None,
-        command: str = None,
+        command: Optional[str] = None,
         args: list[str] | None = None,
         model: str = "",
         max_iterations: int = 90,  # Default tool-calling iterations (shared with subagents)
         tool_delay: float = 1.0,
-        enabled_toolsets: List[str] = None,
-        disabled_toolsets: List[str] = None,
+        enabled_toolsets: Optional[List[str]] = None,
+        disabled_toolsets: Optional[List[str]] = None,
         save_trajectories: bool = False,
         verbose_logging: bool = False,
         quiet_mode: bool = False,
         tool_progress_mode: str = "all",
-        ephemeral_system_prompt: str = None,
+        ephemeral_system_prompt: Optional[str] = None,
         log_prefix_chars: int = 100,
         log_prefix: str = "",
-        providers_allowed: List[str] = None,
-        providers_ignored: List[str] = None,
-        providers_order: List[str] = None,
-        provider_sort: str = None,
+        providers_allowed: Optional[List[str]] = None,
+        providers_ignored: Optional[List[str]] = None,
+        providers_order: Optional[List[str]] = None,
+        provider_sort: Optional[str] = None,
         provider_require_parameters: bool = False,
-        provider_data_collection: str = None,
+        provider_data_collection: Optional[str] = None,
         openrouter_min_coding_score: Optional[float] = None,
-        session_id: str = None,
-        tool_progress_callback: callable = None,
-        tool_start_callback: callable = None,
-        tool_complete_callback: callable = None,
-        thinking_callback: callable = None,
-        reasoning_callback: callable = None,
-        clarify_callback: callable = None,
-        read_terminal_callback: callable = None,
-        step_callback: callable = None,
-        stream_delta_callback: callable = None,
-        interim_assistant_callback: callable = None,
-        tool_gen_callback: callable = None,
-        status_callback: callable = None,
-        notice_callback: callable = None,
-        notice_clear_callback: callable = None,
+        session_id: Optional[str] = None,
+        tool_progress_callback: Optional[Callable] = None,
+        tool_start_callback: Optional[Callable] = None,
+        tool_complete_callback: Optional[Callable] = None,
+        thinking_callback: Optional[Callable] = None,
+        reasoning_callback: Optional[Callable] = None,
+        clarify_callback: Optional[Callable] = None,
+        read_terminal_callback: Optional[Callable] = None,
+        step_callback: Optional[Callable] = None,
+        stream_delta_callback: Optional[Callable] = None,
+        interim_assistant_callback: Optional[Callable] = None,
+        tool_gen_callback: Optional[Callable] = None,
+        status_callback: Optional[Callable] = None,
+        notice_callback: Optional[Callable] = None,
+        notice_clear_callback: Optional[Callable] = None,
         event_callback: Optional[Callable[[str, dict], None]] = None,
         reaction_callback: Optional[Callable[[str], None]] = None,
-        max_tokens: int = None,
-        reasoning_config: Dict[str, Any] = None,
-        service_tier: str = None,
-        request_overrides: Dict[str, Any] = None,
-        prefill_messages: List[Dict[str, Any]] = None,
-        platform: str = None,
-        user_id: str = None,
-        user_id_alt: str = None,
-        user_name: str = None,
-        chat_id: str = None,
-        chat_name: str = None,
-        chat_type: str = None,
-        thread_id: str = None,
-        gateway_session_key: str = None,
+        max_tokens: Optional[int] = None,
+        reasoning_config: Optional[Dict[str, Any]] = None,
+        service_tier: Optional[str] = None,
+        request_overrides: Optional[Dict[str, Any]] = None,
+        prefill_messages: Optional[List[Dict[str, Any]]] = None,
+        platform: Optional[str] = None,
+        user_id: Optional[str] = None,
+        user_id_alt: Optional[str] = None,
+        user_name: Optional[str] = None,
+        chat_id: Optional[str] = None,
+        chat_name: Optional[str] = None,
+        chat_type: Optional[str] = None,
+        thread_id: Optional[str] = None,
+        gateway_session_key: Optional[str] = None,
         skip_context_files: bool = False,
         load_soul_identity: bool = False,
         skip_memory: bool = False,
         session_db=None,
-        parent_session_id: str = None,
+        parent_session_id: Optional[str] = None,
         iteration_budget: "IterationBudget" = None,
-        fallback_model: Dict[str, Any] = None,
+        fallback_model: Optional[Dict[str, Any]] = None,
         credential_pool=None,
         checkpoints_enabled: bool = False,
         checkpoint_max_snapshots: int = 20,
@@ -1070,7 +1070,7 @@ class AIAgent:
 
     # Stream-diagnostic class header preserved for backward compat —
     # actual list lives in ``agent.stream_diag.STREAM_DIAG_HEADERS``.
-    from agent.stream_diag import STREAM_DIAG_HEADERS as _STREAM_DIAG_HEADERS  # noqa: E402
+    from agent.stream_diag import STREAM_DIAG_HEADERS as _STREAM_DIAG_HEADERS
 
     @staticmethod
     def _stream_diag_init() -> Dict[str, Any]:
@@ -1173,7 +1173,7 @@ class AIAgent:
         from agent.conversation_compression import replay_compression_warning
         replay_compression_warning(self)
 
-    def _is_direct_openai_url(self, base_url: str = None) -> bool:
+    def _is_direct_openai_url(self, base_url: Optional[str] = None) -> bool:
         """Return True when a base URL targets OpenAI's native API."""
         if base_url is not None:
             hostname = base_url_hostname(base_url)
@@ -1183,7 +1183,7 @@ class AIAgent:
             )
         return hostname == "api.openai.com"
 
-    def _is_azure_openai_url(self, base_url: str = None) -> bool:
+    def _is_azure_openai_url(self, base_url: Optional[str] = None) -> bool:
         """Return True when a base URL targets Azure OpenAI.
 
         Azure OpenAI exposes an OpenAI-compatible endpoint at
@@ -1199,7 +1199,7 @@ class AIAgent:
             url = getattr(self, "_base_url_lower", "") or ""
         return "openai.azure.com" in url
 
-    def _is_github_copilot_url(self, base_url: str = None) -> bool:
+    def _is_github_copilot_url(self, base_url: Optional[str] = None) -> bool:
         """Return True when a base URL targets GitHub Copilot's OpenAI-compatible API."""
         if base_url is not None:
             hostname = base_url_hostname(base_url)
@@ -1670,7 +1670,7 @@ class AIAgent:
                 if timestamp is not None:
                     msg["timestamp"] = timestamp
 
-    def _persist_session(self, messages: List[Dict], conversation_history: List[Dict] = None):
+    def _persist_session(self, messages: List[Dict], conversation_history: Optional[List[Dict]] = None):
         """Save session state to both JSON log and SQLite on any exit path.
 
         Ensures conversations are never lost, even on errors or early returns.
@@ -1747,7 +1747,7 @@ class AIAgent:
         from agent.agent_runtime_helpers import repair_message_sequence
         return repair_message_sequence(self, messages)
 
-    def _flush_messages_to_session_db(self, messages: List[Dict], conversation_history: List[Dict] = None):
+    def _flush_messages_to_session_db(self, messages: List[Dict], conversation_history: Optional[List[Dict]] = None):
         """Persist any un-flushed messages to the SQLite session store.
 
         Deduplicates via an intrinsic ``_DB_PERSISTED_MARKER`` stamped on each
@@ -2538,18 +2538,20 @@ class AIAgent:
             return redact_sensitive_text(content)
         if isinstance(content, list):
             redacted = []
-            for part in content:
-                if isinstance(part, dict):
-                    part = dict(part)
+            for raw_part in content:
+                if isinstance(raw_part, dict):
+                    part = dict(raw_part)
                     if isinstance(part.get("text"), str):
                         part["text"] = redact_sensitive_text(part["text"])
                     if isinstance(part.get("content"), str):
                         part["content"] = redact_sensitive_text(part["content"])
+                else:
+                    part = raw_part
                 redacted.append(part)
             return redacted
         return content
 
-    def _save_session_log(self, messages: List[Dict[str, Any]] = None):
+    def _save_session_log(self, messages: Optional[List[Dict[str, Any]]] = None):
         """Optional per-session JSON snapshot writer.
 
         Gated by ``sessions.write_json_snapshots`` (default False).  state.db
@@ -2584,7 +2586,8 @@ class AIAgent:
 
         try:
             cleaned = []
-            for msg in messages:
+            for raw_msg in messages:
+                msg = raw_msg
                 # Mirror the SQLite flush: ephemeral recovery scaffolding is
                 # internal retry state, never durable transcript content.
                 if _is_ephemeral_scaffolding(msg):
@@ -2643,7 +2646,7 @@ class AIAgent:
                 logging.warning(f"Failed to save session log: {e}")
 
 
-    def interrupt(self, message: str = None) -> None:
+    def interrupt(self, message: Optional[str] = None) -> None:
         """
         Request the agent to interrupt its current tool-calling loop.
         
@@ -2719,7 +2722,7 @@ class AIAgent:
             except Exception as e:
                 logger.debug("Failed to propagate interrupt to child agent: %s", e)
         if not self.quiet_mode:
-            print("\n⚡ Interrupt requested" + (f": '{message[:40]}...'" if message and len(message) > 40 else f": '{message}'" if message else ""))
+            self._safe_print("\n⚡ Interrupt requested" + (f": '{message[:40]}...'" if message and len(message) > 40 else f": '{message}'" if message else ""))
 
     def clear_interrupt(self) -> None:
         """Clear any pending interrupt request and the per-thread tool interrupt signal."""
@@ -3156,7 +3159,7 @@ class AIAgent:
             "budget_max": self.iteration_budget.max_total,
         }
 
-    def shutdown_memory_provider(self, messages: list = None) -> None:
+    def shutdown_memory_provider(self, messages: Optional[list] = None) -> None:
         """Shut down the memory provider and context engine — call at actual session boundaries.
 
         This calls on_session_end() then shutdown_all() on the memory
@@ -3183,7 +3186,7 @@ class AIAgent:
             except Exception:
                 pass
 
-    def commit_memory_session(self, messages: list = None) -> None:
+    def commit_memory_session(self, messages: Optional[list] = None) -> None:
         """Trigger end-of-session extraction without tearing providers down.
         Called when session_id rotates (e.g. /new, context compression);
         providers keep their state and continue running under the old
@@ -3515,12 +3518,12 @@ class AIAgent:
 
 
 
-    def _build_system_prompt_parts(self, system_message: str = None) -> Dict[str, str]:
+    def _build_system_prompt_parts(self, system_message: Optional[str] = None) -> Dict[str, str]:
         """Forwarder — see ``agent.system_prompt.build_system_prompt_parts``."""
         from agent.system_prompt import build_system_prompt_parts
         return build_system_prompt_parts(self, system_message=system_message)
 
-    def _build_system_prompt(self, system_message: str = None) -> str:
+    def _build_system_prompt(self, system_message: Optional[str] = None) -> str:
         """Forwarder — see ``agent.system_prompt.build_system_prompt``."""
         from agent.system_prompt import build_system_prompt
         return build_system_prompt(self, system_message=system_message)
@@ -4027,7 +4030,7 @@ class AIAgent:
                 exc,
             )
 
-    def _run_codex_stream(self, api_kwargs: dict, client: Any = None, on_first_delta: callable = None):
+    def _run_codex_stream(self, api_kwargs: dict, client: Any = None, on_first_delta: Optional[Callable] = None):
         """Forwarder — see ``agent.codex_runtime.run_codex_stream``."""
         from agent.codex_runtime import run_codex_stream
         return run_codex_stream(self, api_kwargs, client, on_first_delta)
@@ -4586,7 +4589,7 @@ class AIAgent:
         )
 
     def _interruptible_streaming_api_call(
-        self, api_kwargs: dict, *, on_first_delta: callable = None
+        self, api_kwargs: dict, *, on_first_delta: Optional[Callable] = None
     ):
         """Forwarder — see ``agent.chat_completion_helpers.interruptible_streaming_api_call``."""
         from agent.chat_completion_helpers import interruptible_streaming_api_call
@@ -4808,7 +4811,7 @@ class AIAgent:
             return suffix
         return "[A multimodal message was converted to text for Anthropic compatibility.]"
 
-    def _get_transport(self, api_mode: str = None):
+    def _get_transport(self, api_mode: Optional[str] = None):
         """Return the cached transport for the given (or current) api_mode.
 
         Lazy-initializes on first call per api_mode. Returns None if no
@@ -5408,7 +5411,7 @@ class AIAgent:
         messages: list,
         *,
         logger=None,
-        session_id: str = None,
+        session_id: Optional[str] = None,
     ) -> int:
         """Forwarder — see ``agent.agent_runtime_helpers.sanitize_tool_call_arguments``."""
         from agent.agent_runtime_helpers import sanitize_tool_call_arguments
@@ -5427,7 +5430,7 @@ class AIAgent:
         """
         return self.api_mode != "codex_responses"
 
-    def _compress_context(self, messages: list, system_message: str, *, approx_tokens: int = None, task_id: str = "default", focus_topic: str = None, force: bool = False) -> tuple:
+    def _compress_context(self, messages: list, system_message: str, *, approx_tokens: Optional[int] = None, task_id: str = "default", focus_topic: Optional[str] = None, force: bool = False) -> tuple:
         """Forwarder — see ``agent.conversation_compression.compress_context``.
 
         ``force=True`` is passed by the manual ``/compress`` slash command
@@ -5537,7 +5540,7 @@ class AIAgent:
         )
 
     def _invoke_tool(self, function_name: str, function_args: dict, effective_task_id: str,
-                     tool_call_id: Optional[str] = None, messages: list = None,
+                     tool_call_id: Optional[str] = None, messages: Optional[list] = None,
                      pre_tool_block_checked: bool = False,
                      skip_tool_request_middleware: bool = False,
                      tool_request_middleware_trace: Optional[list[dict[str, Any]]] = None) -> str:
@@ -5598,9 +5601,9 @@ class AIAgent:
     def run_conversation(
         self,
         user_message: str,
-        system_message: str = None,
-        conversation_history: List[Dict[str, Any]] = None,
-        task_id: str = None,
+        system_message: Optional[str] = None,
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
+        task_id: Optional[str] = None,
         stream_callback: Optional[callable] = None,
         persist_user_message: Optional[str] = None,
         persist_user_timestamp: Optional[float] = None,
@@ -5648,13 +5651,13 @@ class AIAgent:
         return run_codex_app_server_turn(self, user_message=user_message, original_user_message=original_user_message, messages=messages, effective_task_id=effective_task_id, should_review_memory=should_review_memory)
 
 def main(
-    query: str = None,
+    query: Optional[str] = None,
     model: str = "",
-    api_key: str = None,
+    api_key: Optional[str] = None,
     base_url: str = "",
     max_turns: int = 10,
-    enabled_toolsets: str = None,
-    disabled_toolsets: str = None,
+    enabled_toolsets: Optional[str] = None,
+    disabled_toolsets: Optional[str] = None,
     list_tools: bool = False,
     save_trajectories: bool = False,
     save_sample: bool = False,
@@ -5704,7 +5707,7 @@ def main(
         composite_toolsets = []
         scenario_toolsets = []
         
-        for name, toolset in all_toolsets.items():
+        for name, _toolset in all_toolsets.items():
             info = get_toolset_info(name)
             if info:
                 entry = (name, info)
