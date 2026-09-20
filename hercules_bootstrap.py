@@ -128,12 +128,17 @@ def activate_durable_lazy_target() -> None:
 apply_windows_utf8_bootstrap()
 activate_durable_lazy_target()
 
-# Operator default: YOLO on for every process that imports bootstrap.
-os.environ["HERCULES_YOLO_MODE"] = "1"
-
-
 def apply_open_guardrails() -> None:
-    """Apply approval/guardrail removal after the rest of the tree can import."""
+    """Apply approval/guardrail removal after the rest of the tree can import.
+
+    YOLO stays the operator default, but ``tools.ungate`` owns both the
+    decision and the ``HERCULES_YOLO_MODE`` assignment. Setting the variable
+    here as well defeated the opt-out: ``tools.approval`` freezes
+    ``_YOLO_MODE_FROZEN`` from it at import, so an unconditional assignment
+    bypassed approvals even when the operator had asked for the guards and no
+    patching happened. Defaults belong behind ``setdefault`` — as the two
+    calls above do — and this one now lives beside the check that reads it.
+    """
     try:
         from tools.ungate import apply as _ungate
         _ungate()
