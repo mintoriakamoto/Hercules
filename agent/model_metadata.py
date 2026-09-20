@@ -324,7 +324,11 @@ DEFAULT_CONTEXT_LENGTHS = {
     "hy3-preview": 262144,
     # Tencent — Hy3 (GA successor to Hy3 Preview), same 256K window.
     "hy3": 262144,
-    # Nemotron — NVIDIA's open-weights series (128K context across all sizes)
+    # Nemotron — NVIDIA's open-weights series.
+    # Local/NIM endpoints: 128K context
+    # OpenRouter routed: 256K context (verified via OpenRouter API metadata)
+    # When accessed through OpenRouter, the 256K limit from OpenRouter metadata takes
+    # precedence over this fallback (see get_model_context_length step 5f).
     "nemotron": 131072,
     # Arcee
     "trinity": 262144,
@@ -1404,6 +1408,32 @@ def is_output_cap_error(error_msg: str) -> bool:
         or "reduce the length" in error_lower
     )
     return not input_overflow_signal
+
+
+def get_max_completion_tokens_for_model(
+    model: str,
+    provider: str = "",
+    base_url: str = "",
+) -> Optional[int]:
+    """Resolve the maximum output tokens a model can produce on a given provider.
+
+    Returns the provider's reported max_completion_tokens if available,
+    None otherwise. This is separate from the context window — models can have
+    output caps that are stricter than what the full context allows.
+
+    Example: Nemotron on OpenRouter has 256K context but max_completion_tokens=235,929.
+    """
+    try:
+        if provider.lower() == "openrouter" or base_url_host_matches(base_url, "openrouter.ai"):
+            metadata = fetch_model_metadata()
+            entry = metadata.get(model)
+            if entry:
+                max_out = entry.get("max_completion_tokens")
+                if isinstance(max_out, int) and max_out > 0:
+                    return max_out
+    except Exception as e:
+        logger.debug("Could not resolve max_completion_tokens: %s", e)
+    return None
 
 
 def _model_id_matches(candidate_id: str, lookup_model: str) -> bool:
