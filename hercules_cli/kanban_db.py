@@ -7737,10 +7737,23 @@ def _resolve_worker_cli_toolsets(hercules_home: Optional[str]) -> Optional[list[
         token = set_hercules_home_override(hercules_home)
         try:
             cfg = load_config()
-            toolsets = sorted(_get_platform_tools(cfg, "cli"))
+            toolsets = set(_get_platform_tools(cfg, "cli"))
         finally:
             reset_hercules_home_override(token)
-        return toolsets or None
+        # Guarantee the worker's lifecycle surface explicitly. This used to
+        # arrive by accident: ``kanban`` was absent from CONFIGURABLE_TOOLSETS,
+        # so _get_platform_tools' "recover non-configurable platform toolsets"
+        # pass added it. Now that it is a normal opt-in toolset (so the
+        # orchestrator route is reachable from `hercules tools`), that pass
+        # skips it like any other default-off entry — and a pin of
+        # ``terminal,web`` would otherwise be the whole worker surface.
+        # ``model_tools._compute_tool_definitions`` re-appends kanban whenever
+        # HERCULES_KANBAN_TASK is set, so this is belt-and-braces, but the
+        # guarantee belongs here, where we are explicitly resolving toolsets
+        # FOR a kanban worker, rather than resting on a side effect of another
+        # module's membership list.
+        toolsets.add("kanban")
+        return sorted(toolsets) or None
     except Exception as exc:
         _log.debug(
             "kanban worker: could not resolve CLI toolsets for HERCULES_HOME=%r (%s)",

@@ -2794,7 +2794,8 @@ def _blank_slate_minimal_toolsets(config: dict):
         all_keys.update(k for k, _, _ in CONFIGURABLE_TOOLSETS)
         all_keys.update(_get_plugin_toolset_keys())
         # Plain (non-composite) TOOLSETS entries — catches recovered toolsets
-        # like ``kanban`` that aren't in CONFIGURABLE_TOOLSETS but get re-added.
+        # (e.g. ``feishu_doc``) that aren't in CONFIGURABLE_TOOLSETS but get
+        # re-added by _get_platform_tools' recovery pass.
         for k, tdef in TOOLSETS.items():
             if k.startswith("hercules-"):
                 continue  # platform composites — not user-facing toolsets

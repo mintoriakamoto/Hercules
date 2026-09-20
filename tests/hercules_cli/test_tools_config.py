@@ -1328,36 +1328,55 @@ def test_apply_provider_selection_does_not_prompt_or_post_setup(monkeypatch):
 #    reported as added/removed by `hercules tools` ──────────────────────────
 
 
-def test_checklist_toolset_keys_excludes_kanban():
-    """``kanban`` is check_fn-gated and never appears in the checklist, so it
-    must not be in the checklist's offered universe for any platform."""
+def test_checklist_toolset_keys_includes_kanban():
+    """``kanban`` is offered by the checklist.
+
+    It is still check_fn-gated at runtime (``_check_kanban_mode``), but the
+    gate reads the saved toolset list, so the checkbox has to exist or the
+    documented orchestrator route is unreachable without hand-editing
+    config.yaml. See tests/hercules_cli/test_kanban_toolset_selectable.py.
+    """
     for plat in ("cli", "telegram", "discord"):
         keys = _checklist_toolset_keys(plat)
-        assert "kanban" not in keys
+        assert "kanban" in keys
         # Configurable toolsets that ARE offered must be present.
         assert "web" in keys
 
 
-def test_kanban_not_reported_as_removed_in_diff():
-    """Reproduces the false-signal bug: `hercules tools` printed ``- kanban``
-    when saving a platform that resolves kanban as enabled, even though the
-    checklist never offered kanban as a toggle.
+def test_checklist_toolset_keys_excludes_non_configurable_platform_toolsets():
+    """Toolsets resolved at read time but never shown must stay out.
+
+    ``feishu_doc`` / ``feishu_drive`` are part of the feishu platform
+    composite and absent from CONFIGURABLE_TOOLSETS, so the checklist cannot
+    offer them and the diff must not claim they were added or removed.
+    """
+    keys = _checklist_toolset_keys("feishu")
+    assert "feishu_doc" not in keys
+    assert "feishu_drive" not in keys
+
+
+def test_non_configurable_toolset_not_reported_as_removed_in_diff():
+    """Reproduces the false-signal bug: `hercules tools` printed a removal for
+    a toolset the checklist never offered as a toggle.
 
     The printed diff must be scoped to ``_checklist_toolset_keys`` so a tool
     the user could not deselect is never reported as removed. The persisted
-    config still keeps kanban (verified separately by _save_platform_tools).
+    config still keeps it (verified separately by _save_platform_tools).
+
+    ``feishu_doc`` stands in for that class here; ``kanban`` used to, before
+    it became a real checklist entry.
     """
-    config = {"platform_toolsets": {"telegram": ["kanban", "web", "terminal"]}}
-    current = _get_platform_tools(config, "telegram", include_default_mcp_servers=False)
-    assert "kanban" in current  # resolved as enabled at read time
+    config = {"platform_toolsets": {"feishu": ["hercules-feishu", "web", "terminal"]}}
+    current = _get_platform_tools(config, "feishu", include_default_mcp_servers=False)
+    assert "feishu_doc" in current  # resolved as enabled at read time
 
-    # The checklist can only return configurable keys it was shown; kanban
-    # is never one of them.
-    universe = _checklist_toolset_keys("telegram")
-    new_enabled = {t for t in current if t != "kanban"}
+    # The checklist can only return configurable keys it was shown;
+    # feishu_doc is never one of them.
+    universe = _checklist_toolset_keys("feishu")
+    new_enabled = {t for t in current if t != "feishu_doc"}
 
-    # Unscoped (old, buggy) diff would surface kanban.
-    assert (current - new_enabled) == {"kanban"}
+    # Unscoped (old, buggy) diff would surface it.
+    assert (current - new_enabled) == {"feishu_doc"}
     # Scoped (fixed) diff drops it.
     assert ((current - new_enabled) & universe) == set()
 
@@ -1365,17 +1384,21 @@ def test_kanban_not_reported_as_removed_in_diff():
 def test_real_configurable_changes_still_reported_in_diff():
     """Scoping the diff to the checklist universe must NOT swallow genuine
     add/remove of configurable toolsets."""
-    config = {"platform_toolsets": {"cli": ["kanban", "web", "terminal", "skills"]}}
-    current = _get_platform_tools(config, "cli", include_default_mcp_servers=False)
-    universe = _checklist_toolset_keys("cli")
+    config = {"platform_toolsets": {"feishu": ["hercules-feishu", "web", "terminal", "skills"]}}
+    current = _get_platform_tools(config, "feishu", include_default_mcp_servers=False)
+    universe = _checklist_toolset_keys("feishu")
 
-    # User unticks 'terminal' (configurable) — must still report as removed.
-    new_enabled = {t for t in current if t not in ("kanban", "terminal")}
+    # User unticks 'terminal' (configurable) — must still report as removed,
+    # even though the non-configurable feishu_doc also drops out of the
+    # checklist's view.
+    new_enabled = {t for t in current if t not in ("feishu_doc", "terminal")}
     assert ((current - new_enabled) & universe) == {"terminal"}
 
-    # User adds 'vision' (configurable) — must still report as added.
-    new_enabled2 = (current - {"kanban"}) | {"vision"}
-    assert ((new_enabled2 - current) & universe) == {"vision"}
+    # User adds 'video' (configurable, and not part of the feishu composite)
+    # — must still report as added.
+    assert "video" not in current
+    new_enabled2 = (current - {"feishu_doc"}) | {"video"}
+    assert ((new_enabled2 - current) & universe) == {"video"}
 
 
 def test_vision_picker_writes_provider_and_model(tmp_path, monkeypatch):
