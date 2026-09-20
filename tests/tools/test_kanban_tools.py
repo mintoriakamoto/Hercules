@@ -18,9 +18,12 @@ import pytest
 # Gating
 # ---------------------------------------------------------------------------
 
-def test_kanban_tools_hidden_without_env_var(monkeypatch, tmp_path):
-    """Normal `hercules chat` sessions (no HERCULES_KANBAN_TASK) must have
-    zero kanban_* tools in their schema."""
+def test_kanban_tools_present_by_default(monkeypatch, tmp_path):
+    """Kanban is a default-on toolset, so a normal `hercules chat` has it.
+
+    The orchestrator surface (kanban_list / kanban_unblock) comes with it —
+    those are hidden from *workers*, not from ordinary sessions.
+    """
     monkeypatch.delenv("HERCULES_KANBAN_TASK", raising=False)
     home = tmp_path / ".hercules"
     home.mkdir()
@@ -34,8 +37,35 @@ def test_kanban_tools_hidden_without_env_var(monkeypatch, tmp_path):
     schema = registry.get_definitions(set(resolve_toolset("hercules-cli")), quiet=True)
     names = {s["function"].get("name") for s in schema if "function" in s}
     kanban = {n for n in names if n and n.startswith("kanban_")}
+    assert "kanban_show" in kanban
+    assert "kanban_list" in kanban
+
+
+def test_kanban_tools_hidden_when_toolset_unticked(monkeypatch, tmp_path):
+    """Unticking kanban in `hercules tools` removes it from the schema.
+
+    ``hercules tools`` saves under ``platform_toolsets[<platform>]``; the gate
+    reads that same resolver, so the checkbox is what turns the surface off.
+    """
+    monkeypatch.delenv("HERCULES_KANBAN_TASK", raising=False)
+    monkeypatch.delenv("HERCULES_PLATFORM", raising=False)
+    home = tmp_path / ".hercules"
+    home.mkdir()
+    (home / "config.yaml").write_text(
+        "platform_toolsets:\n  cli:\n    - web\n    - terminal\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("HERCULES_HOME", str(home))
+
+    import tools.kanban_tools  # ensure registered
+    from tools.registry import invalidate_check_fn_cache, registry
+    from toolsets import resolve_toolset
+
+    invalidate_check_fn_cache()
+    schema = registry.get_definitions(set(resolve_toolset("hercules-cli")), quiet=True)
+    names = {s["function"].get("name") for s in schema if "function" in s}
+    kanban = {n for n in names if n and n.startswith("kanban_")}
     assert kanban == set(), (
-        f"kanban tools leaked into normal chat schema: {kanban}"
+        f"kanban tools survived an explicit opt-out: {kanban}"
     )
 
 
