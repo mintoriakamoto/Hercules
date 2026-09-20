@@ -1936,8 +1936,8 @@ def build_context_files_prompt(
 
     Priority (first found wins — only ONE project context type is loaded):
       1. .hercules.md / HERCULES.md  (walk to git root)
-      2. AGENTS.md / agents.md   (cwd only)
-      3. CLAUDE.md / claude.md   (cwd only)
+      2. CLAUDE.md / claude.md   (cwd only) — agent-facing instructions
+      3. AGENTS.md / agents.md   (cwd only) — developer guide (loaded only if CLAUDE.md absent)
       4. .cursorrules / .cursor/rules/*.mdc  (cwd only)
 
     SOUL.md from HERCULES_HOME is independent and always included when present.
@@ -1957,10 +1957,11 @@ def build_context_files_prompt(
     sections = []
 
     # Priority-based project context: first match wins
+    # CLAUDE.md is agent-facing instructions; AGENTS.md is developer documentation
     project_context = (
         _load_hercules_md(cwd_path, context_length)
-        or _load_agents_md(cwd_path, context_length)
         or _load_claude_md(cwd_path, context_length)
+        or _load_agents_md(cwd_path, context_length)
         or _load_cursorrules(cwd_path, context_length)
     )
     if project_context:
