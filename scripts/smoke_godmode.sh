@@ -11,11 +11,12 @@ fail=0
 echo "== repo $REPO_ROOT"
 echo "== in-tree model providers (discovered)"
 count=0
-while IFS= read -r p; do
+for p in plugins/model-providers/*/__init__.py; do
+  [[ -f "$p" ]] || continue
   name="$(basename "$(dirname "$p")")"
   echo "OK $name"
   count=$((count + 1))
-done < <(find plugins/model-providers -mindepth 2 -maxdepth 2 -name '__init__.py' | sort)
+done
 if [[ "$count" -lt 20 ]]; then echo "FAIL expected >=20 providers, got $count"; fail=1; fi
 echo "provider_count=$count"
 
@@ -25,8 +26,8 @@ for p in hercules_cli/default_soul.py hercules_cli/runtime_provider.py hercules_
 done
 
 echo "== syntax"
-if python3 -m py_compile hercules_cli/default_soul.py 2>/dev/null; then echo "OK py_compile default_soul"; else echo "FAIL py_compile default_soul"; fail=1; fi
-if python3 - <<'PY'
+if python3 -m py_compile hercules_cli/default_soul.py; then echo "OK py_compile default_soul"; else echo "FAIL py_compile default_soul"; fail=1; fi
+python3 - <<'PY' || fail=1
 import ast, pathlib, sys
 bad=[]
 for p in [
@@ -45,7 +46,6 @@ if bad:
     sys.exit(1)
 print('OK ast providers + routers')
 PY
-then :; else fail=1; fi
 
 echo "== provider keys (warn only — live calls need at least one)"
 for ev in OPENROUTER_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY ANTHROPIC_TOKEN GEMINI_API_KEY GOOGLE_API_KEY HUGGINGFACE_API_KEY DEEPSEEK_API_KEY XAI_API_KEY; do
