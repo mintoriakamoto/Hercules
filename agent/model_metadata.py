@@ -2284,14 +2284,32 @@ def get_model_context_length(
     if effective_provider == "openrouter":
         metadata = fetch_model_metadata()
         entry = metadata.get(model)
-        if entry:
-            or_ctx = entry.get("context_length")
+
+        # When multiple model variants exist (e.g., undated vs dated/larger versions),
+        # prefer the one with the largest context window. This handles cases like:
+        #   - "nvidia/nemotron-3-ultra-550b-a55b" (262K) vs dated version (1M)
+        # where the undated version is stale but appears first in exact lookup.
+        model_bare = model.split("/")[-1] if "/" in model else model
+        best_entry = entry
+        best_ctx = entry.get("context_length") if entry else 0
+
+        for key, val in metadata.items():
+            key_bare = key.split("/")[-1] if "/" in key else key
+            # Match base model name, allowing for date suffixes and variants
+            if (key_bare == model_bare or
+                key_bare.startswith(model_bare + "-") or
+                key_bare.startswith(model_bare + ":")):
+                ctx = val.get("context_length")
+                if isinstance(ctx, int) and ctx > (best_ctx or 0):
+                    # Prefer larger context — newer/better variants typically have it
+                    best_entry = val
+                    best_ctx = ctx
+
+        if best_entry and isinstance(best_ctx, int) and best_ctx > 0:
             # Guard against the known OpenRouter Kimi-family 32k underreport
             # (same class the hardcoded overrides exist to mitigate).
-            if isinstance(or_ctx, int) and or_ctx > 0 and not (
-                or_ctx == 32768 and _model_name_suggests_kimi(model)
-            ):
-                return or_ctx
+            if not (best_ctx == 32768 and _model_name_suggests_kimi(model)):
+                return best_ctx
 
     if effective_provider:
         from agent.models_dev import lookup_models_dev_context
