@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
-"""
-Hercules Agent CLI launcher.
-
-This wrapper should behave like the installed `hercules` command, including
-subcommands such as `gateway`, `cron`, and `doctor`.
-"""
+"""Hercules Agent CLI launcher — War Room verbs + stock Hercules."""
 
 if __name__ == "__main__":
-    from hercules_cli.main import main
-    main()
+    from hercules_cli.entry import main
+    raise SystemExit(main())
