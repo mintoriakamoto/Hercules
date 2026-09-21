@@ -444,7 +444,7 @@ def _mac_audio_device_index(device_name: str) -> str:
     return "0"
 
 
-def run_bot() -> int:  # noqa: C901 — orchestration, explicit branches
+def run_bot() -> int:
     url = os.environ.get("HERCULES_MEET_URL", "").strip()
     out_dir_env = os.environ.get("HERCULES_MEET_OUT_DIR", "").strip()
     headed = os.environ.get("HERCULES_MEET_HEADED", "").lower() in {"1", "true", "yes"}

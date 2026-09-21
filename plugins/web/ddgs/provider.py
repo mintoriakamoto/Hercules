@@ -133,7 +133,7 @@ class DDGSWebSearchProvider(WebSearchProvider):
                         "or switch to a different search provider."
                     ),
                 }
-        except Exception as exc:  # noqa: BLE001 — ddgs raises its own exceptions
+        except Exception as exc:
             logger.warning("DDGS search error: %s", exc)
             return {"success": False, "error": f"DuckDuckGo search failed: {exc}"}
         finally:

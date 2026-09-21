@@ -174,7 +174,7 @@ def _resolve(configured: Optional[str], *, capability: str) -> Optional[WebSearc
         """Wrap ``is_available()`` so a buggy provider doesn't kill resolution."""
         try:
             return bool(p.is_available())
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("provider %s.is_available() raised %s", p.name, exc)
             return False
 
@@ -273,7 +273,7 @@ def _disabled_web_plugin_for(configured: Optional[str] = None, *, capability: Op
             vendor = key.split("/", 1)[1]
             if _norm(vendor) == want:
                 return key
-    except Exception as exc:  # noqa: BLE001 — diagnostics are best-effort
+    except Exception as exc:
         logger.debug("disabled-web-plugin lookup failed: %s", exc)
     return None
 

@@ -25,7 +25,6 @@ ABC method-name change.
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Dict, List
 
 from agent.web_search_provider import WebSearchProvider
@@ -66,7 +65,7 @@ def _get_exa_client() -> Any:
         _lazy_ensure("search.exa", prompt=False)
     except ImportError:
         pass
-    except Exception as exc:  # noqa: BLE001 — lazy_deps surfaces install hints
+    except Exception as exc:
         raise ImportError(str(exc))
 
     from exa_py import Exa  # noqa: WPS433 — deliberately lazy
@@ -150,7 +149,7 @@ class ExaWebSearchProvider(WebSearchProvider):
             return {"success": False, "error": str(exc)}
         except ImportError as exc:
             return {"success": False, "error": f"Exa SDK not installed: {exc}"}
-        except Exception as exc:  # noqa: BLE001 — surface as failure
+        except Exception as exc:
             logger.warning("Exa search error: %s", exc)
             return {"success": False, "error": f"Exa search failed: {exc}"}
 
@@ -194,7 +193,7 @@ class ExaWebSearchProvider(WebSearchProvider):
                 {"url": u, "title": "", "content": "", "error": f"Exa SDK not installed: {exc}"}
                 for u in urls
             ]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("Exa extract error: %s", exc)
             return [
                 {"url": u, "title": "", "content": "", "error": f"Exa extract failed: {exc}"}
