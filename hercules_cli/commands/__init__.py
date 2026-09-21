@@ -42,11 +42,13 @@ gateway_help_lines = _legacy_commands.gateway_help_lines
 COMMANDS = _legacy_commands.COMMANDS
 COMMANDS_BY_CATEGORY = _legacy_commands.COMMANDS_BY_CATEGORY
 COMMAND_REGISTRY = _legacy_commands.COMMAND_REGISTRY
+SUBCOMMANDS = _legacy_commands.SUBCOMMANDS
 ACTIVE_SESSION_BYPASS_COMMANDS = _legacy_commands.ACTIVE_SESSION_BYPASS_COMMANDS
 should_bypass_active_session = _legacy_commands.should_bypass_active_session
 telegram_menu_commands = _legacy_commands.telegram_menu_commands
 telegram_menu_max_commands = _legacy_commands.telegram_menu_max_commands
 SlashCommandCompleter = _legacy_commands.SlashCommandCompleter
+SlashCommandAutoSuggest = _legacy_commands.SlashCommandAutoSuggest
 discord_skill_commands_by_category = _legacy_commands.discord_skill_commands_by_category
 slack_native_slashes = _legacy_commands.slack_native_slashes
 slack_subcommand_map = _legacy_commands.slack_subcommand_map
@@ -72,11 +74,13 @@ __all__ = [
     "COMMANDS",
     "COMMANDS_BY_CATEGORY",
     "COMMAND_REGISTRY",
+    "SUBCOMMANDS",
     "ACTIVE_SESSION_BYPASS_COMMANDS",
     "should_bypass_active_session",
     "telegram_menu_commands",
     "telegram_menu_max_commands",
     "SlashCommandCompleter",
+    "SlashCommandAutoSuggest",
     "discord_skill_commands_by_category",
     "slack_native_slashes",
     "slack_subcommand_map",
