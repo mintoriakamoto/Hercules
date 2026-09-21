@@ -197,22 +197,33 @@ def _read_configured_video_model() -> Optional[str]:
 
 
 def check_video_generation_requirements() -> bool:
-    """Return True when at least one registered provider reports available.
+    """Return True when at least one registered provider reports available AND configured.
 
     Triggers plugin discovery (idempotent) so user-installed plugins are
-    visible to the toolset gate.
+    visible to the toolset gate. Returns False if no provider is configured
+    to prevent the tool from appearing with no usable backend.
     """
     try:
-        from agent.video_gen_registry import list_providers
+        from agent.video_gen_registry import list_providers, get_active_provider
         from hercules_cli.plugins import _ensure_plugins_discovered
 
         _ensure_plugins_discovered()
-        for provider in list_providers():
-            try:
-                if provider.is_available():
-                    return True
-            except Exception:
-                continue
+
+        # First check: is a provider configured?
+        configured = _read_configured_video_provider()
+        if not configured:
+            return False
+
+        # Second check: is the configured provider actually available?
+        active = get_active_provider()
+        if active is None:
+            return False
+
+        # Third check: does it report available?
+        try:
+            return active.is_available()
+        except Exception:
+            return False
     except Exception:
         pass
     return False
