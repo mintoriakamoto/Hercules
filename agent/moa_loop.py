@@ -811,6 +811,30 @@ class MoAChatCompletions:
         # ("closed") and "moa", which have no pricing entry — without this the
         # aggregator's spend (often the bulk of the turn) is silently dropped
         # and the session cost reflects advisor fan-out only.
+        # Realign slots onto credentials this install actually has. A preset
+        # slot naming an unauthenticated provider does NOT fail cleanly:
+        # resolve_runtime_provider falls back to the provider that CAN
+        # authenticate while carrying the slot's model name through, so a
+        # ChatGPT-OAuth session dispatches "anthropic/claude-opus-4.8" at the
+        # Codex backend and every advisor — plus the acting aggregator — dies
+        # on "model is not supported when using Codex with a ChatGPT account".
+        # Aligning first degrades the fan-out to the model the session is
+        # really running instead of failing the turn. See agent/moa_slots.py.
+        try:
+            from agent.moa_slots import align_preset_slots
+
+            reference_models, aggregator, _slot_notes = align_preset_slots(
+                reference_models, aggregator
+            )
+            if _slot_notes:
+                self._emit(
+                    "moa.slots_realigned",
+                    notes=list(_slot_notes),
+                    preset=self.preset_name,
+                )
+        except Exception as exc:  # pragma: no cover - alignment must never break a turn
+            logger.debug("MoA slot alignment skipped: %s", exc)
+
         self.last_aggregator_slot = dict(aggregator) if aggregator else None
         # By default MoA does not cap reference or aggregator output: each model
         # uses its own maximum (max_tokens=None → call_llm omits the parameter,

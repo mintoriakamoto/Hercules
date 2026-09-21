@@ -128,7 +128,12 @@ def _is_kanban_worker_env_gate(item: dict) -> bool:
 def _doctor_tool_availability_detail(toolset: str) -> str:
     """Optional explanatory suffix for toolsets whose doctor status needs context."""
     if toolset == "kanban" and not os.environ.get("HERCULES_KANBAN_TASK"):
-        return "(runtime-gated; loaded only for dispatcher-spawned workers)"
+        # Two routes open these tools, not one — see
+        # ``tools/kanban_tools.py::_check_kanban_mode``. Naming only the
+        # dispatcher route told a user with an orchestrator profile that the
+        # toolset was unreachable for them, when enabling it in `hercules
+        # tools` is exactly how they get it.
+        return "(runtime-gated; loaded for dispatcher-spawned workers, or when the kanban toolset is enabled)"
     return ""
 
 

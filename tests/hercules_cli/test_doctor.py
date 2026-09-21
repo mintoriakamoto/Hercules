@@ -186,10 +186,21 @@ class TestDoctorToolAvailabilityOverrides:
         assert available == []
         assert unavailable == [kanban_entry]
 
-    def test_kanban_doctor_detail_explains_worker_gate(self, monkeypatch):
+    def test_kanban_doctor_detail_explains_both_gates(self, monkeypatch):
+        """Doctor must name the route the reader can actually take.
+
+        ``_check_kanban_mode`` opens the tools for a dispatcher-spawned worker
+        OR when the kanban toolset is enabled. Naming only the first told a
+        user with an orchestrator profile that the toolset was unreachable for
+        them, when ticking it in `hercules tools` is exactly how they get it.
+        """
         monkeypatch.delenv("HERCULES_KANBAN_TASK", raising=False)
 
-        assert doctor._doctor_tool_availability_detail("kanban") == "(runtime-gated; loaded only for dispatcher-spawned workers)"
+        detail = doctor._doctor_tool_availability_detail("kanban")
+        assert detail == (
+            "(runtime-gated; loaded for dispatcher-spawned workers, "
+            "or when the kanban toolset is enabled)"
+        )
 
 
 class TestHonchoDoctorConfigDetection:

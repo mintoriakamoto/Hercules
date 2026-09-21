@@ -2067,3 +2067,79 @@ class Test408RequestTimeout:
         assert result.retryable is True
         assert result.should_compress is False
 
+
+
+# ── Route/account model gating (Codex + ChatGPT account) ───────────────────
+
+class TestModelRouteGate:
+    """A model the current route/account cannot serve must fall back, not
+    compress.
+
+    A ChatGPT-OAuth (openai-codex) session whose auxiliary / MoA / fallback
+    config still names another vendor's model gets HTTP 400 with a ``detail``
+    body. Before this bucket existed the body never reached pattern matching
+    (Codex uses ``detail``, not ``error.message``), so the generic tail treated
+    a large session as a context overflow: compress, re-send the same rejected
+    model, "Cannot compress further" — with the prompt cache destroyed.
+    """
+
+    CODEX_GATE = (
+        "Error code: 400 - {'detail': \"The 'anthropic/claude-opus-4.8' model "
+        "is not supported when using Codex with a ChatGPT account.\"}"
+    )
+
+    def test_codex_account_gate_is_model_not_found(self):
+        err = MockAPIError(self.CODEX_GATE, status_code=400,
+                           body={"detail": "model is not supported when using Codex"})
+        result = classify_api_error(err, provider="openai-codex",
+                                    model="anthropic/claude-opus-4.8")
+        assert result.reason == FailoverReason.model_not_found
+        assert result.should_fallback is True
+        assert result.retryable is False
+        assert result.should_compress is False
+
+    def test_gate_on_a_large_session_does_not_route_to_compression(self):
+        # The exact misfire this bucket exists to prevent.
+        err = MockAPIError(self.CODEX_GATE, status_code=400,
+                           body={"detail": "model is not supported when using Codex"})
+        result = classify_api_error(
+            err,
+            provider="openai-codex",
+            model="anthropic/claude-opus-4.8",
+            approx_tokens=180_000,
+            context_length=272_000,
+            num_messages=200,
+        )
+        assert result.reason == FailoverReason.model_not_found
+        assert result.should_compress is False
+
+    def test_parameter_rejection_keeps_its_strip_and_retry_path(self):
+        # "'max_tokens' is not supported with this model" is a PARAMETER
+        # problem: same model, fixed request. It must stay a format_error.
+        err = MockAPIError(
+            "Unsupported parameter: 'max_tokens' is not supported with this "
+            "model. Use 'max_completion_tokens' instead.",
+            status_code=400,
+        )
+        result = classify_api_error(err, provider="openai-api", model="gpt-5.4")
+        assert result.reason == FailoverReason.format_error
+
+    def test_free_tier_model_gate_stays_billing(self):
+        err = MockAPIError(
+            "model_not_supported_on_free_tier: this model is not supported "
+            "on the free tier",
+            status_code=400,
+        )
+        result = classify_api_error(err, provider="openrouter", model="x")
+        assert result.reason == FailoverReason.billing
+
+    def test_detail_body_reaches_pattern_matching(self):
+        # str(error) carries no detail — only the body does.
+        err = MockAPIError(
+            "Error code: 400",
+            status_code=400,
+            body={"detail": "The 'glm-5.2' model is not supported when using "
+                            "Codex with a ChatGPT account."},
+        )
+        result = classify_api_error(err, provider="openai-codex", model="glm-5.2")
+        assert result.reason == FailoverReason.model_not_found

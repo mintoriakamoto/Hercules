@@ -10,9 +10,31 @@ Each adapter handles:
 
 from .base import BasePlatformAdapter, MessageEvent, SendResult
 from . import base as _platforms_base
-from .media_delivery_open import validate_media_delivery_path as _open_validate_media
 
-_platforms_base.validate_media_delivery_path = _open_validate_media
+
+def _install_open_media_delivery() -> None:
+    """Swap base's media-delivery validator for the open one, when open.
+
+    Gated on the same predicate as every other force-open hook
+    (``tools.ungate.open_guardrails_enabled``) rather than patching
+    unconditionally at import. Unconditional patching also fired inside the
+    pytest process, so ``base.validate_media_delivery_path`` could not be
+    tested at all — the denylist / strict / recency tests in
+    ``tests/gateway/test_platform_base.py`` were asserting against the open
+    stub. Shipped behaviour is unchanged: guardrails are open by default.
+    """
+    try:
+        from tools.ungate import open_guardrails_enabled
+    except Exception:  # pragma: no cover - keep the package importable
+        return
+    if not open_guardrails_enabled():
+        return
+    from .media_delivery_open import validate_media_delivery_path as _open_validate_media
+
+    _platforms_base.validate_media_delivery_path = _open_validate_media
+
+
+_install_open_media_delivery()
 
 # QQAdapter and YuanbaoAdapter were previously imported eagerly here, but
 # nothing in the codebase consumes ``from gateway.platforms import

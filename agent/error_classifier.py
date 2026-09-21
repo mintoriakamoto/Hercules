@@ -295,6 +295,60 @@ _MODEL_NOT_FOUND_PATTERNS = [
     "no endpoints found that support tool use",
 ]
 
+# Route/account model-gating patterns.
+#
+# The model name is valid, but the *current provider or account* is
+# structurally unable to serve it. The canonical case is a ChatGPT-OAuth
+# (openai-codex) session whose auxiliary/MoA/fallback configuration still
+# names a model from another vendor::
+#
+#   Error code: 400 - {"detail": "The 'claude-opus-4.8' model is not
+#    supported when using Codex with a ChatGPT account."}
+#
+# Without a dedicated bucket this 400 lands in the generic tail of
+# ``_classify_400``: the Codex body uses ``detail`` (not ``error.message``),
+# so the "generic body" heuristic fires and a large session is misrouted to
+# ``context_overflow`` — the loop compresses, re-sends the identical
+# rejected model, and ends in "Cannot compress further" having destroyed the
+# prompt cache. Classifying as ``model_not_found`` (non-retryable, fall back
+# to a different model) matches the only recovery that can work and mirrors
+# ``auxiliary_client._is_model_incompatible_error``, which already handles
+# this shape on the auxiliary path.
+_MODEL_ROUTE_GATE_PATTERNS = [
+    "is not supported when using",     # codex/ChatGPT-account model gating
+    "model is not supported",
+    "model_not_supported",
+    "does not support this model",
+    "not supported for this account",
+]
+
+# Billing/quota and parameter rejections that must NOT be claimed by the
+# route-gate bucket: free-tier gating belongs to ``billing`` and
+# "'max_tokens' is not supported with this model" belongs to the
+# request-validation (``format_error``) path, which strips the parameter and
+# retries on the SAME model. Stealing either would break their recovery.
+_MODEL_ROUTE_GATE_EXCLUSIONS = [
+    "parameter",
+    "credits",
+    "insufficient funds",
+    "billing",
+    "out of funds",
+    "balance_depleted",
+    "no usable credits",
+    "free tier",
+    "free-tier",
+    "model_not_supported_on_free_tier",
+    "quota",
+]
+
+
+def _is_model_route_gate(error_msg: str) -> bool:
+    """True when the route/account cannot serve the requested model."""
+    if any(kw in error_msg for kw in _MODEL_ROUTE_GATE_EXCLUSIONS):
+        return False
+    return any(p in error_msg for p in _MODEL_ROUTE_GATE_PATTERNS)
+
+
 # Request-validation patterns — the request is malformed and will fail
 # identically on every retry. Some OpenAI-compatible gateways (notably
 # codex.nekos.me) return these as 5xx instead of the standard 4xx, which
@@ -586,6 +640,16 @@ def classify_api_error(
                         pass
         if not _body_msg:
             _body_msg = str(body.get("message") or "").lower()
+        # Codex / FastAPI-style bodies carry the message under ``detail``
+        # ({"detail": "The 'X' model is not supported when using Codex with a
+        # ChatGPT account."}). Without this the body text never reaches the
+        # pattern matchers and the 400 falls through to the generic tail.
+        if not _body_msg:
+            _detail = body.get("detail")
+            if isinstance(_detail, str):
+                _body_msg = _detail.lower()
+            elif isinstance(_detail, dict):
+                _body_msg = str(_detail.get("message") or "").lower()
     # Combine all message sources for pattern matching
     parts = [_raw_msg]
     if _body_msg and _body_msg not in _raw_msg:
@@ -1183,6 +1247,19 @@ def _classify_400(
             should_fallback=True,
         )
 
+    # Route/account model gating (e.g. a Claude model requested on a
+    # ChatGPT-account Codex route). Checked BEFORE the context-overflow
+    # heuristics: the rejection is deterministic and compressing the
+    # conversation cannot make an unsupported model supported. Checked AFTER
+    # the request-validation block so a parameter rejection keeps its own
+    # strip-and-retry recovery.
+    if _is_model_route_gate(error_msg):
+        return result_fn(
+            FailoverReason.model_not_found,
+            retryable=False,
+            should_fallback=True,
+        )
+
     # Context overflow from 400
     if any(p in error_msg for p in _CONTEXT_OVERFLOW_PATTERNS):
         return result_fn(
@@ -1232,6 +1309,15 @@ def _classify_400(
         # Responses API (and some providers) use flat body: {"message": "..."}
         if not err_body_msg:
             err_body_msg = str(body.get("message") or "").strip().lower()
+        # ...and Codex/FastAPI-style bodies use {"detail": "..."}. Reading it
+        # keeps a specific rejection out of the "generic body" bucket, which
+        # would otherwise be misread as a context overflow on a large session.
+        if not err_body_msg:
+            _detail_body = body.get("detail")
+            if isinstance(_detail_body, str):
+                err_body_msg = _detail_body.strip().lower()
+            elif isinstance(_detail_body, dict):
+                err_body_msg = str(_detail_body.get("message") or "").strip().lower()
     is_generic = len(err_body_msg) < 30 or err_body_msg in {"error", ""}
     # Absolute token/message-count thresholds are only a proxy for smaller
     # context windows.  Large-context sessions can have many messages while
@@ -1422,6 +1508,15 @@ def _classify_by_message(
             FailoverReason.provider_policy_blocked,
             retryable=False,
             should_fallback=False,
+        )
+
+    # Route/account model gating without a usable status code (some SDKs
+    # raise these bare). Same recovery as model_not_found: fall back.
+    if _is_model_route_gate(error_msg):
+        return result_fn(
+            FailoverReason.model_not_found,
+            retryable=False,
+            should_fallback=True,
         )
 
     # Model not found patterns

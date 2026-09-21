@@ -79,6 +79,7 @@ CONFIGURABLE_TOOLSETS = [
     ("discord_admin",   "🛡️  Discord Server Admin",    "list channels/roles, pin, assign roles"),
     ("yuanbao",          "🤖 Yuanbao",                  "group info, member queries, DM"),
     ("computer_use",     "🖱️  Computer Use (macOS/Windows/Linux)", "background desktop control via cua-driver"),
+    ("kanban",          "📋 Kanban Multi-Agent Board",  "orchestrate work across agents: list, create, link, unblock tasks"),
 ]
 
 
@@ -207,12 +208,20 @@ def _checklist_toolset_keys(platform: str) -> Set[str]:
     selection can therefore only ever be a subset of this universe.
 
     Non-configurable toolsets that ``_get_platform_tools`` resolves at read
-    time — ``kanban`` and other check_fn-gated toolsets, recovered platform
-    composites, MCP server names — are NOT in this set because the checklist
-    never shows them. Use this to scope the added/removed diff the UI prints,
-    so ``hercules tools`` never claims to add or remove a toolset the user was
-    never given a checkbox for. The underlying config is unaffected — those
-    entries are preserved by ``_save_platform_tools`` regardless.
+    time — recovered platform composites, MCP server names — are NOT in this
+    set because the checklist never shows them. Use this to scope the
+    added/removed diff the UI prints, so ``hercules tools`` never claims to
+    add or remove a toolset the user was never given a checkbox for. The
+    underlying config is unaffected — those entries are preserved by
+    ``_save_platform_tools`` regardless.
+
+    ``kanban`` used to be in that category and is no longer: it is a normal
+    configurable toolset now, so it IS in this set and its add/remove is
+    reported like any other. It stays runtime-gated on top of the config —
+    ``tools/kanban_tools.py::_check_kanban_mode`` still decides whether the
+    tools actually load — but enabling it is what the gate reads, so the
+    checkbox has to exist for the documented orchestrator route to be
+    reachable at all.
     """
     return {
         ts_key
@@ -3677,10 +3686,10 @@ def tools_command(args=None, first_install: bool = False, config: Optional[dict]
 
             # Only diff against toolsets the checklist actually offered. The
             # resolved ``current_enabled`` can include non-configurable toolsets
-            # (e.g. ``kanban``, recovered platform composites) the user was
+            # (recovered platform composites, MCP server names) the user was
             # never shown a checkbox for; without this scope the summary would
-            # print spurious ``- kanban`` removals even though the config keeps
-            # them. See _checklist_toolset_keys.
+            # print spurious removals even though the config keeps them.
+            # See _checklist_toolset_keys.
             _diff_universe = _checklist_toolset_keys(pkey)
             added = (new_enabled - current_enabled) & _diff_universe
             removed = (current_enabled - new_enabled) & _diff_universe
@@ -3783,8 +3792,9 @@ def tools_command(args=None, first_install: bool = False, config: Optional[dict]
                 for pk in platform_keys:
                     prev = _get_platform_tools(config, pk, include_default_mcp_servers=False)
                     # Scope the printed diff to the checklist's universe (see
-                    # _checklist_toolset_keys) so non-configurable toolsets like
-                    # ``kanban`` aren't reported as added/removed.
+                    # _checklist_toolset_keys) so non-configurable toolsets
+                    # (recovered composites, MCP server names) aren't reported
+                    # as added/removed.
                     _diff_universe = _checklist_toolset_keys(pk)
                     added = (new_enabled - prev) & _diff_universe
                     removed = (prev - new_enabled) & _diff_universe
@@ -3834,8 +3844,9 @@ def tools_command(args=None, first_install: bool = False, config: Optional[dict]
 
         if new_enabled != current_enabled:
             # Scope the printed diff to the checklist's universe (see
-            # _checklist_toolset_keys) so non-configurable toolsets like
-            # ``kanban`` aren't reported as added/removed.
+            # _checklist_toolset_keys) so non-configurable toolsets
+            # (recovered composites, MCP server names) aren't reported as
+            # added/removed.
             _diff_universe = _checklist_toolset_keys(pkey)
             added = (new_enabled - current_enabled) & _diff_universe
             removed = (current_enabled - new_enabled) & _diff_universe

@@ -49,34 +49,76 @@ KANBAN_LIST_DEFAULT_LIMIT = 50
 KANBAN_LIST_MAX_LIMIT = 200
 
 
-def _profile_has_kanban_toolset() -> bool:
-    # Uses load_config() which has mtime-based caching, so this adds
-    # negligible overhead. The check_fn results are further TTL-cached
-    # (~30s) by the tool registry.
+def _kanban_toolset_enabled() -> bool:
+    """Whether the kanban toolset is enabled for this session.
+
+    Resolved through ``_get_platform_tools``, the same reader the rest of the
+    tool surface uses, rather than the top-level ``toolsets`` key. That key is
+    NOT what enabling the toolset writes: ``hercules tools`` saves selections
+    under ``platform_toolsets[<platform>]``, so reading ``toolsets`` meant
+    ticking the kanban checkbox left this gate shut and unticking it never
+    closed one. The legacy top-level list is still honoured for hand-written
+    configs and profiles that set it.
+
+    Kanban is on by default (it is not in ``_DEFAULT_OFF_TOOLSETS``), so the
+    resolver returns it unless the session's saved toolset list leaves it out.
+
+    Uses load_config() which has mtime-based caching, so this adds negligible
+    overhead. The check_fn results are further TTL-cached (~30s) by the tool
+    registry.
+    """
     try:
         from hercules_cli.config import load_config
+
         cfg = load_config()
-        toolsets = cfg.get("toolsets", [])
-        return "kanban" in toolsets
+        # Legacy / hand-written escape hatch: a top-level `toolsets` entry
+        # enables kanban regardless of platform scoping.
+        if "kanban" in (cfg.get("toolsets") or []):
+            return True
+
+        from hercules_cli.tools_config import _get_platform_tools
+
+        return "kanban" in _get_platform_tools(
+            cfg, _resolve_session_platform(), include_default_mcp_servers=False
+        )
     except Exception:
         return False
+
+
+def _resolve_session_platform() -> str:
+    """Platform scope for toolset resolution; ``cli`` when none is active.
+
+    Mirrors the resolution order used elsewhere for platform-scoped config
+    (see ``agent/skill_commands.py::_resolve_skill_commands_platform``): the
+    ``HERCULES_PLATFORM`` env var, then the gateway session context. A plain
+    ``hercules chat`` has neither and is the ``cli`` platform.
+    """
+    try:
+        from gateway.session_context import get_session_env
+
+        resolved = (
+            os.getenv("HERCULES_PLATFORM")
+            or get_session_env("HERCULES_SESSION_PLATFORM")
+        )
+    except Exception:
+        resolved = os.getenv("HERCULES_PLATFORM")
+    return (resolved or "cli").strip() or "cli"
 
 
 def _check_kanban_mode() -> bool:
     """Task-lifecycle tools are available when:
 
     1. ``HERCULES_KANBAN_TASK`` is set (dispatcher-spawned worker), OR
-    2. The current profile has ``kanban`` in its toolsets config
-       (orchestrator profiles like techlead that route work via Kanban).
+    2. The kanban toolset is enabled for this session — which it is by
+       default; see :func:`_kanban_toolset_enabled`.
 
-    Humans running ``hercules chat`` without the kanban toolset see zero
-    kanban tools. Workers spawned by the kanban dispatcher (gateway-
-    embedded by default) and orchestrator profiles with the kanban
-    toolset enabled see the Kanban lifecycle tool surface.
+    Kanban is a default-on toolset, so a normal ``hercules chat`` sees the
+    lifecycle surface. Unticking it in ``hercules tools`` turns it off for
+    that platform.
     """
     if os.environ.get("HERCULES_KANBAN_TASK"):
         return True
-    return _profile_has_kanban_toolset()
+    return _kanban_toolset_enabled()
 
 
 def _check_kanban_orchestrator_mode() -> bool:
@@ -85,12 +127,12 @@ def _check_kanban_orchestrator_mode() -> bool:
 
     Dispatcher-spawned workers should close their own task via the
     lifecycle tools (complete/block/heartbeat), not enumerate or unblock
-    board state. Profiles that explicitly opt into the kanban toolset
-    and are NOT scoped to a single task are the orchestrator surface.
+    board state. Any session with the kanban toolset enabled that is NOT
+    scoped to a single task is the orchestrator surface.
     """
     if os.environ.get("HERCULES_KANBAN_TASK"):
         return False
-    return _profile_has_kanban_toolset()
+    return _kanban_toolset_enabled()
 
 
 # ---------------------------------------------------------------------------

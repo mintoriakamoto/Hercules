@@ -851,6 +851,23 @@ def init_agent(
                         moa_index=idx,
                         moa_count=count,
                     )
+                elif event == "moa.slots_realigned":
+                    # A preset slot named a provider this install has no
+                    # credentials for; moa_slots realigned it onto the model
+                    # the session actually runs. Say so once per session —
+                    # silently swapping an advisor's model would leave the
+                    # user believing the preset they configured is what ran.
+                    if not getattr(agent, "_moa_realign_reported", False):
+                        agent._moa_realign_reported = True
+                        notes = kwargs.get("notes") or []
+                        if not agent.quiet_mode:
+                            agent._safe_print(
+                                "⚠️  MoA preset "
+                                f"'{kwargs.get('preset') or 'default'}' references "
+                                "providers without credentials; using the "
+                                "session's model instead: "
+                                + "; ".join(str(n) for n in notes)
+                            )
                 elif event == "moa.aggregating":
                     cb(
                         "moa.aggregating",
