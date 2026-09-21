@@ -24,6 +24,7 @@ DEFAULT = {
     "python": True,
     "frontend": True,
     "docker_meta": True,
+    "shell": True,
     "site": True,
     "scan": True,
     "deps": True,
@@ -31,11 +32,12 @@ DEFAULT = {
 }
 
 
-def _lanes(python=False, frontend=False, site=False, scan=False, deps=False, mcp_catalog=False, docker_meta=False) -> dict[str, bool]:
+def _lanes(python=False, frontend=False, site=False, scan=False, deps=False, mcp_catalog=False, docker_meta=False, shell=False) -> dict[str, bool]:
     return {
         "python": python,
         "frontend": frontend,
         "docker_meta": docker_meta,
+        "shell": shell,
         "site": site,
         "scan": scan,
         "deps": deps,
@@ -57,6 +59,17 @@ CASES = {
     # skill edit must still run Python.
     "skill md → python + site": (["skills/github/SKILL.md"], _lanes(python=True, site=True)),
     "dockerfile → docker meta": (["Dockerfile"], _lanes(docker_meta=True)),
+    # The root installer belonged to no lane, so nothing ever parsed it and an
+    # unterminated here-document reached main. Any .sh anywhere runs the lint.
+    "root installer → shell": (
+        ["install_hercules.sh"],
+        _lanes(python=True, shell=True),
+    ),
+    "docker script → docker meta + shell": (
+        ["docker/entrypoint.sh"],
+        _lanes(docker_meta=True, shell=True),
+    ),
+    "nested script → shell": (["scripts/run_tests.sh"], _lanes(python=True, shell=True)),
     # Unknown top-level file keeps Python on rather than risk a silent skip.
     "unknown toplevel → python": (["Makefile"], _lanes(python=True)),
     "mixed docs+python → python": (["README.md", "agent/x.py"], _lanes(python=True, scan=True)),

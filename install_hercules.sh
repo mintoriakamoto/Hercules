@@ -33,17 +33,42 @@ NC='\033[0m'
 # Parse command-line arguments
 SKIP_GPU=false
 DEV_MODE=false
+DRY_RUN=false
+
+usage() {
+    cat <<'USAGE'
+Usage: sudo ./install_hercules.sh [options]
+
+  --no-gpu     Skip GPU driver and CUDA installation
+  --dev        Editable install, including the dev extra
+  --dry-run    Resolve and print the install plan, then exit having changed
+               nothing. Needs no root and asks no questions.
+  -h, --help   Show this message
+USAGE
+}
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         --no-gpu) SKIP_GPU=true; shift ;;
         --dev) DEV_MODE=true; shift ;;
-        *) shift ;;
+        --dry-run) DRY_RUN=true; shift ;;
+        -h|--help) usage; exit 0 ;;
+        # An unknown flag used to be swallowed by a bare `shift`, so a typo'd
+        # `--no-gpus` installed drivers anyway, and `--dry-run` before this
+        # existed ran the real install. Fail loudly instead.
+        *) echo "Unknown option: $1" >&2; echo "" >&2; usage >&2; exit 2 ;;
     esac
 done
 
 # Installation directories
 INSTALL_DIR="/opt/hercules"
-HERCULES_HOME="${HERCULES_HOME:-$HOME/.hercules}"
+# The agent's DATA home, distinct from the install dir. Default deliberately
+# under $INSTALL_DIR rather than $HOME/.hercules: the gateway runs as the
+# `hercules` system user, and $INSTALL_DIR is the tree this installer chowns to
+# it, so it is the one place the daemon is certain to own and be able to write.
+# It is also exactly that user's own ~/.hercules, so the app's built-in default
+# agrees with the unit even if HERCULES_HOME is never exported.
+HERCULES_HOME="${HERCULES_HOME:-$INSTALL_DIR/.hercules}"
 VENV_DIR="$INSTALL_DIR/venv"
 SOURCE_DIR="$INSTALL_DIR/src"
 
@@ -66,30 +91,41 @@ log_warn() {
 echo ""
 echo -e "${CYAN}=========================================="
 echo "  Hercules Agent - Complete Installation"
-echo "==========================================${NC}"
+echo -e "==========================================${NC}"
 echo ""
 
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
+# Check if running as root. A dry run only reads, so it must not demand sudo --
+# the point of it is inspecting the plan before granting root.
+if [ "$DRY_RUN" = false ] && [ "$EUID" -ne 0 ]; then
     log_error "This script requires root privileges"
     echo "Run with: sudo ./install_hercules.sh"
     exit 1
 fi
 
 # ============================================================================
-# [1/8] System Update
+# [0/8] Selections and install plan
 # ============================================================================
+# Everything the install needs to ask is asked here, once, before the first
+# mutating command. The prompts used to be interleaved with the work -- the
+# Python extras question came after apt, the git clone and venv creation -- so
+# an unattended run blocked twenty minutes in, and nothing could state up front
+# what was about to happen to the machine.
 
-log_step "[1/8] Updating system packages..."
-apt update
-apt upgrade -y
-log_success "System packages updated"
-
-# ============================================================================
-# [2/8] Install System Dependencies
-# ============================================================================
-
-log_step "[2/8] Installing system dependencies..."
+# Ask a yes/no question; 0 = yes, 1 = no.
+#
+# Auto-answers "no" when there is nobody to ask (no TTY on stdin, or --dry-run).
+# That case has to be explicit: a bare `read` hitting EOF returns non-zero, and
+# under `set -e` that aborted the entire install, which is why this script could
+# not be exercised in CI at all.
+ask_yes_no() {
+    local reply=""
+    if [ "$DRY_RUN" = true ] || [ ! -t 0 ]; then
+        echo "  $1 [y/N]: N   (non-interactive)"
+        return 1
+    fi
+    read -p "  $1 [y/N]: " -r reply || reply=""
+    [[ $reply =~ ^[Yy]$ ]]
+}
 
 # Core build and development tools (always required)
 SYSTEM_DEPS=(
@@ -131,33 +167,89 @@ UTILITY_DEPS=(
     curl wget
 )
 
-# Build initial required set
+# ---- system packages -------------------------------------------------------
 INSTALL_DEPS=("${SYSTEM_DEPS[@]}" "${AUDIO_VIDEO_DEPS[@]}" "${UTILITY_DEPS[@]}")
 
-# Interactive optional package selection
 echo ""
-echo -e "${YELLOW}Optional System Packages:${NC}"
+echo -e "${YELLOW}Optional system packages:${NC}"
 
-read -p "Install optional Penetration Testing tools? (nmap, metasploit, wireshark) [y/N]: " -r PENTEST_CHOICE
-if [[ $PENTEST_CHOICE =~ ^[Yy]$ ]]; then
+if ask_yes_no "Penetration testing tools? (nmap, metasploit, wireshark)"; then
     INSTALL_DEPS+=("${PENTEST_DEPS[@]}")
-    log_step "Pentest tools will be installed"
 else
-    log_step "Skipping pentest tools (can be installed later with: apt install nmap metasploit-framework)"
+    log_step "Skipping pentest tools (later: apt install nmap wireshark)"
 fi
 
-read -p "Install Database servers? (PostgreSQL, Redis) [y/N]: " -r DATABASE_CHOICE
-if [[ $DATABASE_CHOICE =~ ^[Yy]$ ]]; then
+if ask_yes_no "Database servers? (PostgreSQL, Redis)"; then
     INSTALL_DEPS+=("${DATABASE_DEPS[@]}")
-    log_step "Database servers will be installed"
 else
-    log_step "Skipping database servers (can be installed later or use cloud-hosted)"
+    log_step "Skipping database servers (later, or use cloud-hosted)"
 fi
+
+# ---- Python extras ---------------------------------------------------------
+# Names here must match [project.optional-dependencies] in pyproject.toml.
+EXTRAS=()
+[ "$DEV_MODE" = true ] && EXTRAS+=(dev)
 
 echo ""
-log_step "Installing selected system dependencies..."
+echo -e "${YELLOW}Optional Python features:${NC}"
+
+ask_yes_no "Machine learning? (huggingface-hub, transformers, torch)" && EXTRAS+=(ml)
+ask_yes_no "Computer vision? (opencv-python)"                         && EXTRAS+=(vision)
+ask_yes_no "Audio / TTS? (pyttsx3, pyaudio)"                          && EXTRAS+=(audio)
+ask_yes_no "Data science? (pandas, scipy, scikit-learn)"              && EXTRAS+=(data)
+ask_yes_no "Web framework? (Flask, gunicorn)"                         && EXTRAS+=(web-server)
+ask_yes_no "Messaging platforms? (Telegram, Discord, Slack)"          && EXTRAS+=(messaging)
+
+# Build the pip requirement. Only *extra names* belong inside the brackets:
+# this previously accumulated onto the string "hercules-agent", producing
+# `/opt/hercules/src[hercules-agent[ml]]` -- nested brackets around a package
+# name in the extras slot, which pip rejects outright. With every prompt
+# declined it was still `src[hercules-agent]`, and `hercules-agent` is not an
+# extra, so no combination of answers could install.
+PIP_SPEC="$SOURCE_DIR"
+EXTRAS_DESC=""
+if [ ${#EXTRAS[@]} -gt 0 ]; then
+    EXTRAS_JOINED="$(IFS=,; printf '%s' "${EXTRAS[*]}")"
+    PIP_SPEC="${SOURCE_DIR}[${EXTRAS_JOINED}]"
+    EXTRAS_DESC=" with extras: ${EXTRAS_JOINED}"
+fi
+
+# ---- the plan --------------------------------------------------------------
+echo ""
+echo -e "${CYAN}Install plan:${NC}"
+echo "  source        : $SOURCE_DIR (from github.com/mintoriakamoto/Hercules)"
+echo "  virtualenv    : $VENV_DIR (Python 3.11)"
+echo "  agent home    : $HERCULES_HOME"
+echo "  pip spec      : $PIP_SPEC$([ "$DEV_MODE" = true ] && echo "  (editable)")"
+echo "  apt packages  : ${#INSTALL_DEPS[@]}"
+echo "  GPU / CUDA    : $([ "$SKIP_GPU" = true ] && echo "skipped (--no-gpu)" || echo "installed if an NVIDIA GPU is detected")"
+echo "  systemd unit  : /etc/systemd/system/hercules-gateway.service"
+
+if [ "$DRY_RUN" = true ]; then
+    echo ""
+    log_success "Dry run complete — nothing on this machine was changed."
+    echo "  Re-run without --dry-run (as root) to install."
+    exit 0
+fi
+
+# ============================================================================
+# [1/8] System Update
+# ============================================================================
+
+log_step "[1/8] Updating system packages..."
+apt update
+apt upgrade -y
+log_success "System packages updated"
+
+# ============================================================================
+# [2/8] Install System Dependencies
+# ============================================================================
+
+log_step "[2/8] Installing system dependencies..."
+
+# The package set and the optional groups were resolved in [0/8].
 apt install -y "${INSTALL_DEPS[@]}"
-log_success "System dependencies installed ($(echo ${#INSTALL_DEPS[@]} | wc -c) packages)"
+log_success "System dependencies installed (${#INSTALL_DEPS[@]} packages)"
 
 # ============================================================================
 # [3/8] GPU Drivers (Optional)
@@ -270,71 +362,14 @@ if [ ! -f "$SOURCE_DIR/pyproject.toml" ]; then
     exit 1
 fi
 
-# Determine base installation mode
-INSTALL_EXTRAS="hercules-agent"
+# The extras were chosen in [0/8]; PIP_SPEC is already resolved.
+log_step "Installing Hercules from $PIP_SPEC"
 if [ "$DEV_MODE" = true ]; then
-    INSTALL_EXTRAS="hercules-agent[dev]"
-    log_step "Installing in development mode..."
+    pip install -e "$PIP_SPEC"
 else
-    log_step "Installing base Hercules framework..."
+    pip install "$PIP_SPEC"
 fi
-
-# Interactive feature selection for optional extras
-echo ""
-echo -e "${YELLOW}Optional Feature Selection:${NC}"
-echo "The following features can be added. Select which you want:"
-echo ""
-
-# ML/AI features
-read -p "Install Machine Learning support? (huggingface-hub, transformers, torch) [y/N]: " -r ML_CHOICE
-if [[ $ML_CHOICE =~ ^[Yy]$ ]]; then
-    INSTALL_EXTRAS="$INSTALL_EXTRAS[ml]"
-    log_step "ML support will be installed"
-fi
-
-# Computer vision features
-read -p "Install Computer Vision support? (opencv-python) [y/N]: " -r VISION_CHOICE
-if [[ $VISION_CHOICE =~ ^[Yy]$ ]]; then
-    INSTALL_EXTRAS="$INSTALL_EXTRAS[vision]"
-    log_step "Vision support will be installed"
-fi
-
-# Audio/TTS features
-read -p "Install Audio/TTS support? (pyttsx3, pyaudio) [y/N]: " -r AUDIO_CHOICE
-if [[ $AUDIO_CHOICE =~ ^[Yy]$ ]]; then
-    INSTALL_EXTRAS="$INSTALL_EXTRAS[audio]"
-    log_step "Audio support will be installed"
-fi
-
-# Data science features
-read -p "Install Data Science support? (pandas, scipy, scikit-learn) [y/N]: " -r DATA_CHOICE
-if [[ $DATA_CHOICE =~ ^[Yy]$ ]]; then
-    INSTALL_EXTRAS="$INSTALL_EXTRAS[data]"
-    log_step "Data science support will be installed"
-fi
-
-# Web server features
-read -p "Install Web Framework support? (Flask, gunicorn) [y/N]: " -r WEB_CHOICE
-if [[ $WEB_CHOICE =~ ^[Yy]$ ]]; then
-    INSTALL_EXTRAS="$INSTALL_EXTRAS[web-server]"
-    log_step "Web framework support will be installed"
-fi
-
-# Messaging platforms
-read -p "Install Messaging Platform Integrations? (Telegram, Discord, Slack, etc.) [y/N]: " -r MESSAGING_CHOICE
-if [[ $MESSAGING_CHOICE =~ ^[Yy]$ ]]; then
-    INSTALL_EXTRAS="$INSTALL_EXTRAS[messaging]"
-    log_step "Messaging platforms will be installed"
-fi
-
-echo ""
-log_step "Installing Hercules with selected extras: $INSTALL_EXTRAS"
-if [ "$DEV_MODE" = true ]; then
-    pip install -e "$SOURCE_DIR[$INSTALL_EXTRAS]"
-else
-    pip install "$SOURCE_DIR[$INSTALL_EXTRAS]"
-fi
-log_success "Hercules framework installed with selected features"
+log_success "Hercules framework installed${EXTRAS_DESC}"
 
 # ============================================================================
 # [6/8] Directory Structure and Initialization
@@ -782,14 +817,18 @@ if [ ! -f "$MEMORY_INIT_FILE" ]; then
     "auto_skill_creation": true
   }
 }
-EOF
+MEMORY_EOF
     sed -i "s/\$(date -u +%Y-%m-%dT%H:%M:%SZ)/$(date -u +%Y-%m-%dT%H:%M:%SZ)/g" "$MEMORY_INIT_FILE"
     chmod 600 "$MEMORY_INIT_FILE"
     log_success "Persistent memory initialized"
 fi
 
 # Create systemd service for gateway daemon
-cat > /etc/systemd/system/hercules-gateway.service << 'SERVICE_EOF'
+# Unquoted delimiter: the unit interpolates the paths resolved above, so it
+# cannot drift from where the installer actually put things. The previous
+# version hardcoded HERCULES_HOME=/opt/hercules -- the install *directory*, not
+# the data home -- so the daemon looked for config in a tree of source and venv.
+cat > /etc/systemd/system/hercules-gateway.service << SERVICE_EOF
 [Unit]
 Description=Hercules Agent Gateway
 Documentation=https://github.com/mintoriakamoto/Hercules
@@ -799,22 +838,15 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=hercules
-WorkingDirectory=/opt/hercules/src
-Environment="PATH=/opt/hercules/venv/bin:/usr/local/bin:/usr/bin"
-Environment="HERCULES_HOME=/opt/hercules"
-ExecStart=/opt/hercules/venv/bin/hercules gateway
+WorkingDirectory=$SOURCE_DIR
+Environment="PATH=$VENV_DIR/bin:/usr/local/bin:/usr/bin"
+Environment="HERCULES_HOME=$HERCULES_HOME"
+ExecStart=$VENV_DIR/bin/hercules gateway
 Restart=on-failure
 RestartSec=30
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=hercules-gateway
-
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=yes
-ReadWritePaths=/opt/hercules
 
 [Install]
 WantedBy=multi-user.target
@@ -885,6 +917,11 @@ echo "     sudo systemctl status hercules-gateway"
 echo ""
 echo -e "${CYAN}Configuration:${NC}"
 echo "  • Edit: $HERCULES_HOME/.env"
+# The gateway unit gets this path baked in. An interactive shell does not, and
+# the CLI's own default is the *calling user's* ~/.hercules -- a different
+# directory with no .env in it. Say so rather than let it be discovered.
+echo "    (export HERCULES_HOME=$HERCULES_HOME so the CLI reads the same config"
+echo "     as the gateway service; the service already has it)"
 echo "  • Memory: $HERCULES_HOME/memory/"
 echo "  • Skills: $HERCULES_HOME/skills/"
 echo "  • Logs: $HERCULES_HOME/logs/"
