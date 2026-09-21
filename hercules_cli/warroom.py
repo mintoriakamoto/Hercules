@@ -162,10 +162,38 @@ def _help() -> int:
     return 0
 
 
+# Verbs this bridge owns. Everything else — including no args, -h/--help, and
+# plugin-registered subcommands — belongs to hercules_cli.main. These must be
+# intercepted before main.py's argparse: none of them are in its
+# _BUILTIN_SUBCOMMANDS set, so reaching it would trigger a full plugin
+# discovery pass and then still fail to parse.
+_WARROOM_VERBS = frozenset(
+    {"warroom", "tempest", "t3mp3st", "obliterate", "obliteratus", "abliterate"}
+)
+
+
+def _delegate(args: list[str]) -> int:
+    """Hand a non-warroom invocation to the real Hercules CLI."""
+    # Lazy: hercules_cli.main is 14.7k lines and imports this package's
+    # siblings, so a module-level import here would cycle.
+    from hercules_cli.main import main as _hercules_main
+
+    argv_backup = sys.argv
+    sys.argv = [argv_backup[0], *args]
+    try:
+        return int(_hercules_main() or 0)
+    except SystemExit as exc:
+        if exc.code is None:
+            return 0
+        return exc.code if isinstance(exc.code, int) else 1
+    finally:
+        sys.argv = argv_backup
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    if not args or args[0] in {"-h", "--help", "help", "map"}:
-        return _help()
+    if not args or args[0] not in _WARROOM_VERBS:
+        return _delegate(args)
 
     verb = args[0]
     rest = args[1:]

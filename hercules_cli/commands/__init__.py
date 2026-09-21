@@ -91,3 +91,23 @@ __all__ = [
     "_resolve_config_gates",
     "_iter_plugin_command_entries",
 ]
+
+
+def __getattr__(name: str):
+    """Forward any name not re-exported above to the shadowed legacy module.
+
+    This package shadows ``hercules_cli/commands.py``, so every name the old
+    module exposed has to reach callers through here. The explicit assignments
+    above are a hand-maintained list, and names kept getting missed — callers
+    then fail at import rather than at use (``SlashCommandAutoSuggest`` broke
+    ``hercules chat``; ``_build_description`` broke ``tui_gateway/server.py``).
+    Forwarding the long tail makes the shim complete by construction. PEP 562
+    only consults this for names not already bound, so the explicit re-exports
+    above still take precedence.
+    """
+    try:
+        return getattr(_legacy_commands, name)
+    except AttributeError:
+        raise AttributeError(
+            f"module {__name__!r} has no attribute {name!r}"
+        ) from None

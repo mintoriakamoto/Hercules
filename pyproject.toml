@@ -331,13 +331,11 @@ all = [
 ]
 
 [project.scripts]
-hercules = "hercules_cli.main:main"
+# Unified front door: warroom:main owns the warroom/tempest/obliterate verbs
+# and delegates every other invocation to hercules_cli.main:main.
+hercules = "hercules_cli.warroom:main"
 hercules-agent = "run_agent:main"
 hercules-acp = "acp_adapter.entry:main"
-# warroom dispatches only the warroom/tempest/obliterate verbs and falls through
-# to its own help map for anything else, so it cannot back the `hercules` script
-# without breaking the 45 cmd_* handlers in hercules_cli/main.py.
-hercules-warroom = "hercules_cli.warroom:main"
 
 [tool.setuptools]
 py-modules = ["run_agent", "model_tools", "toolsets", "batch_runner", "trajectory_compressor", "toolset_distributions", "cli", "hercules_bootstrap", "hercules_constants", "hercules_state", "hercules_time", "hercules_logging", "utils", "mcp_serve"]
