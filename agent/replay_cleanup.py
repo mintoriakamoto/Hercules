@@ -18,7 +18,8 @@ of the WebUI path silently skipping it.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+import time
+from typing import Any, Dict, List, Optional
 
 from agent.tool_dispatch_helpers import make_tool_result_message
 from agent.tool_result_classification import tool_may_have_side_effect
@@ -198,6 +199,32 @@ def sanitize_replay_history(
     if not agent_history:
         return agent_history
     return strip_dangling_tool_call_tail(strip_interrupted_tool_tails(agent_history))
+
+
+def canonicalize_replay_history(
+    agent_history: List[Dict[str, Any]], *, now: Optional[float] = None
+) -> List[Dict[str, Any]]:
+    """Apply every destructive replay transform in the shared, fixed order.
+
+    Every resume surface — the messaging gateway, the TUI/WebUI gateway, and
+    the send path — must serialize the *same* history bytes for a given
+    session, or a request resumed through one surface diverges from the cached
+    prefix built by another (breaking the provider prefix cache) and the
+    stale-confirmation redaction silently applies on some paths but not others.
+
+    ``sanitize_replay_history`` runs only the two tail strippers; this is the
+    complete pass and the one every surface should call. The input list is
+    never mutated. ``now`` is the expiry clock for the stale-confirmation
+    stripper — the send path passes the turn's admission time so every request
+    in one turn sees identical bytes; it defaults to wall-clock time.
+    """
+    if not agent_history:
+        return agent_history
+    if now is None:
+        now = time.time()
+    cleaned = strip_interrupted_tool_tails(agent_history)
+    cleaned = strip_dangling_tool_call_tail(cleaned)
+    return strip_stale_dangerous_confirmations(cleaned, now=now)
 
 
 # ──────────────────────────────────────────────────────────────────────

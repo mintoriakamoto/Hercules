@@ -894,25 +894,13 @@ def _build_gateway_agent_history(
             entry = _build_replay_entry(role, content, msg, preserve_timestamp=(role == "user"))
             agent_history.append(entry)
 
-    # Strip interrupted tool-call tails so the LLM doesn't re-execute
-    # tools that were killed mid-flight.
-    agent_history = _strip_interrupted_tool_tails(agent_history)
-
-    # Strip a dangling assistant(tool_calls) tail with no tool answers —
-    # the signature of a SIGKILL mid-tool-call (e.g. the tool itself ran
-    # `docker restart`/`kill` and took the gateway down before the result
-    # was persisted). Without this the model re-issues the unanswered call
-    # on resume and loops the restart forever (#49201).
-    agent_history = _strip_dangling_tool_call_tail(agent_history)
-
-    # Strip stale dangerous-confirmation text in user messages (#59607).
-    # A high-risk confirmation phrase (e.g. "confirm forced restart") that
-    # is older than the expiry window must not be replayed to the model,
-    # otherwise an unrelated follow-up message can be interpreted as a
-    # fresh confirmation and trigger the destructive action a second time.
-    agent_history = _strip_stale_dangerous_confirmations(
-        agent_history, now=time.time()
-    )
+    # Apply every destructive replay transform in one canonical pass so this
+    # surface serializes the same history bytes as every other resume surface
+    # (TUI/WebUI, send path). Folds: interrupted assistant→tool tails, a
+    # dangling assistant(tool_calls) SIGKILL tail (#49201), and stale
+    # dangerous-confirmation text (#59607) — the last of which the TUI path
+    # used to skip, diverging the cached prefix between surfaces.
+    agent_history = _canonicalize_replay_history(agent_history, now=time.time())
 
     observed_context = "\n".join(observed_group_context).strip() or None
     return agent_history, observed_context
@@ -1009,9 +997,10 @@ _AUTO_APPEND_MEDIA_TOOL_NAMES = {
 # call sites and tests keep working.
 from agent.replay_cleanup import (
     is_interrupted_tool_result as _is_interrupted_tool_result,  # noqa: F401 — re-export
-    strip_interrupted_tool_tails as _strip_interrupted_tool_tails,
-    strip_dangling_tool_call_tail as _strip_dangling_tool_call_tail,
+    strip_interrupted_tool_tails as _strip_interrupted_tool_tails,  # noqa: F401 — re-export
+    strip_dangling_tool_call_tail as _strip_dangling_tool_call_tail,  # noqa: F401 — re-export
     strip_stale_dangerous_confirmations as _strip_stale_dangerous_confirmations,
+    canonicalize_replay_history as _canonicalize_replay_history,
     is_dangerous_confirmation as _is_dangerous_confirmation,  # noqa: F401 — re-export
 )
 

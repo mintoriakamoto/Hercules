@@ -11,6 +11,7 @@ from agent.replay_cleanup import (
     strip_dangling_tool_call_tail,
     strip_interrupted_tool_tails,
     sanitize_replay_history,
+    canonicalize_replay_history,
 )
 
 
@@ -146,3 +147,53 @@ def test_sanitize_replay_history_noop_on_clean_history():
 
 def test_sanitize_replay_history_empty():
     assert sanitize_replay_history([]) == []
+
+
+def test_canonicalize_folds_all_three_transforms():
+    # interrupted block + dangling tail + a stale dangerous confirmation, all
+    # in one history — canonicalize must handle every one in a single pass.
+    history = [
+        {"role": "user", "content": "confirm forced restart", "timestamp": 0.0},
+        {"role": "assistant", "content": "restarting"},
+        _user("second"),
+        _assistant_tc("terminal"), _tool("[Command interrupted]"),
+        _user("third"),
+        _assistant_tc("read_file"),  # dangling read-only tail
+    ]
+    out = canonicalize_replay_history(history, now=10_000.0)
+    # stale confirmation redacted in place (role/position preserved)
+    assert out[0]["role"] == "user"
+    assert "EXPIRED" in out[0]["content"]
+    # interrupted block removed, dangling read-only tail erased
+    assert not any(is_interrupted_tool_result(m.get("content", "")) for m in out)
+    assert out[-1] == _user("third")
+
+
+def test_canonicalize_supersets_sanitize_on_stale_confirmation():
+    # The exact divergence that broke the prefix cache: the TUI/WebUI path used
+    # sanitize (2 passes) while the messaging gateway used all 3, so a stale
+    # confirmation survived on one surface and not the other. canonicalize is
+    # the complete pass every surface now shares.
+    history = [{"role": "user", "content": "confirm shutdown", "timestamp": 0.0}]
+    assert sanitize_replay_history(history)[0]["content"] == "confirm shutdown"
+    assert "EXPIRED" in canonicalize_replay_history(history, now=10_000.0)[0]["content"]
+
+
+def test_canonicalize_is_deterministic_for_a_shared_clock():
+    # Two surfaces resuming the same session with the same admission clock must
+    # serialize identical bytes — that is the whole point of the shared pass.
+    history = [
+        {"role": "user", "content": "confirm wipe", "timestamp": 0.0},
+        {"role": "assistant", "content": "ok"},
+        _user("later"),
+        _assistant_tc("read_file"),  # dangling
+    ]
+    a = canonicalize_replay_history(history, now=5_000.0)
+    b = canonicalize_replay_history(history, now=5_000.0)
+    assert a == b
+    # input is never mutated
+    assert history[0]["content"] == "confirm wipe"
+
+
+def test_canonicalize_empty():
+    assert canonicalize_replay_history([]) == []
