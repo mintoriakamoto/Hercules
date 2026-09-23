@@ -339,7 +339,7 @@ User input: "/claude-code /web-search do refactor my code and search"
     ↓
 [build_stacked_skill_invocation_message]  (line 585)
     ├─→ Load each skill independently
-    ├─→ Build "skill bundle" header + "[Loaded as part of the stacked skill..."
+    ├─→ Build "skill bundle" header + "[Loaded as part of the stacked skill bundle]"
     ├─→ Append skill blocks (activation note + content for each)
     ├─→ Append user instruction once at the end
     ↓
