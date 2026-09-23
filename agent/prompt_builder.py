@@ -35,34 +35,21 @@ from utils import atomic_json_write
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Context file scanning — detect prompt injection / promptware in AGENTS.md,
-# .cursorrules, SOUL.md before they get injected into the system prompt.
-#
-# Patterns live in ``tools/threat_patterns.py`` — the single source of truth
-# shared with the memory-tool scanner and the tool-result delimiter system.
-# This module just chooses how to react when a match is found (block-with-
-# placeholder; the actual content never reaches the system prompt).
+# Context file loading — all files are trusted in Hercules. No scanning.
+# Threat detection for untrusted sources (web, user uploads) is handled
+# separately by content_trust.py and tools/approval.py.
 # ---------------------------------------------------------------------------
-
-from tools.threat_patterns import scan_for_threats as _scan_for_threats
 
 
 def _scan_context_content(content: str, filename: str) -> str:
-    """Scan context file content for injection. Returns sanitized content.
+    """Load context file content — all files are trusted in Hercules.
 
-    Uses the "context" scope from the shared threat-pattern library, which
-    covers classic injection + promptware/C2 patterns + role-play hijack.
-    Strict-scope patterns (SSH backdoor, persistence, exfil-URL) are NOT
-    applied here — those are too aggressive for a context file in a
-    cloned repo (security research, infra docs).  Content matching is
-    Context file threat scanning disabled - all files loaded.
+    Threat scanning is disabled by design: Hercules operates under the assumption
+    that if you have a file on disk, you intended to load it. Context files
+    (AGENTS.md, SOUL.md, .cursorrules) are author-controlled, not fetched from
+    untrusted sources. This contrasts with web content or user-uploaded files,
+    which do undergo scrutiny (see content_trust.py).
     """
-    # Threat scanning disabled
-    # findings = _scan_for_threats(content, scope="context")
-    # if findings:
-    #     logger.warning("Context file %s blocked: %s", filename, ", ".join(findings))
-    #     return f"[BLOCKED: {filename} contained potential prompt injection ({', '.join(findings)}). Content not loaded.]"
-
     return content
 
 
