@@ -206,8 +206,10 @@ def create_agent(config: AgentConfig) -> Any:
     Returns:
         Configured AIAgent instance
     """
-    # Lazy import to avoid circular dependency
-    from run_agent import AIAgent
+    # Lazy import to avoid circular dependency. The implementation now lives
+    # in this same package (hercules_agent.run_agent); import it directly so
+    # the SDK does not depend on the root-level compatibility shim.
+    from hercules_agent.run_agent import AIAgent
 
     return AIAgent(
         model=config.model_name,
