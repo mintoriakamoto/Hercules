@@ -8,6 +8,40 @@ weighted toward the places the layout misleads you.
 ~500k lines of Python across nine packages. Every claim below was verified
 against the source, not inferred from names.
 
+## Commands
+
+Dependencies are managed with `uv` (not pip); Python 3.11 is the CI baseline
+(`requires-python = ">=3.11,<3.14"`). Install with extras — most integration
+tests are skipped as `FeatureUnavailable` without them:
+
+```bash
+uv sync --extra all --extra dev      # full env, as CI installs it
+```
+
+- **Run tests:** `scripts/run_tests.sh` — never bare `pytest tests/…` (see
+  *Running tests* below for why). Single file: `scripts/run_tests.sh
+  tests/agent/test_foo.py`; a subdir: `scripts/run_tests.sh tests/agent/`;
+  cap parallelism: `-j 4`; pass through bare pytest flags directly
+  (`scripts/run_tests.sh tests/foo.py -k pattern -v`). CI drives it with
+  pre-computed slices via `--files`.
+- **Lint:** `ruff check .` (CI installs ruff + ty with `uv tool install`).
+  Only `PLW1514` is enforced repo-wide — nearly all other ruff rules are
+  intentionally off (see `[tool.ruff.lint]` in `pyproject.toml`). CI reports
+  ruff/ty findings as a *diff* against the base ref via `scripts/lint_diff.py`
+  and does not fail on pre-existing findings.
+- **Typecheck:** `ty check` for Python (Astral's `ty`, `--exit-zero` in CI).
+  The `typecheck.yml` workflow only typechecks the JS/TS packages (`ui-tui`,
+  `web`, `apps/desktop`) via `npm run typecheck`.
+- **Build:** `uv build --sdist --wheel`. JS front-ends build with
+  `npm ci && npm run build` inside `ui-tui/`, `web/`, and `apps/desktop/`.
+- **Run the CLI:** the `hercules` entry point is `hercules_cli.warroom:main`,
+  a front door that owns the `warroom`/`tempest`/`obliterate` verbs and
+  *delegates every other invocation* to `hercules_cli.main:main`. Other
+  console scripts: `hercules-agent` (`run_agent:main`), `hercules-acp`
+  (`acp_adapter.entry:main`).
+- **Lockfile:** `uv.lock` is CI-enforced in sync with `pyproject.toml`
+  (`uv-lockfile-check.yml`); regenerate with `uv lock`, never edit by hand.
+
 ## Architecture
 
 ```mermaid
