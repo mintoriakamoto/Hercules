@@ -28,7 +28,9 @@ import os
 from typing import Any, Dict, List, Optional
 
 from agent.prompt_builder import (
+    ASTRA_REASONING_GUIDANCE,
     DEFAULT_AGENT_IDENTITY,
+    FERROX_OPTIMIZATION_GUIDANCE,
     GOOGLE_MODEL_OPERATIONAL_GUIDANCE,
     HERCULES_AGENT_HELP_GUIDANCE,
     KANBAN_GUIDANCE,
@@ -215,6 +217,18 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     # (default True) and only injected when tools are actually loaded.
     if getattr(agent, "_parallel_tool_call_guidance", True) and agent.valid_tool_names:
         stable_parts.append(PARALLEL_TOOL_CALL_GUIDANCE)
+
+    # Ferrox Labs optimization discipline — continuous search for performance,
+    # efficiency, and bottleneck elimination. Applied to all sessions.
+    # Gated by config.yaml ``agent.ferrox_optimization_guidance`` (default True).
+    if getattr(agent, "_ferrox_optimization_guidance", True):
+        stable_parts.append(FERROX_OPTIMIZATION_GUIDANCE)
+
+    # Astra (GPT-6) reasoning principles — state-of-the-art verification and
+    # adversarial thinking. Applied to all sessions.
+    # Gated by config.yaml ``agent.astra_reasoning_guidance`` (default True).
+    if getattr(agent, "_astra_reasoning_guidance", True):
+        stable_parts.append(ASTRA_REASONING_GUIDANCE)
 
     # Tool-aware behavioral guidance: only inject when the tools are loaded
     tool_guidance = []
