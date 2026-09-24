@@ -188,7 +188,9 @@ class Embedder:
         except Exception as exc:
             # Trip the breaker: one failure disables the semantic path for the
             # rest of the process so we never hammer a dead endpoint.
-            logger.warning("embeddings: backend failed, disabling semantic path: %s", exc)
+            logger.warning(
+                "embeddings: backend failed, disabling semantic path: %s", exc
+            )
             self._broken = True
             return None
 

@@ -21,7 +21,9 @@ def server():
         "sys.modules",
         {
             "hercules_constants": MagicMock(
-                get_hercules_home=MagicMock(return_value="/tmp/hercules_test_compaction")
+                get_hercules_home=MagicMock(
+                    return_value="/tmp/hercules_test_compaction"
+                )
             ),
             "hercules_cli.env_loader": MagicMock(),
             "hercules_cli.banner": MagicMock(),

@@ -13,7 +13,9 @@ from agent.transports.base import ProviderTransport
 from agent.transports.types import NormalizedResponse, ToolCall
 
 
-def _content_cache_key(instructions: str, tools: Optional[List[Dict[str, Any]]]) -> Optional[str]:
+def _content_cache_key(
+    instructions: str, tools: Optional[List[Dict[str, Any]]]
+) -> Optional[str]:
     """Content-address the prompt cache key from the static request prefix.
 
     Returns ``pck_<sha256[:24]>`` of (instructions + sorted tool schemas), or
@@ -66,6 +68,7 @@ class ResponsesApiTransport(ProviderTransport):
     def _resolve_issuer_kind(self, params: Dict[str, Any]) -> str:
         """Classify the current Responses endpoint from transport params."""
         from agent.codex_responses_adapter import _classify_responses_issuer
+
         return _classify_responses_issuer(
             is_xai_responses=params.get("is_xai_responses") is True,
             is_github_responses=params.get("is_github_responses") is True,
@@ -76,6 +79,7 @@ class ResponsesApiTransport(ProviderTransport):
     def convert_messages(self, messages: List[Dict[str, Any]], **kwargs) -> Any:
         """Convert OpenAI chat messages to Responses API input items."""
         from agent.codex_responses_adapter import _chat_messages_to_responses_input
+
         issuer = self._resolve_issuer_kind(kwargs)
         self._last_issuer_kind = issuer
         return _chat_messages_to_responses_input(
@@ -91,6 +95,7 @@ class ResponsesApiTransport(ProviderTransport):
     def convert_tools(self, tools: List[Dict[str, Any]]) -> Any:
         """Convert OpenAI tool schemas to Responses API function definitions."""
         from agent.codex_responses_adapter import _responses_tools
+
         return _responses_tools(tools)
 
     def build_kwargs(
@@ -226,7 +231,8 @@ class ResponsesApiTransport(ProviderTransport):
             )
             if has_client_web_search:
                 filtered = [
-                    t for t in response_tools
+                    t
+                    for t in response_tools
                     if not (isinstance(t, dict) and t.get("name") == "web_search")
                 ]
                 filtered.append({"type": "web_search"})
@@ -295,7 +301,9 @@ class ResponsesApiTransport(ProviderTransport):
             else:
                 kwargs["reasoning"] = {"effort": reasoning_effort, "summary": "auto"}
                 kwargs["include"] = (
-                    ["reasoning.encrypted_content"] if replay_encrypted_reasoning else []
+                    ["reasoning.encrypted_content"]
+                    if replay_encrypted_reasoning
+                    else []
                 )
         elif not is_github_responses and not is_xai_responses:
             kwargs["include"] = []
@@ -342,13 +350,11 @@ class ResponsesApiTransport(ProviderTransport):
                 existing_extra_headers = kwargs.get("extra_headers")
                 merged_extra_headers: Dict[str, str] = {}
                 if isinstance(existing_extra_headers, dict):
-                    merged_extra_headers.update(
-                        {
-                            str(key): str(value)
-                            for key, value in existing_extra_headers.items()
-                            if key and value is not None
-                        }
-                    )
+                    merged_extra_headers.update({
+                        str(key): str(value)
+                        for key, value in existing_extra_headers.items()
+                        if key and value is not None
+                    })
                 merged_extra_headers["session_id"] = cache_scope_id
                 merged_extra_headers["x-client-request-id"] = cache_scope_id
                 kwargs["extra_headers"] = merged_extra_headers
@@ -361,13 +367,11 @@ class ResponsesApiTransport(ProviderTransport):
             existing_extra_headers = kwargs.get("extra_headers")
             merged_extra_headers: Dict[str, str] = {}
             if isinstance(existing_extra_headers, dict):
-                merged_extra_headers.update(
-                    {
-                        str(key): str(value)
-                        for key, value in existing_extra_headers.items()
-                        if key and value is not None
-                    }
-                )
+                merged_extra_headers.update({
+                    str(key): str(value)
+                    for key, value in existing_extra_headers.items()
+                    if key and value is not None
+                })
             merged_extra_headers["x-grok-conv-id"] = session_id
             kwargs["extra_headers"] = merged_extra_headers
 
@@ -396,7 +400,9 @@ class ResponsesApiTransport(ProviderTransport):
         # turns can detect a model swap and drop foreign-issuer blobs.
         issuer_kind = kwargs.get("issuer_kind") or self._last_issuer_kind
         # _normalize_codex_response returns (SimpleNamespace, finish_reason_str)
-        msg, finish_reason = _normalize_codex_response(response, issuer_kind=issuer_kind)
+        msg, finish_reason = _normalize_codex_response(
+            response, issuer_kind=issuer_kind
+        )
 
         tool_calls = None
         if msg and msg.tool_calls:
@@ -407,12 +413,20 @@ class ResponsesApiTransport(ProviderTransport):
                     provider_data["call_id"] = tc.call_id
                 if hasattr(tc, "response_item_id") and tc.response_item_id:
                     provider_data["response_item_id"] = tc.response_item_id
-                tool_calls.append(ToolCall(
-                    id=tc.id if hasattr(tc, "id") else (tc.function.name if hasattr(tc, "function") else None),
-                    name=tc.function.name if hasattr(tc, "function") else getattr(tc, "name", ""),
-                    arguments=tc.function.arguments if hasattr(tc, "function") else getattr(tc, "arguments", "{}"),
-                    provider_data=provider_data or None,
-                ))
+                tool_calls.append(
+                    ToolCall(
+                        id=tc.id
+                        if hasattr(tc, "id")
+                        else (tc.function.name if hasattr(tc, "function") else None),
+                        name=tc.function.name
+                        if hasattr(tc, "function")
+                        else getattr(tc, "name", ""),
+                        arguments=tc.function.arguments
+                        if hasattr(tc, "function")
+                        else getattr(tc, "arguments", "{}"),
+                        provider_data=provider_data or None,
+                    )
+                )
 
         # Extract reasoning items for provider_data
         provider_data = {}
@@ -458,6 +472,7 @@ class ResponsesApiTransport(ProviderTransport):
         Normalizes input items, strips unsupported fields, validates structure.
         """
         from agent.codex_responses_adapter import _preflight_codex_api_kwargs
+
         return _preflight_codex_api_kwargs(
             api_kwargs,
             allow_stream=allow_stream,

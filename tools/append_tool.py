@@ -5,7 +5,9 @@ from pathlib import Path
 from typing import Dict, Any
 
 
-def append_tool(filepath: str, content: str, create_if_missing: bool = True) -> Dict[str, Any]:
+def append_tool(
+    filepath: str, content: str, create_if_missing: bool = True
+) -> Dict[str, Any]:
     """
     Append content to the end of a file.
 

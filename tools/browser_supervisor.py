@@ -66,9 +66,11 @@ DIALOG_POLICY_MUST_RESPOND = "must_respond"
 DIALOG_POLICY_AUTO_DISMISS = "auto_dismiss"
 DIALOG_POLICY_AUTO_ACCEPT = "auto_accept"
 
-_VALID_POLICIES = frozenset(
-    {DIALOG_POLICY_MUST_RESPOND, DIALOG_POLICY_AUTO_DISMISS, DIALOG_POLICY_AUTO_ACCEPT}
-)
+_VALID_POLICIES = frozenset({
+    DIALOG_POLICY_MUST_RESPOND,
+    DIALOG_POLICY_AUTO_DISMISS,
+    DIALOG_POLICY_AUTO_ACCEPT,
+})
 
 DEFAULT_DIALOG_POLICY = DIALOG_POLICY_MUST_RESPOND
 DEFAULT_DIALOG_TIMEOUT_S = 300.0
@@ -306,7 +308,6 @@ class CDPSupervisor:
         task.add_done_callback(self._background_tasks.discard)
         return task
 
-
     def __init__(
         self,
         task_id: str,
@@ -381,6 +382,7 @@ class CDPSupervisor:
             self.stop()
             try:
                 from agent.redact import redact_cdp_url
+
                 _safe_url = redact_cdp_url(self.cdp_url)
             except Exception:
                 _safe_url = "<cdp_url redacted>"
@@ -419,6 +421,7 @@ class CDPSupervisor:
 
             try:
                 from agent.async_utils import safe_schedule_threadsafe
+
                 fut = safe_schedule_threadsafe(_close_ws(), loop)
                 if fut is not None:
                     try:
@@ -465,7 +468,10 @@ class CDPSupervisor:
         ambiguous dialog_id, supervisor inactive).
         """
         if action not in {"accept", "dismiss"}:
-            return {"ok": False, "error": f"action must be 'accept' or 'dismiss', got {action!r}"}
+            return {
+                "ok": False,
+                "error": f"action must be 'accept' or 'dismiss', got {action!r}",
+            }
 
         with self._state_lock:
             if not self._active:
@@ -499,11 +505,14 @@ class CDPSupervisor:
 
         async def _do_respond():
             return await self._handle_dialog_cdp(
-                snapshot_copy, accept=(action == "accept"), prompt_text=prompt_text or ""
+                snapshot_copy,
+                accept=(action == "accept"),
+                prompt_text=prompt_text or "",
             )
 
         try:
             from agent.async_utils import safe_schedule_threadsafe
+
             fut = safe_schedule_threadsafe(_do_respond(), loop)
             if fut is None:
                 return {"ok": False, "error": "Browser supervisor loop unavailable"}
@@ -591,7 +600,9 @@ class CDPSupervisor:
         # Runtime.evaluate response shape:
         #   {"id": N, "result": {"result": {"type": "...", "value": ..., ...},
         #                         "exceptionDetails": {...} (only on error)}}
-        result_payload = response.get("result", {}) if isinstance(response, dict) else {}
+        result_payload = (
+            response.get("result", {}) if isinstance(response, dict) else {}
+        )
         exception_details = result_payload.get("exceptionDetails")
         if exception_details:
             # Surface the JS-side exception with a clean message.
@@ -612,7 +623,9 @@ class CDPSupervisor:
         else:
             # Non-serializable (functions, DOM nodes, etc.) — return the
             # browser's string description so the model gets *something*.
-            value = result_obj.get("description") or result_obj.get("unserializableValue")
+            value = result_obj.get("description") or result_obj.get(
+                "unserializableValue"
+            )
 
         return {"ok": True, "result": value, "result_type": result_type}
 
@@ -639,7 +652,9 @@ class CDPSupervisor:
                 for t in pending:
                     t.cancel()
                 if pending:
-                    loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                    loop.run_until_complete(
+                        asyncio.gather(*pending, return_exceptions=True)
+                    )
             except Exception:
                 pass
             try:
@@ -676,7 +691,9 @@ class CDPSupervisor:
                     return
                 logger.warning(
                     "CDP supervisor %s: connect failed (attempt %s): %s",
-                    self.task_id, attempt, _redact_cdp_error_text(e),
+                    self.task_id,
+                    attempt,
+                    _redact_cdp_error_text(e),
                 )
                 await asyncio.sleep(min(backoff, 10.0))
                 backoff = min(backoff * 2, 10.0)
@@ -740,7 +757,9 @@ class CDPSupervisor:
 
             # Reconnect: brief backoff, then reattach.
             logger.debug(
-                "CDP supervisor %s: reconnecting in %.1fs...", self.task_id, backoff,
+                "CDP supervisor %s: reconnecting in %.1fs...",
+                self.task_id,
+                backoff,
             )
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 10.0)
@@ -798,7 +817,8 @@ class CDPSupervisor:
         except Exception as e:
             logger.debug(
                 "dialog bridge: addScriptToEvaluateOnNewDocument failed on sid=%s: %s",
-                (session_id or "")[:16], e,
+                (session_id or "")[:16],
+                e,
             )
         try:
             await self._cdp(
@@ -818,7 +838,8 @@ class CDPSupervisor:
         except Exception as e:
             logger.debug(
                 "dialog bridge: Fetch.enable failed on sid=%s: %s",
-                (session_id or "")[:16], e,
+                (session_id or "")[:16],
+                e,
             )
         # Also try to inject into the already-loaded document so existing
         # pages pick up the override on reconnect. Best-effort.
@@ -875,12 +896,16 @@ class CDPSupervisor:
                     if fut is not None and not fut.done():
                         if "error" in msg:
                             fut.set_exception(
-                                RuntimeError(f"CDP error on id={msg['id']}: {msg['error']}")
+                                RuntimeError(
+                                    f"CDP error on id={msg['id']}: {msg['error']}"
+                                )
                             )
                         else:
                             fut.set_result(msg)
                 elif "method" in msg:
-                    await self._on_event(msg["method"], msg.get("params", {}), msg.get("sessionId"))
+                    await self._on_event(
+                        msg["method"], msg.get("params", {}), msg.get("sessionId")
+                    )
         except Exception as e:
             logger.debug("CDP read loop exited: %s", e)
 
@@ -930,9 +955,7 @@ class CDPSupervisor:
             # re-archive it as "remote".
             with self._state_lock:
                 self._archive_dialog_locked(dialog, "auto_policy")
-            self._spawn(
-                self._auto_handle_dialog(dialog, accept=False, prompt_text="")
-            )
+            self._spawn(self._auto_handle_dialog(dialog, accept=False, prompt_text=""))
         elif self.dialog_policy == DIALOG_POLICY_AUTO_ACCEPT:
             with self._state_lock:
                 self._archive_dialog_locked(dialog, "auto_policy")
@@ -1115,8 +1138,10 @@ class CDPSupervisor:
             # Not ours — forward unchanged so the page sees its own request.
             try:
                 await self._cdp(
-                    "Fetch.continueRequest", {"requestId": request_id},
-                    session_id=session_id, timeout=3.0,
+                    "Fetch.continueRequest",
+                    {"requestId": request_id},
+                    session_id=session_id,
+                    timeout=3.0,
                 )
             except Exception:
                 pass
@@ -1124,6 +1149,7 @@ class CDPSupervisor:
 
         # Parse query string for dialog metadata. Use urllib to be robust.
         from urllib.parse import urlparse, parse_qs
+
         q = parse_qs(urlparse(url).query)
 
         def _q(name: str) -> str:
@@ -1186,6 +1212,7 @@ class CDPSupervisor:
         body = json.dumps(payload).encode()
         try:
             import base64 as _b64
+
             await self._cdp(
                 "Fetch.fulfillRequest",
                 {
@@ -1234,7 +1261,8 @@ class CDPSupervisor:
                 frame_id=frame_id,
                 url=str(frame.get("url") or ""),
                 origin=str(frame.get("securityOrigin") or frame.get("origin") or ""),
-                parent_frame_id=frame.get("parentId") or (existing.parent_frame_id if existing else None),
+                parent_frame_id=frame.get("parentId")
+                or (existing.parent_frame_id if existing else None),
                 is_oopif=bool(existing.is_oopif if existing else False),
                 cdp_session_id=existing.cdp_session_id if existing else session_id,
                 name=str(frame.get("name") or (existing.name if existing else "")),
@@ -1366,8 +1394,10 @@ class CDPSupervisor:
             event = ConsoleEvent(ts=time.time(), level="exception", text=text, url=url)
         else:
             raw_level = str(params.get("type") or "log")
-            level = "error" if raw_level in {"error", "assert"} else (
-                "warning" if raw_level == "warning" else "log"
+            level = (
+                "error"
+                if raw_level in {"error", "assert"}
+                else ("warning" if raw_level == "warning" else "log")
             )
             args = params.get("args") or []
             parts: List[str] = []
@@ -1463,7 +1493,9 @@ class _SupervisorRegistry:
             existing = self._by_task.get(task_id)
             if existing is not None:
                 if existing.cdp_url == cdp_url:
-                    thread_ok = existing._thread is not None and existing._thread.is_alive()
+                    thread_ok = (
+                        existing._thread is not None and existing._thread.is_alive()
+                    )
                     loop_ok = existing._loop is not None and existing._loop.is_running()
                     if thread_ok and loop_ok:
                         return existing

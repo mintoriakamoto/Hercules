@@ -12,24 +12,36 @@ from tools.skill_manager_tool import _create_skill, _find_similar_skills
 
 @contextmanager
 def _skill_dir(tmp_path):
-    with patch("tools.skill_manager_tool.SKILLS_DIR", tmp_path), \
-         patch("agent.skill_utils.get_all_skills_dirs", return_value=[tmp_path]):
+    with (
+        patch("tools.skill_manager_tool.SKILLS_DIR", tmp_path),
+        patch("agent.skill_utils.get_all_skills_dirs", return_value=[tmp_path]),
+    ):
         yield
 
 
 def _content(name, description):
-    return f"---\nname: {name}\ndescription: {description}\n---\n\n# {name}\n\nStep 1.\n"
+    return (
+        f"---\nname: {name}\ndescription: {description}\n---\n\n# {name}\n\nStep 1.\n"
+    )
 
 
 class TestNearDuplicateGuard:
     def test_similar_description_blocked(self, tmp_path):
         with _skill_dir(tmp_path):
             first = _create_skill(
-                "deploy-docker", _content("deploy-docker", "Deploy services with docker compose on a remote host")
+                "deploy-docker",
+                _content(
+                    "deploy-docker",
+                    "Deploy services with docker compose on a remote host",
+                ),
             )
             assert first["success"] is True
             second = _create_skill(
-                "docker-deployment", _content("docker-deployment", "Deploy services with docker compose to remote hosts")
+                "docker-deployment",
+                _content(
+                    "docker-deployment",
+                    "Deploy services with docker compose to remote hosts",
+                ),
             )
         assert second["success"] is False
         assert "near-duplicate" in second["error"]
@@ -37,16 +49,26 @@ class TestNearDuplicateGuard:
 
     def test_similar_name_blocked(self, tmp_path):
         with _skill_dir(tmp_path):
-            _create_skill("fix-ci-pipeline", _content("fix-ci-pipeline", "Repair continuous integration failures"))
+            _create_skill(
+                "fix-ci-pipeline",
+                _content("fix-ci-pipeline", "Repair continuous integration failures"),
+            )
             second = _create_skill(
-                "fix-ci-pipelines", _content("fix-ci-pipelines", "Something about totally unrelated gardening topics entirely")
+                "fix-ci-pipelines",
+                _content(
+                    "fix-ci-pipelines",
+                    "Something about totally unrelated gardening topics entirely",
+                ),
             )
         assert second["success"] is False
         assert "near-duplicate" in second["error"]
 
     def test_force_overrides_guard(self, tmp_path):
         with _skill_dir(tmp_path):
-            _create_skill("deploy-docker", _content("deploy-docker", "Deploy services with docker compose"))
+            _create_skill(
+                "deploy-docker",
+                _content("deploy-docker", "Deploy services with docker compose"),
+            )
             second = _create_skill(
                 "docker-deployment",
                 _content("docker-deployment", "Deploy services with docker compose"),
@@ -56,15 +78,27 @@ class TestNearDuplicateGuard:
 
     def test_distinct_skill_passes(self, tmp_path):
         with _skill_dir(tmp_path):
-            _create_skill("deploy-docker", _content("deploy-docker", "Deploy services with docker compose"))
+            _create_skill(
+                "deploy-docker",
+                _content("deploy-docker", "Deploy services with docker compose"),
+            )
             second = _create_skill(
-                "write-blog-post", _content("write-blog-post", "Draft and publish articles for the personal blog")
+                "write-blog-post",
+                _content(
+                    "write-blog-post",
+                    "Draft and publish articles for the personal blog",
+                ),
             )
         assert second["success"] is True
 
     def test_find_similar_empty_when_no_skills(self, tmp_path):
         with _skill_dir(tmp_path):
-            assert _find_similar_skills("anything", _content("anything", "whatever text here")) == []
+            assert (
+                _find_similar_skills(
+                    "anything", _content("anything", "whatever text here")
+                )
+                == []
+            )
 
 
 class TestSkillsListQuery:
@@ -123,7 +157,10 @@ class TestBoundedIndexInjection:
             d = tmp_path / "skills" / f"skill-{i:03d}"
             d.mkdir(parents=True)
             (d / "SKILL.md").write_text(
-                _content(f"skill-{i:03d}", f"Long description for skill number {i} " + "words " * 30),
+                _content(
+                    f"skill-{i:03d}",
+                    f"Long description for skill number {i} " + "words " * 30,
+                ),
                 encoding="utf-8",
             )
 
@@ -135,7 +172,8 @@ class TestBoundedIndexInjection:
         import hercules_cli.config as cfgmod
 
         monkeypatch.setattr(
-            cfgmod, "load_config_readonly",
+            cfgmod,
+            "load_config_readonly",
             lambda: {"skills": {"index_max_chars": 800}},
         )
         result = build_skills_system_prompt()
@@ -152,7 +190,8 @@ class TestBoundedIndexInjection:
         import hercules_cli.config as cfgmod
 
         monkeypatch.setattr(
-            cfgmod, "load_config_readonly",
+            cfgmod,
+            "load_config_readonly",
             lambda: {"skills": {"index_max_chars": 0}},
         )
         result = build_skills_system_prompt()

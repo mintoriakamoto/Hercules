@@ -316,7 +316,9 @@ def test_console_help_table_keeps_long_summaries_compact():
     help_text = HerculesConsoleEngine().help_text()
 
     slack_line = next(
-        line for line in help_text.splitlines() if line.strip().startswith("slack manifest")
+        line
+        for line in help_text.splitlines()
+        if line.strip().startswith("slack manifest")
     )
 
     assert len(slack_line) <= 112
@@ -421,7 +423,9 @@ EXPECTED_HOSTED_CONSOLE_COMMANDS = {
 def test_hosted_console_registry_exposes_only_hosted_safe_surface():
     engine = HerculesConsoleEngine(context="hosted")
     hosted = {
-        path for path, command in engine.commands.items() if "hosted" in command.contexts
+        path
+        for path, command in engine.commands.items()
+        if "hosted" in command.contexts
     }
 
     assert hosted == EXPECTED_HOSTED_CONSOLE_COMMANDS

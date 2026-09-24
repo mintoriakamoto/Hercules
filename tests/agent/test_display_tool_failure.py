@@ -143,7 +143,9 @@ class TestGetCuteToolMessageFailureSuffix:
             "success": False,
             "error": "File not found: /etc/missing",
         })
-        line = get_cute_tool_message("read_file", {"path": "/etc/missing"}, 0.1, result=fail)
+        line = get_cute_tool_message(
+            "read_file", {"path": "/etc/missing"}, 0.1, result=fail
+        )
         assert "[File not found: missing]" in line
 
     def test_terminal_exit_only_suffix(self):
@@ -157,7 +159,9 @@ class TestGetCuteToolMessageFailureSuffix:
             "exit_code": 127,
             "error": "command not found: notathing",
         })
-        line = get_cute_tool_message("terminal", {"command": "notathing"}, 0.1, result=fail)
+        line = get_cute_tool_message(
+            "terminal", {"command": "notathing"}, 0.1, result=fail
+        )
         assert "command not found" in line
         # No '[exit 127]' tag when we have a specific message
         assert "exit 127" not in line

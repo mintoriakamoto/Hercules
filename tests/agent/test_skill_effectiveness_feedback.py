@@ -47,6 +47,7 @@ def env(tmp_path, monkeypatch):
 # Telemetry: bump_feedback + net_effectiveness
 # ---------------------------------------------------------------------------
 
+
 def test_empty_record_carries_effectiveness_fields(env):
     _home, skill_usage, _curator, _tool = env
     rec = skill_usage._empty_record()
@@ -71,7 +72,10 @@ def test_bump_feedback_increments_and_stamps(env):
 def test_net_effectiveness_is_defensive(env):
     _home, skill_usage, _curator, _tool = env
     assert skill_usage.net_effectiveness({}) == 0
-    assert skill_usage.net_effectiveness({"helpful_count": "x", "unhelpful_count": None}) == 0
+    assert (
+        skill_usage.net_effectiveness({"helpful_count": "x", "unhelpful_count": None})
+        == 0
+    )
     assert skill_usage.net_effectiveness({"helpful_count": 5}) == 5
 
 
@@ -91,6 +95,7 @@ def test_feedback_is_not_counted_as_recency_activity(env):
 # Curator: proven-helpful skills resist idle-archival
 # ---------------------------------------------------------------------------
 
+
 def test_proven_helpful_skill_resists_idle_archival(env, monkeypatch):
     home, skill_usage, curator, _tool = env
     skills_dir = home / "skills"
@@ -106,7 +111,7 @@ def test_proven_helpful_skill_resists_idle_archival(env, monkeypatch):
             "created_at": old,
             "last_used_at": old,
             "use_count": 5,
-            "helpful_count": 3,   # net +3 → past the keep threshold (2)
+            "helpful_count": 3,  # net +3 → past the keep threshold (2)
             "unhelpful_count": 0,
             "state": "active",
         },
@@ -188,6 +193,7 @@ def test_single_helpful_rating_does_not_shield(env, monkeypatch):
 # Curator: proven-harmful skills are archived sooner (symmetric to the grace)
 # ---------------------------------------------------------------------------
 
+
 def test_proven_harmful_skill_archives_sooner_than_neutral(env, monkeypatch):
     """A net-harmful skill (misled more than it helped) leaves context on a
     shortened window; a neutral skill at the same idle does not yet."""
@@ -206,7 +212,7 @@ def test_proven_harmful_skill_archives_sooner_than_neutral(env, monkeypatch):
             "last_used_at": idle,
             "use_count": 5,
             "helpful_count": 1,
-            "unhelpful_count": 4,   # net −3 → past the prune threshold (−2)
+            "unhelpful_count": 4,  # net −3 → past the prune threshold (−2)
             "state": "active",
         },
         "neutral": {
@@ -248,7 +254,7 @@ def test_harmful_acceleration_never_precedes_staleness(env, monkeypatch):
             "last_used_at": idle,
             "use_count": 5,
             "helpful_count": 0,
-            "unhelpful_count": 3,   # net −3
+            "unhelpful_count": 3,  # net −3
             "state": "active",
         },
     })
@@ -276,7 +282,7 @@ def test_single_unhelpful_rating_does_not_accelerate(env, monkeypatch):
             "last_used_at": idle,
             "use_count": 5,
             "helpful_count": 0,
-            "unhelpful_count": 1,   # net −1 → not past the −2 threshold
+            "unhelpful_count": 1,  # net −1 → not past the −2 threshold
             "state": "active",
         },
     })
@@ -302,13 +308,20 @@ def test_harmful_penalty_never_lengthens_window_when_archive_lt_stale(env, monke
     idle = (now - timedelta(days=25)).isoformat()
     skill_usage.save_usage({
         "harmful-oddcfg": {
-            "created_by": "agent", "created_at": idle, "last_used_at": idle,
-            "use_count": 5, "helpful_count": 0, "unhelpful_count": 4,  # net −4
+            "created_by": "agent",
+            "created_at": idle,
+            "last_used_at": idle,
+            "use_count": 5,
+            "helpful_count": 0,
+            "unhelpful_count": 4,  # net −4
             "state": "active",
         },
         "neutral-oddcfg": {
-            "created_by": "agent", "created_at": idle, "last_used_at": idle,
-            "use_count": 5, "state": "active",
+            "created_by": "agent",
+            "created_at": idle,
+            "last_used_at": idle,
+            "use_count": 5,
+            "state": "active",
         },
     })
     monkeypatch.setattr(curator, "get_stale_after_days", lambda: 30)
@@ -325,11 +338,14 @@ def test_harmful_penalty_never_lengthens_window_when_archive_lt_stale(env, monke
 # Tool surface: skill_manage(action="feedback")
 # ---------------------------------------------------------------------------
 
+
 def test_skill_manage_feedback_records_signal(env):
     home, skill_usage, _curator, tool = env
     _write_skill(home / "skills", "deploy-recipe")
 
-    out = json.loads(tool.skill_manage(action="feedback", name="deploy-recipe", helpful=True))
+    out = json.loads(
+        tool.skill_manage(action="feedback", name="deploy-recipe", helpful=True)
+    )
     assert out["success"] is True
     assert out["feedback"] == "helpful"
 
@@ -352,6 +368,8 @@ def test_skill_manage_feedback_requires_helpful_bool(env):
 
 def test_skill_manage_feedback_unknown_skill_errors(env):
     _home, _skill_usage, _curator, tool = env
-    out = json.loads(tool.skill_manage(action="feedback", name="does-not-exist", helpful=True))
+    out = json.loads(
+        tool.skill_manage(action="feedback", name="does-not-exist", helpful=True)
+    )
     assert out["success"] is False
     assert "not found" in out["error"].lower()

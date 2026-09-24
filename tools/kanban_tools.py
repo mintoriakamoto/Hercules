@@ -26,6 +26,7 @@ three bypass the agent entirely. The tools are for dispatcher-spawned
 worker handoffs and for configured orchestrator profiles that route work
 through the board.
 """
+
 from __future__ import annotations
 
 import json
@@ -96,9 +97,8 @@ def _resolve_session_platform() -> str:
     try:
         from gateway.session_context import get_session_env
 
-        resolved = (
-            os.getenv("HERCULES_PLATFORM")
-            or get_session_env("HERCULES_SESSION_PLATFORM")
+        resolved = os.getenv("HERCULES_PLATFORM") or get_session_env(
+            "HERCULES_SESSION_PLATFORM"
         )
     except Exception:
         resolved = os.getenv("HERCULES_PLATFORM")
@@ -138,6 +138,7 @@ def _check_kanban_orchestrator_mode() -> bool:
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
 
 def _default_task_id(arg: Optional[str]) -> Optional[str]:
     """Resolve ``task_id`` arg or fall back to the env var the dispatcher set."""
@@ -218,6 +219,7 @@ def _connect(board: Optional[str] = None):
     the env-pinned active board without restarting Hercules.
     """
     from hercules_cli import kanban_db as kb
+
     return kb, kb.connect(board=board)
 
 
@@ -239,6 +241,7 @@ def _goal_judge_available() -> bool:
     """
     try:
         from agent.auxiliary_client import get_text_auxiliary_client
+
         client, model = get_text_auxiliary_client("goal_judge")
     except Exception:
         return False
@@ -296,6 +299,7 @@ def heartbeat_current_worker_from_env() -> bool:
     if not tid:
         return False
     import time as _time
+
     now = _time.monotonic()
     if (now - _auto_heartbeat_last_attempt) < _AUTO_HEARTBEAT_MIN_INTERVAL_SECONDS:
         return False
@@ -406,6 +410,7 @@ def _task_summary_dict(kb, conn, task) -> dict[str, Any]:
 # Handlers
 # ---------------------------------------------------------------------------
 
+
 def _handle_show(args: dict, **kw) -> str:
     """Read a task's full state: task row, parents, children, comments,
     runs (attempt history), and the last N events."""
@@ -429,12 +434,17 @@ def _handle_show(args: dict, **kw) -> str:
 
             def _task_dict(t):
                 return {
-                    "id": t.id, "title": t.title, "body": t.body,
-                    "assignee": t.assignee, "status": t.status,
-                    "tenant": t.tenant, "priority": t.priority,
+                    "id": t.id,
+                    "title": t.title,
+                    "body": t.body,
+                    "assignee": t.assignee,
+                    "status": t.status,
+                    "tenant": t.tenant,
+                    "priority": t.priority,
                     "workspace_kind": t.workspace_kind,
                     "workspace_path": t.workspace_path,
-                    "created_by": t.created_by, "created_at": t.created_at,
+                    "created_by": t.created_by,
+                    "created_at": t.created_at,
                     "started_at": t.started_at,
                     "completed_at": t.completed_at,
                     "result": t.result,
@@ -444,11 +454,15 @@ def _handle_show(args: dict, **kw) -> str:
 
             def _run_dict(r):
                 return {
-                    "id": r.id, "profile": r.profile,
-                    "status": r.status, "outcome": r.outcome,
-                    "summary": r.summary, "error": r.error,
+                    "id": r.id,
+                    "profile": r.profile,
+                    "status": r.status,
+                    "outcome": r.outcome,
+                    "summary": r.summary,
+                    "error": r.error,
                     "metadata": r.metadata,
-                    "started_at": r.started_at, "ended_at": r.ended_at,
+                    "started_at": r.started_at,
+                    "ended_at": r.ended_at,
                 }
 
             return json.dumps({
@@ -456,14 +470,17 @@ def _handle_show(args: dict, **kw) -> str:
                 "parents": parents,
                 "children": children,
                 "comments": [
-                    {"author": c.author, "body": c.body,
-                     "created_at": c.created_at}
+                    {"author": c.author, "body": c.body, "created_at": c.created_at}
                     for c in comments
                 ],
                 "events": [
-                    {"kind": e.kind, "payload": e.payload,
-                     "created_at": e.created_at, "run_id": e.run_id}
-                    for e in events[-50:]   # cap; full log via CLI
+                    {
+                        "kind": e.kind,
+                        "payload": e.payload,
+                        "created_at": e.created_at,
+                        "run_id": e.run_id,
+                    }
+                    for e in events[-50:]  # cap; full log via CLI
                 ],
                 "runs": [_run_dict(r) for r in runs],
                 # Also surface the worker's own context block so the
@@ -530,7 +547,8 @@ def _handle_list(args: dict, **kw) -> str:
                 "truncated": truncated,
                 "next_limit": (
                     min(limit * 2, KANBAN_LIST_MAX_LIMIT)
-                    if truncated and limit < KANBAN_LIST_MAX_LIMIT else None
+                    if truncated and limit < KANBAN_LIST_MAX_LIMIT
+                    else None
                 ),
                 "promoted": promoted,
             })
@@ -579,9 +597,7 @@ def _handle_complete(args: dict, **kw) -> str:
                 f"{type(created_cards).__name__}"
             )
         # Normalise: strings only, stripped, non-empty.
-        created_cards = [
-            str(c).strip() for c in created_cards if str(c).strip()
-        ]
+        created_cards = [str(c).strip() for c in created_cards if str(c).strip()]
     if artifacts is not None:
         if isinstance(artifacts, str):
             # Accept a single path as a string for convenience.
@@ -591,9 +607,7 @@ def _handle_complete(args: dict, **kw) -> str:
                 f"artifacts must be a list of file paths, got "
                 f"{type(artifacts).__name__}"
             )
-        artifacts = [
-            str(p).strip() for p in artifacts if str(p).strip()
-        ]
+        artifacts = [str(p).strip() for p in artifacts if str(p).strip()]
         # Carry the artifact list inside metadata so it rides the
         # existing completed-event payload without a schema change at
         # the DB layer.  The gateway notifier reads payload['artifacts']
@@ -604,8 +618,7 @@ def _handle_complete(args: dict, **kw) -> str:
                 metadata = {}
             elif not isinstance(metadata, dict):
                 return tool_error(
-                    f"metadata must be an object/dict, got "
-                    f"{type(metadata).__name__}"
+                    f"metadata must be an object/dict, got {type(metadata).__name__}"
                 )
             # Don't overwrite an existing metadata.artifacts the worker
             # passed manually — merge instead.
@@ -622,9 +635,7 @@ def _handle_complete(args: dict, **kw) -> str:
             else:
                 metadata["artifacts"] = artifacts
     if not (summary or result):
-        return tool_error(
-            "provide at least one of: summary (preferred), result"
-        )
+        return tool_error("provide at least one of: summary (preferred), result")
     if metadata is not None and not isinstance(metadata, dict):
         return tool_error(
             f"metadata must be an object/dict, got {type(metadata).__name__}"
@@ -667,8 +678,11 @@ def _handle_complete(args: dict, **kw) -> str:
 
             try:
                 ok = kb.complete_task(
-                    conn, tid,
-                    result=result, summary=summary, metadata=metadata,
+                    conn,
+                    tid,
+                    result=result,
+                    summary=summary,
+                    metadata=metadata,
                     created_cards=created_cards,
                     expected_run_id=_worker_run_id(tid),
                 )
@@ -741,11 +755,7 @@ def _handle_block(args: dict, **kw) -> str:
         # and `transient` (or an unset kind) route back through
         # kanban_complete, which the judge now gates.
         task = kb.get_task(conn, tid)
-        if (
-            task
-            and task.goal_mode
-            and kind not in _GOAL_MODE_BLOCK_ALLOWED_KINDS
-        ):
+        if task and task.goal_mode and kind not in _GOAL_MODE_BLOCK_ALLOWED_KINDS:
             conn.close()
             return tool_error(
                 f"goal_mode tasks can only block with kind in "
@@ -756,15 +766,15 @@ def _handle_block(args: dict, **kw) -> str:
             )
         try:
             ok = kb.block_task(
-                conn, tid,
+                conn,
+                tid,
                 reason=reason,
                 kind=kind,
                 expected_run_id=_worker_run_id(tid),
             )
             if not ok:
                 return tool_error(
-                    f"could not block {tid} (unknown id or not in "
-                    f"running/ready)"
+                    f"could not block {tid} (unknown id or not in running/ready)"
                 )
             run = kb.latest_run(conn, tid)
             # Tell the worker where the task actually landed so it doesn't
@@ -965,7 +975,8 @@ def _handle_create(args: dict, **kw) -> str:
                 idempotency_key=idempotency_key,
                 max_runtime_seconds=(
                     int(max_runtime_seconds)
-                    if max_runtime_seconds is not None else None
+                    if max_runtime_seconds is not None
+                    else None
                 ),
                 skills=skills,
                 goal_mode=goal_mode,
@@ -1043,6 +1054,7 @@ def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
     chat_id = ""
     try:
         from gateway.session_context import get_session_env
+
         platform = get_session_env("HERCULES_SESSION_PLATFORM", "")
         chat_id = get_session_env("HERCULES_SESSION_CHAT_ID", "")
         if not platform or not chat_id:
@@ -1059,9 +1071,8 @@ def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
             # every CLI invocation, which is exactly the over-eager
             # behaviour that got #19718 reverted upstream. The TUI
             # poller keys on HERCULES_SESSION_KEY.
-            session_key = (
-                get_session_env("HERCULES_SESSION_KEY", "")
-                or os.environ.get("HERCULES_SESSION_KEY", "")
+            session_key = get_session_env("HERCULES_SESSION_KEY", "") or os.environ.get(
+                "HERCULES_SESSION_KEY", ""
             )
             if not session_key:
                 return False  # CLI / cron / test — no persistent channel
@@ -1069,24 +1080,29 @@ def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
             chat_id = session_key
         thread_id = get_session_env("HERCULES_SESSION_THREAD_ID", "") or None
         user_id = get_session_env("HERCULES_SESSION_USER_ID", "") or None
-        notifier_profile = (
-            get_session_env("HERCULES_SESSION_PROFILE", "")
-            or os.environ.get("HERCULES_PROFILE")
-        )
+        notifier_profile = get_session_env(
+            "HERCULES_SESSION_PROFILE", ""
+        ) or os.environ.get("HERCULES_PROFILE")
 
         # Lazy-import to keep the module-level dependency light
         from hercules_cli import kanban_db as _kb
+
         _kb.add_notify_sub(
-            conn, task_id=task_id,
-            platform=platform, chat_id=chat_id,
-            thread_id=thread_id, user_id=user_id,
+            conn,
+            task_id=task_id,
+            platform=platform,
+            chat_id=chat_id,
+            thread_id=thread_id,
+            user_id=user_id,
             notifier_profile=notifier_profile,
         )
         return True
     except Exception as _exc:
         logger.warning(
             "_maybe_auto_subscribe failed: %r (platform=%r key_set=%r)",
-            _exc, platform, bool(chat_id),
+            _exc,
+            platform,
+            bool(chat_id),
         )
         return False
 
@@ -1168,6 +1184,7 @@ def _board_schema_prop() -> dict[str, str]:
     """
     return {"type": "string", "description": _DESC_BOARD}
 
+
 KANBAN_SHOW_SCHEMA = {
     "name": "kanban_show",
     "description": (
@@ -1213,8 +1230,13 @@ KANBAN_LIST_SCHEMA = {
             "status": {
                 "type": "string",
                 "enum": [
-                    "triage", "todo", "ready", "running",
-                    "blocked", "done", "archived",
+                    "triage",
+                    "todo",
+                    "ready",
+                    "running",
+                    "blocked",
+                    "done",
+                    "archived",
                 ],
                 "description": "Optional task status filter.",
             },
@@ -1274,8 +1296,8 @@ KANBAN_COMPLETE_SCHEMA = {
                 "type": "object",
                 "description": (
                     "Free-form dict of structured facts about this "
-                    "attempt — {\"changed_files\": [...], \"tests_run\": 12, "
-                    "\"findings\": [...]}. Surfaced to downstream "
+                    'attempt — {"changed_files": [...], "tests_run": 12, '
+                    '"findings": [...]}. Surfaced to downstream '
                     "workers alongside ``summary``."
                 ),
             },
@@ -1311,8 +1333,8 @@ KANBAN_COMPLETE_SCHEMA = {
                     "Optional list of absolute paths to deliverable "
                     "files you produced during this run — generated "
                     "charts, PDFs, spreadsheets, images, archives. "
-                    "Examples: [\"/tmp/q3-revenue.png\", "
-                    "\"/tmp/report.pdf\"]. The gateway notifier "
+                    'Examples: ["/tmp/q3-revenue.png", '
+                    '"/tmp/report.pdf"]. The gateway notifier '
                     "uploads each path as a native attachment to the "
                     "subscribed chat (images embed inline, everything "
                     "else uploads as a file) so the deliverable "
@@ -1620,7 +1642,7 @@ KANBAN_LINK_SCHEMA = {
         "type": "object",
         "properties": {
             "parent_id": {"type": "string", "description": "Parent task id."},
-            "child_id":  {"type": "string", "description": "Child task id."},
+            "child_id": {"type": "string", "description": "Child task id."},
             "board": _board_schema_prop(),
         },
         "required": ["parent_id", "child_id"],

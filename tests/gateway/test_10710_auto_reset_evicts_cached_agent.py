@@ -15,6 +15,7 @@ These are AST invariants — load-bearing pins that fail if the eviction is
 removed from the cleanup block (mirrors
 test_48031_model_switch_after_auto_reset.py's approach).
 """
+
 from __future__ import annotations
 
 import ast
@@ -64,9 +65,8 @@ def test_auto_reset_cleanup_evicts_cached_agent():
         if not isinstance(node, ast.If):
             continue
         calls = _calls(node)
-        if (
-            "_set_session_reasoning_override" in calls
-            and _assigns_false(node, "was_auto_reset")
+        if "_set_session_reasoning_override" in calls and _assigns_false(
+            node, "was_auto_reset"
         ):
             assert "_evict_cached_agent" in calls, (
                 "gateway/run.py auto-reset cleanup block must call "
@@ -117,9 +117,8 @@ def test_auto_reset_cleanup_clears_last_resolved_model():
         if not isinstance(node, ast.If):
             continue
         calls = _calls(node)
-        if (
-            "_set_session_reasoning_override" in calls
-            and _assigns_false(node, "was_auto_reset")
+        if "_set_session_reasoning_override" in calls and _assigns_false(
+            node, "was_auto_reset"
         ):
             assert _references_name(node, "_last_resolved_model") and "pop" in _calls(
                 node

@@ -260,6 +260,7 @@ class TestCascadingFailures:
         )
         # Validation should catch this
         from agent.task_aware_model_router import _validate_routing_result
+
         validated = _validate_routing_result(decision)
         assert 0.0 <= validated.confidence <= 1.0
 

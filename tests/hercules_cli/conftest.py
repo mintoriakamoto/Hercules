@@ -11,9 +11,14 @@ _SKIP_NOUS_DOCKER_UPDATE = {
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    skip = pytest.mark.skip(reason="Cooklabs: Nous docker image pin moved to test_cooklabs_docker_update.py")
+    skip = pytest.mark.skip(
+        reason="Cooklabs: Nous docker image pin moved to test_cooklabs_docker_update.py"
+    )
     for item in items:
-        if item.name in _SKIP_NOUS_DOCKER_UPDATE and item.path.name == "test_web_server.py":
+        if (
+            item.name in _SKIP_NOUS_DOCKER_UPDATE
+            and item.path.name == "test_web_server.py"
+        ):
             item.add_marker(skip)
 
 
@@ -21,6 +26,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 def all_assignees_spawnable(monkeypatch):
     """Pretend every assignee maps to a real Hercules profile."""
     from hercules_cli import profiles
+
     monkeypatch.setattr(profiles, "profile_exists", lambda name: True)
 
 

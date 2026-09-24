@@ -82,7 +82,7 @@ def directory_stats_tool(
     try:
         for root, dirs, files in os.walk(base_path):
             # Check depth
-            depth = root[len(str(base_path)):].count(os.sep)
+            depth = root[len(str(base_path)) :].count(os.sep)
             if depth > max_depth:
                 dirs.clear()
                 continue
@@ -118,8 +118,11 @@ def directory_stats_tool(
 
             # Calculate directory sizes
             try:
-                dir_size = sum(os.path.getsize(os.path.join(root, f))
-                             for f in files if os.path.isfile(os.path.join(root, f)))
+                dir_size = sum(
+                    os.path.getsize(os.path.join(root, f))
+                    for f in files
+                    if os.path.isfile(os.path.join(root, f))
+                )
                 if dir_size > 0:
                     dir_sizes[root] = dir_size
             except OSError:
@@ -257,7 +260,7 @@ def tree_view_tool(
     add_tree(base_path)
 
     return {
-        "tree": "\n".join(lines[:max_items * 2]),  # Limit output size
+        "tree": "\n".join(lines[: max_items * 2]),  # Limit output size
         "truncated": truncated,
         "path": str(base_path),
         "items_shown": len(lines),

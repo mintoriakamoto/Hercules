@@ -18,7 +18,9 @@ from agent.transports.base import ProviderTransport
 from agent.transports.types import NormalizedResponse, ToolCall, Usage
 
 
-def _reasoning_config_for_model(model: str, reasoning_config: dict | None) -> dict | None:
+def _reasoning_config_for_model(
+    model: str, reasoning_config: dict | None
+) -> dict | None:
     """Return the model's wire-compatible reasoning config."""
     if not isinstance(reasoning_config, dict):
         return reasoning_config
@@ -32,7 +34,9 @@ def _reasoning_config_for_model(model: str, reasoning_config: dict | None) -> di
     return reasoning_config
 
 
-def _build_gemini_thinking_config(model: str, reasoning_config: dict | None) -> dict | None:
+def _build_gemini_thinking_config(
+    model: str, reasoning_config: dict | None
+) -> dict | None:
     """Translate Hercules/OpenRouter-style reasoning config to Gemini thinkingConfig."""
     if reasoning_config is None or not isinstance(reasoning_config, dict):
         return None
@@ -174,9 +178,7 @@ class ChatCompletionsTransport(ProviderTransport):
           ``Extra inputs are not permitted, field: 'messages[N]._empty_recovery_synthetic'``,
           which then poisons every subsequent request in the session.
         """
-        strip_extra_content = not _model_consumes_thought_signature(
-            kwargs.get("model")
-        )
+        strip_extra_content = not _model_consumes_thought_signature(kwargs.get("model"))
         needs_sanitize = False
         for msg in messages:
             if not isinstance(msg, dict):
@@ -236,7 +238,6 @@ class ChatCompletionsTransport(ProviderTransport):
                 out_msg.pop("tool_name", None)
                 out_msg.pop("effect_disposition", None)
                 out_msg.pop("timestamp", None)  # #47868 — leak into strict providers
-
 
             # Drop all Hercules-internal scaffolding markers (``_``-prefixed).
             # OpenAI's message schema has no ``_``-prefixed fields, so this
@@ -376,7 +377,9 @@ class ChatCompletionsTransport(ProviderTransport):
         anthropic_max_out = params.get("anthropic_max_output")
         is_kimi = params.get("is_kimi", False)
         is_tokenhub = params.get("is_tokenhub", False)
-        reasoning_config = _reasoning_config_for_model(model, params.get("reasoning_config"))
+        reasoning_config = _reasoning_config_for_model(
+            model, params.get("reasoning_config")
+        )
 
         if ephemeral is not None and max_tokens_fn:
             api_kwargs.update(max_tokens_fn(ephemeral))
@@ -466,7 +469,9 @@ class ChatCompletionsTransport(ProviderTransport):
 
         # Reasoning. LM Studio is handled above via top-level reasoning_effort,
         # so skip emitting extra_body.reasoning for it.
-        if params.get("supports_reasoning", False) and not params.get("is_lmstudio", False):
+        if params.get("supports_reasoning", False) and not params.get(
+            "is_lmstudio", False
+        ):
             if is_github_models:
                 gh_reasoning = params.get("github_reasoning_extra")
                 if gh_reasoning is not None:
@@ -480,7 +485,9 @@ class ChatCompletionsTransport(ProviderTransport):
         if provider_name == "gemini":
             raw_thinking_config = _build_gemini_thinking_config(model, reasoning_config)
             if _is_gemini_openai_compat_base_url(base_url):
-                thinking_config = _snake_case_gemini_thinking_config(raw_thinking_config)
+                thinking_config = _snake_case_gemini_thinking_config(
+                    raw_thinking_config
+                )
                 if thinking_config:
                     openai_compat_extra = extra_body.get("extra_body", {})
                     google_extra = openai_compat_extra.get("google", {})
@@ -574,7 +581,9 @@ class ChatCompletionsTransport(ProviderTransport):
             api_kwargs["max_tokens"] = anthropic_max
 
         # Provider-specific api_kwargs extras (reasoning_effort, metadata, etc.)
-        reasoning_config = _reasoning_config_for_model(model, params.get("reasoning_config"))
+        reasoning_config = _reasoning_config_for_model(
+            model, params.get("reasoning_config")
+        )
         extra_body_from_profile, top_level_from_profile = (
             profile.build_api_kwargs_extras(
                 reasoning_config=reasoning_config,
@@ -634,12 +643,14 @@ class ChatCompletionsTransport(ProviderTransport):
             # thinking_config from extra_body, so drop everything else here.
             try:
                 from agent.gemini_native_adapter import is_native_gemini_base_url
+
                 _native_gemini = is_native_gemini_base_url(params.get("base_url"))
             except Exception:
                 _native_gemini = False
             if _native_gemini:
                 extra_body = {
-                    k: v for k, v in extra_body.items()
+                    k: v
+                    for k, v in extra_body.items()
                     if k in ("thinking_config", "thinkingConfig")
                 }
             if extra_body:
@@ -675,7 +686,9 @@ class ChatCompletionsTransport(ProviderTransport):
                 tc_provider_data: dict[str, Any] = {}
                 extra = getattr(tc, "extra_content", None)
                 if extra is None and hasattr(tc, "model_extra"):
-                    extra = (tc.model_extra if isinstance(tc.model_extra, dict) else {}).get("extra_content")
+                    extra = (
+                        tc.model_extra if isinstance(tc.model_extra, dict) else {}
+                    ).get("extra_content")
                 if extra is not None:
                     if hasattr(extra, "model_dump"):
                         try:

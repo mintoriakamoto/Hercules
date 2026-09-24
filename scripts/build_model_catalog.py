@@ -31,7 +31,9 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
 # Ensure HERCULES_HOME is set for imports that touch it at module level.
-os.environ.setdefault("HERCULES_HOME", os.path.join(os.path.expanduser("~"), ".hercules"))
+os.environ.setdefault(
+    "HERCULES_HOME", os.path.join(os.path.expanduser("~"), ".hercules")
+)
 
 from hercules_cli.models import OPENROUTER_MODELS
 
@@ -57,8 +59,7 @@ def build_catalog() -> dict:
                     ),
                 },
                 "models": [
-                    {"id": mid, "description": desc}
-                    for mid, desc in OPENROUTER_MODELS
+                    {"id": mid, "description": desc} for mid, desc in OPENROUTER_MODELS
                 ],
             },
         },

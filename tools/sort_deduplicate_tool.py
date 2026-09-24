@@ -42,14 +42,23 @@ def sort_lines_tool(
             all_lines = f.readlines()
 
         # Preserve line endings
-        lines_with_endings = [(line.rstrip("\n"), line.endswith("\n")) for line in all_lines]
+        lines_with_endings = [
+            (line.rstrip("\n"), line.endswith("\n")) for line in all_lines
+        ]
         lines_content = [l[0] for l in lines_with_endings]
 
         # Sort
-        sorted_lines = sorted(lines_content, key=lambda x: x.lower() if ignore_case else x, reverse=reverse)
+        sorted_lines = sorted(
+            lines_content,
+            key=lambda x: x.lower() if ignore_case else x,
+            reverse=reverse,
+        )
 
         # Restore line endings
-        sorted_output = [line + ("\n" if endings else "") for line, (_, endings) in zip(sorted_lines, lines_with_endings)]
+        sorted_output = [
+            line + ("\n" if endings else "")
+            for line, (_, endings) in zip(sorted_lines, lines_with_endings)
+        ]
 
         # Create backup if requested
         backup_file = None

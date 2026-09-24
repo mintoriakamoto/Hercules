@@ -50,7 +50,7 @@ def _clear_model_metadata_caches():
 
     # Also clear any context length caches that might be populated
     try:
-        if hasattr(mm, '_local_context_cache'):
+        if hasattr(mm, "_local_context_cache"):
             mm._local_context_cache.clear()
     except:
         pass
@@ -180,7 +180,10 @@ def clear_model_metadata_caches_and_mock_requests(monkeypatch, _hermetic_environ
     # and left in an invalid state
     try:
         import subprocess
-        subprocess.run(["pkill", "-f", "codex.*app-server"], timeout=2, capture_output=True)
+
+        subprocess.run(
+            ["pkill", "-f", "codex.*app-server"], timeout=2, capture_output=True
+        )
     except Exception:
         pass
 
@@ -192,111 +195,120 @@ def _clear_other_module_caches(monkeypatch):
     # bedrock_adapter caches
     try:
         import agent.bedrock_adapter as ba
-        if hasattr(ba, '_bedrock_runtime_client_cache'):
+
+        if hasattr(ba, "_bedrock_runtime_client_cache"):
             try:
                 ba._bedrock_runtime_client_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(ba, '_bedrock_runtime_client_cache', {})
-        if hasattr(ba, '_bedrock_control_client_cache'):
+            monkeypatch.setattr(ba, "_bedrock_runtime_client_cache", {})
+        if hasattr(ba, "_bedrock_control_client_cache"):
             try:
                 ba._bedrock_control_client_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(ba, '_bedrock_control_client_cache', {})
-        if hasattr(ba, '_discovery_cache'):
+            monkeypatch.setattr(ba, "_bedrock_control_client_cache", {})
+        if hasattr(ba, "_discovery_cache"):
             try:
                 ba._discovery_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(ba, '_discovery_cache', {})
+            monkeypatch.setattr(ba, "_discovery_cache", {})
     except Exception:
         pass
 
     # anthropic_adapter cache
     try:
         import agent.anthropic_adapter as aa
-        if hasattr(aa, '_claude_code_version_cache'):
-            monkeypatch.setattr(aa, '_claude_code_version_cache', None)
+
+        if hasattr(aa, "_claude_code_version_cache"):
+            monkeypatch.setattr(aa, "_claude_code_version_cache", None)
     except Exception:
         pass
 
     # i18n cache
     try:
         import agent.i18n as i18n
-        if hasattr(i18n, '_catalog_cache'):
+
+        if hasattr(i18n, "_catalog_cache"):
             try:
                 i18n._catalog_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(i18n, '_catalog_cache', {})
+            monkeypatch.setattr(i18n, "_catalog_cache", {})
     except Exception:
         pass
 
     # lsp workspace cache
     try:
         import agent.lsp.workspace as ws
-        if hasattr(ws, '_workspace_cache'):
+
+        if hasattr(ws, "_workspace_cache"):
             try:
                 ws._workspace_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(ws, '_workspace_cache', {})
+            monkeypatch.setattr(ws, "_workspace_cache", {})
     except Exception:
         pass
 
     # auxiliary_client cache
     try:
         import agent.auxiliary_client as ac
-        if hasattr(ac, '_client_cache'):
+
+        if hasattr(ac, "_client_cache"):
             try:
                 ac._client_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(ac, '_client_cache', {})
+            monkeypatch.setattr(ac, "_client_cache", {})
     except Exception:
         pass
 
     # vertex_adapter cache
     try:
         import agent.vertex_adapter as va
-        if hasattr(va, '_creds_cache'):
+
+        if hasattr(va, "_creds_cache"):
             try:
                 va._creds_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(va, '_creds_cache', {})
+            monkeypatch.setattr(va, "_creds_cache", {})
     except Exception:
         pass
 
     # skill_bundles cache
     try:
         import agent.skill_bundles as sb
-        if hasattr(sb, '_bundles_cache'):
+
+        if hasattr(sb, "_bundles_cache"):
             try:
                 sb._bundles_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(sb, '_bundles_cache', {})
+            monkeypatch.setattr(sb, "_bundles_cache", {})
     except Exception:
         pass
 
     # models_dev cache
     try:
         import agent.models_dev as md
-        if hasattr(md, '_models_dev_cache'):
+
+        if hasattr(md, "_models_dev_cache"):
             try:
                 md._models_dev_cache.clear()
             except (AttributeError, TypeError):
                 pass
-            monkeypatch.setattr(md, '_models_dev_cache', {})
+            monkeypatch.setattr(md, "_models_dev_cache", {})
     except Exception:
         pass
 
     # pet manifest cache
     try:
         import agent.pet.manifest as pm
-        if hasattr(pm, '_cache'):
-            monkeypatch.setattr(pm, '_cache', None)
+
+        if hasattr(pm, "_cache"):
+            monkeypatch.setattr(pm, "_cache", None)
     except Exception:
         pass

@@ -238,7 +238,9 @@ def _parser_root() -> tuple[_ArgumentParser, argparse._SubParsersAction]:
     return parser, subparsers
 
 
-def _subparser_actions(parser: argparse.ArgumentParser) -> list[argparse._SubParsersAction]:
+def _subparser_actions(
+    parser: argparse.ArgumentParser,
+) -> list[argparse._SubParsersAction]:
     return [
         action
         for action in parser._actions
@@ -248,7 +250,10 @@ def _subparser_actions(parser: argparse.ArgumentParser) -> list[argparse._SubPar
 
 def _choice_help(action: argparse._SubParsersAction, name: str) -> str:
     for choice in action._choices_actions:
-        if getattr(choice, "dest", None) == name or getattr(choice, "metavar", None) == name:
+        if (
+            getattr(choice, "dest", None) == name
+            or getattr(choice, "metavar", None) == name
+        ):
             help_text = getattr(choice, "help", None)
             if help_text and help_text is not argparse.SUPPRESS:
                 return str(help_text)
@@ -268,7 +273,9 @@ def _clean_summary(text: str | None) -> str:
     return summary
 
 
-def _summaries_from_parser(parser: argparse.ArgumentParser) -> dict[tuple[str, ...], str]:
+def _summaries_from_parser(
+    parser: argparse.ArgumentParser,
+) -> dict[tuple[str, ...], str]:
     summaries: dict[tuple[str, ...], str] = {}
 
     def walk(current: argparse.ArgumentParser, path: tuple[str, ...]) -> None:
@@ -376,7 +383,8 @@ def _dispatch_extracted_subcommand(
     builder_name: str,
     main_handler_name: str,
     console_context: ConsoleContext,
-    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None] | None = None,
+    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None]
+    | None = None,
 ) -> str:
     parser, subparsers = _parser_root()
     module = importlib.import_module(module_name)
@@ -399,7 +407,8 @@ def _dispatch_registered_subcommand(
     register_name: str,
     handler_name: str | None = None,
     console_context: ConsoleContext,
-    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None] | None = None,
+    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None]
+    | None = None,
 ) -> str:
     parser, subparsers = _parser_root()
     module = importlib.import_module(module_name)
@@ -423,7 +432,8 @@ def _dispatch_builder_subcommand(
     builder_name: str,
     main_handler_name: str,
     console_context: ConsoleContext,
-    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None] | None = None,
+    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None]
+    | None = None,
 ) -> str:
     parser, subparsers = _parser_root()
     module = importlib.import_module(module_name)
@@ -444,7 +454,8 @@ def _dispatch_adder_subcommand(
     module_name: str,
     add_name: str,
     console_context: ConsoleContext,
-    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None] | None = None,
+    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None]
+    | None = None,
 ) -> str:
     parser, subparsers = _parser_root()
     module = importlib.import_module(module_name)
@@ -461,7 +472,8 @@ def _extracted_handler(
     module_name: str,
     builder_name: str,
     main_handler_name: str,
-    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None] | None = None,
+    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None]
+    | None = None,
 ) -> Callable[["HerculesConsoleEngine", list[str]], str]:
     def handler(_engine: HerculesConsoleEngine, args: list[str]) -> str:
         return _dispatch_extracted_subcommand(
@@ -484,7 +496,8 @@ def _registered_handler(
     module_name: str,
     register_name: str,
     handler_name: str | None = None,
-    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None] | None = None,
+    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None]
+    | None = None,
 ) -> Callable[["HerculesConsoleEngine", list[str]], str]:
     def handler(_engine: HerculesConsoleEngine, args: list[str]) -> str:
         return _dispatch_registered_subcommand(
@@ -507,7 +520,8 @@ def _builder_handler(
     module_name: str,
     builder_name: str,
     main_handler_name: str,
-    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None] | None = None,
+    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None]
+    | None = None,
 ) -> Callable[["HerculesConsoleEngine", list[str]], str]:
     def handler(_engine: HerculesConsoleEngine, args: list[str]) -> str:
         return _dispatch_builder_subcommand(
@@ -529,7 +543,8 @@ def _adder_handler(
     fixed: Sequence[str],
     module_name: str,
     add_name: str,
-    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None] | None = None,
+    namespace_update: Callable[[argparse.Namespace, ConsoleContext], None]
+    | None = None,
 ) -> Callable[["HerculesConsoleEngine", list[str]], str]:
     def handler(_engine: HerculesConsoleEngine, args: list[str]) -> str:
         return _dispatch_adder_subcommand(
@@ -550,7 +565,9 @@ def _register_command_family(
     *,
     root: str,
     paths: Iterable[Sequence[str]],
-    handler_factory: Callable[[Sequence[str]], Callable[["HerculesConsoleEngine", list[str]], str]],
+    handler_factory: Callable[
+        [Sequence[str]], Callable[["HerculesConsoleEngine", list[str]], str]
+    ],
     mutating: Iterable[Sequence[str]] = (),
     hosted: Iterable[Sequence[str]] = (),
     summary: str = "",
@@ -563,7 +580,9 @@ def _register_command_family(
         child_key = tuple(child_path)
         full_path = (root, *tuple(child_path))
         usage = " ".join(full_path)
-        command_summary = summary or (summaries or {}).get(full_path) or f"Run `hercules {usage}`."
+        command_summary = (
+            summary or (summaries or {}).get(full_path) or f"Run `hercules {usage}`."
+        )
         engine.register(
             full_path,
             usage,
@@ -642,24 +661,66 @@ class HerculesConsoleEngine:
             if self.context not in command.contexts:
                 continue
             marker = " *" if command.mutating else "  "
-            lines.append(f"{marker} {command.usage:<32} {_table_summary(command.summary)}")
-        lines.extend(
-            [
-                "",
-                "* requires confirmation",
-                "Built-ins: help, help <command>, history, clear, exit, quit",
-            ]
-        )
+            lines.append(
+                f"{marker} {command.usage:<32} {_table_summary(command.summary)}"
+            )
+        lines.extend([
+            "",
+            "* requires confirmation",
+            "Built-ins: help, help <command>, history, clear, exit, quit",
+        ])
         return "\n".join(lines)
 
     def _register_defaults(self) -> None:
-        self.register(("status",), "status", "Show Hercules component status.", _status, contexts=ALL_CONTEXTS)
-        self.register(("doctor",), "doctor", "Run diagnostics without auto-fix.", _doctor, contexts=ALL_CONTEXTS)
-        self.register(("logs",), "logs [name] [-n N]", "Show recent Hercules logs.", _logs, contexts=ALL_CONTEXTS)
-        self.register(("sessions", "list"), "sessions list [--limit N]", "List recent sessions.", _sessions_list, contexts=ALL_CONTEXTS)
-        self.register(("sessions", "stats"), "sessions stats", "Show session store statistics.", _sessions_stats, contexts=ALL_CONTEXTS)
-        self.register(("config", "show"), "config show", "Show current configuration.", _config_show, contexts=ALL_CONTEXTS)
-        self.register(("config", "path"), "config path", "Print config.yaml path.", _config_path, contexts=ALL_CONTEXTS)
+        self.register(
+            ("status",),
+            "status",
+            "Show Hercules component status.",
+            _status,
+            contexts=ALL_CONTEXTS,
+        )
+        self.register(
+            ("doctor",),
+            "doctor",
+            "Run diagnostics without auto-fix.",
+            _doctor,
+            contexts=ALL_CONTEXTS,
+        )
+        self.register(
+            ("logs",),
+            "logs [name] [-n N]",
+            "Show recent Hercules logs.",
+            _logs,
+            contexts=ALL_CONTEXTS,
+        )
+        self.register(
+            ("sessions", "list"),
+            "sessions list [--limit N]",
+            "List recent sessions.",
+            _sessions_list,
+            contexts=ALL_CONTEXTS,
+        )
+        self.register(
+            ("sessions", "stats"),
+            "sessions stats",
+            "Show session store statistics.",
+            _sessions_stats,
+            contexts=ALL_CONTEXTS,
+        )
+        self.register(
+            ("config", "show"),
+            "config show",
+            "Show current configuration.",
+            _config_show,
+            contexts=ALL_CONTEXTS,
+        )
+        self.register(
+            ("config", "path"),
+            "config path",
+            "Print config.yaml path.",
+            _config_path,
+            contexts=ALL_CONTEXTS,
+        )
         self.register(
             ("config", "set"),
             "config set <key> <value>",
@@ -669,8 +730,20 @@ class HerculesConsoleEngine:
             confirmation="Update Hercules configuration?",
             contexts=ALL_CONTEXTS,
         )
-        self.register(("cron", "list"), "cron list [--all]", "List scheduled jobs.", _cron_list, contexts=ALL_CONTEXTS)
-        self.register(("cron", "status"), "cron status", "Show cron scheduler status.", _cron_status, contexts=ALL_CONTEXTS)
+        self.register(
+            ("cron", "list"),
+            "cron list [--all]",
+            "List scheduled jobs.",
+            _cron_list,
+            contexts=ALL_CONTEXTS,
+        )
+        self.register(
+            ("cron", "status"),
+            "cron status",
+            "Show cron scheduler status.",
+            _cron_status,
+            contexts=ALL_CONTEXTS,
+        )
         self.register(
             ("cron", "pause"),
             "cron pause <job>",
@@ -778,7 +851,14 @@ class HerculesConsoleEngine:
                 "hercules_cli.subcommands.plugins",
                 "build_plugins_parser",
                 "cmd_plugins",
-                [("list",), ("enable",), ("disable",), ("install",), ("update",), ("remove",)],
+                [
+                    ("list",),
+                    ("enable",),
+                    ("disable",),
+                    ("install",),
+                    ("update",),
+                    ("remove",),
+                ],
                 {("enable",), ("disable",), ("install",), ("update",), ("remove",)},
             ),
             "skills": (
@@ -954,13 +1034,15 @@ class HerculesConsoleEngine:
                 paths=paths,
                 mutating=mutating,
                 summaries=summaries,
-                handler_factory=lambda fixed, root=root, module=module, builder=builder, main_handler=main_handler: _extracted_handler(
-                    root,
-                    fixed,
-                    module,
-                    builder,
-                    main_handler,
-                    namespace_update=_apply_confirmed_defaults,
+                handler_factory=lambda fixed, root=root, module=module, builder=builder, main_handler=main_handler: (
+                    _extracted_handler(
+                        root,
+                        fixed,
+                        module,
+                        builder,
+                        main_handler,
+                        namespace_update=_apply_confirmed_defaults,
+                    )
                 ),
             )
 
@@ -1015,7 +1097,9 @@ class HerculesConsoleEngine:
             ("send",),
             "send --to <target> <message>",
             "Send a message to a configured platform.",
-            _adder_handler("send", (), "hercules_cli.send_cmd", "register_send_subparser"),
+            _adder_handler(
+                "send", (), "hercules_cli.send_cmd", "register_send_subparser"
+            ),
             mutating=True,
             confirmation="Send this message?",
         )
@@ -1176,11 +1260,26 @@ class HerculesConsoleEngine:
                 "hercules_cli.pets",
                 "register_cli",
                 None,
-                [("list",), ("install",), ("select",), ("show",), ("off",), ("scale",), ("remove",), ("doctor",)],
+                [
+                    ("list",),
+                    ("install",),
+                    ("select",),
+                    ("show",),
+                    ("off",),
+                    ("scale",),
+                    ("remove",),
+                    ("doctor",),
+                ],
                 {("install",), ("select",), ("off",), ("scale",), ("remove",)},
             ),
         }
-        for root, (module, register, handler_name, paths, mutating) in registered.items():
+        for root, (
+            module,
+            register,
+            handler_name,
+            paths,
+            mutating,
+        ) in registered.items():
             summaries = _registered_summaries(root, module, register)
             _register_command_family(
                 self,
@@ -1188,13 +1287,15 @@ class HerculesConsoleEngine:
                 paths=paths,
                 mutating=mutating,
                 summaries=summaries,
-                handler_factory=lambda fixed, root=root, module=module, register=register, handler_name=handler_name: _registered_handler(
-                    root,
-                    fixed,
-                    module,
-                    register,
-                    handler_name=handler_name,
-                    namespace_update=_apply_confirmed_defaults,
+                handler_factory=lambda fixed, root=root, module=module, register=register, handler_name=handler_name: (
+                    _registered_handler(
+                        root,
+                        fixed,
+                        module,
+                        register,
+                        handler_name=handler_name,
+                        namespace_update=_apply_confirmed_defaults,
+                    )
                 ),
             )
 
@@ -1227,7 +1328,9 @@ class HerculesConsoleEngine:
             key = tuple(path)
             command = self.commands.get(key)
             if command is None:
-                raise RuntimeError(f"Hosted console policy references unknown command: {' '.join(key)}")
+                raise RuntimeError(
+                    f"Hosted console policy references unknown command: {' '.join(key)}"
+                )
             self.commands[key] = replace(
                 command,
                 contexts=command.contexts | frozenset({"hosted"}),
@@ -1242,7 +1345,9 @@ class HerculesConsoleEngine:
             except ConsoleCommandError as exc:
                 return ConsoleResult("error", output=str(exc))
         if head == "history":
-            output = "\n".join(f"{idx + 1}: {cmd}" for idx, cmd in enumerate(self.history))
+            output = "\n".join(
+                f"{idx + 1}: {cmd}" for idx, cmd in enumerate(self.history)
+            )
             return ConsoleResult("ok", output=output or "No history yet.")
         if head == "clear":
             return ConsoleResult("clear", output="\033[2J\033[H")
@@ -1250,7 +1355,9 @@ class HerculesConsoleEngine:
             return ConsoleResult("exit")
         return None
 
-    def _resolve_command(self, tokens: Sequence[str]) -> tuple[ConsoleCommand, list[str]]:
+    def _resolve_command(
+        self, tokens: Sequence[str]
+    ) -> tuple[ConsoleCommand, list[str]]:
         rejected = self._rejection_for(tokens)
         if rejected:
             raise ConsoleCommandError(rejected)
@@ -1275,7 +1382,9 @@ class HerculesConsoleEngine:
         probe = " ".join(tokens[:2]) if len(tokens) > 1 else tokens[0]
         suggestions = difflib.get_close_matches(probe, available, n=3, cutoff=0.45)
         suffix = f" Did you mean: {', '.join(suggestions)}?" if suggestions else ""
-        raise ConsoleCommandError(f"Unsupported Hercules Console command: {probe}.{suffix}")
+        raise ConsoleCommandError(
+            f"Unsupported Hercules Console command: {probe}.{suffix}"
+        )
 
     def _enforce_context_policy(self, command: ConsoleCommand, args: list[str]) -> None:
         if self.context != "hosted":
@@ -1313,18 +1422,54 @@ class HerculesConsoleEngine:
         if first in blocked_top:
             return f"`hercules {first}` is not available in Hercules Console."
         blocked_pairs = {
-            ("config", "edit"): "`config edit` opens an editor and is not available in Hercules Console.",
-            ("mcp", "serve"): "`mcp serve` starts a server and is not available in Hercules Console.",
-            ("profile", "alias"): "`profile alias` creates shell wrappers and is not available in Hercules Console.",
-            ("skills", "config"): "`skills config` is interactive and is not available in Hercules Console.",
-            ("skills", "publish"): "`skills publish` is not available in Hercules Console.",
-            ("kanban", "tail"): "`kanban tail` streams output and is not available in Hercules Console.",
-            ("kanban", "watch"): "`kanban watch` streams output and is not available in Hercules Console.",
-            ("kanban", "daemon"): "`kanban daemon` starts a service and is not available in Hercules Console.",
-            ("kanban", "dispatcher"): "`kanban dispatcher` starts a worker and is not available in Hercules Console.",
-            ("kanban", "swarm"): "`kanban swarm` starts agent work and is not available in Hercules Console.",
-            ("kanban", "decompose"): "`kanban decompose` starts agent work and is not available in Hercules Console.",
-            ("kanban", "specify"): "`kanban specify` starts agent work and is not available in Hercules Console.",
+            (
+                "config",
+                "edit",
+            ): "`config edit` opens an editor and is not available in Hercules Console.",
+            (
+                "mcp",
+                "serve",
+            ): "`mcp serve` starts a server and is not available in Hercules Console.",
+            (
+                "profile",
+                "alias",
+            ): "`profile alias` creates shell wrappers and is not available in Hercules Console.",
+            (
+                "skills",
+                "config",
+            ): "`skills config` is interactive and is not available in Hercules Console.",
+            (
+                "skills",
+                "publish",
+            ): "`skills publish` is not available in Hercules Console.",
+            (
+                "kanban",
+                "tail",
+            ): "`kanban tail` streams output and is not available in Hercules Console.",
+            (
+                "kanban",
+                "watch",
+            ): "`kanban watch` streams output and is not available in Hercules Console.",
+            (
+                "kanban",
+                "daemon",
+            ): "`kanban daemon` starts a service and is not available in Hercules Console.",
+            (
+                "kanban",
+                "dispatcher",
+            ): "`kanban dispatcher` starts a worker and is not available in Hercules Console.",
+            (
+                "kanban",
+                "swarm",
+            ): "`kanban swarm` starts agent work and is not available in Hercules Console.",
+            (
+                "kanban",
+                "decompose",
+            ): "`kanban decompose` starts agent work and is not available in Hercules Console.",
+            (
+                "kanban",
+                "specify",
+            ): "`kanban specify` starts agent work and is not available in Hercules Console.",
             ("kanban", "gc"): "`kanban gc` is not available in Hercules Console.",
         }
         if len(tokens) >= 2:
@@ -1342,7 +1487,7 @@ class HerculesConsoleEngine:
         if len(output) <= self.output_limit:
             return output
         omitted = len(output) - self.output_limit
-        return f"{output[:self.output_limit]}\n... output truncated ({omitted} bytes omitted)"
+        return f"{output[: self.output_limit]}\n... output truncated ({omitted} bytes omitted)"
 
 
 def _expect_no_args(args: Sequence[str], usage: str) -> None:
@@ -1458,7 +1603,9 @@ def _enforce_hosted_line_policy(path: tuple[str, ...], args: Sequence[str]) -> N
                 )
 
 
-def _apply_confirmed_defaults(args: argparse.Namespace, context: ConsoleContext) -> None:
+def _apply_confirmed_defaults(
+    args: argparse.Namespace, context: ConsoleContext
+) -> None:
     """Skip nested prompts after the console-level confirmation has happened."""
 
     for attr in ("yes",):
@@ -1474,7 +1621,9 @@ def _apply_confirmed_defaults(args: argparse.Namespace, context: ConsoleContext)
     if getattr(args, "auth_action", None) == "add":
         auth_type = getattr(args, "auth_type", None)
         if auth_type in {"api-key", "api_key"} and not getattr(args, "api_key", None):
-            raise ConsoleCommandError("auth add --type api-key requires --api-key in Hercules Console.")
+            raise ConsoleCommandError(
+                "auth add --type api-key requires --api-key in Hercules Console."
+            )
     if getattr(args, "import_name", None) is not None:
         # profile import has no prompt flag; leave it alone.
         return
@@ -1495,7 +1644,9 @@ def _status(_engine: HerculesConsoleEngine, args: list[str]) -> str:
 
     from hercules_cli.status import show_status
 
-    output = _capture_output(lambda: show_status(SimpleNamespace(all=False, deep=False)))
+    output = _capture_output(
+        lambda: show_status(SimpleNamespace(all=False, deep=False))
+    )
     return _strip_console_status_footer(output)
 
 
@@ -1710,7 +1861,11 @@ def _sessions_repair(_engine: HerculesConsoleEngine, args: list[str]) -> str:
     ns = parser.parse_args(args)
 
     def _run() -> None:
-        from hercules_state import DEFAULT_DB_PATH, _db_opens_cleanly, repair_state_db_schema
+        from hercules_state import (
+            DEFAULT_DB_PATH,
+            _db_opens_cleanly,
+            repair_state_db_schema,
+        )
 
         db_path = DEFAULT_DB_PATH
         if not db_path.exists():
@@ -1823,7 +1978,9 @@ def run_console_repl(
 
     engine = HerculesConsoleEngine()
     if interactive:
-        print("Hercules Console. Type `help` for commands, `exit` to quit.", file=stdout)
+        print(
+            "Hercules Console. Type `help` for commands, `exit` to quit.", file=stdout
+        )
 
     while True:
         if interactive:
@@ -1842,7 +1999,9 @@ def run_console_repl(
                     file=stderr,
                 )
                 return 1
-            print(f"{result.confirmation_message} [y/N] ", end="", file=stdout, flush=True)
+            print(
+                f"{result.confirmation_message} [y/N] ", end="", file=stdout, flush=True
+            )
             answer = stdin.readline()
             if answer.strip().lower() not in {"y", "yes"}:
                 print("Cancelled.", file=stdout)

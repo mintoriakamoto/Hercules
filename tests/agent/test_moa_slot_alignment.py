@@ -132,8 +132,10 @@ def test_resolution_landing_on_another_provider_is_unusable(monkeypatch):
     # substitutes the Codex route while the Claude model name rides along.
     monkeypatch.setattr(
         "hercules_cli.runtime_provider.resolve_runtime_provider",
-        lambda **kw: {"provider": "openai-codex",
-                      "base_url": "https://chatgpt.com/backend-api/codex"},
+        lambda **kw: {
+            "provider": "openai-codex",
+            "base_url": "https://chatgpt.com/backend-api/codex",
+        },
     )
     assert moa_slots._probe_provider("openrouter", "anthropic/claude-opus-4.8") is False
 
@@ -171,7 +173,9 @@ def test_session_slot_reads_configured_provider_and_model(monkeypatch):
     monkeypatch.setattr(moa_slots, "provider_is_available", _available("openai-codex"))
     monkeypatch.setattr(
         "hercules_cli.config.load_config",
-        lambda *a, **k: {"model": {"provider": "openai-codex", "default": "gpt-6-astra"}},
+        lambda *a, **k: {
+            "model": {"provider": "openai-codex", "default": "gpt-6-astra"}
+        },
     )
     assert moa_slots.session_slot() == {
         "provider": "openai-codex",

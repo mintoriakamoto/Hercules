@@ -93,7 +93,12 @@ class TestChainSurvivesTheRoundTrip:
     def test_append_refuses_an_unsigned_record(self):
         identity = Identity.generate()
         forged = SignedRecord(
-            kind="verified_claim", by=identity.agent_id, ts=1, body={}, prev=None, sig=""
+            kind="verified_claim",
+            by=identity.agent_id,
+            ts=1,
+            body={},
+            prev=None,
+            sig="",
         )
         with pytest.raises(ValueError, match="signature is invalid"):
             PersistentEvidenceLog().append(forged)
@@ -127,7 +132,11 @@ class TestChainSurvivesTheRoundTrip:
         claim_record = _claim(miner)
         log.append(claim_record)
         check = verification(
-            checker, claim=claim_record, observed=Observation(0), ts=2, prev=claim_record.hash
+            checker,
+            claim=claim_record,
+            observed=Observation(0),
+            ts=2,
+            prev=claim_record.hash,
         )
         log.append(check)
         assert len(log.records_of_kind("verified_claim")) == 1

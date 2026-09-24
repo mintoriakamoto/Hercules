@@ -114,6 +114,7 @@ class TestDesktopHintBlockRemoved:
         monkeypatch.setenv("HERCULES_DESKTOP", "1")
         monkeypatch.delenv("HERCULES_DESKTOP_TERMINAL", raising=False)
         from agent.prompt_builder import _clear_backend_probe_cache
+
         _clear_backend_probe_cache()
         hints = build_environment_hints()
         assert "Runtime surface:" not in hints
@@ -125,6 +126,7 @@ class TestDesktopHintBlockRemoved:
         monkeypatch.setenv("HERCULES_DESKTOP", "1")
         monkeypatch.setenv("HERCULES_DESKTOP_TERMINAL", "1")
         from agent.prompt_builder import _clear_backend_probe_cache
+
         _clear_backend_probe_cache()
         hints = build_environment_hints()
         assert "embedded terminal pane" not in hints

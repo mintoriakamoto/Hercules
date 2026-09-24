@@ -106,10 +106,10 @@ CREATE INDEX IF NOT EXISTS idx_assoc_b ON fact_associations(fact_b, strength DES
 """
 
 # Trust adjustment constants
-_HELPFUL_DELTA   =  0.05
+_HELPFUL_DELTA = 0.05
 _UNHELPFUL_DELTA = -0.10
-_TRUST_MIN       =  0.0
-_TRUST_MAX       =  1.0
+_TRUST_MIN = 0.0
+_TRUST_MAX = 1.0
 
 # Hebbian association decay: an edge that stops being reinforced fades, so
 # spreading activation reflects what is CURRENTLY useful, not what was useful a
@@ -120,7 +120,9 @@ _ASSOCIATION_HALF_LIFE_DAYS = 30.0
 _ASSOCIATION_PRUNE_FLOOR = 0.05
 
 
-def _decay_factor(updated_at: object, half_life_days: float = _ASSOCIATION_HALF_LIFE_DAYS) -> float:
+def _decay_factor(
+    updated_at: object, half_life_days: float = _ASSOCIATION_HALF_LIFE_DAYS
+) -> float:
     """Exponential decay 0.5^(age_days / half_life). 1.0 if age is unknown/negative.
 
     Mirrors the retriever's temporal decay so associations age on the same
@@ -146,12 +148,13 @@ def _decay_factor(updated_at: object, half_life_days: float = _ASSOCIATION_HALF_
         # never erases an edge" contract instead of propagating.
         return 1.0
 
+
 # Entity extraction patterns
-_RE_CAPITALIZED  = re.compile(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b')
+_RE_CAPITALIZED = re.compile(r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b")
 _RE_DOUBLE_QUOTE = re.compile(r'"([^"]+)"')
 _RE_SINGLE_QUOTE = re.compile(r"'([^']+)'")
-_RE_AKA          = re.compile(
-    r'(\w+(?:\s+\w+)*)\s+(?:aka|also known as)\s+(\w+(?:\s+\w+)*)',
+_RE_AKA = re.compile(
+    r"(\w+(?:\s+\w+)*)\s+(?:aka|also known as)\s+(\w+(?:\s+\w+)*)",
     re.IGNORECASE,
 )
 
@@ -208,6 +211,7 @@ class MemoryStore:
     ) -> None:
         if db_path is None:
             from hercules_constants import get_hercules_home
+
             db_path = str(get_hercules_home() / "memory_store.db")
         self.db_path = Path(db_path).expanduser()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -240,7 +244,12 @@ class MemoryStore:
                     isolation_level=None,
                 )
                 conn.row_factory = sqlite3.Row
-                entry = {"conn": conn, "lock": threading.RLock(), "refs": 0, "ready": False}
+                entry = {
+                    "conn": conn,
+                    "lock": threading.RLock(),
+                    "refs": 0,
+                    "ready": False,
+                }
                 MemoryStore._shared[self._key] = entry
             entry["refs"] += 1
             self._entry = entry
@@ -293,23 +302,32 @@ class MemoryStore:
         # gracefully on NFS/SMB/FUSE-mounted HERCULES_HOME (same issue as
         # state.db / kanban.db — see hercules_state._WAL_INCOMPAT_MARKERS).
         from hercules_state import apply_wal_with_fallback
+
         apply_wal_with_fallback(self._conn, db_label="memory_store.db (holographic)")
         self._apply_performance_pragmas()
         self._conn.executescript(_SCHEMA)
         # Migrate: add newer columns if missing (safe for existing databases).
-        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(facts)").fetchall()}
+        columns = {
+            row[1] for row in self._conn.execute("PRAGMA table_info(facts)").fetchall()
+        }
         if "hrr_vector" not in columns:
             self._conn.execute("ALTER TABLE facts ADD COLUMN hrr_vector BLOB")
         if "embedding" not in columns:
             self._conn.execute("ALTER TABLE facts ADD COLUMN embedding BLOB")
         if "fact_type" not in columns:
-            self._conn.execute("ALTER TABLE facts ADD COLUMN fact_type TEXT DEFAULT 'episodic'")
+            self._conn.execute(
+                "ALTER TABLE facts ADD COLUMN fact_type TEXT DEFAULT 'episodic'"
+            )
         if "superseded_by" not in columns:
             self._conn.execute("ALTER TABLE facts ADD COLUMN superseded_by INTEGER")
         if "importance" not in columns:
-            self._conn.execute("ALTER TABLE facts ADD COLUMN importance INTEGER DEFAULT 5")
+            self._conn.execute(
+                "ALTER TABLE facts ADD COLUMN importance INTEGER DEFAULT 5"
+            )
         if "reflected" not in columns:
-            self._conn.execute("ALTER TABLE facts ADD COLUMN reflected INTEGER DEFAULT 0")
+            self._conn.execute(
+                "ALTER TABLE facts ADD COLUMN reflected INTEGER DEFAULT 0"
+            )
         self._conn.commit()
 
     def _rebuild_corrupt_db(self) -> None:
@@ -327,6 +345,7 @@ class MemoryStore:
         path = Path(self._key)
         try:
             from hercules_state import _backup_db_file
+
             _backup_db_file(path)
         except Exception as exc:  # best-effort forensic copy
             logger.debug("memory DB backup before rebuild failed: %s", exc)
@@ -413,7 +432,14 @@ class MemoryStore:
                     INSERT INTO facts (content, category, tags, trust_score, fact_type, importance)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (content, category, tags, self.default_trust, fact_type, importance),
+                    (
+                        content,
+                        category,
+                        tags,
+                        self.default_trust,
+                        fact_type,
+                        importance,
+                    ),
                 )
                 self._conn.commit()
                 fact_id: int = cur.lastrowid  # type: ignore[assignment]
@@ -661,9 +687,9 @@ class MemoryStore:
             self._conn.commit()
 
             return {
-                "fact_id":      fact_id,
-                "old_trust":    old_trust,
-                "new_trust":    new_trust,
+                "fact_id": fact_id,
+                "old_trust": old_trust,
+                "new_trust": new_trust,
                 "helpful_count": row["helpful_count"] + helpful_increment,
             }
 
@@ -671,7 +697,9 @@ class MemoryStore:
     # Durable Hebbian associations (spreading activation)
     # ------------------------------------------------------------------
 
-    def reinforce_association(self, fact_id_a: int, fact_id_b: int, delta: float = 0.1) -> float:
+    def reinforce_association(
+        self, fact_id_a: int, fact_id_b: int, delta: float = 0.1
+    ) -> float:
         """Strengthen the undirected association between two facts.
 
         Strength accumulates (capped at 1.0) so a pair that keeps proving
@@ -805,7 +833,8 @@ class MemoryStore:
             doomed = [
                 (r["fact_a"], r["fact_b"])
                 for r in rows
-                if r["strength"] * _decay_factor(r["updated_at"]) < _ASSOCIATION_PRUNE_FLOOR
+                if r["strength"] * _decay_factor(r["updated_at"])
+                < _ASSOCIATION_PRUNE_FLOOR
             ]
             for a, b in doomed:
                 self._conn.execute(
@@ -888,7 +917,14 @@ class MemoryStore:
         for r in rows:
             sim = cosine(qvec, bytes_to_vec(r["embedding"]))
             if sim >= min_sim:
-                scored.append((sim, {"fact_id": r["fact_id"], "content": r["content"], "similarity": sim}))
+                scored.append((
+                    sim,
+                    {
+                        "fact_id": r["fact_id"],
+                        "content": r["content"],
+                        "similarity": sim,
+                    },
+                ))
         scored.sort(key=lambda t: t[0], reverse=True)
         return [d for _s, d in scored[:k]]
 
@@ -918,23 +954,40 @@ class MemoryStore:
 
         # Exact/near-exact duplicate short-circuit (no LLM needed).
         for n in neighbors:
-            if n.get("similarity", 0.0) >= 0.985 or n["content"].strip().lower() == content.lower():
-                return {"action": "duplicate", "fact_id": n["fact_id"], "superseded": []}
+            if (
+                n.get("similarity", 0.0) >= 0.985
+                or n["content"].strip().lower() == content.lower()
+            ):
+                return {
+                    "action": "duplicate",
+                    "fact_id": n["fact_id"],
+                    "superseded": [],
+                }
 
         decision = None
-        if neighbors and reconciler is not None and getattr(reconciler, "enabled", False):
+        if (
+            neighbors
+            and reconciler is not None
+            and getattr(reconciler, "enabled", False)
+        ):
             try:
                 decision = reconciler.reconcile(content, neighbors)
             except Exception:
                 decision = None
 
         if decision and decision.get("action") == "duplicate":
-            target = decision.get("target_fact_id") or (neighbors[0]["fact_id"] if neighbors else None)
+            target = decision.get("target_fact_id") or (
+                neighbors[0]["fact_id"] if neighbors else None
+            )
             return {"action": "duplicate", "fact_id": target, "superseded": []}
 
         # Insert the new fact.
         new_id = self.add_fact(
-            content, category=category, tags=tags, fact_type=fact_type, importance=importance
+            content,
+            category=category,
+            tags=tags,
+            fact_type=fact_type,
+            importance=importance,
         )
 
         superseded: list[int] = []
@@ -945,7 +998,11 @@ class MemoryStore:
                 if self.supersede_fact(target, new_id):
                     superseded.append(target)
 
-        return {"action": "update" if superseded else "new", "fact_id": new_id, "superseded": superseded}
+        return {
+            "action": "update" if superseded else "new",
+            "fact_id": new_id,
+            "superseded": superseded,
+        }
 
     # ------------------------------------------------------------------
     # Reflection / importance
@@ -956,7 +1013,8 @@ class MemoryStore:
         importance = max(1, min(10, int(importance)))
         with self._lock:
             cur = self._conn.execute(
-                "UPDATE facts SET importance = ? WHERE fact_id = ?", (importance, fact_id)
+                "UPDATE facts SET importance = ? WHERE fact_id = ?",
+                (importance, fact_id),
             )
             self._conn.commit()
             return cur.rowcount > 0
@@ -1071,7 +1129,8 @@ class MemoryStore:
                 if not name:
                     continue
                 row = self._conn.execute(
-                    "SELECT entity_id FROM entities WHERE name = ? COLLATE NOCASE", (name,)
+                    "SELECT entity_id FROM entities WHERE name = ? COLLATE NOCASE",
+                    (name,),
                 ).fetchone()
                 if row is not None:
                     seeds.add(int(row["entity_id"]))
@@ -1111,7 +1170,9 @@ class MemoryStore:
                         f"SELECT DISTINCT entity_id FROM fact_entities WHERE fact_id IN ({f_ph})",
                         new_ids,
                     ).fetchall()
-                    next_frontier = {int(er["entity_id"]) for er in erows} - visited_entities
+                    next_frontier = {
+                        int(er["entity_id"]) for er in erows
+                    } - visited_entities
                     visited_entities |= next_frontier
                     frontier = next_frontier
                 else:
@@ -1192,9 +1253,7 @@ class MemoryStore:
             return int(alias_row["entity_id"])
 
         # Create new entity
-        cur = self._conn.execute(
-            "INSERT INTO entities (name) VALUES (?)", (name,)
-        )
+        cur = self._conn.execute("INSERT INTO entities (name) VALUES (?)", (name,))
         self._conn.commit()
         return int(cur.lastrowid)  # type: ignore[return-value]
 
@@ -1271,7 +1330,9 @@ class MemoryStore:
             ).fetchall()
 
             if not rows:
-                self._conn.execute("DELETE FROM memory_banks WHERE bank_name = ?", (bank_name,))
+                self._conn.execute(
+                    "DELETE FROM memory_banks WHERE bank_name = ?", (bank_name,)
+                )
                 self._conn.commit()
                 return
 

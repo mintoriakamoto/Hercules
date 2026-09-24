@@ -97,6 +97,7 @@ class PluginManifest:
 
 class IntegrityError(Exception):
     """Raised when plugin integrity check fails."""
+
     def __init__(self, plugin_name: str, reason: str):
         self.plugin_name = plugin_name
         self.reason = reason
@@ -105,6 +106,7 @@ class IntegrityError(Exception):
 
 class CapabilityDenied(Exception):
     """Raised when plugin uses unauthorized capability."""
+
     def __init__(self, plugin_name: str, capability: str):
         self.plugin_name = plugin_name
         self.capability = capability
@@ -115,6 +117,7 @@ class CapabilityDenied(Exception):
 
 class OverrideDenied(Exception):
     """Raised when plugin tries to override without approval."""
+
     def __init__(self, plugin_name: str, tool_name: str):
         self.plugin_name = plugin_name
         self.tool_name = tool_name
@@ -158,7 +161,7 @@ class PluginVerifier:
                 f"__init__.py not found at {entry}",
             )
 
-        with open(entry, 'rb') as f:
+        with open(entry, "rb") as f:
             content = f.read()
 
         actual_hash = hashlib.sha256(content).hexdigest()
@@ -169,7 +172,9 @@ class PluginVerifier:
                 f"content hash mismatch: expected {expected_hash}, got {actual_hash}",
             )
 
-        logger.info("Plugin %s content verified (hash: %s)", plugin_path.name, actual_hash[:8])
+        logger.info(
+            "Plugin %s content verified (hash: %s)", plugin_path.name, actual_hash[:8]
+        )
         return actual_hash
 
     def verify_signature(
@@ -191,12 +196,11 @@ class PluginVerifier:
         """
         if not self.signing_key:
             raise IntegrityError(
-                plugin_path.name,
-                "No signing key configured for signature verification"
+                plugin_path.name, "No signing key configured for signature verification"
             )
 
         entry = plugin_path / "__init__.py"
-        with open(entry, 'rb') as f:
+        with open(entry, "rb") as f:
             content = f.read()
 
         # Parse signature format: "ed25519:<base64-signature>"
@@ -208,11 +212,13 @@ class PluginVerifier:
 
         try:
             import base64
+
             sig_b64 = signature.split(":", 1)[1]
             sig_bytes = base64.b64decode(sig_b64)
 
             # Verify with libsodium/nacl
             import nacl.signing
+
             verify_key = nacl.signing.VerifyKey(self.signing_key)
             verify_key.verify(content, sig_bytes)
 
@@ -221,8 +227,7 @@ class PluginVerifier:
 
         except Exception as e:
             raise IntegrityError(
-                plugin_path.name,
-                f"Signature verification failed: {str(e)}"
+                plugin_path.name, f"Signature verification failed: {str(e)}"
             )
 
 
@@ -247,7 +252,7 @@ class CapabilityAuditor:
         logger.info(
             "Plugin %s approved for capabilities: %s",
             plugin_name,
-            ", ".join(capabilities)
+            ", ".join(capabilities),
         )
 
     def check_capability(
@@ -334,7 +339,7 @@ class PluginIntegrityManager:
     def _load_manifest_file(self, path: Path) -> None:
         """Load manifest from JSON file."""
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             for name, manifest_data in data.items():
                 self.manifests[name] = PluginManifest.from_dict(manifest_data)
@@ -362,10 +367,7 @@ class PluginIntegrityManager:
         # Get manifest
         manifest = self.manifests.get(plugin_name)
         if manifest is None:
-            raise IntegrityError(
-                plugin_name,
-                f"Plugin not in manifest"
-            )
+            raise IntegrityError(plugin_name, f"Plugin not in manifest")
 
         # Verify content hash
         self.verifier.verify_content(plugin_path, manifest.content_hash)
@@ -382,10 +384,7 @@ class PluginIntegrityManager:
 
     def save_manifest(self, path: Path) -> None:
         """Save manifests to JSON file."""
-        data = {
-            name: manifest.to_dict()
-            for name, manifest in self.manifests.items()
-        }
-        with open(path, 'w', encoding='utf-8') as f:
+        data = {name: manifest.to_dict() for name, manifest in self.manifests.items()}
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         logger.info("Saved %d manifests to %s", len(self.manifests), path)

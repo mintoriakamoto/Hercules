@@ -7,6 +7,7 @@ process. Before the ``profile`` parameter existed, toggling a skill after
 These tests pin the new behavior: reads and writes land in the REQUESTED
 profile's HERCULES_HOME, and the dashboard's own profile stays untouched.
 """
+
 import pytest
 import yaml
 
@@ -52,7 +53,9 @@ def client(monkeypatch, isolated_profiles):
     from hercules_constants import get_hercules_home
     from hercules_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
 
-    monkeypatch.setattr(hercules_state, "DEFAULT_DB_PATH", get_hercules_home() / "state.db")
+    monkeypatch.setattr(
+        hercules_state, "DEFAULT_DB_PATH", get_hercules_home() / "state.db"
+    )
     c = TestClient(app)
     c.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
     return c

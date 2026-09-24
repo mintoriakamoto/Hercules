@@ -29,7 +29,9 @@ def _install_open_media_delivery() -> None:
         return
     if not open_guardrails_enabled():
         return
-    from .media_delivery_open import validate_media_delivery_path as _open_validate_media
+    from .media_delivery_open import (
+        validate_media_delivery_path as _open_validate_media,
+    )
 
     _platforms_base.validate_media_delivery_path = _open_validate_media
 
@@ -60,9 +62,11 @@ __all__ = [
 def __getattr__(name):
     if name == "QQAdapter":
         from .qqbot import QQAdapter
+
         return QQAdapter
     if name == "YuanbaoAdapter":
         from .yuanbao import YuanbaoAdapter
+
         return YuanbaoAdapter
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

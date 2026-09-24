@@ -283,7 +283,9 @@ class RelayAdapter(BasePlatformAdapter):
             platform = getattr(src, "platform", None)
             platform_value = getattr(platform, "value", platform)
             if platform_value and platform_value != "relay":
-                _remember_chat_hint(self._platform_by_chat, str(chat), str(platform_value))
+                _remember_chat_hint(
+                    self._platform_by_chat, str(chat), str(platform_value)
+                )
             scope = getattr(src, "scope_id", None)
             if scope:
                 _remember_chat_hint(self._scope_by_chat, str(chat), str(scope))
@@ -296,7 +298,9 @@ class RelayAdapter(BasePlatformAdapter):
         except Exception:
             pass
 
-    def _with_scope(self, chat_id: str, metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def _with_scope(
+        self, chat_id: str, metadata: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Ensure the outbound metadata carries the discriminator the connector's
         egress guard needs to resolve the owning tenant. Two cases:
 
@@ -420,16 +424,26 @@ class RelayAdapter(BasePlatformAdapter):
         else:
             text = ""
         member = payload.get("member") or {}
-        user = (member.get("user") if isinstance(member, dict) else None) or payload.get("user") or {}
+        user = (
+            (member.get("user") if isinstance(member, dict) else None)
+            or payload.get("user")
+            or {}
+        )
         channel_id = str(payload.get("channel_id") or "")
         guild_id = payload.get("guild_id")  # real Discord interaction wire field
         source = SessionSource(
             platform=Platform.RELAY,
             chat_id=channel_id,
             chat_type="channel" if guild_id else "dm",
-            user_id=str(user.get("id")) if isinstance(user, dict) and user.get("id") else None,
-            user_name=str(user.get("username")) if isinstance(user, dict) and user.get("username") else None,
-            scope_id=str(guild_id) if guild_id else None,  # Discord guild → generic scope slot
+            user_id=str(user.get("id"))
+            if isinstance(user, dict) and user.get("id")
+            else None,
+            user_name=str(user.get("username"))
+            if isinstance(user, dict) and user.get("username")
+            else None,
+            scope_id=str(guild_id)
+            if guild_id
+            else None,  # Discord guild → generic scope slot
             message_id=str(payload.get("id")) if payload.get("id") else None,
         )
         return MessageEvent(text=text, message_type=MessageType.TEXT, source=source)

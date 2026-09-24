@@ -63,7 +63,9 @@ _POLL_INTERVAL_S = 2.0
 _TERM_GRACE_S = 3.0
 
 
-def _is_orphaned(original_ppid: int, parent_create_time: float, getppid=os.getppid) -> bool:
+def _is_orphaned(
+    original_ppid: int, parent_create_time: float, getppid=os.getppid
+) -> bool:
     """Mirrors ``tui_gateway.slash_worker._is_orphaned`` exactly.
 
     True once the process that spawned us is gone. Never trusts a bare
@@ -118,7 +120,9 @@ def _terminate_process_group(proc: subprocess.Popen) -> None:
             continue
 
 
-def _watchdog_loop(proc: subprocess.Popen, original_ppid: int, parent_create_time: float) -> None:
+def _watchdog_loop(
+    proc: subprocess.Popen, original_ppid: int, parent_create_time: float
+) -> None:
     while proc.poll() is None:
         if _is_orphaned(original_ppid, parent_create_time):
             _terminate_process_group(proc)

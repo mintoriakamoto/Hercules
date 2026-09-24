@@ -68,10 +68,10 @@ logger = logging.getLogger(__name__)
 #
 # Fully in-memory and session-scoped: no schema change, no persistence, and it
 # rides on the existing trust column via store.update_fact(trust_delta=...).
-_CO_ACTIVATION_DELTA = 0.02       # sub-helpful nudge (direct helpful is 0.05)
-_CO_ACTIVATION_MEMORY = 12        # recall episodes retained for reinforcement
-_CO_ACTIVATION_MAX_FANOUT = 12    # cap co-boosted facts per feedback event
-_ASSOCIATION_DELTA = 0.15         # durable Hebbian edge strengthened per event
+_CO_ACTIVATION_DELTA = 0.02  # sub-helpful nudge (direct helpful is 0.05)
+_CO_ACTIVATION_MEMORY = 12  # recall episodes retained for reinforcement
+_CO_ACTIVATION_MAX_FANOUT = 12  # cap co-boosted facts per feedback event
+_ASSOCIATION_DELTA = 0.15  # durable Hebbian edge strengthened per event
 
 # Automatic spreading activation on prefetch: after the every-turn search, pull
 # in the strongest facts that have proven useful *together* with the top hit,
@@ -96,10 +96,10 @@ _PREFETCH_SPREAD_MAX = 2
 #   • recency    — gentle temporal freshness (a year-old fact is less certain)
 _CONFIDENCE_TRUST_WEIGHT = 0.55
 _CONFIDENCE_CORROBORATION_WEIGHT = 0.30
-_CONFIDENCE_RECENCY_WEIGHT = 0.15   # smaller, so a fresh but low-trust,
+_CONFIDENCE_RECENCY_WEIGHT = 0.15  # smaller, so a fresh but low-trust,
 #                                     uncorroborated fact still reads "low" and
 #                                     the agent hedges it (the whole point).
-_CONFIDENCE_CORROBORATION_SATURATION = 3   # helpful ratings for full corroboration
+_CONFIDENCE_CORROBORATION_SATURATION = 3  # helpful ratings for full corroboration
 _CONFIDENCE_RECENCY_HALF_LIFE_DAYS = 180.0  # matches the retriever's recency default
 
 
@@ -167,27 +167,52 @@ def _confidence_label(conf: float) -> str:
 # ambiguous sessions (no clear signal) change nothing.
 _AUTO_ATTRIBUTION_POSITIVE_DELTA = 0.02
 _AUTO_ATTRIBUTION_NEGATIVE_DELTA = -0.03
-_AUTO_ATTRIBUTION_MAX_FACTS = 10          # most-recently-recalled facts credited
-_AUTO_ATTRIBUTION_RECALL_CAP = 500        # bound per-session recall tracking
+_AUTO_ATTRIBUTION_MAX_FACTS = 10  # most-recently-recalled facts credited
+_AUTO_ATTRIBUTION_RECALL_CAP = 500  # bound per-session recall tracking
 
 # A clear parting acknowledgement → the recalled facts helped. Matched as whole
 # phrases (word boundaries) against the FINAL user turn only, so "not perfect"
 # or "imperfect" can't trip "perfect".
 _POSITIVE_OUTCOME_MARKERS = (
-    "thank you", "thanks", "perfect", "exactly right", "that's right",
-    "that is right", "that worked", "that's correct", "that is correct",
-    "spot on", "nailed it", "works now", "that did it", "you're right",
-    "you are right", "that's exactly right", "that's perfect",
+    "thank you",
+    "thanks",
+    "perfect",
+    "exactly right",
+    "that's right",
+    "that is right",
+    "that worked",
+    "that's correct",
+    "that is correct",
+    "spot on",
+    "nailed it",
+    "works now",
+    "that did it",
+    "you're right",
+    "you are right",
+    "that's exactly right",
+    "that's perfect",
 )
 # A clear correction/negation → the recalled facts misled. Deliberately narrow:
 # only unambiguous whole phrases, so a benign "actually it's working now" or
 # "the incorrectly-named var is fixed" can't misfire as negative.
 _NEGATIVE_OUTCOME_MARKERS = (
-    "that's wrong", "that is wrong", "you're wrong", "you are wrong",
-    "that's incorrect", "that is incorrect", "that's not right",
-    "that is not right", "that's not correct", "that is not correct",
-    "wrong answer", "doesn't work", "does not work", "didn't work",
-    "did not work", "not what i asked", "that's not it",
+    "that's wrong",
+    "that is wrong",
+    "you're wrong",
+    "you are wrong",
+    "that's incorrect",
+    "that is incorrect",
+    "that's not right",
+    "that is not right",
+    "that's not correct",
+    "that is not correct",
+    "wrong answer",
+    "doesn't work",
+    "does not work",
+    "didn't work",
+    "did not work",
+    "not what i asked",
+    "that's not it",
 )
 
 _OUTCOME_NORMALIZE_RE = re.compile(r"[^a-z0-9']+")
@@ -233,7 +258,7 @@ FACT_STORE_SCHEMA = {
         "graph, or reason first.\n"
         "Recall results carry a calibrated `confidence` (0-1) + `confidence_label` "
         "per fact and an overall `recall_confidence`: state high-confidence "
-        "memories as fact, but HEDGE low-confidence ones (\"I believe…\", verify) "
+        'memories as fact, but HEDGE low-confidence ones ("I believe…", verify) '
         "instead of asserting a weak guess."
     ),
     "parameters": {
@@ -241,22 +266,77 @@ FACT_STORE_SCHEMA = {
         "properties": {
             "action": {
                 "type": "string",
-                "enum": ["add", "search", "probe", "related", "reason", "contradict", "update", "remove", "list", "reflect", "why", "graph", "spread"],
+                "enum": [
+                    "add",
+                    "search",
+                    "probe",
+                    "related",
+                    "reason",
+                    "contradict",
+                    "update",
+                    "remove",
+                    "list",
+                    "reflect",
+                    "why",
+                    "graph",
+                    "spread",
+                ],
             },
-            "content": {"type": "string", "description": "Fact content (required for 'add')."},
-            "query": {"type": "string", "description": "Search query (required for 'search'); also a seed for 'graph'."},
-            "entity": {"type": "string", "description": "Entity name for 'probe'/'related'/'graph'."},
-            "entities": {"type": "array", "items": {"type": "string"}, "description": "Entity names for 'reason'."},
-            "fact_id": {"type": "integer", "description": "Fact ID for 'update'/'remove'/'why'."},
-            "category": {"type": "string", "enum": ["user_pref", "project", "tool", "general"]},
-            "fact_type": {"type": "string", "enum": ["profile", "episodic"], "description": "For 'add': 'profile' = durable identity/preferences injected every turn; 'episodic' (default) = recalled on demand."},
-            "importance": {"type": "integer", "description": "For 'add': 1-10 retrieval weight (10 = core/critical, 5 = default, 1 = trivial)."},
-            "hops": {"type": "integer", "description": "For 'graph': association depth to traverse (default 2)."},
-            "min_facts": {"type": "integer", "description": "For 'reflect': minimum new observations required before synthesizing insights (default 3)."},
+            "content": {
+                "type": "string",
+                "description": "Fact content (required for 'add').",
+            },
+            "query": {
+                "type": "string",
+                "description": "Search query (required for 'search'); also a seed for 'graph'.",
+            },
+            "entity": {
+                "type": "string",
+                "description": "Entity name for 'probe'/'related'/'graph'.",
+            },
+            "entities": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Entity names for 'reason'.",
+            },
+            "fact_id": {
+                "type": "integer",
+                "description": "Fact ID for 'update'/'remove'/'why'.",
+            },
+            "category": {
+                "type": "string",
+                "enum": ["user_pref", "project", "tool", "general"],
+            },
+            "fact_type": {
+                "type": "string",
+                "enum": ["profile", "episodic"],
+                "description": "For 'add': 'profile' = durable identity/preferences injected every turn; 'episodic' (default) = recalled on demand.",
+            },
+            "importance": {
+                "type": "integer",
+                "description": "For 'add': 1-10 retrieval weight (10 = core/critical, 5 = default, 1 = trivial).",
+            },
+            "hops": {
+                "type": "integer",
+                "description": "For 'graph': association depth to traverse (default 2).",
+            },
+            "min_facts": {
+                "type": "integer",
+                "description": "For 'reflect': minimum new observations required before synthesizing insights (default 3).",
+            },
             "tags": {"type": "string", "description": "Comma-separated tags."},
-            "trust_delta": {"type": "number", "description": "Trust adjustment for 'update'."},
-            "min_trust": {"type": "number", "description": "Minimum trust filter (default: 0.3)."},
-            "min_strength": {"type": "number", "description": "For 'spread': minimum learned association strength (default: 0.0)."},
+            "trust_delta": {
+                "type": "number",
+                "description": "Trust adjustment for 'update'.",
+            },
+            "min_trust": {
+                "type": "number",
+                "description": "Minimum trust filter (default: 0.3).",
+            },
+            "min_strength": {
+                "type": "number",
+                "description": "For 'spread': minimum learned association strength (default: 0.0).",
+            },
             "limit": {"type": "integer", "description": "Max results (default: 10)."},
         },
         "required": ["action"],
@@ -284,13 +364,16 @@ FACT_FEEDBACK_SCHEMA = {
 # Config
 # ---------------------------------------------------------------------------
 
+
 def _load_plugin_config() -> dict:
     from hercules_constants import get_hercules_home
+
     config_path = get_hercules_home() / "config.yaml"
     if not config_path.exists():
         return {}
     try:
         import yaml
+
         with open(config_path, encoding="utf-8-sig") as f:
             all_config = yaml.safe_load(f) or {}
         return cfg_get(all_config, "plugins", "hercules-memory-store", default={}) or {}
@@ -301,6 +384,7 @@ def _load_plugin_config() -> dict:
 # ---------------------------------------------------------------------------
 # MemoryProvider implementation
 # ---------------------------------------------------------------------------
+
 
 class HolographicMemoryProvider(MemoryProvider):
     """Holographic memory with structured facts, entity resolution, and HRR retrieval."""
@@ -327,9 +411,11 @@ class HolographicMemoryProvider(MemoryProvider):
     def save_config(self, values, hercules_home):
         """Write config to config.yaml under plugins.hercules-memory-store."""
         from pathlib import Path
+
         config_path = Path(hercules_home) / "config.yaml"
         try:
             import yaml
+
             existing = {}
             if config_path.exists():
                 with open(config_path, encoding="utf-8-sig") as f:
@@ -343,17 +429,41 @@ class HolographicMemoryProvider(MemoryProvider):
 
     def get_config_schema(self):
         from hercules_constants import display_hercules_home
+
         _default_db = f"{display_hercules_home()}/memory_store.db"
         return [
-            {"key": "db_path", "description": "SQLite database path", "default": _default_db},
-            {"key": "auto_extract", "description": "Auto-extract facts at session end", "default": "false", "choices": ["true", "false"]},
-            {"key": "auto_attribution", "description": "At session end, nudge the trust of recalled facts by the inferred session outcome (learns from use, not just explicit ratings)", "default": "true", "choices": ["true", "false"]},
-            {"key": "default_trust", "description": "Default trust score for new facts", "default": "0.5"},
-            {"key": "hrr_dim", "description": "HRR vector dimensions", "default": "1024"},
+            {
+                "key": "db_path",
+                "description": "SQLite database path",
+                "default": _default_db,
+            },
+            {
+                "key": "auto_extract",
+                "description": "Auto-extract facts at session end",
+                "default": "false",
+                "choices": ["true", "false"],
+            },
+            {
+                "key": "auto_attribution",
+                "description": "At session end, nudge the trust of recalled facts by the inferred session outcome (learns from use, not just explicit ratings)",
+                "default": "true",
+                "choices": ["true", "false"],
+            },
+            {
+                "key": "default_trust",
+                "description": "Default trust score for new facts",
+                "default": "0.5",
+            },
+            {
+                "key": "hrr_dim",
+                "description": "HRR vector dimensions",
+                "default": "1024",
+            },
         ]
 
     def initialize(self, session_id: str, **kwargs) -> None:
         from hercules_constants import get_hercules_home
+
         _hercules_home = str(get_hercules_home())
         _default_db = _hercules_home + "/memory_store.db"
         db_path = self._config.get("db_path", _default_db)
@@ -380,7 +490,10 @@ class HolographicMemoryProvider(MemoryProvider):
 
             embedder = Embedder.from_config(self._config)
             if getattr(embedder, "enabled", False):
-                logger.info("holographic memory: semantic embeddings enabled (model=%s)", embedder.model)
+                logger.info(
+                    "holographic memory: semantic embeddings enabled (model=%s)",
+                    embedder.model,
+                )
         except Exception as exc:
             logger.debug("holographic memory: embedder init skipped: %s", exc)
             embedder = None
@@ -393,13 +506,19 @@ class HolographicMemoryProvider(MemoryProvider):
 
             self._llm = MemoryLLM.from_config(self._config)
             if getattr(self._llm, "enabled", False):
-                logger.info("holographic memory: LLM curation enabled (model=%s)", self._llm.model)
+                logger.info(
+                    "holographic memory: LLM curation enabled (model=%s)",
+                    self._llm.model,
+                )
         except Exception as exc:
             logger.debug("holographic memory: LLM init skipped: %s", exc)
             self._llm = None
 
         self._store = MemoryStore(
-            db_path=db_path, default_trust=default_trust, hrr_dim=hrr_dim, embedder=embedder
+            db_path=db_path,
+            default_trust=default_trust,
+            hrr_dim=hrr_dim,
+            embedder=embedder,
         )
         self._retriever = FactRetriever(
             store=self._store,
@@ -420,9 +539,9 @@ class HolographicMemoryProvider(MemoryProvider):
         if not self._store:
             return ""
         try:
-            total = self._store._conn.execute(
-                "SELECT COUNT(*) FROM facts"
-            ).fetchone()[0]
+            total = self._store._conn.execute("SELECT COUNT(*) FROM facts").fetchone()[
+                0
+            ]
         except Exception:
             total = 0
         if total == 0:
@@ -442,7 +561,9 @@ class HolographicMemoryProvider(MemoryProvider):
         # preferences) are injected every turn rather than waiting to be
         # recalled, since they apply regardless of the current query.
         try:
-            profile = self._store.list_profile_facts(limit=int(self._config.get("profile_inject_limit", 15)))
+            profile = self._store.list_profile_facts(
+                limit=int(self._config.get("profile_inject_limit", 15))
+            )
         except Exception:
             profile = []
         if profile:
@@ -465,7 +586,9 @@ class HolographicMemoryProvider(MemoryProvider):
                 except Exception:
                     expanded = None
                 if expanded and expanded.strip().lower() != query.strip().lower():
-                    extra = self._retriever.search(expanded, min_trust=self._min_trust, limit=5)
+                    extra = self._retriever.search(
+                        expanded, min_trust=self._min_trust, limit=5
+                    )
                     seen = {r.get("fact_id") for r in results}
                     for r in extra:
                         if r.get("fact_id") not in seen:
@@ -583,10 +706,14 @@ class HolographicMemoryProvider(MemoryProvider):
         if adjusted:
             logger.info(
                 "auto-attribution: %s outcome nudged %d recalled fact(s) by %+.3f",
-                outcome, adjusted, delta,
+                outcome,
+                adjusted,
+                delta,
             )
 
-    def sync_turn(self, user_content: str, assistant_content: str, *, session_id: str = "") -> None:
+    def sync_turn(
+        self, user_content: str, assistant_content: str, *, session_id: str = ""
+    ) -> None:
         # Holographic memory stores explicit facts via tools, not auto-sync.
         # The on_session_end hook handles auto-extraction if configured.
         pass
@@ -693,7 +820,11 @@ class HolographicMemoryProvider(MemoryProvider):
                 continue
         result["insights"] = made
         if made:
-            logger.info("Reflection: synthesized %d insight(s) from %d observations", made, len(facts))
+            logger.info(
+                "Reflection: synthesized %d insight(s) from %d observations",
+                made,
+                len(facts),
+            )
         return result
 
     def on_memory_write(self, action: str, target: str, content: str) -> None:
@@ -760,7 +891,8 @@ class HolographicMemoryProvider(MemoryProvider):
                 self._note_co_activation(results)
                 recall_conf = self._annotate_confidence(results)
                 return json.dumps({
-                    "results": results, "count": len(results),
+                    "results": results,
+                    "count": len(results),
                     "recall_confidence": recall_conf,
                 })
 
@@ -773,7 +905,8 @@ class HolographicMemoryProvider(MemoryProvider):
                 self._note_co_activation(results)
                 recall_conf = self._annotate_confidence(results)
                 return json.dumps({
-                    "results": results, "count": len(results),
+                    "results": results,
+                    "count": len(results),
                     "recall_confidence": recall_conf,
                 })
 
@@ -786,7 +919,8 @@ class HolographicMemoryProvider(MemoryProvider):
                 self._note_co_activation(results)
                 recall_conf = self._annotate_confidence(results)
                 return json.dumps({
-                    "results": results, "count": len(results),
+                    "results": results,
+                    "count": len(results),
                     "recall_confidence": recall_conf,
                 })
 
@@ -802,7 +936,8 @@ class HolographicMemoryProvider(MemoryProvider):
                 self._note_co_activation(results)
                 recall_conf = self._annotate_confidence(results)
                 return json.dumps({
-                    "results": results, "count": len(results),
+                    "results": results,
+                    "count": len(results),
                     "recall_confidence": recall_conf,
                 })
 
@@ -817,7 +952,9 @@ class HolographicMemoryProvider(MemoryProvider):
                 updated = store.update_fact(
                     int(args["fact_id"]),
                     content=args.get("content"),
-                    trust_delta=float(args["trust_delta"]) if "trust_delta" in args else None,
+                    trust_delta=float(args["trust_delta"])
+                    if "trust_delta" in args
+                    else None,
                     tags=args.get("tags"),
                     category=args.get("category"),
                 )
@@ -856,7 +993,8 @@ class HolographicMemoryProvider(MemoryProvider):
                 self._note_co_activation(results)
                 recall_conf = self._annotate_confidence(results)
                 return json.dumps({
-                    "facts": results, "count": len(results),
+                    "facts": results,
+                    "count": len(results),
                     "recall_confidence": recall_conf,
                 })
 
@@ -870,7 +1008,9 @@ class HolographicMemoryProvider(MemoryProvider):
                 if seed_id is None:
                     probe_text = args.get("query") or args.get("entity") or ""
                     if not probe_text:
-                        return tool_error("spread requires 'fact_id', 'query', or 'entity'")
+                        return tool_error(
+                            "spread requires 'fact_id', 'query', or 'entity'"
+                        )
                     hits = retriever.search(
                         probe_text,
                         min_trust=float(args.get("min_trust", self._min_trust)),
@@ -886,7 +1026,9 @@ class HolographicMemoryProvider(MemoryProvider):
                 )
                 recall_conf = self._annotate_confidence(results)
                 return json.dumps({
-                    "seed": int(seed_id), "facts": results, "count": len(results),
+                    "seed": int(seed_id),
+                    "facts": results,
+                    "count": len(results),
                     "recall_confidence": recall_conf,
                 })
 
@@ -1015,7 +1157,11 @@ class HolographicMemoryProvider(MemoryProvider):
             for msg in messages:
                 role = msg.get("role")
                 content = msg.get("content", "")
-                if role in ("user", "assistant") and isinstance(content, str) and content.strip():
+                if (
+                    role in ("user", "assistant")
+                    and isinstance(content, str)
+                    and content.strip()
+                ):
                     parts.append(f"{role}: {content.strip()}")
             if not parts:
                 return False
@@ -1037,7 +1183,9 @@ class HolographicMemoryProvider(MemoryProvider):
                         stored += 1
                 except Exception:
                     continue
-            logger.info("LLM salience: extracted %d facts (%d new/updated)", len(facts), stored)
+            logger.info(
+                "LLM salience: extracted %d facts (%d new/updated)", len(facts), stored
+            )
             return True
         except Exception as exc:
             logger.debug("LLM salience extraction failed: %s", exc)
@@ -1053,13 +1201,22 @@ class HolographicMemoryProvider(MemoryProvider):
                 return
 
         _PREF_PATTERNS = [
-            re.compile(r'\bI\s+(?:prefer|like|love|use|want|need)\s+(.+)', re.IGNORECASE),
-            re.compile(r'\bmy\s+(?:favorite|preferred|default)\s+\w+\s+is\s+(.+)', re.IGNORECASE),
-            re.compile(r'\bI\s+(?:always|never|usually)\s+(.+)', re.IGNORECASE),
+            re.compile(
+                r"\bI\s+(?:prefer|like|love|use|want|need)\s+(.+)", re.IGNORECASE
+            ),
+            re.compile(
+                r"\bmy\s+(?:favorite|preferred|default)\s+\w+\s+is\s+(.+)",
+                re.IGNORECASE,
+            ),
+            re.compile(r"\bI\s+(?:always|never|usually)\s+(.+)", re.IGNORECASE),
         ]
         _DECISION_PATTERNS = [
-            re.compile(r'\bwe\s+(?:decided|agreed|chose)\s+(?:to\s+)?(.+)', re.IGNORECASE),
-            re.compile(r'\bthe\s+project\s+(?:uses|needs|requires)\s+(.+)', re.IGNORECASE),
+            re.compile(
+                r"\bwe\s+(?:decided|agreed|chose)\s+(?:to\s+)?(.+)", re.IGNORECASE
+            ),
+            re.compile(
+                r"\bthe\s+project\s+(?:uses|needs|requires)\s+(.+)", re.IGNORECASE
+            ),
         ]
 
         extracted = 0
@@ -1095,6 +1252,7 @@ class HolographicMemoryProvider(MemoryProvider):
 # ---------------------------------------------------------------------------
 # Plugin entry point
 # ---------------------------------------------------------------------------
+
 
 def register(ctx) -> None:
     """Register the holographic memory provider with the plugin system."""

@@ -187,16 +187,14 @@ class MemoryLLM:
             content = str(item.get("content", "") or "").strip()
             if not content:
                 continue
-            out.append(
-                {
-                    "content": content[:400],
-                    "category": str(item.get("category", "general") or "general"),
-                    "fact_type": "profile"
-                    if str(item.get("fact_type", "")).lower() == "profile"
-                    else "episodic",
-                    "importance": _clamp_importance(item.get("importance")),
-                }
-            )
+            out.append({
+                "content": content[:400],
+                "category": str(item.get("category", "general") or "general"),
+                "fact_type": "profile"
+                if str(item.get("fact_type", "")).lower() == "profile"
+                else "episodic",
+                "importance": _clamp_importance(item.get("importance")),
+            })
         return out
 
     def score_importance(self, content: str) -> Optional[int]:
@@ -222,7 +220,7 @@ class MemoryLLM:
         """
         if not facts:
             return []
-        listing = "\n".join(f'{f["fact_id"]}: {f["content"]}' for f in facts)
+        listing = "\n".join(f"{f['fact_id']}: {f['content']}" for f in facts)
         system = (
             "You are the reflective memory of an AI agent. Given recent "
             "observations (each: `id: fact`), synthesize higher-order INSIGHTS: "
@@ -252,14 +250,12 @@ class MemoryLLM:
                         source_ids.append(int(s))
                     except (ValueError, TypeError):
                         continue
-            out.append(
-                {
-                    "content": content[:400],
-                    "category": str(item.get("category", "insight") or "insight"),
-                    "source_ids": source_ids,
-                    "importance": _clamp_importance(item.get("importance"), default=8),
-                }
-            )
+            out.append({
+                "content": content[:400],
+                "category": str(item.get("category", "insight") or "insight"),
+                "source_ids": source_ids,
+                "importance": _clamp_importance(item.get("importance"), default=8),
+            })
         return out
 
     def reconcile(self, new_content: str, candidates: List[dict]) -> Optional[dict]:
@@ -272,7 +268,7 @@ class MemoryLLM:
         """
         if not candidates:
             return {"action": "new", "target_fact_id": None}
-        listing = "\n".join(f'{c["fact_id"]}: {c["content"]}' for c in candidates)
+        listing = "\n".join(f"{c['fact_id']}: {c['content']}" for c in candidates)
         system = (
             "You maintain an AI agent's fact memory. Given a NEW fact and "
             "EXISTING similar facts, decide the relationship. Return ONLY JSON: "

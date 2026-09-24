@@ -143,7 +143,11 @@ class TaskAwareModelRouter:
         Returns:
             RoutingDecision with recommended model tier and optional specific model
         """
-        logger.debug("Analyzing task for routing: %s (tools=%d)", task_description[:80], available_tools)
+        logger.debug(
+            "Analyzing task for routing: %s (tools=%d)",
+            task_description[:80],
+            available_tools,
+        )
 
         # Determine task complexity using extended reasoning engine
         try:
@@ -162,7 +166,9 @@ class TaskAwareModelRouter:
 
         # Determine task category by keyword matching
         category = self._categorize_task(task_description)
-        logger.debug("Task category identified: %s", category.value if category else "none")
+        logger.debug(
+            "Task category identified: %s", category.value if category else "none"
+        )
 
         # Find best matching routing rule
         # Security rules get highest priority to override complexity-based routing
@@ -230,8 +236,7 @@ class TaskAwareModelRouter:
             tier = ModelTier.BALANCED
             confidence = 0.5
             reasoning = (
-                f"No rule matched; using default balanced tier "
-                f"for {complexity.value}"
+                f"No rule matched; using default balanced tier for {complexity.value}"
             )
             logger.info(
                 "Task routed to default: tier=%s, reason=no_rule_match, complexity=%s",
@@ -408,7 +413,9 @@ def _validate_routing_result(decision: RoutingDecision) -> RoutingDecision:
     if decision.cost_savings_estimate is not None:
         if not (0.0 <= decision.cost_savings_estimate <= 100.0):
             old_savings = decision.cost_savings_estimate
-            decision.cost_savings_estimate = max(0.0, min(100.0, decision.cost_savings_estimate))
+            decision.cost_savings_estimate = max(
+                0.0, min(100.0, decision.cost_savings_estimate)
+            )
             logger.warning(
                 "Routing cost savings out of range [0-100%%]: %.1f → %.1f",
                 old_savings,
@@ -477,7 +484,9 @@ def route_task_to_model(
             )
 
         if available_tools < 0:
-            logger.warning("Negative available_tools: %d; clamping to 0", available_tools)
+            logger.warning(
+                "Negative available_tools: %d; clamping to 0", available_tools
+            )
             available_tools = 0
 
         router = get_model_router()

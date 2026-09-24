@@ -48,7 +48,9 @@ def analyze_skill_performance(skill_name: str) -> Dict[str, Any]:
         "avg_latency_ms": round(metrics.avg_latency_ms, 2),
         "total_runs": profile.total_runs,
         "improvement_potential": round(improvement_potential, 3),
-        "recommendation": _get_recommendation(metrics.success_rate, improvement_potential),
+        "recommendation": _get_recommendation(
+            metrics.success_rate, improvement_potential
+        ),
     }
 
 
@@ -252,9 +254,9 @@ def get_transfer_opportunities(skill_name: str) -> Dict[str, Any]:
 def _get_recommendation(success_rate: float, improvement_potential: float) -> str:
     """Generate actionable recommendation based on performance."""
     if success_rate < 0.7:
-        return f"⚠️ Low reliability ({success_rate*100:.0f}%). Recommend reliability improvements."
+        return f"⚠️ Low reliability ({success_rate * 100:.0f}%). Recommend reliability improvements."
     elif success_rate < 0.85:
-        return f"🔧 Moderate reliability ({success_rate*100:.0f}%). Consider efficiency or generalization improvements."
+        return f"🔧 Moderate reliability ({success_rate * 100:.0f}%). Consider efficiency or generalization improvements."
     elif improvement_potential > 0.15:
         return "📈 Good performance with room for optimization. Consider performance improvements."
     else:
@@ -265,77 +267,68 @@ def _get_recommendation(success_rate: float, improvement_potential: float) -> st
 ANALYZE_PERFORMANCE_SCHEMA = {
     "type": "object",
     "properties": {
-        "skill_name": {
-            "type": "string",
-            "description": "Name of the skill to analyze"
-        }
+        "skill_name": {"type": "string", "description": "Name of the skill to analyze"}
     },
-    "required": ["skill_name"]
+    "required": ["skill_name"],
 }
 
 PROPOSE_IMPROVEMENT_SCHEMA = {
     "type": "object",
     "properties": {
-        "skill_name": {
-            "type": "string",
-            "description": "Skill to improve"
-        },
+        "skill_name": {"type": "string", "description": "Skill to improve"},
         "improvement_type": {
             "type": "string",
-            "enum": ["performance", "generalization", "efficiency", "reliability", "maintainability"],
-            "description": "Category of improvement"
+            "enum": [
+                "performance",
+                "generalization",
+                "efficiency",
+                "reliability",
+                "maintainability",
+            ],
+            "description": "Category of improvement",
         },
         "description": {
             "type": "string",
-            "description": "Description of the proposed improvement"
+            "description": "Description of the proposed improvement",
         },
         "expected_improvement": {
             "type": "number",
             "description": "Expected improvement ratio (e.g., 1.2 for 20% improvement)",
-            "default": 1.1
-        }
+            "default": 1.1,
+        },
     },
-    "required": ["skill_name"]
+    "required": ["skill_name"],
 }
 
 APPLY_IMPROVEMENT_SCHEMA = {
     "type": "object",
     "properties": {
-        "skill_name": {
-            "type": "string",
-            "description": "Skill to improve"
-        },
+        "skill_name": {"type": "string", "description": "Skill to improve"},
         "version": {
             "type": "string",
-            "description": "Version of the improvement to apply"
-        }
+            "description": "Version of the improvement to apply",
+        },
     },
-    "required": ["skill_name", "version"]
+    "required": ["skill_name", "version"],
 }
 
 RECORD_EXECUTION_SCHEMA = {
     "type": "object",
     "properties": {
-        "skill_name": {
-            "type": "string",
-            "description": "Name of the executed skill"
-        },
-        "success": {
-            "type": "boolean",
-            "description": "Whether execution succeeded"
-        },
+        "skill_name": {"type": "string", "description": "Name of the executed skill"},
+        "success": {"type": "boolean", "description": "Whether execution succeeded"},
         "latency_ms": {
             "type": "number",
             "description": "Execution time in milliseconds",
-            "default": 0.0
+            "default": 0.0,
         },
         "context": {
             "type": "object",
             "description": "Additional execution context",
-            "additionalProperties": {"type": "string"}
-        }
+            "additionalProperties": {"type": "string"},
+        },
     },
-    "required": ["skill_name", "success"]
+    "required": ["skill_name", "success"],
 }
 
 TRANSFER_OPPORTUNITIES_SCHEMA = {
@@ -343,10 +336,10 @@ TRANSFER_OPPORTUNITIES_SCHEMA = {
     "properties": {
         "skill_name": {
             "type": "string",
-            "description": "Skill with successful improvements"
+            "description": "Skill with successful improvements",
         }
     },
-    "required": ["skill_name"]
+    "required": ["skill_name"],
 }
 
 # Register tools with the agent
@@ -360,7 +353,7 @@ registry.register(
     check_fn=lambda: True,
     requires_env=None,
     emoji="📊",
-    description="Analyze recent performance of a skill"
+    description="Analyze recent performance of a skill",
 )
 
 registry.register(
@@ -371,12 +364,12 @@ registry.register(
         skill_name=args.get("skill_name", ""),
         improvement_type=args.get("improvement_type", "performance"),
         description=args.get("description", ""),
-        expected_improvement=args.get("expected_improvement", 1.1)
+        expected_improvement=args.get("expected_improvement", 1.1),
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="💡",
-    description="Propose an improvement to a skill"
+    description="Propose an improvement to a skill",
 )
 
 registry.register(
@@ -384,13 +377,12 @@ registry.register(
     toolset="learning",
     schema=APPLY_IMPROVEMENT_SCHEMA,
     handler=lambda args, **kw: apply_skill_improvement(
-        skill_name=args.get("skill_name", ""),
-        version=args.get("version", "")
+        skill_name=args.get("skill_name", ""), version=args.get("version", "")
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="✅",
-    description="Apply a proposed improvement to a skill"
+    description="Apply a proposed improvement to a skill",
 )
 
 registry.register(
@@ -401,12 +393,12 @@ registry.register(
         skill_name=args.get("skill_name", ""),
         success=args.get("success", False),
         latency_ms=args.get("latency_ms", 0.0),
-        context=args.get("context")
+        context=args.get("context"),
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="⏱️",
-    description="Record execution of a skill for performance tracking"
+    description="Record execution of a skill for performance tracking",
 )
 
 registry.register(
@@ -417,7 +409,7 @@ registry.register(
     check_fn=lambda: True,
     requires_env=None,
     emoji="📈",
-    description="Get overall improvement statistics"
+    description="Get overall improvement statistics",
 )
 
 registry.register(
@@ -428,5 +420,5 @@ registry.register(
     check_fn=lambda: True,
     requires_env=None,
     emoji="🔄",
-    description="Identify skills that could benefit from improvements to another skill"
+    description="Identify skills that could benefit from improvements to another skill",
 )

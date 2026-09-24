@@ -46,15 +46,23 @@ def build_login_parser(subparsers, *, cmd_login: Callable) -> None:
         help="(deprecated) Provider name; ignored — see `hercules model`",
     )
     login_parser.add_argument(
-        "--portal-url", help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`."
+        "--portal-url",
+        help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`.",
     )
     login_parser.add_argument(
-        "--inference-url", help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`.",
+        "--inference-url",
+        help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`.",
     )
     login_parser.add_argument(
-        "--client-id", default=None, help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`."
+        "--client-id",
+        default=None,
+        help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`.",
     )
-    login_parser.add_argument("--scope", default=None, help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`.")
+    login_parser.add_argument(
+        "--scope",
+        default=None,
+        help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`.",
+    )
     login_parser.add_argument(
         "--no-browser",
         action="store_true",
@@ -67,7 +75,8 @@ def build_login_parser(subparsers, *, cmd_login: Callable) -> None:
         help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`.",
     )
     login_parser.add_argument(
-        "--ca-bundle", help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`."
+        "--ca-bundle",
+        help="(deprecated) Ignored — `hercules login` was removed; use `hercules model` / `hercules auth`.",
     )
     login_parser.add_argument(
         "--insecure",

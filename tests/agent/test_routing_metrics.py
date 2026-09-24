@@ -132,8 +132,13 @@ class TestRoutingMetrics:
         metrics = RoutingMetrics()
 
         metrics.record_routing_decision(
-            ModelTier.CAPABLE, TaskCategory.SECURITY, "complex", 0.8, 0.0,
-            constraint_applied=True, security_upgrade=True
+            ModelTier.CAPABLE,
+            TaskCategory.SECURITY,
+            "complex",
+            0.8,
+            0.0,
+            constraint_applied=True,
+            security_upgrade=True,
         )
 
         assert metrics.constraints_applied == 1
@@ -163,7 +168,9 @@ class TestRoutingMetrics:
         """Reset should clear all metrics."""
         metrics = RoutingMetrics()
 
-        metrics.record_routing_decision(ModelTier.BALANCED, TaskCategory.CODE, "moderate", 0.8, 25.0)
+        metrics.record_routing_decision(
+            ModelTier.BALANCED, TaskCategory.CODE, "moderate", 0.8, 25.0
+        )
         assert metrics.total_routed == 1
 
         metrics.reset()
@@ -255,9 +262,7 @@ class TestGlobalMetricsTracker:
     def test_multiple_global_records(self):
         """Multiple global records should accumulate."""
         for i in range(5):
-            record_routing_decision(
-                ModelTier.BALANCED, None, "moderate", 0.8, 20.0
-            )
+            record_routing_decision(ModelTier.BALANCED, None, "moderate", 0.8, 20.0)
 
         metrics = get_routing_metrics()
         assert metrics.total_routed == 5
@@ -285,8 +290,13 @@ class TestMetricsReporting:
             ModelTier.BALANCED, TaskCategory.CODE, "moderate", 0.85, 25.0
         )
         record_routing_decision(
-            ModelTier.CAPABLE, TaskCategory.SECURITY, "complex", 0.9, 0.0,
-            constraint_applied=True, security_upgrade=True
+            ModelTier.CAPABLE,
+            TaskCategory.SECURITY,
+            "complex",
+            0.9,
+            0.0,
+            constraint_applied=True,
+            security_upgrade=True,
         )
 
         tracker = get_routing_metrics_tracker()
@@ -329,9 +339,7 @@ class TestMetricsEdgeCases:
 
     def test_zero_confidence_handling(self):
         """Zero confidence should be handled."""
-        record_routing_decision(
-            ModelTier.BALANCED, None, "moderate", 0.0, 0.0
-        )
+        record_routing_decision(ModelTier.BALANCED, None, "moderate", 0.0, 0.0)
 
         metrics = get_routing_metrics()
         assert metrics.min_confidence == 0.0
@@ -350,9 +358,7 @@ class TestMetricsEdgeCases:
     def test_mixed_failures_and_successes(self):
         """Mixed failures and successes should aggregate correctly."""
         for _ in range(3):
-            record_routing_decision(
-                ModelTier.BALANCED, None, "moderate", 0.8, 10.0
-            )
+            record_routing_decision(ModelTier.BALANCED, None, "moderate", 0.8, 10.0)
 
         for _ in range(2):
             record_routing_failure()

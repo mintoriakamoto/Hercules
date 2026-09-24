@@ -33,26 +33,30 @@ class ValidationError(ValueError):
         self.value = value
         msg = f"Validation failed for '{field}': {reason}"
         if value is not None:
-            msg += f" (value: {value[:50]}...)" if len(str(value)) > 50 else f" (value: {value})"
+            msg += (
+                f" (value: {value[:50]}...)"
+                if len(str(value)) > 50
+                else f" (value: {value})"
+            )
         super().__init__(msg)
 
 
 class ValidationLevel(Enum):
     """Strictness level for validation."""
 
-    STRICT = "strict"      # Reject anything suspicious
-    NORMAL = "normal"      # Standard security validation
-    LENIENT = "lenient"    # Allow more variations
+    STRICT = "strict"  # Reject anything suspicious
+    NORMAL = "normal"  # Standard security validation
+    LENIENT = "lenient"  # Allow more variations
 
 
 # ── Common patterns ────────────────────────────────────────────────────────
 
 # Dangerous path sequences that indicate traversal attempts
 _PATH_TRAVERSAL_PATTERNS = [
-    re.compile(r"\.\./"),           # ../ sequences
-    re.compile(r"\.\\."),            # ..\ sequences (Windows)
-    re.compile(r"^~"),               # Home directory expansion attempts
-    re.compile(r"%SystemRoot%"),     # Windows env var expansion
+    re.compile(r"\.\./"),  # ../ sequences
+    re.compile(r"\.\\."),  # ..\ sequences (Windows)
+    re.compile(r"^~"),  # Home directory expansion attempts
+    re.compile(r"%SystemRoot%"),  # Windows env var expansion
     re.compile(r"\$\{?[A-Z_]+\}?"),  # Unix env var expansion
 ]
 
@@ -317,9 +321,7 @@ def validate_array(
 
     effective_max = max_length or config.max_array_length
     if len(value) > effective_max:
-        raise ValidationError(
-            field, f"array exceeds maximum length of {effective_max}"
-        )
+        raise ValidationError(field, f"array exceeds maximum length of {effective_max}")
 
     if element_validator:
         validated = []
@@ -367,9 +369,7 @@ def validate_url(
         raise ValidationError(field, f"malformed URL: {e}", url) from e
 
     if parsed.scheme not in allowed_schemes:
-        raise ValidationError(
-            field, f"scheme '{parsed.scheme}' not allowed", url
-        )
+        raise ValidationError(field, f"scheme '{parsed.scheme}' not allowed", url)
 
     if not parsed.netloc:
         raise ValidationError(field, "URL missing hostname", url)
@@ -421,6 +421,7 @@ def validate_object(
 
 
 # Convenience functions for common validations
+
 
 def validate_not_null(value: T, field: str = "value") -> T:
     """Ensure value is not null."""

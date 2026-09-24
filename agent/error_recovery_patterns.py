@@ -51,7 +51,7 @@ class RetryStrategy:
     def get_delay(self, attempt: int) -> float:
         """Calculate delay for retry attempt."""
         delay = min(
-            self.base_delay * (self.exponential_base ** attempt),
+            self.base_delay * (self.exponential_base**attempt),
             self.max_delay,
         )
 
@@ -319,6 +319,7 @@ def safe_resource(resource: Any, resource_name: str = "resource"):
 
 
 # Fallback chain pattern
+
 
 class FallbackChain:
     """Execute functions in sequence until one succeeds."""

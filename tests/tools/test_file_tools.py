@@ -24,6 +24,7 @@ class TestReadFileHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import read_file_tool
+
         result = json.loads(read_file_tool("/tmp/test.txt"))
         assert result["content"] == "line1\nline2"
         assert result["total_lines"] == 2
@@ -39,6 +40,7 @@ class TestReadFileHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import read_file_tool
+
         read_file_tool("/tmp/big.txt", offset=10, limit=20)
         mock_ops.read_file.assert_called_once_with("/tmp/big.txt", 10, 20)
 
@@ -52,6 +54,7 @@ class TestReadFileHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import read_file_tool
+
         read_file_tool("/tmp/big.txt", offset=0, limit=0)
         mock_ops.read_file.assert_called_once_with("/tmp/big.txt", 1, 1)
 
@@ -60,6 +63,7 @@ class TestReadFileHandler:
         mock_get.side_effect = RuntimeError("terminal not available")
 
         from tools.file_tools import read_file_tool
+
         result = json.loads(read_file_tool("/tmp/test.txt"))
         assert "error" in result
         assert "terminal not available" in result["error"]
@@ -70,25 +74,35 @@ class TestWriteFileHandler:
     def test_writes_content(self, mock_get):
         mock_ops = MagicMock()
         result_obj = MagicMock()
-        result_obj.to_dict.return_value = {"status": "ok", "path": "/tmp/out.txt", "bytes": 13}
+        result_obj.to_dict.return_value = {
+            "status": "ok",
+            "path": "/tmp/out.txt",
+            "bytes": 13,
+        }
         mock_ops.write_file.return_value = result_obj
         mock_get.return_value = mock_ops
 
         from tools.file_tools import write_file_tool
+
         result = json.loads(write_file_tool("/tmp/out.txt", "hello world!\n"))
         assert result["status"] == "ok"
         mock_ops.write_file.assert_called_once_with("/tmp/out.txt", "hello world!\n")
 
     @patch("tools.file_tools._get_file_ops")
-    def test_permission_error_returns_error_json_without_error_log(self, mock_get, caplog):
+    def test_permission_error_returns_error_json_without_error_log(
+        self, mock_get, caplog
+    ):
         mock_get.side_effect = PermissionError("read-only filesystem")
 
         from tools.file_tools import write_file_tool
+
         with caplog.at_level(logging.DEBUG, logger="tools.file_tools"):
             result = json.loads(write_file_tool("/tmp/out.txt", "data"))
         assert "error" in result
         assert "read-only" in result["error"]
-        assert any("write_file expected denial" in r.getMessage() for r in caplog.records)
+        assert any(
+            "write_file expected denial" in r.getMessage() for r in caplog.records
+        )
         assert not any(r.levelno >= logging.ERROR for r in caplog.records)
 
     @patch("tools.file_tools._get_file_ops")
@@ -108,12 +122,19 @@ class TestWriteFileHandler:
         """A single literal N| line should not be treated as read_file output."""
         mock_ops = MagicMock()
         result_obj = MagicMock()
-        result_obj.to_dict.return_value = {"status": "ok", "path": "/tmp/out.txt", "bytes": 21}
+        result_obj.to_dict.return_value = {
+            "status": "ok",
+            "path": "/tmp/out.txt",
+            "bytes": 21,
+        }
         mock_ops.write_file.return_value = result_obj
         mock_get.return_value = mock_ops
 
         from tools.file_tools import write_file_tool
-        result = json.loads(write_file_tool("/tmp/out.txt", "1|literal value\nplain line\n"))
+
+        result = json.loads(
+            write_file_tool("/tmp/out.txt", "1|literal value\nplain line\n")
+        )
 
         assert result["status"] == "ok"
         mock_ops.write_file.assert_called_once()
@@ -123,6 +144,7 @@ class TestWriteFileHandler:
         mock_get.side_effect = RuntimeError("boom")
 
         from tools.file_tools import write_file_tool
+
         with caplog.at_level(logging.ERROR, logger="tools.file_tools"):
             result = json.loads(write_file_tool("/tmp/out.txt", "data"))
         assert result["error"] == "boom"
@@ -135,7 +157,11 @@ class TestWriteFileHandler:
         result = json.loads(_handle_write_file({"path": "/tmp/oops.md"}))
         assert "error" in result
         assert "content" in result["error"]
-        assert "path" not in result.get("error", "").lower() or "missing" not in result.get("error", "").lower() or True  # just check error present
+        assert (
+            "path" not in result.get("error", "").lower()
+            or "missing" not in result.get("error", "").lower()
+            or True
+        )  # just check error present
 
     def test_missing_path_key_returns_error(self):
         """#19096 — handler must reject tool calls where 'path' key is absent."""
@@ -151,20 +177,30 @@ class TestWriteFileHandler:
         with patch("tools.file_tools._get_file_ops") as mock_get:
             mock_ops = MagicMock()
             result_obj = MagicMock()
-            result_obj.to_dict.return_value = {"status": "ok", "path": "/tmp/empty.txt", "bytes": 0}
+            result_obj.to_dict.return_value = {
+                "status": "ok",
+                "path": "/tmp/empty.txt",
+                "bytes": 0,
+            }
             mock_ops.write_file.return_value = result_obj
             mock_get.return_value = mock_ops
 
-            result = json.loads(_handle_write_file({"path": "/tmp/empty.txt", "content": ""}))
+            result = json.loads(
+                _handle_write_file({"path": "/tmp/empty.txt", "content": ""})
+            )
             assert result["status"] == "ok"
 
     def test_non_string_content_returns_error(self):
         """#19096 — content must be a string, not a dict or list."""
         from tools.file_tools import _handle_write_file
 
-        result = json.loads(_handle_write_file({"path": "/tmp/x.txt", "content": {"nested": "dict"}}))
+        result = json.loads(
+            _handle_write_file({"path": "/tmp/x.txt", "content": {"nested": "dict"}})
+        )
         assert "error" in result
-        assert "string" in result["error"].lower() or "content" in result["error"].lower()
+        assert (
+            "string" in result["error"].lower() or "content" in result["error"].lower()
+        )
 
 
 class TestPatchHandler:
@@ -177,10 +213,12 @@ class TestPatchHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import patch_tool
-        result = json.loads(patch_tool(
-            mode="replace", path="/tmp/f.py",
-            old_string="foo", new_string="bar"
-        ))
+
+        result = json.loads(
+            patch_tool(
+                mode="replace", path="/tmp/f.py", old_string="foo", new_string="bar"
+            )
+        )
         assert result["status"] == "ok"
         mock_ops.patch_replace.assert_called_once_with("/tmp/f.py", "foo", "bar", False)
 
@@ -193,20 +231,34 @@ class TestPatchHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import patch_tool
-        patch_tool(mode="replace", path="/tmp/f.py",
-                   old_string="x", new_string="y", replace_all=True)
+
+        patch_tool(
+            mode="replace",
+            path="/tmp/f.py",
+            old_string="x",
+            new_string="y",
+            replace_all=True,
+        )
         mock_ops.patch_replace.assert_called_once_with("/tmp/f.py", "x", "y", True)
 
     @patch("tools.file_tools._get_file_ops")
     def test_replace_mode_missing_path_errors(self, mock_get):
         from tools.file_tools import patch_tool
-        result = json.loads(patch_tool(mode="replace", path=None, old_string="a", new_string="b"))
+
+        result = json.loads(
+            patch_tool(mode="replace", path=None, old_string="a", new_string="b")
+        )
         assert "error" in result
 
     @patch("tools.file_tools._get_file_ops")
     def test_replace_mode_missing_strings_errors(self, mock_get):
         from tools.file_tools import patch_tool
-        result = json.loads(patch_tool(mode="replace", path="/tmp/f.py", old_string=None, new_string="b"))
+
+        result = json.loads(
+            patch_tool(
+                mode="replace", path="/tmp/f.py", old_string=None, new_string="b"
+            )
+        )
         assert "error" in result
 
     @patch("tools.file_tools._get_file_ops")
@@ -218,6 +270,7 @@ class TestPatchHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import patch_tool
+
         result = json.loads(patch_tool(mode="patch", patch="*** Begin Patch\n..."))
         assert result["status"] == "ok"
         mock_ops.patch_v4a.assert_called_once()
@@ -225,12 +278,14 @@ class TestPatchHandler:
     @patch("tools.file_tools._get_file_ops")
     def test_patch_mode_missing_content_errors(self, mock_get):
         from tools.file_tools import patch_tool
+
         result = json.loads(patch_tool(mode="patch", patch=None))
         assert "error" in result
 
     @patch("tools.file_tools._get_file_ops")
     def test_unknown_mode_errors(self, mock_get):
         from tools.file_tools import patch_tool
+
         result = json.loads(patch_tool(mode="invalid_mode"))
         assert "error" in result
         assert "Unknown mode" in result["error"]
@@ -243,17 +298,20 @@ class TestPatchHandler:
         applied, even though the explicit ``path=`` arg is allowed to use
         ``..`` for legitimate cross-worktree edits."""
         from tools.file_tools import patch_tool
-        result = json.loads(patch_tool(
-            mode="patch",
-            patch=(
-                "*** Begin Patch\n"
-                "*** Update File: ../../../etc/shadow\n"
-                "@@ -1,3 +1,3 @@\n"
-                "-old\n"
-                "+new\n"
-                "*** End Patch\n"
-            ),
-        ))
+
+        result = json.loads(
+            patch_tool(
+                mode="patch",
+                patch=(
+                    "*** Begin Patch\n"
+                    "*** Update File: ../../../etc/shadow\n"
+                    "@@ -1,3 +1,3 @@\n"
+                    "-old\n"
+                    "+new\n"
+                    "*** End Patch\n"
+                ),
+            )
+        )
         assert "error" in result
         assert "traversal" in result["error"].lower()
         # patch_v4a must not be invoked when the header is rejected
@@ -262,15 +320,18 @@ class TestPatchHandler:
     @patch("tools.file_tools._get_file_ops")
     def test_patch_v4a_rejects_traversal_in_add_header(self, mock_get):
         from tools.file_tools import patch_tool
-        result = json.loads(patch_tool(
-            mode="patch",
-            patch=(
-                "*** Begin Patch\n"
-                "*** Add File: ../../../tmp/dropped.py\n"
-                "+print('pwned')\n"
-                "*** End Patch\n"
-            ),
-        ))
+
+        result = json.loads(
+            patch_tool(
+                mode="patch",
+                patch=(
+                    "*** Begin Patch\n"
+                    "*** Add File: ../../../tmp/dropped.py\n"
+                    "+print('pwned')\n"
+                    "*** End Patch\n"
+                ),
+            )
+        )
         assert "error" in result
         assert "traversal" in result["error"].lower()
 
@@ -293,6 +354,7 @@ class TestPatchSensitivePathExtraction:
     @patch("tools.file_tools._get_file_ops")
     def test_patch_move_to_sensitive_dst_blocked(self, mock_get):
         from tools.file_tools import patch_tool
+
         patch_text = (
             "*** Begin Patch\n"
             "*** Move File: /tmp/work.txt -> /etc/crontab\n"
@@ -306,6 +368,7 @@ class TestPatchSensitivePathExtraction:
     @patch("tools.file_tools._get_file_ops")
     def test_patch_move_from_sensitive_src_blocked(self, mock_get):
         from tools.file_tools import patch_tool
+
         patch_text = (
             "*** Begin Patch\n"
             "*** Move File: /etc/hosts -> /tmp/leak.txt\n"
@@ -325,6 +388,7 @@ class TestPatchSensitivePathExtraction:
         is bypassed.
         """
         from tools.file_tools import patch_tool
+
         patch_text = (
             "*** Begin Patch\n"
             "***Update File: /etc/resolv.conf\n"
@@ -343,6 +407,7 @@ class TestPatchSensitivePathExtraction:
         """A Move endpoint with ``..`` traversal is rejected, same as the
         Update/Add/Delete headers."""
         from tools.file_tools import patch_tool
+
         patch_text = (
             "*** Begin Patch\n"
             "*** Move File: /tmp/work.txt -> ../../../etc/shadow\n"
@@ -363,10 +428,9 @@ class TestPatchSensitivePathExtraction:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import patch_tool
+
         patch_text = (
-            "*** Begin Patch\n"
-            "*** Move File: /tmp/a.txt -> /tmp/b.txt\n"
-            "*** End Patch\n"
+            "*** Begin Patch\n*** Move File: /tmp/a.txt -> /tmp/b.txt\n*** End Patch\n"
         )
         result = json.loads(patch_tool(mode="patch", patch=patch_text))
         assert "error" not in result
@@ -383,6 +447,7 @@ class TestSearchHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import search_tool
+
         result = json.loads(search_tool(pattern="TODO", target="content", path="."))
         assert "matches" in result
         mock_ops.search.assert_called_once()
@@ -396,11 +461,26 @@ class TestSearchHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import search_tool
-        search_tool(pattern="class", target="files", path="/src",
-                    file_glob="*.py", limit=10, offset=5, output_mode="count", context=2)
+
+        search_tool(
+            pattern="class",
+            target="files",
+            path="/src",
+            file_glob="*.py",
+            limit=10,
+            offset=5,
+            output_mode="count",
+            context=2,
+        )
         mock_ops.search.assert_called_once_with(
-            pattern="class", path="/src", target="files", file_glob="*.py",
-            limit=10, offset=5, output_mode="count", context=2,
+            pattern="class",
+            path="/src",
+            target="files",
+            file_glob="*.py",
+            limit=10,
+            offset=5,
+            output_mode="count",
+            context=2,
         )
 
     @patch("tools.file_tools._get_file_ops")
@@ -412,10 +492,17 @@ class TestSearchHandler:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import search_tool
+
         search_tool(pattern="class", target="files", path="/src", limit=-5, offset=-2)
         mock_ops.search.assert_called_once_with(
-            pattern="class", path="/src", target="files", file_glob=None,
-            limit=1, offset=0, output_mode="content", context=0,
+            pattern="class",
+            path="/src",
+            target="files",
+            file_glob=None,
+            limit=1,
+            offset=0,
+            output_mode="content",
+            context=0,
         )
 
     @patch("tools.file_tools._get_file_ops")
@@ -423,6 +510,7 @@ class TestSearchHandler:
         mock_get.side_effect = RuntimeError("no terminal")
 
         from tools.file_tools import search_tool
+
         result = json.loads(search_tool(pattern="x"))
         assert "error" in result
 
@@ -430,6 +518,7 @@ class TestSearchHandler:
 # ---------------------------------------------------------------------------
 # Windows MSYS path resolution (salvage of #50488 / #46995)
 # ---------------------------------------------------------------------------
+
 
 class TestWindowsMsysPathResolution:
     """File tools must translate Git Bash drive paths before Path resolution."""
@@ -440,7 +529,9 @@ class TestWindowsMsysPathResolution:
 
         monkeypatch.setattr(file_tools.sys, "platform", "win32")
         monkeypatch.setattr(local_mod, "_IS_WINDOWS", True)
-        monkeypatch.setattr(file_tools, "_uses_container_paths", lambda task_id="default": False)
+        monkeypatch.setattr(
+            file_tools, "_uses_container_paths", lambda task_id="default": False
+        )
 
         resolved = file_tools._resolve_path_for_task("/c/Users/Mark/project/app.py")
         assert str(resolved) == r"C:\Users\Mark\project\app.py"
@@ -451,7 +542,9 @@ class TestWindowsMsysPathResolution:
 
         monkeypatch.setattr(file_tools.sys, "platform", "win32")
         monkeypatch.setattr(local_mod, "_IS_WINDOWS", True)
-        monkeypatch.setattr(file_tools, "_uses_container_paths", lambda task_id="default": False)
+        monkeypatch.setattr(
+            file_tools, "_uses_container_paths", lambda task_id="default": False
+        )
 
         resolved = file_tools._resolve_path_for_task("/cygdrive/d/code/main.py")
         assert str(resolved) == r"D:\code\main.py"
@@ -462,7 +555,9 @@ class TestWindowsMsysPathResolution:
 
         monkeypatch.setattr(file_tools.sys, "platform", "win32")
         monkeypatch.setattr(local_mod, "_IS_WINDOWS", True)
-        monkeypatch.setattr(file_tools, "_uses_container_paths", lambda task_id="default": False)
+        monkeypatch.setattr(
+            file_tools, "_uses_container_paths", lambda task_id="default": False
+        )
         monkeypatch.setattr(
             file_tools,
             "_authoritative_workspace_root",
@@ -479,7 +574,9 @@ class TestWindowsMsysPathResolution:
 
         monkeypatch.setattr(file_tools.sys, "platform", "win32")
         monkeypatch.setattr(local_mod, "_IS_WINDOWS", True)
-        monkeypatch.setattr(file_tools, "_uses_container_paths", lambda task_id="default": True)
+        monkeypatch.setattr(
+            file_tools, "_uses_container_paths", lambda task_id="default": True
+        )
         monkeypatch.setattr(
             file_tools,
             "_authoritative_workspace_root",
@@ -493,6 +590,7 @@ class TestWindowsMsysPathResolution:
 # ---------------------------------------------------------------------------
 # Tool result hint tests (#722)
 # ---------------------------------------------------------------------------
+
 
 class TestPatchHints:
     """Patch tool should hint when old_string is not found."""
@@ -508,6 +606,7 @@ class TestPatchHints:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import patch_tool
+
         raw = patch_tool(mode="replace", path="foo.py", old_string="x", new_string="y")
         # patch_tool surfaces the hint as a structured "_hint" field on the
         # JSON error payload (not an inline "[Hint: ..." tail).
@@ -523,6 +622,7 @@ class TestPatchHints:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import patch_tool
+
         raw = patch_tool(mode="replace", path="foo.py", old_string="x", new_string="y")
         assert "_hint" not in raw
 
@@ -533,6 +633,7 @@ class TestSearchHints:
     def setup_method(self):
         """Clear read/search tracker between tests to avoid cross-test state."""
         from tools.file_tools import _read_tracker
+
         _read_tracker.clear()
 
     @patch("tools.file_tools._get_file_ops")
@@ -548,6 +649,7 @@ class TestSearchHints:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import search_tool
+
         raw = search_tool(pattern="foo", offset=0, limit=50)
         assert "[Hint:" in raw
         assert "offset=50" in raw
@@ -564,6 +666,7 @@ class TestSearchHints:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import search_tool
+
         raw = search_tool(pattern="foo")
         assert "[Hint:" not in raw
 
@@ -580,6 +683,7 @@ class TestSearchHints:
         mock_get.return_value = mock_ops
 
         from tools.file_tools import search_tool
+
         raw = search_tool(pattern="foo", offset=50, limit=50)
         assert "[Hint:" in raw
         assert "offset=100" in raw
@@ -595,60 +699,86 @@ class TestSensitivePathCheck:
 
     def test_hercules_config_blocked_for_write_file(self, tmp_path, monkeypatch):
         fake_config = tmp_path / "config.yaml"
-        monkeypatch.setattr("tools.file_tools._hercules_config_resolved", str(fake_config))
+        monkeypatch.setattr(
+            "tools.file_tools._hercules_config_resolved", str(fake_config)
+        )
         monkeypatch.setattr("tools.file_tools._hercules_config_resolved_loaded", True)
 
         from tools.file_tools import write_file_tool
-        result = json.loads(write_file_tool(str(fake_config), "approvals:\n  mode: off\n"))
+
+        result = json.loads(
+            write_file_tool(str(fake_config), "approvals:\n  mode: off\n")
+        )
         assert "error" in result
         assert "Hercules config" in result["error"]
 
     def test_hercules_config_blocked_via_tilde_path(self, tmp_path, monkeypatch):
         fake_config = tmp_path / "config.yaml"
-        monkeypatch.setattr("tools.file_tools._hercules_config_resolved", str(fake_config))
+        monkeypatch.setattr(
+            "tools.file_tools._hercules_config_resolved", str(fake_config)
+        )
         monkeypatch.setattr("tools.file_tools._hercules_config_resolved_loaded", True)
 
         from tools.file_tools import write_file_tool
-        result = json.loads(write_file_tool(str(fake_config), "approvals:\n  mode: off\n"))
+
+        result = json.loads(
+            write_file_tool(str(fake_config), "approvals:\n  mode: off\n")
+        )
         assert "error" in result
         assert "Hercules config" in result["error"]
 
     def test_hercules_config_blocked_for_patch(self, tmp_path, monkeypatch):
         fake_config = tmp_path / "config.yaml"
         fake_config.write_text("approvals:\n  mode: manual\n")
-        monkeypatch.setattr("tools.file_tools._hercules_config_resolved", str(fake_config))
+        monkeypatch.setattr(
+            "tools.file_tools._hercules_config_resolved", str(fake_config)
+        )
         monkeypatch.setattr("tools.file_tools._hercules_config_resolved_loaded", True)
 
         from tools.file_tools import patch_tool
-        result = json.loads(patch_tool(
-            mode="replace",
-            path=str(fake_config),
-            old_string="mode: manual",
-            new_string="mode: off",
-        ))
+
+        result = json.loads(
+            patch_tool(
+                mode="replace",
+                path=str(fake_config),
+                old_string="mode: manual",
+                new_string="mode: off",
+            )
+        )
         assert "error" in result
         assert "Hercules config" in result["error"]
 
     def test_system_path_still_blocked(self, monkeypatch):
-        monkeypatch.setattr("tools.file_tools._hercules_config_resolved", "/some/other/path")
+        monkeypatch.setattr(
+            "tools.file_tools._hercules_config_resolved", "/some/other/path"
+        )
         monkeypatch.setattr("tools.file_tools._hercules_config_resolved_loaded", True)
 
         from tools.file_tools import write_file_tool
+
         result = json.loads(write_file_tool("/etc/passwd", "evil"))
         assert "error" in result
         assert "sensitive system path" in result["error"]
 
     @patch("tools.file_tools._get_file_ops")
     def test_normal_file_not_blocked(self, mock_get, monkeypatch):
-        monkeypatch.setattr("tools.file_tools._hercules_config_resolved", "/home/user/.hercules/config.yaml")
+        monkeypatch.setattr(
+            "tools.file_tools._hercules_config_resolved",
+            "/home/user/.hercules/config.yaml",
+        )
         monkeypatch.setattr("tools.file_tools._hercules_config_resolved_loaded", True)
         mock_ops = MagicMock()
         result_obj = MagicMock()
-        result_obj.to_dict.return_value = {"status": "ok", "path": "/tmp/other.txt", "bytes": 5}
+        result_obj.to_dict.return_value = {
+            "status": "ok",
+            "path": "/tmp/other.txt",
+            "bytes": 5,
+        }
         mock_ops.write_file.return_value = result_obj
         mock_get.return_value = mock_ops
 
         from tools.file_tools import write_file_tool
+
         result = json.loads(write_file_tool("/tmp/other.txt", "hello"))
         assert result["status"] == "ok"
 
@@ -679,6 +809,7 @@ class TestPatchSchemaShape:
 # ---------------------------------------------------------------------------
 # _last_known_cwd tests (#26211: silent file creation failure in long conversations)
 # ---------------------------------------------------------------------------
+
 
 class TestLastKnownCwd:
     """
@@ -719,7 +850,7 @@ class TestLastKnownCwd:
         # Verify the env was created with the saved CWD, not the default
         create_call = mock_create_env.call_args
         assert create_call is not None, "_create_environment was not called"
-        
+
         # Find cwd in the kwargs
         kwargs = create_call.kwargs if create_call.kwargs else {}
         # cwd is passed as positional or keyword
@@ -730,13 +861,14 @@ class TestLastKnownCwd:
             # Position: (env_type, image, cwd, timeout, ...)
             if len(args) >= 3:
                 cwd_passed = args[2]
-        
-        assert cwd_passed == "/Users/user/project", \
+
+        assert cwd_passed == "/Users/user/project", (
             f"Expected cwd='/Users/user/project', got {cwd_passed!r}"
-        
+        )
+
         # Cleanup
         _last_known_cwd.pop(task_id, None)
-        
+
     @patch("tools.terminal_tool._active_environments", new_callable=dict)
     @patch("tools.file_tools._file_ops_cache", new_callable=dict)
     @patch("tools.terminal_tool._get_env_config")
@@ -757,25 +889,26 @@ class TestLastKnownCwd:
 
         # _get_file_ops resolves to "default"
         task_id = "default"
-        
+
         # Ensure _last_known_cwd is empty for this task
         _last_known_cwd.pop(task_id, None)
 
         result = _get_file_ops(task_id)
-        
+
         create_call = mock_create_env.call_args
         assert create_call is not None, "_create_environment was not called"
-        
+
         kwargs = create_call.kwargs if create_call.kwargs else {}
         cwd_passed = kwargs.get("cwd", None)
         if cwd_passed is None:
             args = create_call.args if create_call.args else []
             if len(args) >= 3:
                 cwd_passed = args[2]
-        
+
         # Should fall back to config default
-        assert cwd_passed == "/config/default/path", \
+        assert cwd_passed == "/config/default/path", (
             f"Expected cwd='/config/default/path', got {cwd_passed!r}"
+        )
 
     @patch("tools.terminal_tool._active_environments", new_callable=dict)
     @patch("tools.file_tools._file_ops_cache", new_callable=dict)
@@ -814,7 +947,9 @@ class TestLastKnownCwd:
         mirror from an earlier live read already populated _last_known_cwd, so
         the rebuilt env still restores the user's directory."""
         from tools.file_tools import (
-            _get_file_ops, _get_live_tracking_cwd, _last_known_cwd,
+            _get_file_ops,
+            _get_live_tracking_cwd,
+            _last_known_cwd,
         )
 
         task_id = "default"
@@ -856,8 +991,9 @@ class TestLastKnownCwd:
                 cwd_passed = args[2]
 
         # Rebuilt env restored the mirrored cwd, NOT the config default.
-        assert cwd_passed == "/Users/user/project", \
+        assert cwd_passed == "/Users/user/project", (
             f"Expected restored cwd='/Users/user/project', got {cwd_passed!r}"
+        )
         _last_known_cwd.pop(task_id, None)
 
 
@@ -872,7 +1008,9 @@ class TestSilentFileMisplacementE2E:
     in _authoritative_workspace_root makes the resolved path correct.
     """
 
-    def test_relative_write_after_env_cleanup_lands_in_user_cwd(self, tmp_path, monkeypatch):
+    def test_relative_write_after_env_cleanup_lands_in_user_cwd(
+        self, tmp_path, monkeypatch
+    ):
         import tools.terminal_tool as tt
         import tools.file_tools as ft
 
@@ -884,7 +1022,8 @@ class TestSilentFileMisplacementE2E:
 
         _orig = tt._get_env_config
         monkeypatch.setattr(
-            tt, "_get_env_config",
+            tt,
+            "_get_env_config",
             lambda: {**_orig(), "env_type": "local", "cwd": str(config_default)},
         )
 
@@ -910,7 +1049,8 @@ class TestSilentFileMisplacementE2E:
         res = json.loads(ft.write_file_tool("report.txt", "hello\n", task_id))
         assert res.get("resolved_path") == str(project / "report.txt"), res
         assert (project / "report.txt").exists(), "file should be in the user's cwd"
-        assert not (config_default / "report.txt").exists(), \
+        assert not (config_default / "report.txt").exists(), (
             "file silently misplaced into config default (the #26211 bug)"
+        )
 
         ft._last_known_cwd.pop(task_id, None)

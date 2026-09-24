@@ -17,7 +17,9 @@ class TestCooklabsDockerUpdate:
         from hercules_constants import get_hercules_home
         from hercules_cli.web_server import app, _SESSION_HEADER_NAME, _SESSION_TOKEN
 
-        monkeypatch.setattr(hercules_state, "DEFAULT_DB_PATH", get_hercules_home() / "state.db")
+        monkeypatch.setattr(
+            hercules_state, "DEFAULT_DB_PATH", get_hercules_home() / "state.db"
+        )
         self.client = TestClient(app)
         self.client.headers[_SESSION_HEADER_NAME] = _SESSION_TOKEN
 
@@ -31,7 +33,9 @@ class TestCooklabsDockerUpdate:
             spawned = True
             raise AssertionError("docker update guard should not spawn hercules update")
 
-        monkeypatch.setattr(web_server, "_dashboard_local_update_managed_externally", lambda: False)
+        monkeypatch.setattr(
+            web_server, "_dashboard_local_update_managed_externally", lambda: False
+        )
         monkeypatch.setattr(web_server, "detect_install_method", lambda _root: "docker")
         monkeypatch.setattr(web_server, "_spawn_hercules_action", fail_spawn)
         web_server._ACTION_PROCS.pop("hercules-update", None)

@@ -30,6 +30,7 @@ Two subtleties this pins:
   and disables compaction on a healthy session.
   ``test_no_false_positive_under_tokenizer_skew``.
 """
+
 import pytest
 
 from agent.context_compressor import ContextCompressor
@@ -142,7 +143,7 @@ class TestFutilityGuard:
 
         fired = 0
         for _ in range(8):
-            cc.should_compress(rough)          # pre-API gate (rough)
+            cc.should_compress(rough)  # pre-API gate (rough)
             msgs, did = _turn(cc, msgs, real)  # post-response gate (real) + usage
             if did:
                 fired += 1

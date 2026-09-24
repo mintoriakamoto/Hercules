@@ -10,16 +10,23 @@ Every ``docker exec`` here runs as the unprivileged ``hercules`` user
 (via :func:`docker_exec`/:func:`docker_exec_sh` in conftest), matching
 the realistic runtime context. See the conftest module docstring.
 """
+
 from __future__ import annotations
 
 import json
 import time
 
-from tests.docker.conftest import docker_exec, docker_exec_sh, start_container, poll_container
+from tests.docker.conftest import (
+    docker_exec,
+    docker_exec_sh,
+    start_container,
+    poll_container,
+)
 
 
 def test_dashboard_not_running_by_default(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """Without HERCULES_DASHBOARD, no dashboard process should be running."""
     start_container(built_image, container_name, cmd="sleep 60")
@@ -31,7 +38,8 @@ def test_dashboard_not_running_by_default(
 
 
 def test_dashboard_slot_reports_down_when_disabled(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """Without HERCULES_DASHBOARD, s6-svstat should report the dashboard
     slot as DOWN (not up-with-sleep-infinity, which would
@@ -45,7 +53,9 @@ def test_dashboard_slot_reports_down_when_disabled(
     # /command/ isn't on PATH for docker-exec sessions, so call by
     # absolute path.
     r = docker_exec(
-        container_name, "/command/s6-svstat", "/run/service/dashboard",
+        container_name,
+        "/command/s6-svstat",
+        "/run/service/dashboard",
     )
     assert r.returncode == 0, f"s6-svstat failed: {r.stderr!r} / {r.stdout!r}"
     assert "down" in r.stdout, (
@@ -55,7 +65,8 @@ def test_dashboard_slot_reports_down_when_disabled(
 
 
 def test_dashboard_slot_reports_up_when_enabled(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """Symmetry: with HERCULES_DASHBOARD=1, s6-svstat reports the slot as up."""
     # The default dashboard host is 0.0.0.0, which engages the auth
@@ -64,18 +75,22 @@ def test_dashboard_slot_reports_up_when_enabled(
     # basic password provider to keep this test focused on the s6
     # supervision contract, not the auth gate.
     start_container(
-        built_image, container_name,
+        built_image,
+        container_name,
         "HERCULES_DASHBOARD=1",
         "HERCULES_DASHBOARD_BASIC_AUTH_USERNAME=admin",
         "HERCULES_DASHBOARD_BASIC_AUTH_PASSWORD=test-dashboard-pw",
         cmd="sleep 120",
     )
     # uvicorn takes a moment to bind; poll svstat.
-    poll_container(container_name, "/command/s6-svstat /run/service/dashboard | grep -q 'up '")
+    poll_container(
+        container_name, "/command/s6-svstat /run/service/dashboard | grep -q 'up '"
+    )
 
 
 def test_dashboard_opt_in_starts(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """With HERCULES_DASHBOARD=1, a dashboard process should be visible."""
     # Default bind is 0.0.0.0, which engages the auth gate. Register the
@@ -83,7 +98,8 @@ def test_dashboard_opt_in_starts(
     # dashboard binds (vs fail-closed). Keeps the test focused on s6
     # supervision, not auth.
     start_container(
-        built_image, container_name,
+        built_image,
+        container_name,
         "HERCULES_DASHBOARD=1",
         "HERCULES_DASHBOARD_BASIC_AUTH_USERNAME=admin",
         "HERCULES_DASHBOARD_BASIC_AUTH_PASSWORD=test-dashboard-pw",
@@ -93,20 +109,24 @@ def test_dashboard_opt_in_starts(
     # backgrounds it and bootstrap (skills sync etc.) can take a few
     # seconds before the python process actually launches.
     ok, _ = poll_container(
-        container_name, "pgrep -f 'hercules dashboard'", deadline_s=30.0,
+        container_name,
+        "pgrep -f 'hercules dashboard'",
+        deadline_s=30.0,
     )
     assert ok, "Dashboard should be running with HERCULES_DASHBOARD=1"
 
 
 def test_dashboard_port_override(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """HERCULES_DASHBOARD_PORT changes the dashboard's listen port."""
     # Default bind is 0.0.0.0; register the basic password provider so
     # the auth gate has a provider and the dashboard binds. See
     # test_dashboard_slot_reports_up_when_enabled for the full rationale.
     start_container(
-        built_image, container_name,
+        built_image,
+        container_name,
         "HERCULES_DASHBOARD=1",
         "HERCULES_DASHBOARD_PORT=9120",
         "HERCULES_DASHBOARD_BASIC_AUTH_USERNAME=admin",
@@ -119,15 +139,15 @@ def test_dashboard_port_override(
     # port 9120 = 0x23A0, state 0A = LISTEN.
     ok, stdout = poll_container(
         container_name,
-        "grep -E ' 0+:23A0 .* 0A ' /proc/net/tcp /proc/net/tcp6 "
-        "2>/dev/null",
+        "grep -E ' 0+:23A0 .* 0A ' /proc/net/tcp /proc/net/tcp6 2>/dev/null",
         deadline_s=60.0,
     )
     assert ok, f"Dashboard not listening on port 9120: stdout={stdout!r}"
 
 
 def test_dashboard_restarts_after_crash(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """Phase 2 invariant: under s6 supervision, killing the dashboard
     process should be recovered automatically.
@@ -142,7 +162,8 @@ def test_dashboard_restarts_after_crash(
     # See test_dashboard_slot_reports_up_when_enabled for the full
     # rationale.
     start_container(
-        built_image, container_name,
+        built_image,
+        container_name,
         "HERCULES_DASHBOARD=1",
         "HERCULES_DASHBOARD_BASIC_AUTH_USERNAME=admin",
         "HERCULES_DASHBOARD_BASIC_AUTH_PASSWORD=test-dashboard-pw",
@@ -150,7 +171,9 @@ def test_dashboard_restarts_after_crash(
     )
     # Wait for the first dashboard to come up.
     ok, _ = poll_container(
-        container_name, "pgrep -f 'hercules dashboard'", deadline_s=30.0,
+        container_name,
+        "pgrep -f 'hercules dashboard'",
+        deadline_s=30.0,
     )
     assert ok, "Dashboard never started initially"
 
@@ -160,7 +183,10 @@ def test_dashboard_restarts_after_crash(
     first_pid: str | None = None
     for _attempt in range(10):
         first_pid_result = docker_exec(
-            container_name, "pgrep", "-f", "hercules dashboard",
+            container_name,
+            "pgrep",
+            "-f",
+            "hercules dashboard",
         )
         first_pids = first_pid_result.stdout.strip().split()
         if first_pids:
@@ -183,9 +209,7 @@ def test_dashboard_restarts_after_crash(
             return  # success
         time.sleep(0.5)
 
-    raise AssertionError(
-        f"Dashboard not restarted after kill (first_pid={first_pid})"
-    )
+    raise AssertionError(f"Dashboard not restarted after kill (first_pid={first_pid})")
 
 
 # ---------------------------------------------------------------------------
@@ -237,11 +261,7 @@ except urllib.error.HTTPError as h:
     # Feed the program over stdin via a heredoc so docker_exec_sh's
     # single bash string stays clean. The 'PY' delimiter is quoted to
     # disable shell expansion inside the heredoc body.
-    probe = (
-        "/opt/hercules/.venv/bin/python - <<'PY'\n"
-        f"{py_program}"
-        "PY"
-    )
+    probe = f"/opt/hercules/.venv/bin/python - <<'PY'\n{py_program}PY"
     end = time.monotonic() + deadline_s
     last_err = ""
     while time.monotonic() < end:
@@ -264,7 +284,8 @@ except urllib.error.HTTPError as h:
 
 
 def test_dashboard_auth_gate_engages_on_non_loopback_bind(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """The s6 dashboard run script must NOT auto-add ``--insecure`` when the
     dashboard binds to ``0.0.0.0``. The auth gate engages on its own when a
@@ -298,7 +319,8 @@ def test_dashboard_auth_gate_engages_on_non_loopback_bind(
        distinguish "gate on" from "gate off".
     """
     start_container(
-        built_image, container_name,
+        built_image,
+        container_name,
         "HERCULES_DASHBOARD=1",
         "HERCULES_DASHBOARD_HOST=0.0.0.0",
         "HERCULES_DASHBOARD_BASIC_AUTH_USERNAME=admin",
@@ -349,7 +371,8 @@ def test_dashboard_auth_gate_engages_on_non_loopback_bind(
 
 
 def test_dashboard_insecure_env_var_no_longer_bypasses_gate(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """``HERCULES_DASHBOARD_INSECURE=1`` NO LONGER disables the auth gate
     (June 2026 hardening). With insecure set on a 0.0.0.0 bind and NO auth
@@ -359,7 +382,8 @@ def test_dashboard_insecure_env_var_no_longer_bypasses_gate(
     dashboard on a public bind without an auth provider.
     """
     start_container(
-        built_image, container_name,
+        built_image,
+        container_name,
         "HERCULES_DASHBOARD=1",
         "HERCULES_DASHBOARD_HOST=0.0.0.0",
         "HERCULES_DASHBOARD_INSECURE=1",

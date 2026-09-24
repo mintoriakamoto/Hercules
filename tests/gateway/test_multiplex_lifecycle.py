@@ -1,4 +1,5 @@
 """Phase 4: lifecycle guard + per-profile observability."""
+
 import pytest
 
 
@@ -7,6 +8,7 @@ class TestServedProfilesStatus:
         monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
         import importlib
         import gateway.status as status
+
         importlib.reload(status)
         try:
             status.write_runtime_status(
@@ -21,6 +23,7 @@ class TestServedProfilesStatus:
         monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
         import importlib
         import gateway.status as status
+
         importlib.reload(status)
         try:
             status.write_runtime_status(gateway_state="running")
@@ -35,18 +38,21 @@ class TestNamedProfileMultiplexerGuard:
 
     def test_inert_for_default_profile(self, monkeypatch):
         from hercules_cli import gateway as gw
+
         monkeypatch.setattr(gw, "_profile_suffix", lambda: "")
         # Should return without raising (default profile => guard N/A).
         gw._guard_named_profile_under_multiplexer(force=False)
 
     def test_force_bypasses(self, monkeypatch):
         from hercules_cli import gateway as gw
+
         # Even if it looks like a named profile, force returns immediately.
         monkeypatch.setattr(gw, "_profile_suffix", lambda: "coder")
         gw._guard_named_profile_under_multiplexer(force=True)
 
     def test_inert_when_no_default_gateway_running(self, monkeypatch, tmp_path):
         from hercules_cli import gateway as gw
+
         monkeypatch.setattr(gw, "_profile_suffix", lambda: "coder")
         monkeypatch.setattr(
             "hercules_constants.get_default_hercules_root", lambda: tmp_path
@@ -73,6 +79,7 @@ class TestNamedProfileMultiplexerGuard:
         default profile's config.yaml has no multiplex_profiles key — the hosted
         case where multiplex is forced purely by the env stamp."""
         from hercules_cli import gateway as gw
+
         self._fake_running_default_gateway(monkeypatch, tmp_path)
         # No config.yaml written → the only signal is the env override.
         monkeypatch.setenv("GATEWAY_MULTIPLEX_PROFILES", "true")
@@ -83,6 +90,7 @@ class TestNamedProfileMultiplexerGuard:
         """GATEWAY_MULTIPLEX_PROFILES=false wins over a config.yaml opt-in, so
         the guard stays inert (symmetric with the config precedence)."""
         from hercules_cli import gateway as gw
+
         self._fake_running_default_gateway(monkeypatch, tmp_path)
         (tmp_path / "config.yaml").write_text(
             "multiplex_profiles: true\n", encoding="utf-8"
@@ -95,6 +103,7 @@ class TestNamedProfileMultiplexerGuard:
         """A blank env value must not shadow a config.yaml opt-in: the guard
         still trips on the config value."""
         from hercules_cli import gateway as gw
+
         self._fake_running_default_gateway(monkeypatch, tmp_path)
         (tmp_path / "config.yaml").write_text(
             "multiplex_profiles: true\n", encoding="utf-8"

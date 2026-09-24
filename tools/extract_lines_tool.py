@@ -52,7 +52,10 @@ def extract_lines_tool(
             extracted = []
             for line_num in sorted(set(line_numbers)):
                 if 1 <= line_num <= total_lines:
-                    extracted.append({"line_number": line_num, "content": all_lines[line_num - 1].rstrip("\n")})
+                    extracted.append({
+                        "line_number": line_num,
+                        "content": all_lines[line_num - 1].rstrip("\n"),
+                    })
             return {
                 "lines": extracted,
                 "count": len(extracted),
@@ -62,7 +65,7 @@ def extract_lines_tool(
         else:
             # Extract range
             start_idx = (start or 1) - 1
-            end_idx = (end or total_lines)
+            end_idx = end or total_lines
 
             if start_idx < 0:
                 start_idx = 0

@@ -17,7 +17,9 @@ def _rows_with_env(monkeypatch, env_name: str, provider: str) -> list[dict]:
             "agent.models_dev.PROVIDER_TO_MODELS_DEV",
             {provider: provider},
         ),
-        patch("hercules_cli.models.cached_provider_model_ids", return_value=["model-a"]),
+        patch(
+            "hercules_cli.models.cached_provider_model_ids", return_value=["model-a"]
+        ),
         patch("hercules_cli.providers.HERCULES_OVERLAYS", {}),
     ):
         return list_authenticated_providers(max_models=5)

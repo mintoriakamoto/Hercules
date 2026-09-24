@@ -17,6 +17,7 @@ These tests pin the fix at the single chokepoint (``create_openai_client``):
 every gemini-oauth client — shared, recreated, or per-request — must carry the
 ``GeminiCodeAssistTransport`` so requests are translated to the Code Assist RPC.
 """
+
 from unittest.mock import MagicMock, patch
 
 import httpx
@@ -84,7 +85,9 @@ def test_per_request_client_reuses_shared_code_assist_client():
         "per-request gemini-oauth client must be the shared Code Assist client, "
         "not a freshly rebuilt plain OpenAI client"
     )
-    assert isinstance(_underlying_transport(request_client), g.GeminiCodeAssistTransport)
+    assert isinstance(
+        _underlying_transport(request_client), g.GeminiCodeAssistTransport
+    )
 
 
 def test_gemini_oauth_transport_targets_generate_content_rpc():
@@ -109,7 +112,7 @@ def test_gemini_oauth_transport_targets_generate_content_rpc():
             },
         )
 
-    with patch.object(g, "make_project_provider", lambda *a, **k: (lambda: "proj-1")):
+    with patch.object(g, "make_project_provider", lambda *a, **k: lambda: "proj-1"):
         client = agent._create_openai_client(
             {
                 "api_key": "gemini-oauth",

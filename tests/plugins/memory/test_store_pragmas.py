@@ -6,6 +6,7 @@ in-memory temp store, a larger page cache, and memory-mapped reads. Every
 pragma is best-effort — a build or filesystem that rejects one must not stop
 the store from opening.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -31,9 +32,9 @@ def _pragma(store, name):
 def test_wal_store_applies_performance_pragmas(store):
     # tmp_path is a normal local filesystem → WAL succeeds → NORMAL sync.
     assert str(_pragma(store, "journal_mode")).lower() == "wal"
-    assert _pragma(store, "synchronous") == 1        # NORMAL
-    assert _pragma(store, "temp_store") == 2         # MEMORY
-    assert _pragma(store, "cache_size") == -8000     # ~8 MiB
+    assert _pragma(store, "synchronous") == 1  # NORMAL
+    assert _pragma(store, "temp_store") == 2  # MEMORY
+    assert _pragma(store, "cache_size") == -8000  # ~8 MiB
     assert _pragma(store, "mmap_size") == 134217728  # 128 MiB
 
 

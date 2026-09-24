@@ -153,13 +153,17 @@ def _list_targets(platform_filter: Optional[str], *, json_mode: bool) -> int:
             load_directory,
         )
     except Exception as exc:
-        print(f"hercules send: failed to load channel directory: {exc}", file=sys.stderr)
+        print(
+            f"hercules send: failed to load channel directory: {exc}", file=sys.stderr
+        )
         return _FAILURE_EXIT
 
     try:
         raw = load_directory()
     except Exception as exc:
-        print(f"hercules send: failed to read channel directory: {exc}", file=sys.stderr)
+        print(
+            f"hercules send: failed to read channel directory: {exc}", file=sys.stderr
+        )
         return _FAILURE_EXIT
 
     platforms = dict(raw.get("platforms") or {})
@@ -235,6 +239,7 @@ def _load_hercules_env() -> None:
 
     try:
         from hercules_cli.config import get_hercules_home
+
         home = get_hercules_home()
     except Exception:
         return
@@ -255,6 +260,7 @@ def _load_hercules_env() -> None:
     # gateway.config.load_gateway_config() sees them. Scalars only; don't
     # override values already in the env.
     import os
+
     config_path = home / "config.yaml"
     if not config_path.exists():
         return
@@ -272,6 +278,7 @@ def _load_hercules_env() -> None:
 
     try:
         from hercules_cli.config import _expand_env_vars
+
         raw = _expand_env_vars(raw)
     except Exception:
         pass
@@ -280,6 +287,7 @@ def _load_hercules_env() -> None:
     # so a managed top-level scalar wins here too. Fail-open via the helper.
     try:
         from hercules_cli import managed_scope
+
         raw = managed_scope.apply_managed_overlay(raw if isinstance(raw, dict) else {})
     except Exception:
         pass
@@ -308,7 +316,9 @@ def cmd_send(args: argparse.Namespace) -> None:
         # When `--list telegram` is used, argparse stores "telegram" in the
         # `message` positional (since list_targets takes no argument).
         platform_filter = getattr(args, "message", None)
-        exit_code = _list_targets(platform_filter, json_mode=getattr(args, "json", False))
+        exit_code = _list_targets(
+            platform_filter, json_mode=getattr(args, "json", False)
+        )
         sys.exit(exit_code)
 
     target = _resolve_target(getattr(args, "to", None))
@@ -316,7 +326,7 @@ def cmd_send(args: argparse.Namespace) -> None:
         print(
             "hercules send: --to PLATFORM[:channel[:thread]] is required\n"
             "Examples:\n"
-            "  hercules send --to telegram \"hello\"\n"
+            '  hercules send --to telegram "hello"\n'
             "  hercules send --to discord:#ops --file report.md\n"
             "  hercules send --list      # list available targets",
             file=sys.stderr,
@@ -384,11 +394,11 @@ def register_send_subparser(subparsers) -> argparse.ArgumentParser:
         ),
         epilog=(
             "Examples:\n"
-            "  hercules send --to telegram \"deploy finished\"\n"
-            "  echo \"RAM 92%\" | hercules send --to telegram:-1001234567890\n"
+            '  hercules send --to telegram "deploy finished"\n'
+            '  echo "RAM 92%" | hercules send --to telegram:-1001234567890\n'
             "  hercules send --to discord:#ops --file /tmp/report.md\n"
-            "  hercules send --to slack:#eng --subject \"[CI]\" --file build.log\n"
-            "  hercules send --to telegram \"MEDIA:/tmp/chart.png\"   # send a media attachment\n"
+            '  hercules send --to slack:#eng --subject "[CI]" --file build.log\n'
+            '  hercules send --to telegram "MEDIA:/tmp/chart.png"   # send a media attachment\n'
             "  hercules send --list                  # all platforms\n"
             "  hercules send --list telegram         # filter by platform\n"
             "\n"

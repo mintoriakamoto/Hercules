@@ -520,8 +520,10 @@ def run_whatsapp_cloud_setup() -> int:
     effective_waba = waba_id or current_waba_id
     if effective_waba:
         print("    • Display name + profile picture:")
-        print("        https://business.facebook.com/wa/manage/phone-numbers/"
-              f"?waba_id={effective_waba}")
+        print(
+            "        https://business.facebook.com/wa/manage/phone-numbers/"
+            f"?waba_id={effective_waba}"
+        )
     else:
         print("    • Display name + profile picture:")
         print("        https://business.facebook.com/wa/manage/phone-numbers/")
@@ -535,7 +537,9 @@ def run_whatsapp_cloud_setup() -> int:
     print("        Requires Meta's business verification process —")
     print("        Business Manager → Security Center → Start Verification.")
     print()
-    print("  Docs: https://github.com/mintoriakamoto/Hercules/tree/main/website/docs/user-guide")
+    print(
+        "  Docs: https://github.com/mintoriakamoto/Hercules/tree/main/website/docs/user-guide"
+    )
     print("        messaging/whatsapp-cloud")
     print()
     return 0

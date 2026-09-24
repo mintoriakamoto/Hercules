@@ -20,8 +20,10 @@ def test_get_git_commit_uses_live_git_when_available(tmp_path):
 
     git_result = MagicMock(returncode=0, stdout="deadbeef\n")
     # build_info should NOT be consulted when live git succeeds.
-    with patch("hercules_cli.dump.subprocess.run", return_value=git_result) as mock_run, \
-         patch("hercules_cli.build_info.get_build_sha") as mock_build:
+    with (
+        patch("hercules_cli.dump.subprocess.run", return_value=git_result) as mock_run,
+        patch("hercules_cli.build_info.get_build_sha") as mock_build,
+    ):
         commit = dump._get_git_commit(repo_dir)
 
     assert commit == "deadbeef"
@@ -37,8 +39,10 @@ def test_get_git_commit_falls_back_to_build_sha_when_live_git_fails(tmp_path):
     repo_dir.mkdir()
 
     failed = MagicMock(returncode=128, stdout="")
-    with patch("hercules_cli.dump.subprocess.run", return_value=failed), \
-         patch("hercules_cli.build_info.get_build_sha", return_value="cafef00d"):
+    with (
+        patch("hercules_cli.dump.subprocess.run", return_value=failed),
+        patch("hercules_cli.build_info.get_build_sha", return_value="cafef00d"),
+    ):
         commit = dump._get_git_commit(repo_dir)
 
     assert commit == "cafef00d"
@@ -52,8 +56,10 @@ def test_get_git_commit_falls_back_when_git_returns_empty_stdout(tmp_path):
     repo_dir.mkdir()
 
     empty = MagicMock(returncode=0, stdout="\n")
-    with patch("hercules_cli.dump.subprocess.run", return_value=empty), \
-         patch("hercules_cli.build_info.get_build_sha", return_value="abcdef12"):
+    with (
+        patch("hercules_cli.dump.subprocess.run", return_value=empty),
+        patch("hercules_cli.build_info.get_build_sha", return_value="abcdef12"),
+    ):
         commit = dump._get_git_commit(repo_dir)
 
     assert commit == "abcdef12"
@@ -66,8 +72,10 @@ def test_get_git_commit_falls_back_when_git_raises(tmp_path):
     repo_dir = tmp_path / "repo"
     repo_dir.mkdir()
 
-    with patch("hercules_cli.dump.subprocess.run", side_effect=FileNotFoundError("git")), \
-         patch("hercules_cli.build_info.get_build_sha", return_value="feedface"):
+    with (
+        patch("hercules_cli.dump.subprocess.run", side_effect=FileNotFoundError("git")),
+        patch("hercules_cli.build_info.get_build_sha", return_value="feedface"),
+    ):
         commit = dump._get_git_commit(repo_dir)
 
     assert commit == "feedface"
@@ -81,8 +89,10 @@ def test_get_git_commit_returns_unknown_when_neither_source_available(tmp_path):
     repo_dir.mkdir()
 
     failed = MagicMock(returncode=128, stdout="")
-    with patch("hercules_cli.dump.subprocess.run", return_value=failed), \
-         patch("hercules_cli.build_info.get_build_sha", return_value=None):
+    with (
+        patch("hercules_cli.dump.subprocess.run", return_value=failed),
+        patch("hercules_cli.build_info.get_build_sha", return_value=None),
+    ):
         commit = dump._get_git_commit(repo_dir)
 
     assert commit == "(unknown)"
@@ -108,8 +118,10 @@ def test_get_git_commit_output_format_identical_between_sources(tmp_path):
 
     # Baked-SHA path.
     failed = MagicMock(returncode=128, stdout="")
-    with patch("hercules_cli.dump.subprocess.run", return_value=failed), \
-         patch("hercules_cli.build_info.get_build_sha", return_value="b2f477a3"):
+    with (
+        patch("hercules_cli.dump.subprocess.run", return_value=failed),
+        patch("hercules_cli.build_info.get_build_sha", return_value="b2f477a3"),
+    ):
         baked = dump._get_git_commit(repo_dir)
 
     assert live == baked == "b2f477a3"
@@ -153,7 +165,9 @@ def test_get_git_commit_date_empty_when_git_raises(tmp_path):
     repo_dir = tmp_path / "repo"
     repo_dir.mkdir()
 
-    with patch("hercules_cli.dump.subprocess.run", side_effect=FileNotFoundError("git")):
+    with patch(
+        "hercules_cli.dump.subprocess.run", side_effect=FileNotFoundError("git")
+    ):
         date = dump._get_git_commit_date(repo_dir)
 
     assert date == ""

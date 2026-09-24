@@ -50,11 +50,23 @@ class FactRetriever:
         # signals (FTS5, Jaccard) and structural HRR become supporting signals
         # while cosine similarity over dense embeddings does the heavy lifting.
         # Falls back to the historical lexical+HRR blend when embeddings are off.
-        self._semantic = bool(embedder is not None and getattr(embedder, "enabled", False))
+        self._semantic = bool(
+            embedder is not None and getattr(embedder, "enabled", False)
+        )
         if self._semantic and embedding_weight <= 0.0:
-            fts_weight, jaccard_weight, hrr_weight, embedding_weight = 0.25, 0.15, 0.15, 0.45
+            fts_weight, jaccard_weight, hrr_weight, embedding_weight = (
+                0.25,
+                0.15,
+                0.15,
+                0.45,
+            )
             if not hrr._HAS_NUMPY:
-                fts_weight, jaccard_weight, hrr_weight, embedding_weight = 0.30, 0.20, 0.0, 0.50
+                fts_weight, jaccard_weight, hrr_weight, embedding_weight = (
+                    0.30,
+                    0.20,
+                    0.0,
+                    0.50,
+                )
 
         self.fts_weight = fts_weight
         self.jaccard_weight = jaccard_weight
@@ -123,7 +135,9 @@ class FactRetriever:
                 if query_vec is None:
                     query_vec = hrr.encode_text(query, self.hrr_dim)
                 fact_vec = hrr.bytes_to_phases(fact["hrr_vector"])
-                hrr_sim = (hrr.similarity(query_vec, fact_vec) + 1.0) / 2.0  # shift to [0,1]
+                hrr_sim = (
+                    hrr.similarity(query_vec, fact_vec) + 1.0
+                ) / 2.0  # shift to [0,1]
             else:
                 hrr_sim = 0.5  # neutral
 
@@ -133,15 +147,19 @@ class FactRetriever:
             if self.embedding_weight > 0 and query_emb and fact.get("embedding"):
                 from .embeddings import bytes_to_vec, cosine
 
-                emb_sim = (cosine(query_emb, bytes_to_vec(fact["embedding"])) + 1.0) / 2.0
+                emb_sim = (
+                    cosine(query_emb, bytes_to_vec(fact["embedding"])) + 1.0
+                ) / 2.0
             else:
                 emb_sim = 0.5  # neutral
 
             # Combine FTS5 + Jaccard + HRR + semantic
-            relevance = (self.fts_weight * fts_score
-                        + self.jaccard_weight * jaccard
-                        + self.hrr_weight * hrr_sim
-                        + self.embedding_weight * emb_sim)
+            relevance = (
+                self.fts_weight * fts_score
+                + self.jaccard_weight * jaccard
+                + self.hrr_weight * hrr_sim
+                + self.embedding_weight * emb_sim
+            )
 
             # Trust weighting
             score = relevance * fact["trust_score"]
@@ -157,7 +175,9 @@ class FactRetriever:
 
             # Optional temporal decay
             if self.half_life > 0:
-                score *= self._temporal_decay(fact.get("updated_at") or fact.get("created_at"))
+                score *= self._temporal_decay(
+                    fact.get("updated_at") or fact.get("created_at")
+                )
 
             fact["score"] = score
             scored.append(fact)
@@ -357,7 +377,9 @@ class FactRetriever:
             # Unbind probe key from fact to see if entity is structurally present
             residual = hrr.unbind(fact_vec, probe_key)
             # Compare residual against content signal
-            content_vec = hrr.bind(hrr.encode_text(fact["content"], self.hrr_dim), role_content)
+            content_vec = hrr.bind(
+                hrr.encode_text(fact["content"], self.hrr_dim), role_content
+            )
             sim = hrr.similarity(residual, content_vec)
             fact["score"] = (sim + 1.0) / 2.0 * fact["trust_score"]
             scored.append(fact)
@@ -556,7 +578,9 @@ class FactRetriever:
         # Above that, only check the most recently updated facts.
         _MAX_CONTRADICT_FACTS = 500
         if len(rows) > _MAX_CONTRADICT_FACTS:
-            rows = sorted(rows, key=lambda r: r["updated_at"] or r["created_at"], reverse=True)
+            rows = sorted(
+                rows, key=lambda r: r["updated_at"] or r["created_at"], reverse=True
+            )
             rows = rows[:_MAX_CONTRADICT_FACTS]
 
         # Build entity sets per fact
@@ -587,7 +611,9 @@ class FactRetriever:
                     continue
 
                 # Entity overlap (Jaccard)
-                entity_overlap = len(ents1 & ents2) / len(ents1 | ents2) if (ents1 | ents2) else 0.0
+                entity_overlap = (
+                    len(ents1 & ents2) / len(ents1 | ents2) if (ents1 | ents2) else 0.0
+                )
 
                 if entity_overlap < 0.3:
                     continue  # Not enough entity overlap to be contradictory
@@ -743,21 +769,131 @@ class FactRetriever:
     # words that carry no retrieval signal and force false-negative AND
     # matches when left in the query.
     _FTS_STOPWORDS = frozenset({
-        "a", "about", "above", "after", "again", "all", "am", "an", "and",
-        "any", "are", "as", "at", "be", "because", "been", "before", "being",
-        "between", "both", "but", "by", "can", "could", "did", "do", "does",
-        "doing", "don", "down", "during", "each", "few", "for", "from",
-        "further", "had", "has", "have", "having", "he", "her", "here",
-        "hers", "herself", "him", "himself", "his", "how", "i", "if", "in",
-        "into", "is", "it", "its", "itself", "just", "me", "more", "most",
-        "my", "myself", "no", "nor", "not", "now", "of", "off", "on", "once",
-        "only", "or", "other", "our", "ours", "ourselves", "out", "over",
-        "own", "same", "she", "should", "so", "some", "such", "than", "that",
-        "the", "their", "theirs", "them", "themselves", "then", "there",
-        "these", "they", "this", "those", "through", "to", "too", "under",
-        "until", "up", "very", "was", "we", "were", "what", "when", "where",
-        "which", "while", "who", "whom", "why", "will", "with", "would",
-        "you", "your", "yours", "yourself", "yourselves",
+        "a",
+        "about",
+        "above",
+        "after",
+        "again",
+        "all",
+        "am",
+        "an",
+        "and",
+        "any",
+        "are",
+        "as",
+        "at",
+        "be",
+        "because",
+        "been",
+        "before",
+        "being",
+        "between",
+        "both",
+        "but",
+        "by",
+        "can",
+        "could",
+        "did",
+        "do",
+        "does",
+        "doing",
+        "don",
+        "down",
+        "during",
+        "each",
+        "few",
+        "for",
+        "from",
+        "further",
+        "had",
+        "has",
+        "have",
+        "having",
+        "he",
+        "her",
+        "here",
+        "hers",
+        "herself",
+        "him",
+        "himself",
+        "his",
+        "how",
+        "i",
+        "if",
+        "in",
+        "into",
+        "is",
+        "it",
+        "its",
+        "itself",
+        "just",
+        "me",
+        "more",
+        "most",
+        "my",
+        "myself",
+        "no",
+        "nor",
+        "not",
+        "now",
+        "of",
+        "off",
+        "on",
+        "once",
+        "only",
+        "or",
+        "other",
+        "our",
+        "ours",
+        "ourselves",
+        "out",
+        "over",
+        "own",
+        "same",
+        "she",
+        "should",
+        "so",
+        "some",
+        "such",
+        "than",
+        "that",
+        "the",
+        "their",
+        "theirs",
+        "them",
+        "themselves",
+        "then",
+        "there",
+        "these",
+        "they",
+        "this",
+        "those",
+        "through",
+        "to",
+        "too",
+        "under",
+        "until",
+        "up",
+        "very",
+        "was",
+        "we",
+        "were",
+        "what",
+        "when",
+        "where",
+        "which",
+        "while",
+        "who",
+        "whom",
+        "why",
+        "will",
+        "with",
+        "would",
+        "you",
+        "your",
+        "yours",
+        "yourself",
+        "yourselves",
     })
 
     @classmethod
@@ -781,7 +917,7 @@ class FactRetriever:
         _FTS_SPECIAL = '"()*^:-+'
         tokens: list[str] = []
         for raw in query.lower().split():
-            cleaned = raw.strip(".,;:!?\"'()[]{}#@<>") .translate(
+            cleaned = raw.strip(".,;:!?\"'()[]{}#@<>").translate(
                 str.maketrans("", "", _FTS_SPECIAL)
             )
             if len(cleaned) < 2:

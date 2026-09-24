@@ -115,7 +115,9 @@ class TestTestProcessesKeepRealGuards:
         assert ungate.open_guardrails_enabled() is False
 
     @pytest.mark.parametrize("var", ["HERCULES_YOLO_MODE", "HERCULES_OPEN_GUARDRAILS"])
-    def test_exported_truthy_does_not_re_break_the_suite(self, ungate, monkeypatch, var):
+    def test_exported_truthy_does_not_re_break_the_suite(
+        self, ungate, monkeypatch, var
+    ):
         """A truthy value must not override the pytest check.
 
         Someone who runs YOLO plausibly has ``HERCULES_YOLO_MODE=1`` exported

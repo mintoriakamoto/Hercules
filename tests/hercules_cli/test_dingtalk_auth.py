@@ -1,4 +1,5 @@
 """Unit tests for hercules_cli/dingtalk_auth.py (QR device-flow registration)."""
+
 from __future__ import annotations
 
 import sys
@@ -13,13 +14,14 @@ import pytest
 
 
 class TestApiPost:
-
     def test_raises_on_network_error(self):
         import requests
         from hercules_cli.dingtalk_auth import _api_post, RegistrationError
 
-        with patch("hercules_cli.dingtalk_auth.requests.post",
-                   side_effect=requests.ConnectionError("nope")):
+        with patch(
+            "hercules_cli.dingtalk_auth.requests.post",
+            side_effect=requests.ConnectionError("nope"),
+        ):
             with pytest.raises(RegistrationError, match="Network error"):
                 _api_post("/app/registration/init", {"source": "hercules"})
 
@@ -52,7 +54,6 @@ class TestApiPost:
 
 
 class TestBeginRegistration:
-
     def test_chains_init_then_begin(self):
         from hercules_cli.dingtalk_auth import begin_registration
 
@@ -77,8 +78,10 @@ class TestBeginRegistration:
     def test_missing_nonce_raises(self):
         from hercules_cli.dingtalk_auth import begin_registration, RegistrationError
 
-        with patch("hercules_cli.dingtalk_auth._api_post",
-                   return_value={"errcode": 0, "nonce": ""}):
+        with patch(
+            "hercules_cli.dingtalk_auth._api_post",
+            return_value={"errcode": 0, "nonce": ""},
+        ):
             with pytest.raises(RegistrationError, match="missing nonce"):
                 begin_registration()
 
@@ -101,8 +104,9 @@ class TestBeginRegistration:
             {"errcode": 0, "device_code": "dev"},  # no verification_uri_complete
         ]
         with patch("hercules_cli.dingtalk_auth._api_post", side_effect=responses):
-            with pytest.raises(RegistrationError,
-                               match="missing verification_uri_complete"):
+            with pytest.raises(
+                RegistrationError, match="missing verification_uri_complete"
+            ):
                 begin_registration()
 
 
@@ -112,7 +116,6 @@ class TestBeginRegistration:
 
 
 class TestWaitForSuccess:
-
     def test_returns_credentials_on_success(self):
         from hercules_cli.dingtalk_auth import wait_for_registration_success
 
@@ -121,8 +124,12 @@ class TestWaitForSuccess:
             {"status": "WAITING"},
             {"status": "SUCCESS", "client_id": "cid-1", "client_secret": "sec-1"},
         ]
-        with patch("hercules_cli.dingtalk_auth.poll_registration", side_effect=responses), \
-             patch("hercules_cli.dingtalk_auth.time.sleep"):
+        with (
+            patch(
+                "hercules_cli.dingtalk_auth.poll_registration", side_effect=responses
+            ),
+            patch("hercules_cli.dingtalk_auth.time.sleep"),
+        ):
             cid, secret = wait_for_registration_success(
                 device_code="dev", interval=0, expires_in=60
             )
@@ -130,11 +137,22 @@ class TestWaitForSuccess:
             assert secret == "sec-1"
 
     def test_success_without_credentials_raises(self):
-        from hercules_cli.dingtalk_auth import wait_for_registration_success, RegistrationError
+        from hercules_cli.dingtalk_auth import (
+            wait_for_registration_success,
+            RegistrationError,
+        )
 
-        with patch("hercules_cli.dingtalk_auth.poll_registration",
-                   return_value={"status": "SUCCESS", "client_id": "", "client_secret": ""}), \
-             patch("hercules_cli.dingtalk_auth.time.sleep"):
+        with (
+            patch(
+                "hercules_cli.dingtalk_auth.poll_registration",
+                return_value={
+                    "status": "SUCCESS",
+                    "client_id": "",
+                    "client_secret": "",
+                },
+            ),
+            patch("hercules_cli.dingtalk_auth.time.sleep"),
+        ):
             with pytest.raises(RegistrationError, match="credentials are missing"):
                 wait_for_registration_success(
                     device_code="dev", interval=0, expires_in=60
@@ -149,8 +167,12 @@ class TestWaitForSuccess:
             {"status": "WAITING"},
             {"status": "SUCCESS", "client_id": "cid", "client_secret": "sec"},
         ]
-        with patch("hercules_cli.dingtalk_auth.poll_registration", side_effect=responses), \
-             patch("hercules_cli.dingtalk_auth.time.sleep"):
+        with (
+            patch(
+                "hercules_cli.dingtalk_auth.poll_registration", side_effect=responses
+            ),
+            patch("hercules_cli.dingtalk_auth.time.sleep"),
+        ):
             wait_for_registration_success(
                 device_code="dev", interval=0, expires_in=60, on_waiting=callback
             )
@@ -163,7 +185,6 @@ class TestWaitForSuccess:
 
 
 class TestRenderQR:
-
     def test_returns_false_when_qrcode_missing(self, monkeypatch):
         from hercules_cli import dingtalk_auth
 
@@ -179,6 +200,7 @@ class TestRenderQR:
             pytest.skip("qrcode library not available")
 
         from hercules_cli.dingtalk_auth import render_qr_to_terminal
+
         result = render_qr_to_terminal("https://example.com/test")
         captured = capsys.readouterr()
         assert result is True
@@ -191,20 +213,22 @@ class TestRenderQR:
 
 
 class TestConfigOverrides:
-
     def test_base_url_default(self, monkeypatch):
         monkeypatch.delenv("DINGTALK_REGISTRATION_BASE_URL", raising=False)
         # Force module reload to pick up current env
         import importlib
         import hercules_cli.dingtalk_auth as mod
+
         importlib.reload(mod)
         assert mod.REGISTRATION_BASE_URL == "https://oapi.dingtalk.com"
 
     def test_base_url_override_via_env(self, monkeypatch):
-        monkeypatch.setenv("DINGTALK_REGISTRATION_BASE_URL",
-                           "https://test.example.com/")
+        monkeypatch.setenv(
+            "DINGTALK_REGISTRATION_BASE_URL", "https://test.example.com/"
+        )
         import importlib
         import hercules_cli.dingtalk_auth as mod
+
         importlib.reload(mod)
         # Trailing slash stripped
         assert mod.REGISTRATION_BASE_URL == "https://test.example.com"
@@ -213,5 +237,6 @@ class TestConfigOverrides:
         monkeypatch.delenv("DINGTALK_REGISTRATION_SOURCE", raising=False)
         import importlib
         import hercules_cli.dingtalk_auth as mod
+
         importlib.reload(mod)
         assert mod.REGISTRATION_SOURCE == "openClaw"

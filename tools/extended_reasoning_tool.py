@@ -88,7 +88,9 @@ def build_reasoning_chain(
     """
     engine = get_reasoning_engine()
 
-    complexity = engine.analyze_task_complexity(task_description, len(available_tools), time_budget_seconds)
+    complexity = engine.analyze_task_complexity(
+        task_description, len(available_tools), time_budget_seconds
+    )
 
     context = DecisionContext(
         task_description=task_description,
@@ -196,7 +198,9 @@ def plan_tool_sequence(
         "primary_sequence": reasoning.recommended_tool_sequence,
         "reasoning": reasoning.reasoning_steps,
         "confidence": reasoning.confidence_score,
-        "fallback_sequence": _generate_fallback(reasoning.recommended_tool_sequence, available_tools),
+        "fallback_sequence": _generate_fallback(
+            reasoning.recommended_tool_sequence, available_tools
+        ),
         "estimated_steps": len(reasoning.recommended_tool_sequence),
     }
 
@@ -231,7 +235,9 @@ def handle_tool_failure(
     """
     engine = get_reasoning_engine()
 
-    fallback = engine.generate_fallback_strategy(original_plan, failure_reason, available_tools)
+    fallback = engine.generate_fallback_strategy(
+        original_plan, failure_reason, available_tools
+    )
 
     return {
         "original_sequence": original_plan,
@@ -239,7 +245,9 @@ def handle_tool_failure(
         "failure_reason": failure_reason,
         "fallback_sequence": fallback,
         "changes": _diff_sequences(original_plan, fallback),
-        "recommendation": "Use fallback sequence" if fallback != original_plan else "Retry original sequence",
+        "recommendation": "Use fallback sequence"
+        if fallback != original_plan
+        else "Retry original sequence",
     }
 
 
@@ -281,6 +289,7 @@ def get_reasoning_insights(
 
 
 # Helper functions
+
 
 def _get_reasoning_depth(complexity: ReasoningComplexity) -> str:
     """Get recommended reasoning depth for complexity level."""
@@ -370,7 +379,14 @@ def _generate_clarifying_questions(task: str) -> List[str]:
         questions.append("What metrics matter most?")
         questions.append("What counts as success?")
 
-    return questions if questions else ["What is the priority/urgency?", "Are there constraints we should know about?"]
+    return (
+        questions
+        if questions
+        else [
+            "What is the priority/urgency?",
+            "Are there constraints we should know about?",
+        ]
+    )
 
 
 def _identify_obstacles(task: str, complexity: ReasoningComplexity) -> List[str]:
@@ -401,51 +417,48 @@ ANALYZE_COMPLEXITY_SCHEMA = {
     "properties": {
         "task_description": {
             "type": "string",
-            "description": "Description of the task to analyze"
+            "description": "Description of the task to analyze",
         },
         "num_available_tools": {
             "type": "integer",
             "description": "Number of tools available",
-            "default": 0
+            "default": 0,
         },
         "time_budget_seconds": {
             "type": "number",
             "description": "Time budget in seconds",
-            "default": 30.0
-        }
+            "default": 30.0,
+        },
     },
-    "required": ["task_description"]
+    "required": ["task_description"],
 }
 
 BUILD_REASONING_SCHEMA = {
     "type": "object",
     "properties": {
-        "task_description": {
-            "type": "string",
-            "description": "What needs to be done"
-        },
+        "task_description": {"type": "string", "description": "What needs to be done"},
         "user_intent": {
             "type": "string",
-            "description": "Why the user wants this done"
+            "description": "Why the user wants this done",
         },
         "available_tools": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "List of available tools"
+            "description": "List of available tools",
         },
         "time_budget_seconds": {
             "type": "number",
             "description": "Time budget in seconds",
-            "default": 30.0
+            "default": 30.0,
         },
         "domain": {
             "type": "string",
             "enum": ["general", "web", "file_system", "security", "data"],
             "description": "Domain context",
-            "default": "general"
-        }
+            "default": "general",
+        },
     },
-    "required": ["task_description", "user_intent", "available_tools"]
+    "required": ["task_description", "user_intent", "available_tools"],
 }
 
 SCORE_TOOL_SCHEMA = {
@@ -453,20 +466,17 @@ SCORE_TOOL_SCHEMA = {
     "properties": {
         "task_description": {
             "type": "string",
-            "description": "Description of the task"
+            "description": "Description of the task",
         },
-        "tool_name": {
-            "type": "string",
-            "description": "Name of the tool to evaluate"
-        },
+        "tool_name": {"type": "string", "description": "Name of the tool to evaluate"},
         "success_rate": {
             "type": "number",
             "description": "Recent success rate of the tool (0.0-1.0)",
             "minimum": 0.0,
-            "maximum": 1.0
-        }
+            "maximum": 1.0,
+        },
     },
-    "required": ["task_description", "tool_name"]
+    "required": ["task_description", "tool_name"],
 }
 
 PLAN_SEQUENCE_SCHEMA = {
@@ -474,21 +484,21 @@ PLAN_SEQUENCE_SCHEMA = {
     "properties": {
         "task_description": {
             "type": "string",
-            "description": "What needs to be accomplished"
+            "description": "What needs to be accomplished",
         },
         "available_tools": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "Tools that can be used"
+            "description": "Tools that can be used",
         },
         "complexity": {
             "type": "string",
             "enum": ["simple", "moderate", "complex", "critical"],
             "description": "Estimated task complexity",
-            "default": "moderate"
-        }
+            "default": "moderate",
+        },
     },
-    "required": ["task_description", "available_tools"]
+    "required": ["task_description", "available_tools"],
 }
 
 HANDLE_FAILURE_SCHEMA = {
@@ -497,23 +507,17 @@ HANDLE_FAILURE_SCHEMA = {
         "original_plan": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "Original tool sequence"
+            "description": "Original tool sequence",
         },
-        "failed_tool": {
-            "type": "string",
-            "description": "Which tool failed"
-        },
-        "failure_reason": {
-            "type": "string",
-            "description": "Why it failed"
-        },
+        "failed_tool": {"type": "string", "description": "Which tool failed"},
+        "failure_reason": {"type": "string", "description": "Why it failed"},
         "available_tools": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "Tools still available"
-        }
+            "description": "Tools still available",
+        },
     },
-    "required": ["original_plan", "failed_tool", "failure_reason", "available_tools"]
+    "required": ["original_plan", "failed_tool", "failure_reason", "available_tools"],
 }
 
 # Register tools
@@ -526,12 +530,12 @@ registry.register(
     handler=lambda args, **kw: analyze_task_complexity(
         args.get("task_description", ""),
         args.get("num_available_tools", 0),
-        args.get("time_budget_seconds", 30.0)
+        args.get("time_budget_seconds", 30.0),
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="🎯",
-    description="Analyze task complexity to determine reasoning depth"
+    description="Analyze task complexity to determine reasoning depth",
 )
 
 registry.register(
@@ -544,12 +548,12 @@ registry.register(
         args.get("available_tools", []),
         args.get("time_budget_seconds", 30.0),
         args.get("safety_constraints"),
-        args.get("domain", "general")
+        args.get("domain", "general"),
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="🧠",
-    description="Build structured reasoning chain for complex decisions"
+    description="Build structured reasoning chain for complex decisions",
 )
 
 registry.register(
@@ -559,12 +563,12 @@ registry.register(
     handler=lambda args, **kw: score_tool_selection(
         args.get("task_description", ""),
         args.get("tool_name", ""),
-        args.get("success_rate")
+        args.get("success_rate"),
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="⚖️",
-    description="Score how well a tool matches a task"
+    description="Score how well a tool matches a task",
 )
 
 registry.register(
@@ -574,12 +578,12 @@ registry.register(
     handler=lambda args, **kw: plan_tool_sequence(
         args.get("task_description", ""),
         args.get("available_tools", []),
-        args.get("complexity", "moderate")
+        args.get("complexity", "moderate"),
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="🔗",
-    description="Plan optimal sequence of tools for a task"
+    description="Plan optimal sequence of tools for a task",
 )
 
 registry.register(
@@ -590,12 +594,12 @@ registry.register(
         args.get("original_plan", []),
         args.get("failed_tool", ""),
         args.get("failure_reason", ""),
-        args.get("available_tools", [])
+        args.get("available_tools", []),
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="🔄",
-    description="Generate fallback strategy when tool fails"
+    description="Generate fallback strategy when tool fails",
 )
 
 registry.register(
@@ -606,22 +610,21 @@ registry.register(
         "properties": {
             "task_description": {
                 "type": "string",
-                "description": "Description of the task"
+                "description": "Description of the task",
             },
             "context_clues": {
                 "type": "object",
                 "description": "Optional additional context",
-                "additionalProperties": {"type": "string"}
-            }
+                "additionalProperties": {"type": "string"},
+            },
         },
-        "required": ["task_description"]
+        "required": ["task_description"],
     },
     handler=lambda args, **kw: get_reasoning_insights(
-        args.get("task_description", ""),
-        args.get("context_clues")
+        args.get("task_description", ""), args.get("context_clues")
     ),
     check_fn=lambda: True,
     requires_env=None,
     emoji="💡",
-    description="Get reasoning insights without committing to tools"
+    description="Get reasoning insights without committing to tools",
 )

@@ -30,14 +30,25 @@ from plugins.memory.holographic.retrieval import FactRetriever  # noqa: E402
 # This lets us assert meaning-based matching without a network/API key.
 _CONCEPTS = {
     # deployment / hosting
-    "production": (1, 0, 0, 0), "fly": (1, 0, 0, 0), "deploy": (1, 0, 0, 0),
-    "ship": (1, 0, 0, 0), "hosting": (1, 0, 0, 0), "server": (1, 0, 0, 0),
+    "production": (1, 0, 0, 0),
+    "fly": (1, 0, 0, 0),
+    "deploy": (1, 0, 0, 0),
+    "ship": (1, 0, 0, 0),
+    "hosting": (1, 0, 0, 0),
+    "server": (1, 0, 0, 0),
     # pets / animals
-    "cat": (0, 1, 0, 0), "tuna": (0, 1, 0, 0), "pet": (0, 1, 0, 0), "kitten": (0, 1, 0, 0),
+    "cat": (0, 1, 0, 0),
+    "tuna": (0, 1, 0, 0),
+    "pet": (0, 1, 0, 0),
+    "kitten": (0, 1, 0, 0),
     # programming languages
-    "python": (0, 0, 1, 0), "code": (0, 0, 1, 0), "programming": (0, 0, 1, 0),
+    "python": (0, 0, 1, 0),
+    "code": (0, 0, 1, 0),
+    "programming": (0, 0, 1, 0),
     # food / cooking
-    "recipe": (0, 0, 0, 1), "bake": (0, 0, 0, 1), "oven": (0, 0, 0, 1),
+    "recipe": (0, 0, 0, 1),
+    "bake": (0, 0, 0, 1),
+    "oven": (0, 0, 0, 1),
 }
 
 
@@ -63,6 +74,7 @@ def db_path(tmp_path):
 # ---------------------------------------------------------------------------
 # embeddings module utilities
 # ---------------------------------------------------------------------------
+
 
 def test_vec_bytes_roundtrip():
     vec = [0.5, -1.25, 3.0, 0.0]
@@ -109,6 +121,7 @@ def test_embed_fn_exception_returns_none():
 # store: embeddings are computed + stored
 # ---------------------------------------------------------------------------
 
+
 def test_store_computes_embedding_when_enabled(db_path):
     store = MemoryStore(db_path=db_path, embedder=Embedder(embed_fn=_fake_embed))
     try:
@@ -138,10 +151,11 @@ def test_store_no_embedding_without_embedder(db_path):
 # retrieval: semantic recall + rerank
 # ---------------------------------------------------------------------------
 
+
 def _seed(store):
-    store.add_fact("production runs on fly")            # deploy concept
-    store.add_fact("the cat enjoys tuna")               # pet concept
-    store.add_fact("i write python code every day")     # programming concept
+    store.add_fact("production runs on fly")  # deploy concept
+    store.add_fact("the cat enjoys tuna")  # pet concept
+    store.add_fact("i write python code every day")  # programming concept
 
 
 def test_semantic_recall_with_zero_keyword_overlap(db_path):
@@ -206,6 +220,7 @@ def test_retrieval_count_tracked_on_hybrid_path(db_path):
 # ---------------------------------------------------------------------------
 # entity resolution fix (LIKE wildcard injection)
 # ---------------------------------------------------------------------------
+
 
 def test_entity_resolution_no_wildcard_merge(db_path):
     store = MemoryStore(db_path=db_path)

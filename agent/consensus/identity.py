@@ -68,9 +68,7 @@ class Identity:
 
     def seed(self) -> bytes:
         """The 32-byte private seed. Secret — persist it somewhere safe."""
-        return self._sk.private_bytes(
-            Encoding.Raw, PrivateFormat.Raw, NoEncryption()
-        )
+        return self._sk.private_bytes(Encoding.Raw, PrivateFormat.Raw, NoEncryption())
 
     def sign(self, message: bytes) -> str:
         """Return a base64url Ed25519 signature over *message*."""

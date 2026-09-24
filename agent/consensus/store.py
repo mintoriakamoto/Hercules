@@ -156,9 +156,7 @@ class PersistentEvidenceLog:
 
     def records(self) -> list[SignedRecord]:
         with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT record FROM evidence ORDER BY seq"
-            ).fetchall()
+            rows = conn.execute("SELECT record FROM evidence ORDER BY seq").fetchall()
         return [SignedRecord.from_dict(json.loads(raw)) for (raw,) in rows]
 
     def records_of_kind(self, kind: str) -> list[SignedRecord]:

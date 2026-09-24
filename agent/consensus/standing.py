@@ -86,9 +86,7 @@ def rank_contributions(
         if claim.kind != VERIFIED_CLAIM:
             continue
         outcome = settle(claim, verifications)
-        entry = tallies.setdefault(
-            claim.by, {"rank": 0.0, "verified": 0, "refuted": 0}
-        )
+        entry = tallies.setdefault(claim.by, {"rank": 0.0, "verified": 0, "refuted": 0})
         if outcome["outcome"] == "unproven":
             continue
         weight = (1.0 + abs(float(claim.body.get("stake", 0.0)))) * _decay(
@@ -156,9 +154,7 @@ def standings(
 
 def ranked(standings_by_agent: dict[str, Standing]) -> list[Standing]:
     """Standings ordered best first, ties broken by agent id for determinism."""
-    return sorted(
-        standings_by_agent.values(), key=lambda s: (-s.rank, s.agent_id)
-    )
+    return sorted(standings_by_agent.values(), key=lambda s: (-s.rank, s.agent_id))
 
 
 def compute_allocation(

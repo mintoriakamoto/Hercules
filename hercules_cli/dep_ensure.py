@@ -13,6 +13,7 @@ Deps that degrade gracefully (ripgrep → grep fallback, ffmpeg → skip convers
 don't need ensure_dependency wired in — only hard-fail sites do (TUI needs node,
 browser tool needs agent-browser).
 """
+
 from __future__ import annotations
 
 import platform
@@ -49,7 +50,13 @@ def _has_system_browser() -> bool:
     if _IS_WINDOWS:
         names = ("chrome", "msedge", "chromium")
     else:
-        names = ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome")
+        names = (
+            "google-chrome",
+            "google-chrome-stable",
+            "chromium",
+            "chromium-browser",
+            "chrome",
+        )
     for name in names:
         if shutil.which(name):
             return True
@@ -58,16 +65,16 @@ def _has_system_browser() -> bool:
 
 def _has_hercules_agent_browser() -> bool:
     from hercules_constants import get_hercules_home
+
     home = get_hercules_home()
     if _IS_WINDOWS:
         # npm -g --prefix puts .cmd shims directly in the prefix dir on Windows
         return (home / "node" / "agent-browser.cmd").is_file()
     # install.sh installs globally into $HERCULES_HOME/node/bin/ via npm -g --prefix
     # Also check legacy node_modules/.bin/ path for git-clone installs.
-    return (
-        (home / "node" / "bin" / "agent-browser").is_file()
-        or (home / "node_modules" / ".bin" / "agent-browser").is_file()
-    )
+    return (home / "node" / "bin" / "agent-browser").is_file() or (
+        home / "node_modules" / ".bin" / "agent-browser"
+    ).is_file()
 
 
 def _find_install_script(
@@ -125,7 +132,9 @@ def ensure_dependency(
     if interactive and sys.stdin.isatty():
         desc = _DEP_DESCRIPTIONS.get(dep, dep)
         try:
-            reply = input(f"{desc} is not installed. Install now? [Y/n] ").strip().lower()
+            reply = (
+                input(f"{desc} is not installed. Install now? [Y/n] ").strip().lower()
+            )
         except (EOFError, KeyboardInterrupt):
             return False
         if reply not in ("", "y", "yes"):
@@ -133,17 +142,24 @@ def ensure_dependency(
 
     if shell == "powershell":
         from hercules_constants import get_hercules_home
+
         ps_bin = shutil.which("powershell") or shutil.which("pwsh")
         if not ps_bin:
             if interactive:
-                print("  PowerShell not found. Install PowerShell or run install.ps1 manually.")
+                print(
+                    "  PowerShell not found. Install PowerShell or run install.ps1 manually."
+                )
             return False
         cmd = [
             ps_bin,
-            "-ExecutionPolicy", "Bypass",
-            "-File", str(script),
-            "-Ensure", dep,
-            "-HerculesHome", str(get_hercules_home()),
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script),
+            "-Ensure",
+            dep,
+            "-HerculesHome",
+            str(get_hercules_home()),
         ]
     else:
         cmd = ["bash", str(script), "--ensure", dep]

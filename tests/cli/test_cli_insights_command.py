@@ -21,8 +21,10 @@ def _run_show_insights(command: str):
     cli_obj = HerculesCLI.__new__(HerculesCLI)
     db = MagicMock()
     _InsightsEngineStub.calls = []
-    with patch("hercules_state.SessionDB", return_value=db), \
-         patch("agent.insights.InsightsEngine", _InsightsEngineStub):
+    with (
+        patch("hercules_state.SessionDB", return_value=db),
+        patch("agent.insights.InsightsEngine", _InsightsEngineStub),
+    ):
         cli_obj._show_insights(command)
     return _InsightsEngineStub.calls, db
 

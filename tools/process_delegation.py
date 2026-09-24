@@ -103,9 +103,7 @@ class ProcessDelegationExecutor:
             logger.error(f"Failed to serialize task {task_index}: {e}")
             # Return a failed future
             fut: Future = Future()
-            fut.set_exception(
-                RuntimeError(f"Task serialization failed: {e}")
-            )
+            fut.set_exception(RuntimeError(f"Task serialization failed: {e}"))
             return fut
 
         # Submit to process pool
@@ -290,7 +288,9 @@ class ProcessPoolDelegationCoordinator:
 _coordinator: Optional[ProcessPoolDelegationCoordinator] = None
 
 
-def get_coordinator(max_workers: Optional[int] = None) -> ProcessPoolDelegationCoordinator:
+def get_coordinator(
+    max_workers: Optional[int] = None,
+) -> ProcessPoolDelegationCoordinator:
     """Get or create module-level coordinator instance."""
     global _coordinator
     if _coordinator is None:

@@ -92,6 +92,7 @@ class TestPlatformConfigRoundtrip:
         # extra; from_dict must honor it there too (mirrors _grn fallback).
         restored = PlatformConfig.from_dict({"extra": {"typing_indicator": False}})
         assert restored.typing_indicator is False
+
     def test_channel_overrides_roundtrip(self):
         pc = PlatformConfig(
             enabled=True,
@@ -110,10 +111,17 @@ class TestPlatformConfigRoundtrip:
         )
         d = pc.to_dict()
         assert "channel_overrides" in d
-        assert d["channel_overrides"]["1234567890"]["model"] == "openrouter/healer-alpha"
-        assert d["channel_overrides"]["9876543210"]["system_prompt"] == "You are a coding assistant."
+        assert (
+            d["channel_overrides"]["1234567890"]["model"] == "openrouter/healer-alpha"
+        )
+        assert (
+            d["channel_overrides"]["9876543210"]["system_prompt"]
+            == "You are a coding assistant."
+        )
         restored = PlatformConfig.from_dict(d)
-        assert restored.channel_overrides["1234567890"].model == "openrouter/healer-alpha"
+        assert (
+            restored.channel_overrides["1234567890"].model == "openrouter/healer-alpha"
+        )
         assert restored.channel_overrides["9876543210"].provider == "anthropic"
 
     def test_channel_overrides_from_dict_normalizes_channel_id_to_str(self):
@@ -144,13 +152,11 @@ class TestChannelOverride:
 
 class TestPlatformConfigMalformedSections:
     def test_from_dict_ignores_malformed_nested_sections(self):
-        restored = PlatformConfig.from_dict(
-            {
-                "enabled": True,
-                "home_channel": "telegram:123",
-                "extra": "oops",
-            }
-        )
+        restored = PlatformConfig.from_dict({
+            "enabled": True,
+            "home_channel": "telegram:123",
+            "extra": "oops",
+        })
 
         assert restored.enabled is True
         assert restored.home_channel is None
@@ -223,8 +229,9 @@ class TestGetConnectedPlatforms:
 
 class TestSessionResetPolicy:
     def test_roundtrip(self):
-        policy = SessionResetPolicy(mode="idle", at_hour=6, idle_minutes=120,
-                                    bg_process_max_age_hours=48)
+        policy = SessionResetPolicy(
+            mode="idle", at_hour=6, idle_minutes=120, bg_process_max_age_hours=48
+        )
         d = policy.to_dict()
         restored = SessionResetPolicy.from_dict(d)
         assert restored.mode == "idle"
@@ -240,10 +247,12 @@ class TestSessionResetPolicy:
         assert policy.bg_process_max_age_hours == 24
 
     def test_from_dict_treats_null_values_as_defaults(self):
-        restored = SessionResetPolicy.from_dict(
-            {"mode": None, "at_hour": None, "idle_minutes": None,
-             "bg_process_max_age_hours": None}
-        )
+        restored = SessionResetPolicy.from_dict({
+            "mode": None,
+            "at_hour": None,
+            "idle_minutes": None,
+            "bg_process_max_age_hours": None,
+        })
         assert restored.mode == "none"
         assert restored.at_hour == 4
         assert restored.idle_minutes == 1440
@@ -273,13 +282,11 @@ class TestStreamingConfig:
         assert restored.enabled is False
 
     def test_from_dict_malformed_numeric_values_fall_back_to_defaults(self):
-        restored = StreamingConfig.from_dict(
-            {
-                "edit_interval": "oops",
-                "buffer_threshold": "oops",
-                "fresh_final_after_seconds": "oops",
-            }
-        )
+        restored = StreamingConfig.from_dict({
+            "edit_interval": "oops",
+            "buffer_threshold": "oops",
+            "fresh_final_after_seconds": "oops",
+        })
         assert restored.edit_interval == 0.8
         assert restored.buffer_threshold == 24
         assert restored.fresh_final_after_seconds == 0.0
@@ -311,15 +318,32 @@ class TestGatewayConfigRoundtrip:
         assert Platform.TELEGRAM in restored.platforms
         assert restored.platforms[Platform.TELEGRAM].token == "tok_123"
         assert restored.reset_triggers == ["/new"]
-        assert restored.quick_commands == {"limits": {"type": "exec", "command": "echo ok"}}
+        assert restored.quick_commands == {
+            "limits": {"type": "exec", "command": "echo ok"}
+        }
         assert restored.group_sessions_per_user is False
         assert restored.thread_sessions_per_user is True
 
     def test_max_concurrent_sessions_from_dict_normalizes_disabled_values(self):
         assert GatewayConfig.from_dict({}).max_concurrent_sessions is None
-        assert GatewayConfig.from_dict({"max_concurrent_sessions": None}).max_concurrent_sessions is None
-        assert GatewayConfig.from_dict({"max_concurrent_sessions": 0}).max_concurrent_sessions is None
-        assert GatewayConfig.from_dict({"max_concurrent_sessions": -1}).max_concurrent_sessions is None
+        assert (
+            GatewayConfig.from_dict({
+                "max_concurrent_sessions": None
+            }).max_concurrent_sessions
+            is None
+        )
+        assert (
+            GatewayConfig.from_dict({
+                "max_concurrent_sessions": 0
+            }).max_concurrent_sessions
+            is None
+        )
+        assert (
+            GatewayConfig.from_dict({
+                "max_concurrent_sessions": -1
+            }).max_concurrent_sessions
+            is None
+        )
 
     def test_max_concurrent_sessions_from_dict_accepts_positive_integer(self):
         config = GatewayConfig.from_dict({"max_concurrent_sessions": "3"})
@@ -343,12 +367,10 @@ class TestGatewayConfigRoundtrip:
         assert config.max_concurrent_sessions == 4
 
     def test_max_concurrent_sessions_top_level_overrides_nested(self):
-        config = GatewayConfig.from_dict(
-            {
-                "gateway": {"max_concurrent_sessions": 4},
-                "max_concurrent_sessions": 2,
-            }
-        )
+        config = GatewayConfig.from_dict({
+            "gateway": {"max_concurrent_sessions": 4},
+            "max_concurrent_sessions": 2,
+        })
 
         assert config.max_concurrent_sessions == 2
 
@@ -366,7 +388,10 @@ class TestGatewayConfigRoundtrip:
         restored = GatewayConfig.from_dict(config.to_dict())
 
         assert restored.unauthorized_dm_behavior == "ignore"
-        assert restored.platforms[Platform.WHATSAPP].extra["unauthorized_dm_behavior"] == "pair"
+        assert (
+            restored.platforms[Platform.WHATSAPP].extra["unauthorized_dm_behavior"]
+            == "pair"
+        )
 
     def test_email_defaults_to_ignore_for_unauthorized_dm_behavior(self):
         config = GatewayConfig(
@@ -392,18 +417,16 @@ class TestGatewayConfigRoundtrip:
         assert restored.always_log_local is False
 
     def test_from_dict_ignores_malformed_nested_sections(self):
-        restored = GatewayConfig.from_dict(
-            {
-                "platforms": {
-                    "telegram": "enabled",
-                    "discord": {"enabled": True, "token": "tok"},
-                },
-                "default_reset_policy": "daily",
-                "reset_by_type": ["oops"],
-                "reset_by_platform": "oops",
-                "streaming": "enabled",
-            }
-        )
+        restored = GatewayConfig.from_dict({
+            "platforms": {
+                "telegram": "enabled",
+                "discord": {"enabled": True, "token": "tok"},
+            },
+            "default_reset_policy": "daily",
+            "reset_by_type": ["oops"],
+            "reset_by_platform": "oops",
+            "streaming": "enabled",
+        })
 
         assert Platform.TELEGRAM not in restored.platforms
         assert restored.platforms[Platform.DISCORD].enabled is True
@@ -439,10 +462,7 @@ class TestLoadGatewayConfig:
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "quick_commands:\n"
-            "  limits:\n"
-            "    type: exec\n"
-            "    command: echo ok\n",
+            "quick_commands:\n  limits:\n    type: exec\n    command: echo ok\n",
             encoding="utf-8",
         )
 
@@ -450,9 +470,13 @@ class TestLoadGatewayConfig:
 
         config = load_gateway_config()
 
-        assert config.quick_commands == {"limits": {"type": "exec", "command": "echo ok"}}
+        assert config.quick_commands == {
+            "limits": {"type": "exec", "command": "echo ok"}
+        }
 
-    def test_multiplex_profiles_from_nested_gateway_section(self, tmp_path, monkeypatch):
+    def test_multiplex_profiles_from_nested_gateway_section(
+        self, tmp_path, monkeypatch
+    ):
         """``gateway.multiplex_profiles: true`` (the nested form written by
         ``hercules config set gateway.multiplex_profiles true``) must enable
         multiplexing when loaded via load_gateway_config().
@@ -527,7 +551,9 @@ class TestLoadGatewayConfig:
         assert Platform.RELAY in config.platforms
         assert config.platforms[Platform.RELAY].enabled is True
 
-    def test_bridges_group_sessions_per_user_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_group_sessions_per_user_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -539,7 +565,9 @@ class TestLoadGatewayConfig:
 
         assert config.group_sessions_per_user is False
 
-    def test_bridges_thread_sessions_per_user_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_thread_sessions_per_user_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -563,7 +591,9 @@ class TestLoadGatewayConfig:
 
         assert config.thread_sessions_per_user is False
 
-    def test_bridges_top_level_max_concurrent_sessions_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_top_level_max_concurrent_sessions_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -575,13 +605,14 @@ class TestLoadGatewayConfig:
 
         assert config.max_concurrent_sessions == 2
 
-    def test_bridges_nested_max_concurrent_sessions_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_nested_max_concurrent_sessions_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "gateway:\n"
-            "  max_concurrent_sessions: 3\n",
+            "gateway:\n  max_concurrent_sessions: 3\n",
             encoding="utf-8",
         )
 
@@ -591,14 +622,14 @@ class TestLoadGatewayConfig:
 
         assert config.max_concurrent_sessions == 3
 
-    def test_top_level_max_concurrent_sessions_overrides_nested_config_yaml(self, tmp_path, monkeypatch):
+    def test_top_level_max_concurrent_sessions_overrides_nested_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "max_concurrent_sessions: 2\n"
-            "gateway:\n"
-            "  max_concurrent_sessions: 3\n",
+            "max_concurrent_sessions: 2\ngateway:\n  max_concurrent_sessions: 3\n",
             encoding="utf-8",
         )
 
@@ -608,7 +639,9 @@ class TestLoadGatewayConfig:
 
         assert config.max_concurrent_sessions == 2
 
-    def test_scalar_gateway_section_does_not_crash_streaming_fallback(self, tmp_path, monkeypatch):
+    def test_scalar_gateway_section_does_not_crash_streaming_fallback(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -620,14 +653,15 @@ class TestLoadGatewayConfig:
 
         assert config.streaming.transport == "auto"
 
-    def test_bridges_discord_thread_require_mention_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_discord_thread_require_mention_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         """discord.thread_require_mention in config.yaml should reach the runtime env var."""
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "discord:\n"
-            "  thread_require_mention: true\n",
+            "discord:\n  thread_require_mention: true\n",
             encoding="utf-8",
         )
 
@@ -638,14 +672,15 @@ class TestLoadGatewayConfig:
 
         assert os.environ.get("DISCORD_THREAD_REQUIRE_MENTION") == "true"
 
-    def test_thread_require_mention_yaml_does_not_overwrite_env(self, tmp_path, monkeypatch):
+    def test_thread_require_mention_yaml_does_not_overwrite_env(
+        self, tmp_path, monkeypatch
+    ):
         """Explicit env var should win over config.yaml (env > yaml precedence)."""
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "discord:\n"
-            "  thread_require_mention: false\n",
+            "discord:\n  thread_require_mention: false\n",
             encoding="utf-8",
         )
 
@@ -657,14 +692,15 @@ class TestLoadGatewayConfig:
         # Env value preserved, not clobbered by yaml.
         assert os.environ.get("DISCORD_THREAD_REQUIRE_MENTION") == "true"
 
-    def test_bridges_discord_bots_require_inline_mention_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_discord_bots_require_inline_mention_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         """discord.bots_require_inline_mention should reach the runtime env var."""
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "discord:\n"
-            "  bots_require_inline_mention: true\n",
+            "discord:\n  bots_require_inline_mention: true\n",
             encoding="utf-8",
         )
 
@@ -675,14 +711,15 @@ class TestLoadGatewayConfig:
 
         assert os.environ.get("DISCORD_BOTS_REQUIRE_INLINE_MENTION") == "true"
 
-    def test_bots_require_inline_mention_yaml_does_not_overwrite_env(self, tmp_path, monkeypatch):
+    def test_bots_require_inline_mention_yaml_does_not_overwrite_env(
+        self, tmp_path, monkeypatch
+    ):
         """Explicit env var should win over config.yaml for inline bot mention gating."""
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "discord:\n"
-            "  bots_require_inline_mention: false\n",
+            "discord:\n  bots_require_inline_mention: false\n",
             encoding="utf-8",
         )
 
@@ -701,8 +738,8 @@ class TestLoadGatewayConfig:
         config_path.write_text(
             "discord:\n"
             "  allow_from:\n"
-            "    - \"123456789012345678\"\n"
-            "    - \"999888777666555444\"\n",
+            '    - "123456789012345678"\n'
+            '    - "999888777666555444"\n',
             encoding="utf-8",
         )
 
@@ -719,7 +756,9 @@ class TestLoadGatewayConfig:
             "123456789012345678,999888777666555444"
         )
 
-    def test_bridges_discord_platform_extra_allow_from_to_env(self, tmp_path, monkeypatch):
+    def test_bridges_discord_platform_extra_allow_from_to_env(
+        self, tmp_path, monkeypatch
+    ):
         """platforms.discord.extra.allow_from should reach DISCORD_ALLOWED_USERS too."""
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
@@ -729,7 +768,7 @@ class TestLoadGatewayConfig:
             "  discord:\n"
             "    extra:\n"
             "      allow_from:\n"
-            "        - \"123456789012345678\"\n",
+            '        - "123456789012345678"\n',
             encoding="utf-8",
         )
 
@@ -743,14 +782,14 @@ class TestLoadGatewayConfig:
         ]
         assert os.environ.get("DISCORD_ALLOWED_USERS") == "123456789012345678"
 
-    def test_bridges_quoted_false_platform_enabled_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_quoted_false_platform_enabled_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "platforms:\n"
-            "  api_server:\n"
-            "    enabled: \"false\"\n",
+            'platforms:\n  api_server:\n    enabled: "false"\n',
             encoding="utf-8",
         )
 
@@ -761,7 +800,9 @@ class TestLoadGatewayConfig:
         assert config.platforms[Platform.API_SERVER].enabled is False
         assert Platform.API_SERVER not in config.get_connected_platforms()
 
-    def test_bridges_nested_gateway_platforms_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_nested_gateway_platforms_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -773,7 +814,7 @@ class TestLoadGatewayConfig:
             "      token: nested-token\n"
             "      home_channel:\n"
             "        platform: telegram\n"
-            "        chat_id: \"123\"\n"
+            '        chat_id: "123"\n'
             "        name: Nested Home\n"
             "      extra:\n"
             "        reply_prefix: nested\n",
@@ -794,7 +835,9 @@ class TestLoadGatewayConfig:
         )
         assert telegram.extra["reply_prefix"] == "nested"
 
-    def test_top_level_platforms_override_nested_gateway_platforms(self, tmp_path, monkeypatch):
+    def test_top_level_platforms_override_nested_gateway_platforms(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -824,7 +867,9 @@ class TestLoadGatewayConfig:
         assert telegram.token == "top-token"
         assert telegram.extra["reply_prefix"] == "top"
 
-    def test_shared_key_loop_bridges_allow_from_from_nested_platforms(self, tmp_path, monkeypatch):
+    def test_shared_key_loop_bridges_allow_from_from_nested_platforms(
+        self, tmp_path, monkeypatch
+    ):
         """Regression: shared-key loop must bridge allow_from / require_mention
         into PlatformConfig.extra even when the platform is configured only
         under ``platforms:`` (no top-level ``telegram:`` block).
@@ -841,8 +886,8 @@ class TestLoadGatewayConfig:
             "platforms:\n"
             "  telegram:\n"
             "    allow_from:\n"
-            "      - \"111222333\"\n"
-            "      - \"444555666\"\n"
+            '      - "111222333"\n'
+            '      - "444555666"\n'
             "    require_mention: true\n",
             encoding="utf-8",
         )
@@ -861,7 +906,9 @@ class TestLoadGatewayConfig:
             "bridged into PlatformConfig.extra by the shared-key loop"
         )
 
-    def test_shared_key_loop_bridges_allow_from_from_nested_gateway_platforms(self, tmp_path, monkeypatch):
+    def test_shared_key_loop_bridges_allow_from_from_nested_gateway_platforms(
+        self, tmp_path, monkeypatch
+    ):
         """Same regression check for ``gateway.platforms:`` path."""
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
@@ -871,7 +918,7 @@ class TestLoadGatewayConfig:
             "  platforms:\n"
             "    telegram:\n"
             "      allow_from:\n"
-            "        - \"777888999\"\n"
+            '        - "777888999"\n'
             "      require_mention: false\n",
             encoding="utf-8",
         )
@@ -887,13 +934,14 @@ class TestLoadGatewayConfig:
         )
         assert telegram.extra.get("require_mention") is False
 
-    def test_bridges_quoted_false_session_notify_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_quoted_false_session_notify_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "session_reset:\n"
-            "  notify: \"false\"\n",
+            'session_reset:\n  notify: "false"\n',
             encoding="utf-8",
         )
 
@@ -903,12 +951,14 @@ class TestLoadGatewayConfig:
 
         assert config.default_reset_policy.notify is False
 
-    def test_bridges_quoted_false_always_log_local_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_quoted_false_always_log_local_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "always_log_local: \"false\"\n",
+            'always_log_local: "false"\n',
             encoding="utf-8",
         )
 
@@ -918,7 +968,9 @@ class TestLoadGatewayConfig:
 
         assert config.always_log_local is False
 
-    def test_bridges_discord_channel_overrides_from_top_level_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_discord_channel_overrides_from_top_level_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -943,14 +995,16 @@ class TestLoadGatewayConfig:
         assert ov.provider == "openrouter"
         assert ov.system_prompt == "Daily news summarizer"
 
-    def test_bridges_discord_channel_prompts_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_discord_channel_prompts_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
             "discord:\n"
             "  channel_prompts:\n"
-            "    \"123\": Research mode\n"
+            '    "123": Research mode\n'
             "    456: Therapist mode\n",
             encoding="utf-8",
         )
@@ -964,14 +1018,14 @@ class TestLoadGatewayConfig:
             "456": "Therapist mode",
         }
 
-    def test_bridges_discord_history_backfill_settings_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_discord_history_backfill_settings_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "discord:\n"
-            "  history_backfill: true\n"
-            "  history_backfill_limit: 17\n",
+            "discord:\n  history_backfill: true\n  history_backfill_limit: 17\n",
             encoding="utf-8",
         )
 
@@ -984,7 +1038,9 @@ class TestLoadGatewayConfig:
         assert os.getenv("DISCORD_HISTORY_BACKFILL") == "true"
         assert os.getenv("DISCORD_HISTORY_BACKFILL_LIMIT") == "17"
 
-    def test_bridges_telegram_channel_prompts_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_telegram_channel_prompts_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1005,14 +1061,14 @@ class TestLoadGatewayConfig:
             "789": "Creative writing",
         }
 
-    def test_bridges_slack_channel_prompts_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_slack_channel_prompts_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "slack:\n"
-            "  channel_prompts:\n"
-            '    "C01ABC": Code review mode\n',
+            'slack:\n  channel_prompts:\n    "C01ABC": Code review mode\n',
             encoding="utf-8",
         )
 
@@ -1024,7 +1080,9 @@ class TestLoadGatewayConfig:
             "C01ABC": "Code review mode",
         }
 
-    def test_bridges_feishu_allow_bots_from_config_yaml_to_env(self, tmp_path, monkeypatch):
+    def test_bridges_feishu_allow_bots_from_config_yaml_to_env(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1040,7 +1098,9 @@ class TestLoadGatewayConfig:
 
         assert os.environ.get("FEISHU_ALLOW_BOTS") == "mentions"
 
-    def test_feishu_allow_bots_env_takes_precedence_over_config_yaml(self, tmp_path, monkeypatch):
+    def test_feishu_allow_bots_env_takes_precedence_over_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1056,7 +1116,9 @@ class TestLoadGatewayConfig:
 
         assert os.environ.get("FEISHU_ALLOW_BOTS") == "none"
 
-    def test_bridges_telegram_allow_bots_from_config_yaml_to_env(self, tmp_path, monkeypatch):
+    def test_bridges_telegram_allow_bots_from_config_yaml_to_env(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1072,7 +1134,9 @@ class TestLoadGatewayConfig:
 
         assert os.environ.get("TELEGRAM_ALLOW_BOTS") == "mentions"
 
-    def test_telegram_allow_bots_env_takes_precedence_over_config_yaml(self, tmp_path, monkeypatch):
+    def test_telegram_allow_bots_env_takes_precedence_over_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1088,7 +1152,9 @@ class TestLoadGatewayConfig:
 
         assert os.environ.get("TELEGRAM_ALLOW_BOTS") == "none"
 
-    def test_invalid_quick_commands_in_config_yaml_are_ignored(self, tmp_path, monkeypatch):
+    def test_invalid_quick_commands_in_config_yaml_are_ignored(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1100,7 +1166,9 @@ class TestLoadGatewayConfig:
 
         assert config.quick_commands == {}
 
-    def test_bridges_unauthorized_dm_behavior_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_unauthorized_dm_behavior_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1116,15 +1184,19 @@ class TestLoadGatewayConfig:
         config = load_gateway_config()
 
         assert config.unauthorized_dm_behavior == "ignore"
-        assert config.platforms[Platform.WHATSAPP].extra["unauthorized_dm_behavior"] == "pair"
+        assert (
+            config.platforms[Platform.WHATSAPP].extra["unauthorized_dm_behavior"]
+            == "pair"
+        )
 
-    def test_bridges_telegram_disable_link_previews_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_telegram_disable_link_previews_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "telegram:\n"
-            "  disable_link_previews: true\n",
+            "telegram:\n  disable_link_previews: true\n",
             encoding="utf-8",
         )
 
@@ -1132,9 +1204,13 @@ class TestLoadGatewayConfig:
 
         config = load_gateway_config()
 
-        assert config.platforms[Platform.TELEGRAM].extra["disable_link_previews"] is True
+        assert (
+            config.platforms[Platform.TELEGRAM].extra["disable_link_previews"] is True
+        )
 
-    def test_loads_telegram_rich_messages_from_gateway_platform_extra(self, tmp_path, monkeypatch):
+    def test_loads_telegram_rich_messages_from_gateway_platform_extra(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1153,7 +1229,9 @@ class TestLoadGatewayConfig:
 
         assert config.platforms[Platform.TELEGRAM].extra["rich_messages"] is False
 
-    def test_loads_telegram_rich_drafts_from_gateway_platform_extra(self, tmp_path, monkeypatch):
+    def test_loads_telegram_rich_drafts_from_gateway_platform_extra(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
@@ -1172,7 +1250,9 @@ class TestLoadGatewayConfig:
 
         assert config.platforms[Platform.TELEGRAM].extra["rich_drafts"] is True
 
-    def test_load_config_default_keeps_telegram_rich_messages_opt_in(self, tmp_path, monkeypatch):
+    def test_load_config_default_keeps_telegram_rich_messages_opt_in(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
 
@@ -1185,14 +1265,14 @@ class TestLoadGatewayConfig:
         assert config["telegram"]["extra"]["rich_messages"] is False
         assert config["telegram"]["extra"]["rich_drafts"] is False
 
-    def test_bridges_telegram_extra_base_url_from_config_yaml(self, tmp_path, monkeypatch):
+    def test_bridges_telegram_extra_base_url_from_config_yaml(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "telegram:\n"
-            "  extra:\n"
-            "    base_url: https://custom-proxy.example.com/bot\n",
+            "telegram:\n  extra:\n    base_url: https://custom-proxy.example.com/bot\n",
             encoding="utf-8",
         )
 
@@ -1210,8 +1290,7 @@ class TestLoadGatewayConfig:
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "slack:\n"
-            "  notice_delivery: private\n",
+            "slack:\n  notice_delivery: private\n",
             encoding="utf-8",
         )
 
@@ -1226,8 +1305,7 @@ class TestLoadGatewayConfig:
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "telegram:\n"
-            "  proxy_url: socks5://127.0.0.1:1080\n",
+            "telegram:\n  proxy_url: socks5://127.0.0.1:1080\n",
             encoding="utf-8",
         )
 
@@ -1237,15 +1315,17 @@ class TestLoadGatewayConfig:
         load_gateway_config()
 
         import os
+
         assert os.environ.get("TELEGRAM_PROXY") == "socks5://127.0.0.1:1080"
 
-    def test_telegram_proxy_env_takes_precedence_over_config(self, tmp_path, monkeypatch):
+    def test_telegram_proxy_env_takes_precedence_over_config(
+        self, tmp_path, monkeypatch
+    ):
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
         config_path = hercules_home / "config.yaml"
         config_path.write_text(
-            "telegram:\n"
-            "  proxy_url: http://from-config:8080\n",
+            "telegram:\n  proxy_url: http://from-config:8080\n",
             encoding="utf-8",
         )
 
@@ -1255,6 +1335,7 @@ class TestLoadGatewayConfig:
         load_gateway_config()
 
         import os
+
         assert os.environ.get("TELEGRAM_PROXY") == "socks5://from-env:1080"
 
     def test_profile_scoped_env_overrides_do_not_fall_back_to_default_profile_env(
@@ -1320,9 +1401,15 @@ class TestHomeChannelEnvOverrides:
                 Platform.SIGNAL,
                 PlatformConfig(
                     enabled=True,
-                    extra={"http_url": "http://localhost:9090", "account": "+15551234567"},
+                    extra={
+                        "http_url": "http://localhost:9090",
+                        "account": "+15551234567",
+                    },
                 ),
-                {"SIGNAL_HOME_CHANNEL": "+1555000", "SIGNAL_HOME_CHANNEL_NAME": "Phone"},
+                {
+                    "SIGNAL_HOME_CHANNEL": "+1555000",
+                    "SIGNAL_HOME_CHANNEL_NAME": "Phone",
+                },
                 ("+1555000", "Phone"),
             ),
             (
@@ -1332,7 +1419,10 @@ class TestHomeChannelEnvOverrides:
                     token="mm-token",
                     extra={"url": "https://mm.example.com"},
                 ),
-                {"MATTERMOST_HOME_CHANNEL": "ch_abc123", "MATTERMOST_HOME_CHANNEL_NAME": "General"},
+                {
+                    "MATTERMOST_HOME_CHANNEL": "ch_abc123",
+                    "MATTERMOST_HOME_CHANNEL_NAME": "General",
+                },
                 ("ch_abc123", "General"),
             ),
             (
@@ -1342,7 +1432,10 @@ class TestHomeChannelEnvOverrides:
                     token="syt_abc123",
                     extra={"homeserver": "https://matrix.example.org"},
                 ),
-                {"MATRIX_HOME_ROOM": "!room123:example.org", "MATRIX_HOME_ROOM_NAME": "Bot Room"},
+                {
+                    "MATRIX_HOME_ROOM": "!room123:example.org",
+                    "MATRIX_HOME_ROOM_NAME": "Bot Room",
+                },
                 ("!room123:example.org", "Bot Room"),
             ),
             (
@@ -1355,13 +1448,19 @@ class TestHomeChannelEnvOverrides:
                         "smtp_host": "smtp.test.com",
                     },
                 ),
-                {"EMAIL_HOME_ADDRESS": "user@test.com", "EMAIL_HOME_ADDRESS_NAME": "Inbox"},
+                {
+                    "EMAIL_HOME_ADDRESS": "user@test.com",
+                    "EMAIL_HOME_ADDRESS_NAME": "Inbox",
+                },
                 ("user@test.com", "Inbox"),
             ),
             (
                 Platform.SMS,
                 PlatformConfig(enabled=True, api_key="token_abc"),
-                {"SMS_HOME_CHANNEL": "+15559876543", "SMS_HOME_CHANNEL_NAME": "My Phone"},
+                {
+                    "SMS_HOME_CHANNEL": "+15559876543",
+                    "SMS_HOME_CHANNEL_NAME": "My Phone",
+                },
                 ("+15559876543", "My Phone"),
             ),
         ]
@@ -1372,7 +1471,9 @@ class TestHomeChannelEnvOverrides:
                 _apply_env_overrides(config)
 
             home = config.platforms[platform].home_channel
-            assert home is not None, f"{platform.value}: home_channel should not be None"
+            assert home is not None, (
+                f"{platform.value}: home_channel should not be None"
+            )
             assert (home.chat_id, home.name) == expected, platform.value
 
 

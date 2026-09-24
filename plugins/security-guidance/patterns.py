@@ -27,10 +27,22 @@ Modifications by NousResearch for the Hercules Agent plugin port:
     patterns.py at commit 0bde168 (2026-05-26). Hercules-side wiring lives in
     __init__.py.
 """
+
 from enum import IntEnum
 
 
-_JS_EXTS = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".svelte")
+_JS_EXTS = (
+    ".js",
+    ".jsx",
+    ".ts",
+    ".tsx",
+    ".mjs",
+    ".cjs",
+    ".mts",
+    ".cts",
+    ".vue",
+    ".svelte",
+)
 _PY_EXTS = (".py", ".pyi", ".ipynb")
 _DOC_EXTS = (".md", ".mdx", ".txt", ".rst", ".json", ".yaml", ".yml")
 
@@ -53,8 +65,10 @@ If the file only contains tensors and simple data structures, pass weights_only=
 SECURITY_PATTERNS = [
     {
         "ruleName": "github_actions_workflow",
-        "path_check": lambda path: ".github/workflows/" in path
-        and (path.endswith(".yml") or path.endswith(".yaml")),
+        "path_check": lambda path: (
+            ".github/workflows/" in path
+            and (path.endswith(".yml") or path.endswith(".yaml"))
+        ),
         "reminder": """⚠️ Security Warning: You are editing a GitHub Actions workflow file. Be aware of these security risks:
 
 1. **Command Injection**: Never use untrusted input (like issue titles, PR descriptions, commit messages) directly in run: commands without proper escaping
@@ -293,6 +307,7 @@ class RuleId(IntEnum):
 
     Values are frozen: do not renumber existing entries. Append new ones.
     """
+
     GITHUB_ACTIONS_WORKFLOW = 1
     CHILD_PROCESS_EXEC = 2
     NEW_FUNCTION_INJECTION = 3

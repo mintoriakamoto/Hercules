@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import sys
 
-WARROOM_VERBS = frozenset(
-    {
-        "warroom",
-        "tempest",
-        "t3mp3st",
-        "obliterate",
-        "obliteratus",
-        "abliterate",
-    }
-)
+WARROOM_VERBS = frozenset({
+    "warroom",
+    "tempest",
+    "t3mp3st",
+    "obliterate",
+    "obliteratus",
+    "abliterate",
+})
 
 
 def main(argv: list[str] | None = None) -> int:

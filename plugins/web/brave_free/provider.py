@@ -100,7 +100,10 @@ class BraveFreeWebSearchProvider(WebSearchProvider):
             data = resp.json()
         except Exception as exc:
             logger.warning("Brave Search response parse error: %s", exc)
-            return {"success": False, "error": "Could not parse Brave Search response as JSON"}
+            return {
+                "success": False,
+                "error": "Could not parse Brave Search response as JSON",
+            }
 
         raw_results = (data.get("web") or {}).get("results", []) or []
         truncated = raw_results[:limit]

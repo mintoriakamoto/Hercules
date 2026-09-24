@@ -144,7 +144,7 @@ def _sanitize_loaded_credentials() -> None:
             "  This usually means the key was copy-pasted from a PDF, "
             "rich-text editor, or web page that substituted lookalike\n"
             "  Unicode glyphs for ASCII letters. If authentication fails "
-            "(e.g. \"API key not valid\"), re-copy the key from the\n"
+            '(e.g. "API key not valid"), re-copy the key from the\n'
             "  provider's dashboard and run `hercules setup` (or edit the "
             ".env file in a plain-text editor).",
             file=sys.stderr,
@@ -198,6 +198,7 @@ def _sanitize_env_file_if_needed(path: Path) -> None:
         sanitized = _sanitize_env_lines(stripped)
         if sanitized != original:
             import tempfile
+
             fd, tmp = tempfile.mkstemp(
                 dir=str(path.parent), suffix=".tmp", prefix=".env_"
             )
@@ -232,7 +233,9 @@ def load_hercules_dotenv(
     """
     loaded: list[Path] = []
 
-    home_path = Path(hercules_home or os.getenv("HERCULES_HOME", Path.home() / ".hercules"))
+    home_path = Path(
+        hercules_home or os.getenv("HERCULES_HOME", Path.home() / ".hercules")
+    )
     user_env = home_path / ".env"
     project_env_path = Path(project_env) if project_env else None
 

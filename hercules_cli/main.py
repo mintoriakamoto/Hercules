@@ -130,9 +130,14 @@ def _config_default_interface_early() -> str:
             import yaml as _yaml_iface
 
             with open(cfg_path, encoding="utf-8") as _f:
-                raw = _yaml_iface.load(
-                    _f, Loader=getattr(_yaml_iface, "CSafeLoader", None) or _yaml_iface.SafeLoader
-                ) or {}
+                raw = (
+                    _yaml_iface.load(
+                        _f,
+                        Loader=getattr(_yaml_iface, "CSafeLoader", None)
+                        or _yaml_iface.SafeLoader,
+                    )
+                    or {}
+                )
             disp = raw.get("display", {})
             if isinstance(disp, dict):
                 iface = disp.get("interface")
@@ -249,7 +254,11 @@ def _print_fast_version_info() -> None:
     print(f"Python: {sys.version.split()[0]}")
 
     openai_version = _read_openai_version_fast()
-    print(f"OpenAI SDK: {openai_version}" if openai_version else "OpenAI SDK: Not installed")
+    print(
+        f"OpenAI SDK: {openai_version}"
+        if openai_version
+        else "OpenAI SDK: Not installed"
+    )
 
 
 def _try_termux_ultrafast_version() -> bool:
@@ -404,12 +413,17 @@ def _apply_profile_override() -> None:
     # after the subcommand (`hercules chat -p coder`), so keep scanning broadly.
     # The exception is command-argv passthrough regions such as `mcp add --args`.
     value_flags = {
-        "-z", "--oneshot",
-        "-m", "--model",
+        "-z",
+        "--oneshot",
+        "-m",
+        "--model",
         "--provider",
-        "-t", "--toolsets",
-        "-r", "--resume",
-        "-s", "--skills",
+        "-t",
+        "--toolsets",
+        "-r",
+        "--resume",
+        "-s",
+        "--skills",
         "--usage-file",
     }
     optional_value_flags = {"-c", "--continue"}
@@ -546,9 +560,14 @@ try:
     _cfg_path = get_hercules_home() / "config.yaml"
     if _cfg_path.exists():
         with open(_cfg_path, encoding="utf-8") as _f:
-            _early_cfg_raw = _yaml_early.load(
-                _f, Loader=getattr(_yaml_early, "CSafeLoader", None) or _yaml_early.SafeLoader
-            ) or {}
+            _early_cfg_raw = (
+                _yaml_early.load(
+                    _f,
+                    Loader=getattr(_yaml_early, "CSafeLoader", None)
+                    or _yaml_early.SafeLoader,
+                )
+                or {}
+            )
         # Managed scope: overlay administrator-pinned values so a managed
         # security.redact_secrets / network.force_ipv4 wins here too. This early
         # bridge reads config.yaml directly (before load_config is usable), so
@@ -556,6 +575,7 @@ try:
         # Fail-open via the shared helper.
         try:
             from hercules_cli import managed_scope
+
             _early_cfg_raw = managed_scope.apply_managed_overlay(_early_cfg_raw)
         except Exception:
             pass
@@ -635,6 +655,7 @@ from hercules_cli.model_setup_flows import (  # noqa: F401 — re-exports, see c
     _model_flow_anthropic,
     _model_flow_moa,
 )
+
 logger = logging.getLogger(__name__)
 
 
@@ -656,7 +677,9 @@ def _read_packed_ref(common_dir: Path, ref: str) -> str | None:
     peel lines and ``#``-prefixed comments / ``# pack-refs with:`` header.
     """
     try:
-        text = (common_dir / "packed-refs").read_text(encoding="utf-8", errors="replace")
+        text = (common_dir / "packed-refs").read_text(
+            encoding="utf-8", errors="replace"
+        )
     except OSError:
         return None
     for line in text.splitlines():
@@ -673,7 +696,9 @@ def _read_git_revision_fingerprint(repo_root: Path) -> str | None:
     git_dir = repo_root / ".git"
     try:
         if git_dir.is_file():
-            for line in git_dir.read_text(encoding="utf-8", errors="replace").splitlines():
+            for line in git_dir.read_text(
+                encoding="utf-8", errors="replace"
+            ).splitlines():
                 key, _, value = line.partition(":")
                 if key.strip() == "gitdir" and value.strip():
                     git_dir = (repo_root / value.strip()).resolve()
@@ -685,7 +710,9 @@ def _read_git_revision_fingerprint(repo_root: Path) -> str | None:
         commondir_file = git_dir / "commondir"
         if commondir_file.exists():
             try:
-                rel = commondir_file.read_text(encoding="utf-8", errors="replace").strip()
+                rel = commondir_file.read_text(
+                    encoding="utf-8", errors="replace"
+                ).strip()
                 if rel:
                     common_dir = (git_dir / rel).resolve()
             except OSError:
@@ -721,7 +748,9 @@ def _termux_bundled_skills_fingerprint() -> str:
     skills_dir = PROJECT_ROOT / "skills"
     try:
         stat = skills_dir.stat()
-        return f"skills:{__version__}:{__release_date__}:{stat.st_mtime_ns}:{stat.st_size}"
+        return (
+            f"skills:{__version__}:{__release_date__}:{stat.st_mtime_ns}:{stat.st_size}"
+        )
     except OSError:
         return f"skills:{__version__}:{__release_date__}:missing"
 
@@ -737,7 +766,10 @@ def _termux_bundled_skills_sync_needed() -> bool:
         return True
     try:
         stamp = _termux_bundled_skills_stamp_path()
-        return stamp.read_text(encoding="utf-8").strip() != _termux_bundled_skills_fingerprint()
+        return (
+            stamp.read_text(encoding="utf-8").strip()
+            != _termux_bundled_skills_fingerprint()
+        )
     except OSError:
         return True
 
@@ -967,7 +999,9 @@ def _session_browse_picker(sessions: list) -> Optional[str]:
                 curses.init_pair(1, curses.COLOR_GREEN, -1)  # selected
                 curses.init_pair(2, curses.COLOR_YELLOW, -1)  # header
                 curses.init_pair(3, curses.COLOR_CYAN, -1)  # search
-                curses.init_pair(4, 8 if curses.COLORS > 8 else curses.COLOR_WHITE, -1)  # dim
+                curses.init_pair(
+                    4, 8 if curses.COLORS > 8 else curses.COLOR_WHITE, -1
+                )  # dim
 
             cursor = 0
             scroll_offset = 0
@@ -1079,10 +1113,14 @@ def _session_browse_picker(sessions: list) -> Optional[str]:
                 stdscr.refresh()
                 key = stdscr.getch()
 
-                if key in {curses.KEY_UP,}:
+                if key in {
+                    curses.KEY_UP,
+                }:
                     if filtered:
                         cursor = (cursor - 1) % len(filtered)
-                elif key in {curses.KEY_DOWN,}:
+                elif key in {
+                    curses.KEY_DOWN,
+                }:
                     if filtered:
                         cursor = (cursor + 1) % len(filtered)
                 elif key in {curses.KEY_ENTER, 10, 13}:
@@ -1452,9 +1490,10 @@ def _termux_workspace_install_context(
         if packages_dir.is_dir():
             for child in sorted(packages_dir.iterdir()):
                 if child.is_dir() and (child / "package.json").is_file():
-                    workspace_args.extend(
-                        ["--workspace", child.relative_to(ws_root).as_posix()]
-                    )
+                    workspace_args.extend([
+                        "--workspace",
+                        child.relative_to(ws_root).as_posix(),
+                    ])
     workspace_args.append("--include-workspace-root=false")
     return ws_root, tuple(workspace_args)
 
@@ -1557,9 +1596,15 @@ _TUI_BUILD_INPUT_FILES = (
     "packages/hercules-ink/text-input.js",
 )
 
-_TUI_BUILD_INPUT_SUFFIXES = frozenset(
-    {".cjs", ".js", ".jsx", ".json", ".mjs", ".ts", ".tsx"}
-)
+_TUI_BUILD_INPUT_SUFFIXES = frozenset({
+    ".cjs",
+    ".js",
+    ".jsx",
+    ".json",
+    ".mjs",
+    ".ts",
+    ".tsx",
+})
 
 
 def _iter_tui_build_inputs(root: Path):
@@ -1655,7 +1700,10 @@ def _ensure_tui_node() -> None:
     if resolved:
         extras.append(Path(resolved).resolve().parent)
 
-    extras.extend([Path(hercules_home) / "node" / "bin", Path.home() / ".local" / "bin"])
+    extras.extend([
+        Path(hercules_home) / "node" / "bin",
+        Path.home() / ".local" / "bin",
+    ])
 
     for extra in extras:
         s = str(extra)
@@ -1743,6 +1791,7 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
         if not path and bin == "node":
             try:
                 from hercules_cli.dep_ensure import ensure_dependency
+
                 if ensure_dependency("node"):
                     path = shutil.which("node")
             except Exception:
@@ -1794,10 +1843,7 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
     skip_install_for_fresh_termux_bundle = (
         termux_startup and not tui_dev and not termux_need_rebuild
     )
-    if (
-        not skip_install_for_fresh_termux_bundle
-        and _tui_need_npm_install(tui_dir)
-    ):
+    if not skip_install_for_fresh_termux_bundle and _tui_need_npm_install(tui_dir):
         npm = _node_bin("npm")
         if not os.environ.get("HERCULES_QUIET"):
             print("Installing TUI dependencies…")
@@ -1808,7 +1854,9 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
         # _workspace_root() returns tui_dir itself.  Passing --workspace in
         # that case fails because npm cannot find a workspace named "ui-tui"
         # inside ui-tui/.  See #42973.
-        npm_workspace_args: tuple[str, ...] = () if npm_cwd == tui_dir else ("--workspace", "ui-tui")
+        npm_workspace_args: tuple[str, ...] = (
+            () if npm_cwd == tui_dir else ("--workspace", "ui-tui")
+        )
         if termux_startup:
             npm_cwd, npm_workspace_args = _termux_workspace_install_context(
                 tui_dir,
@@ -2019,9 +2067,12 @@ def _launch_tui(
     env = os.environ.copy()
     try:
         from hercules_cli.config import apply_terminal_config_to_env
+
         apply_terminal_config_to_env(env=env)
     except Exception:
-        logger.debug("Failed to apply terminal config bridge for TUI launch", exc_info=True)
+        logger.debug(
+            "Failed to apply terminal config bridge for TUI launch", exc_info=True
+        )
     active_session_fd, active_session_file = tempfile.mkstemp(
         prefix="hercules-tui-active-session-", suffix=".json"
     )
@@ -2295,10 +2346,16 @@ def cmd_chat(args):
         try:
             from hercules_state import SessionDB
 
-            _saved_cwd = ((SessionDB().get_session(args.resume) or {}).get("cwd") or "").strip()
+            _saved_cwd = (
+                (SessionDB().get_session(args.resume) or {}).get("cwd") or ""
+            ).strip()
             if _saved_cwd and not os.path.isdir(_saved_cwd):
-                print(f"⚠ session's recorded dir is gone ({_saved_cwd}); staying in {os.getcwd()}")
-            elif _saved_cwd and os.path.realpath(_saved_cwd) != os.path.realpath(os.getcwd()):
+                print(
+                    f"⚠ session's recorded dir is gone ({_saved_cwd}); staying in {os.getcwd()}"
+                )
+            elif _saved_cwd and os.path.realpath(_saved_cwd) != os.path.realpath(
+                os.getcwd()
+            ):
                 os.chdir(_saved_cwd)
                 print(f"↪ restored workspace dir: {_saved_cwd}")
         except Exception:
@@ -2322,7 +2379,9 @@ def cmd_chat(args):
             )
             for _ref in _retired_xai_refs:
                 sys.stderr.write(f"  \033[33m⚠\033[0m {format_issue(_ref)}\n")
-            sys.stderr.write(f"  \033[2mMigration guide: {MIGRATION_GUIDE_URL}\033[0m\n")
+            sys.stderr.write(
+                f"  \033[2mMigration guide: {MIGRATION_GUIDE_URL}\033[0m\n"
+            )
             sys.stderr.write("  \033[2mRun 'hercules doctor' for details.\033[0m\n\n")
     except Exception:
         pass
@@ -2441,8 +2500,10 @@ def cmd_chat(args):
         "checkpoints": getattr(args, "checkpoints", False),
         "pass_session_id": getattr(args, "pass_session_id", False),
         "max_turns": getattr(args, "max_turns", None),
-        "ignore_rules": getattr(args, "ignore_rules", False) or getattr(args, "safe_mode", False),
-        "ignore_user_config": getattr(args, "ignore_user_config", False) or getattr(args, "safe_mode", False),
+        "ignore_rules": getattr(args, "ignore_rules", False)
+        or getattr(args, "safe_mode", False),
+        "ignore_user_config": getattr(args, "ignore_user_config", False)
+        or getattr(args, "safe_mode", False),
         "compact": getattr(args, "compact", False),
     }
     # Filter out None values
@@ -2583,6 +2644,7 @@ def cmd_whatsapp(args):
 
     # ── Step 4: Install bridge dependencies ──────────────────────────────
     from gateway.platforms.whatsapp_common import resolve_whatsapp_bridge_dir
+
     bridge_dir = resolve_whatsapp_bridge_dir()
     bridge_script = bridge_dir / "bridge.js"
 
@@ -2761,6 +2823,7 @@ def cmd_model(args):
     if getattr(args, "refresh", False):
         try:
             from hercules_cli.models import clear_provider_models_cache
+
             clear_provider_models_cache()
             print("  Cleared model picker cache.")
         except Exception:
@@ -2777,6 +2840,7 @@ def _is_profile_api_key_provider(provider_id: str) -> bool:
     """
     try:
         from providers import get_provider_profile
+
         _p = get_provider_profile(provider_id)
         return _p is not None and _p.auth_type == "api_key"
     except Exception:
@@ -2820,6 +2884,7 @@ def select_provider_and_model(args=None):
         config_provider or os.getenv("HERCULES_INFERENCE_PROVIDER") or "auto"
     )
     compatible_custom_providers = get_compatible_custom_providers(config)
+
     def _named_custom_provider_map(cfg) -> dict[str, dict[str, str]]:
         from hercules_cli.config import read_raw_config
 
@@ -2855,9 +2920,10 @@ def select_provider_and_model(args=None):
             if name:
                 identities.extend(((name.lower(),), (name.lower(), model)))
             if provider_key:
-                identities.extend(
-                    ((provider_key.lower(),), (provider_key.lower(), model))
-                )
+                identities.extend((
+                    (provider_key.lower(),),
+                    (provider_key.lower(), model),
+                ))
             if "${" in template:
                 for identity in identities:
                     raw_api_key_refs.setdefault(identity, template)
@@ -3038,7 +3104,11 @@ def select_provider_and_model(args=None):
         if row["kind"] == "group":
             gid = row["group_id"]
             group_desc = row.get("description", "")
-            label = f"{row['label']} ▸ ({group_desc})" if group_desc else f"{row['label']} ▸"
+            label = (
+                f"{row['label']} ▸ ({group_desc})"
+                if group_desc
+                else f"{row['label']} ▸"
+            )
             key = f"group:{gid}"
             is_active = bool(active_group) and gid == active_group
             members = row["members"]
@@ -3094,9 +3164,7 @@ def select_provider_and_model(args=None):
         member_default = 0
         if active in selected_members:
             member_default = selected_members.index(active)
-        member_labels = [
-            provider_labels.get(m, m) for m in selected_members
-        ]
+        member_labels = [provider_labels.get(m, m) for m in selected_members]
         group_label = ordered[provider_idx][1].split(" ▸", 1)[0]
         member_idx = _prompt_provider_choice(
             member_labels,
@@ -3271,6 +3339,7 @@ def _all_aux_tasks() -> list[tuple[str, str, str]]:
     tasks = list(_AUX_TASKS)
     try:
         from hercules_cli.plugins import get_plugin_auxiliary_tasks
+
         for entry in get_plugin_auxiliary_tasks():
             tasks.append((entry["key"], entry["display_name"], entry["description"]))
     except Exception:
@@ -3441,7 +3510,9 @@ def _aux_select_for_task(task: str) -> None:
     current_model = str(task_cfg.get("model") or "").strip()
     current_base_url = str(task_cfg.get("base_url") or "").strip()
 
-    display_name = next((name for key, name, _ in _all_aux_tasks() if key == task), task)
+    display_name = next(
+        (name for key, name, _ in _all_aux_tasks() if key == task), task
+    )
 
     # Gather authenticated providers (has credentials + curated model list)
     try:
@@ -3512,7 +3583,9 @@ def _aux_flow_provider_model(
     from hercules_cli.auth import _prompt_model_selection
     from hercules_cli.models import get_pricing_for_provider
 
-    display_name = next((name for key, name, _ in _all_aux_tasks() if key == task), task)
+    display_name = next(
+        (name for key, name, _ in _all_aux_tasks() if key == task), task
+    )
 
     # Fetch live pricing for this provider (non-blocking)
     pricing: dict = {}
@@ -3559,7 +3632,9 @@ def _aux_flow_custom_endpoint(task: str, task_cfg: dict) -> None:
     """Prompt for a direct OpenAI-compatible base_url + optional api_key/model."""
     from hercules_cli.secret_prompt import masked_secret_prompt
 
-    display_name = next((name for key, name, _ in _all_aux_tasks() if key == task), task)
+    display_name = next(
+        (name for key, name, _ in _all_aux_tasks() if key == task), task
+    )
     current_base_url = str(task_cfg.get("base_url") or "").strip()
     current_model = str(task_cfg.get("model") or "").strip()
 
@@ -3648,21 +3723,15 @@ def _prompt_provider_choice(choices, *, default=0, title="Select provider:"):
             return None
 
 
-
-
-
-
-
-
-
-
 _DEFAULT_QWEN_PORTAL_MODELS = [
     "qwen3-coder-plus",
     "qwen3-coder",
 ]
 
 
-def _prompt_custom_api_mode_selection(base_url: str, current_api_mode: str = "") -> Optional[str]:
+def _prompt_custom_api_mode_selection(
+    base_url: str, current_api_mode: str = ""
+) -> Optional[str]:
     """Prompt for a custom provider API mode.
 
     Returns an explicit mode string, or None to keep auto-detect behavior.
@@ -3709,9 +3778,7 @@ def _prompt_custom_api_mode_selection(base_url: str, current_api_mode: str = "")
         print(f"     {description}")
 
     try:
-        raw = input(
-            "Choice [1-4, Enter to keep current/detected]: "
-        ).strip().lower()
+        raw = input("Choice [1-4, Enter to keep current/detected]: ").strip().lower()
     except (KeyboardInterrupt, EOFError):
         print("\nCancelled.")
         raise
@@ -3838,8 +3905,6 @@ def _save_custom_provider(
     print(f'  💾 Saved to custom providers as "{name}" (edit in config.yaml)')
 
 
-
-
 def _remove_custom_provider(config):
     """Let the user remove a saved custom provider from config.yaml."""
     from hercules_cli.config import load_config, save_config
@@ -3898,8 +3963,6 @@ def _remove_custom_provider(config):
     print(f'✅ Removed "{removed_name}" from custom providers.')
 
 
-
-
 # Lazy-export the model catalog at module level. Tests and a handful of
 # downstream call sites read `hercules_cli.main._PROVIDER_MODELS` directly,
 # so the symbol needs to be reachable as a module attribute. But importing
@@ -3917,6 +3980,7 @@ def __getattr__(name):
     """Defer the model-catalog import until something actually reads it."""
     if name in _LAZY_MODEL_EXPORTS:
         from hercules_cli.models import _PROVIDER_MODELS
+
         # Cache on the module so subsequent accesses skip the import machinery.
         globals()[name] = _PROVIDER_MODELS
         return _PROVIDER_MODELS
@@ -4018,10 +4082,6 @@ def _prompt_reasoning_effort_selection(efforts, current_effort=""):
             return None
 
 
-
-
-
-
 def _prompt_api_key(pconfig, existing_key: str, provider_id: str = "") -> tuple:
     """Shared API-key entry point for ``hercules setup`` / ``hercules model``.
 
@@ -4105,8 +4165,6 @@ def _prompt_api_key(pconfig, existing_key: str, provider_id: str = "") -> tuple:
     return existing_key, False
 
 
-
-
 def _infer_stepfun_region(base_url: str) -> str:
     """Infer the current StepFun region from the configured endpoint."""
     normalized = (base_url or "").strip().lower()
@@ -4126,14 +4184,6 @@ def _stepfun_base_url_for_region(region: str) -> str:
         if region == "china"
         else STEPFUN_STEP_PLAN_INTL_BASE_URL
     )
-
-
-
-
-
-
-
-
 
 
 def _run_anthropic_oauth_flow(save_env_value):
@@ -4227,8 +4277,6 @@ def _run_anthropic_oauth_flow(save_env_value):
             return True
         print("  Cancelled — install Claude Code and try again.")
         return False
-
-
 
 
 def cmd_login(args):
@@ -4630,7 +4678,9 @@ def _web_ui_build_needed(web_dir: Path) -> bool:
     Vite manifest as the sentinel because it is written last and therefore
     has the newest mtime of any build output.
     """
-    project_root = web_dir.parent.parent if web_dir.parent.name == "apps" else web_dir.parent
+    project_root = (
+        web_dir.parent.parent if web_dir.parent.name == "apps" else web_dir.parent
+    )
     dist_dir = project_root / "hercules_cli" / "web_dist"
     sentinel = dist_dir / ".vite" / "manifest.json"
     if not sentinel.exists():
@@ -4718,7 +4768,12 @@ def _run_with_idle_timeout(
             except UnicodeEncodeError:
                 # Windows cp1252 fallback — same pattern as _say().
                 enc = getattr(sys.stdout, "encoding", None) or "ascii"
-                safe = line.rstrip().encode(enc, errors="replace").decode(enc, errors="replace")
+                safe = (
+                    line
+                    .rstrip()
+                    .encode(enc, errors="replace")
+                    .decode(enc, errors="replace")
+                )
                 print(f"{indent}{safe}", flush=True)
             with lock:
                 merged_chunks.append(line)
@@ -4805,7 +4860,10 @@ def _nixos_build_env() -> dict[str, str] | None:
     try:
         result = subprocess.run(
             ["nix-shell", "-p", "python3", "--run", "which python3"],
-            capture_output=True, text=True, check=False, timeout=15,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=15,
         )
         if result.returncode == 0:
             python3_path = result.stdout.strip()
@@ -4815,6 +4873,8 @@ def _nixos_build_env() -> dict[str, str] | None:
         pass  # nix-shell not available — caller will get None
 
     return None
+
+
 def _run_npm_install_deterministic(
     npm: str,
     cwd: Path,
@@ -4893,7 +4953,11 @@ def _build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
             print(text)
         except UnicodeEncodeError:
             encoding = getattr(sys.stdout, "encoding", None) or "ascii"
-            print(text.encode(encoding, errors="replace").decode(encoding, errors="replace"))
+            print(
+                text.encode(encoding, errors="replace").decode(
+                    encoding, errors="replace"
+                )
+            )
 
     from hercules_constants import find_node_executable, with_hercules_node_path
 
@@ -4917,7 +4981,11 @@ def _build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
         for blob in (result.stdout, result.stderr):
             if not blob:
                 continue
-            text = blob.decode("utf-8", errors="replace").rstrip() if isinstance(blob, bytes) else blob.rstrip()
+            text = (
+                blob.decode("utf-8", errors="replace").rstrip()
+                if isinstance(blob, bytes)
+                else blob.rstrip()
+            )
             if text:
                 _say(text)
 
@@ -4928,7 +4996,9 @@ def _build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
     # would pull in desktop on every web build. See #38772.
     # When web/ has its own package-lock.json, _workspace_root() returns
     # web_dir itself and --workspace would fail.  See #42973.
-    npm_workspace_args: tuple[str, ...] = () if npm_cwd == web_dir else ("--workspace", "web")
+    npm_workspace_args: tuple[str, ...] = (
+        () if npm_cwd == web_dir else ("--workspace", "web")
+    )
     if _is_termux_startup_environment():
         npm_cwd, npm_workspace_args = _termux_workspace_install_context(web_dir)
     r1 = _run_npm_install_deterministic(
@@ -4966,8 +5036,12 @@ def _build_web_ui(web_dir: Path, *, fatal: bool = False) -> bool:
         # the CompletedProcess.
         build_output = (r2.stderr or "") + (r2.stdout or "")
         stderr_preview = build_output.strip()
-        stderr_tail = "\n  ".join(stderr_preview.splitlines()[-10:]) if stderr_preview else ""
-        project_root = web_dir.parent.parent if web_dir.parent.name == "apps" else web_dir.parent
+        stderr_tail = (
+            "\n  ".join(stderr_preview.splitlines()[-10:]) if stderr_preview else ""
+        )
+        project_root = (
+            web_dir.parent.parent if web_dir.parent.name == "apps" else web_dir.parent
+        )
         dist_dir = project_root / "hercules_cli" / "web_dist"
         dist_index = dist_dir / "index.html"
 
@@ -5018,6 +5092,7 @@ def _desktop_dist_exists(desktop_dir: Path) -> bool:
 #     "builtAt": "<ISO 8601>"
 #   }
 
+
 def _compute_desktop_content_hash(project_root: Path) -> str:
     """Return a SHA-256 hex digest of all source files that feed the desktop build.
 
@@ -5043,7 +5118,6 @@ def _compute_desktop_content_hash(project_root: Path) -> str:
             pass
         h.update(b"\0")
 
-
     from pathspec import PathSpec
 
     gitignore = project_root / ".gitignore"
@@ -5065,7 +5139,8 @@ def _compute_desktop_content_hash(project_root: Path) -> str:
     for dirpath, dirnames, filenames in os.walk(desktop_dir, topdown=True):
         # Prune ignored directories so we never descend into them
         dirnames[:] = [
-            d for d in dirnames
+            d
+            for d in dirnames
             if not spec.match_file(str((Path(dirpath) / d).relative_to(project_root)))
         ]
 
@@ -5081,10 +5156,13 @@ def _compute_desktop_content_hash(project_root: Path) -> str:
 def _desktop_stamp_path() -> Path:
     """Return the path to the desktop build stamp file under $HERCULES_HOME."""
     from hercules_constants import get_hercules_home
+
     return get_hercules_home() / "desktop-build-stamp.json"
 
 
-def _desktop_build_needed(desktop_dir: Path, project_root: Path, *, source_mode: bool) -> bool:
+def _desktop_build_needed(
+    desktop_dir: Path, project_root: Path, *, source_mode: bool
+) -> bool:
     """Return True when the desktop build output is stale or missing.
 
     Compares the current content hash against the saved stamp. Also returns
@@ -5127,6 +5205,7 @@ def _write_desktop_build_stamp(project_root: Path, *, source_mode: bool) -> None
         stamp_file.parent.mkdir(parents=True, exist_ok=True)
         content_hash = _compute_desktop_content_hash(project_root)
         from datetime import datetime, timezone
+
         stamp_data = {
             "contentHash": content_hash,
             "sourceMode": source_mode,
@@ -5174,7 +5253,9 @@ def _electron_download_cache_dirs() -> list[Path]:
     """
     home = Path.home()
     candidates: list[Path] = []
-    override = os.environ.get("electron_config_cache") or os.environ.get("ELECTRON_CACHE")
+    override = os.environ.get("electron_config_cache") or os.environ.get(
+        "ELECTRON_CACHE"
+    )
     if override:
         candidates.append(Path(override))
     if sys.platform == "darwin":
@@ -5353,7 +5434,9 @@ def _redownload_electron_dist(
     if mirror:
         dl_env["ELECTRON_MIRROR"] = mirror
     try:
-        subprocess.run([node, str(installer)], cwd=str(electron_dir), env=dl_env, check=False)
+        subprocess.run(
+            [node, str(installer)], cwd=str(electron_dir), env=dl_env, check=False
+        )
     except OSError:
         return False
     return _electron_dist_ok(project_root)
@@ -5365,7 +5448,9 @@ def _try_redownload_electron_dist(project_root: Path, env: dict) -> bool:
         return True
     if env.get("ELECTRON_MIRROR"):
         return False
-    return _redownload_electron_dist(project_root, env, mirror=_ELECTRON_FALLBACK_MIRROR)
+    return _redownload_electron_dist(
+        project_root, env, mirror=_ELECTRON_FALLBACK_MIRROR
+    )
 
 
 def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
@@ -5473,7 +5558,9 @@ def _desktop_macos_relaunchable_fixup(desktop_dir: Path) -> None:
         return
     try:
         subprocess.run(["xattr", "-cr", str(app)], check=False)
-        subprocess.run([codesign, "--force", "--deep", "--sign", "-", str(app)], check=False)
+        subprocess.run(
+            [codesign, "--force", "--deep", "--sign", "-", str(app)], check=False
+        )
     except Exception as exc:
         print(f"  (warning: macOS relaunch fixup skipped: {exc})")
 
@@ -5527,7 +5614,9 @@ def _desktop_linux_needs_no_sandbox() -> bool:
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         return False
     try:
-        with open("/proc/sys/kernel/apparmor_restrict_unprivileged_userns", encoding="utf-8") as f:
+        with open(
+            "/proc/sys/kernel/apparmor_restrict_unprivileged_userns", encoding="utf-8"
+        ) as f:
             return f.read().strip() == "1"
     except OSError:
         return False
@@ -5545,7 +5634,6 @@ def _desktop_linux_sandbox_helper_is_regular_file(packaged_executable: Path) -> 
     return stat.S_ISREG(sandbox_lstat.st_mode)
 
 
-
 def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
     """Configure Electron's Linux SUID sandbox helper when required."""
     if sys.platform != "linux":
@@ -5553,7 +5641,9 @@ def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
 
     sandbox = packaged_executable.parent / "chrome-sandbox"
     if not sandbox.exists():
-        print(f"✗ Hercules Desktop is missing Electron's Linux sandbox helper: {sandbox}")
+        print(
+            f"✗ Hercules Desktop is missing Electron's Linux sandbox helper: {sandbox}"
+        )
         return False
 
     # Reject symlinks — chown/chmod must not follow an attacker-controlled
@@ -5573,11 +5663,16 @@ def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
 
     sudo = shutil.which("sudo")
     if not sudo:
-        print("✗ Hercules Desktop requires sudo to configure Electron's Linux sandbox helper.")
+        print(
+            "✗ Hercules Desktop requires sudo to configure Electron's Linux sandbox helper."
+        )
         return False
 
     print("→ Configuring Electron Linux sandbox helper (sudo required)...")
-    for command in ([sudo, "chown", "root:root", str(sandbox)], [sudo, "chmod", "4755", str(sandbox)]):
+    for command in (
+        [sudo, "chown", "root:root", str(sandbox)],
+        [sudo, "chmod", "4755", str(sandbox)],
+    ):
         if subprocess.run(command, check=False).returncode != 0:
             print(f"✗ Failed to configure Electron's Linux sandbox helper: {sandbox}")
             return False
@@ -5631,6 +5726,7 @@ def cmd_gui(args: argparse.Namespace):
 
     try:
         from hercules_logging import setup_logging as _setup_logging_gui
+
         _setup_logging_gui(mode="gui")
     except Exception:
         pass
@@ -5644,7 +5740,9 @@ def cmd_gui(args: argparse.Namespace):
     if getattr(args, "ignore_existing", False):
         env["HERCULES_DESKTOP_IGNORE_EXISTING"] = "1"
     if getattr(args, "hercules_root", None):
-        env["HERCULES_DESKTOP_HERCULES_ROOT"] = str(Path(args.hercules_root).expanduser().resolve())
+        env["HERCULES_DESKTOP_HERCULES_ROOT"] = str(
+            Path(args.hercules_root).expanduser().resolve()
+        )
     if getattr(args, "cwd", None):
         env["HERCULES_DESKTOP_CWD"] = str(Path(args.cwd).expanduser().resolve())
     else:
@@ -5655,7 +5753,10 @@ def cmd_gui(args: argparse.Namespace):
     # Electron app already reads; an explicit env var still wins over config so
     # `HERCULES_DESKTOP_DISABLE_GPU=... hercules desktop` keeps working.
     config_electron_flags, config_disable_gpu = _desktop_launch_options()
-    if config_disable_gpu != "auto" and "HERCULES_DESKTOP_DISABLE_GPU" not in os.environ:
+    if (
+        config_disable_gpu != "auto"
+        and "HERCULES_DESKTOP_DISABLE_GPU" not in os.environ
+    ):
         env["HERCULES_DESKTOP_DISABLE_GPU"] = config_disable_gpu
 
     source_mode = getattr(args, "source", False)
@@ -5676,23 +5777,37 @@ def cmd_gui(args: argparse.Namespace):
     if skip_build:
         if source_mode:
             if not _desktop_dist_exists(desktop_dir):
-                print(f"✗ --skip-build --source was passed but no desktop dist found at: {desktop_dir / 'dist'}")
+                print(
+                    f"✗ --skip-build --source was passed but no desktop dist found at: {desktop_dir / 'dist'}"
+                )
                 print("  Pre-build first:  cd apps/desktop && npm run build")
-                print("  Or drop --skip-build to install dependencies and build automatically.")
+                print(
+                    "  Or drop --skip-build to install dependencies and build automatically."
+                )
                 sys.exit(1)
             if not (_electron_dir(PROJECT_ROOT) / "package.json").exists():
-                print("✗ --skip-build --source requires existing desktop workspace dependencies.")
+                print(
+                    "✗ --skip-build --source requires existing desktop workspace dependencies."
+                )
                 print(f"  Install first:  cd {PROJECT_ROOT} && npm ci")
-                print("  Or drop --skip-build to install dependencies and build automatically.")
+                print(
+                    "  Or drop --skip-build to install dependencies and build automatically."
+                )
                 sys.exit(1)
-            print(f"→ Skipping desktop source build (--skip-build --source); using dist at {desktop_dir / 'dist'}")
+            print(
+                f"→ Skipping desktop source build (--skip-build --source); using dist at {desktop_dir / 'dist'}"
+            )
         elif packaged_executable is None:
-            print(f"✗ --skip-build was passed but no packaged desktop app was found at: {desktop_dir / 'release'}")
+            print(
+                f"✗ --skip-build was passed but no packaged desktop app was found at: {desktop_dir / 'release'}"
+            )
             print("  Pre-build first:  cd apps/desktop && npm run pack")
             print("  Or drop --skip-build to package automatically.")
             sys.exit(1)
         else:
-            print(f"→ Skipping desktop package build (--skip-build); using {packaged_executable}")
+            print(
+                f"→ Skipping desktop package build (--skip-build); using {packaged_executable}"
+            )
     else:
         # Check the content-hash stamp before doing any build work.
         # If the source tree hasn't changed since the last successful build,
@@ -5707,7 +5822,9 @@ def cmd_gui(args: argparse.Namespace):
         else:
             print("→ Installing desktop workspace dependencies...")
             nixos_env = _nixos_build_env()
-            install_result = _run_npm_install_deterministic(npm, PROJECT_ROOT, capture_output=False, env=nixos_env)
+            install_result = _run_npm_install_deterministic(
+                npm, PROJECT_ROOT, capture_output=False, env=nixos_env
+            )
             if install_result.returncode != 0:
                 if not _electron_pkg_staged_missing_dist(PROJECT_ROOT):
                     print("✗ Desktop dependency install failed")
@@ -5715,19 +5832,25 @@ def cmd_gui(args: argparse.Namespace):
                     sys.exit(install_result.returncode or 1)
                 repaired = _try_redownload_electron_dist(PROJECT_ROOT, env)
                 if repaired:
-                    print("  ⚠ Dependency install failed with a missing Electron dist; "
-                          "repopulated it and continuing.")
+                    print(
+                        "  ⚠ Dependency install failed with a missing Electron dist; "
+                        "repopulated it and continuing."
+                    )
                 else:
-                    print("  ⚠ Dependency install failed with a missing Electron dist; "
-                          "continuing to the build so electron-builder can attempt "
-                          "the Electron fetch itself.")
+                    print(
+                        "  ⚠ Dependency install failed with a missing Electron dist; "
+                        "continuing to the build so electron-builder can attempt "
+                        "the Electron fetch itself."
+                    )
 
             build_label = "source build" if source_mode else "packaged app"
             print(f"→ Building desktop {build_label}...")
             build_script = "build" if source_mode else "pack"
             if _force_adhoc_macos_signing(env, source_mode=source_mode):
-                print("  → No Developer ID configured; ad-hoc signing this local rebuild "
-                      "(CSC_IDENTITY_AUTO_DISCOVERY=false)")
+                print(
+                    "  → No Developer ID configured; ad-hoc signing this local rebuild "
+                    "(CSC_IDENTITY_AUTO_DISCOVERY=false)"
+                )
             if not source_mode:
                 # A running desktop instance launched from release/win-unpacked
                 # holds Hercules.exe locked on Windows, so the pack can't replace
@@ -5736,8 +5859,12 @@ def cmd_gui(args: argparse.Namespace):
                 # headless --update rebuild — succeeds instead of failing cryptically.
                 stopped = _stop_desktop_processes_locking_build(desktop_dir)
                 if stopped:
-                    print(f"  ⚠ Stopped running desktop app to free the build output (pid {', '.join(map(str, stopped))})")
-            build_result = subprocess.run([npm, "run", build_script], cwd=desktop_dir, env=env, check=False)
+                    print(
+                        f"  ⚠ Stopped running desktop app to free the build output (pid {', '.join(map(str, stopped))})"
+                    )
+            build_result = subprocess.run(
+                [npm, "run", build_script], cwd=desktop_dir, env=env, check=False
+            )
             if (
                 build_result.returncode != 0
                 and not source_mode
@@ -5758,37 +5885,57 @@ def cmd_gui(args: argparse.Namespace):
                     purged = _purge_electron_build_cache(desktop_dir)
                     restored = _redownload_electron_dist(PROJECT_ROOT, env)
                 if restored:
-                    print("  ⚠ Desktop build failed; refreshed the Electron download and retrying once...")
+                    print(
+                        "  ⚠ Desktop build failed; refreshed the Electron download and retrying once..."
+                    )
                     for p in purged:
                         print(f"    - {p}")
                     # The purge can't remove a win-unpacked tree whose Hercules.exe
                     # is still locked by a running instance; stop it before retry.
                     _stop_desktop_processes_locking_build(desktop_dir)
-                    build_result = subprocess.run([npm, "run", build_script], cwd=desktop_dir, env=env, check=False)
+                    build_result = subprocess.run(
+                        [npm, "run", build_script],
+                        cwd=desktop_dir,
+                        env=env,
+                        check=False,
+                    )
             if (
                 build_result.returncode != 0
                 and not source_mode
                 and not env.get("ELECTRON_MIRROR")
                 and _desktop_packaged_executable(desktop_dir) is None
             ):
-                print("  ⚠ Desktop build still failing; the Electron download from "
-                      "GitHub looks blocked. Re-downloading via a public mirror "
-                      "(npmmirror.com)... (set ELECTRON_MIRROR to use another mirror)")
+                print(
+                    "  ⚠ Desktop build still failing; the Electron download from "
+                    "GitHub looks blocked. Re-downloading via a public mirror "
+                    "(npmmirror.com)... (set ELECTRON_MIRROR to use another mirror)"
+                )
                 mirror = _ELECTRON_FALLBACK_MIRROR
                 mirror_env = dict(env)
                 mirror_env["ELECTRON_MIRROR"] = mirror
                 if not _electron_dist_ok(PROJECT_ROOT):
                     _redownload_electron_dist(PROJECT_ROOT, env, mirror=mirror)
                 _stop_desktop_processes_locking_build(desktop_dir)
-                build_result = subprocess.run([npm, "run", build_script], cwd=desktop_dir, env=mirror_env, check=False)
+                build_result = subprocess.run(
+                    [npm, "run", build_script],
+                    cwd=desktop_dir,
+                    env=mirror_env,
+                    check=False,
+                )
             if build_result.returncode != 0:
                 print("✗ Desktop GUI build failed")
                 print(f"  Run manually:  cd apps/desktop && npm run {build_script}")
                 if sys.platform == "win32":
-                    print("  If this says \"Access is denied\" on Hercules.exe, close any")
+                    print(
+                        '  If this says "Access is denied" on Hercules.exe, close any'
+                    )
                     print("  running Hercules desktop window and retry.")
-                print("  If the log shows Electron download retries, rebuild via a mirror:")
-                print("    ELECTRON_MIRROR=<mirror-base-url> hercules desktop --force-build")
+                print(
+                    "  If the log shows Electron download retries, rebuild via a mirror:"
+                )
+                print(
+                    "    ELECTRON_MIRROR=<mirror-base-url> hercules desktop --force-build"
+                )
                 sys.exit(build_result.returncode or 1)
             packaged_executable = _desktop_packaged_executable(desktop_dir)
             if not source_mode:
@@ -5809,38 +5956,57 @@ def cmd_gui(args: argparse.Namespace):
     if getattr(args, "build_only", False):
         if source_mode:
             if not _desktop_dist_exists(desktop_dir):
-                print(f"✗ --build-only --source produced no dist at: {desktop_dir / 'dist'}")
+                print(
+                    f"✗ --build-only --source produced no dist at: {desktop_dir / 'dist'}"
+                )
                 sys.exit(1)
-            print(f"✓ Desktop source build ready at {desktop_dir / 'dist'} (not launching; --build-only)")
+            print(
+                f"✓ Desktop source build ready at {desktop_dir / 'dist'} (not launching; --build-only)"
+            )
         elif packaged_executable is None:
-            print(f"✗ --build-only produced no launchable app at: {desktop_dir / 'release'}")
+            print(
+                f"✗ --build-only produced no launchable app at: {desktop_dir / 'release'}"
+            )
             print("  Expected an unpacked Electron app for the current OS.")
             sys.exit(1)
         else:
-            print(f"✓ Desktop packaged app ready: {packaged_executable} (not launching; --build-only)")
+            print(
+                f"✓ Desktop packaged app ready: {packaged_executable} (not launching; --build-only)"
+            )
         return
 
     if source_mode:
         print("→ Launching Hercules Desktop from source build...")
-        launch_result = subprocess.run([npm, "exec", "--", "electron", "."], cwd=desktop_dir, env=env, check=False)
+        launch_result = subprocess.run(
+            [npm, "exec", "--", "electron", "."], cwd=desktop_dir, env=env, check=False
+        )
         sys.exit(launch_result.returncode)
 
     if packaged_executable is None:
-        print(f"✗ Desktop package build completed but no launchable app was found at: {desktop_dir / 'release'}")
+        print(
+            f"✗ Desktop package build completed but no launchable app was found at: {desktop_dir / 'release'}"
+        )
         print("  Expected an unpacked Electron app for the current OS.")
         sys.exit(1)
 
     launch_command = [str(packaged_executable)]
     if not _desktop_linux_sandbox_fixup(packaged_executable):
-        if _desktop_linux_needs_no_sandbox() and _desktop_linux_sandbox_helper_is_regular_file(packaged_executable):
-            print("⚠ Falling back to --no-sandbox because this Linux host restricts unprivileged user namespaces and the Electron sandbox helper could not be configured.")
+        if (
+            _desktop_linux_needs_no_sandbox()
+            and _desktop_linux_sandbox_helper_is_regular_file(packaged_executable)
+        ):
+            print(
+                "⚠ Falling back to --no-sandbox because this Linux host restricts unprivileged user namespaces and the Electron sandbox helper could not be configured."
+            )
             launch_command.append("--no-sandbox")
         else:
             sys.exit(1)
 
     launch_command.extend(config_electron_flags)
     print(f"→ Launching packaged Hercules Desktop: {' '.join(launch_command)}")
-    launch_result = subprocess.run(launch_command, cwd=desktop_dir, env=env, check=False)
+    launch_result = subprocess.run(
+        launch_command, cwd=desktop_dir, env=env, check=False
+    )
     sys.exit(launch_result.returncode)
 
 
@@ -6074,6 +6240,7 @@ def _format_time_ago(iso_ts: str) -> str:
     """Render an ISO timestamp as `Xh ago` / `Xd ago` / `Xm ago`. Best effort."""
     try:
         from datetime import datetime, timezone
+
         ts = datetime.fromisoformat(iso_ts.replace("Z", "+00:00"))
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=timezone.utc)
@@ -6182,6 +6349,7 @@ def _kill_stale_dashboard_processes(
             # On Windows, os.kill(pid, 0) is NOT a no-op. Route through
             # the cross-platform existence check.
             from gateway.status import _pid_exists
+
             for pid in pending:
                 if _pid_exists(pid):
                     still_pending.append(pid)
@@ -6292,6 +6460,7 @@ def _update_via_zip(args):
 
         print("→ Extracting...")
         import stat as _stat
+
         with zipfile.ZipFile(zip_path, "r") as zf:
             # Validate paths to prevent zip-slip (path traversal) AND reject
             # symlink members. A GitHub source ZIP for hercules-agent itself
@@ -6680,7 +6849,9 @@ def _discard_stashed_changes(
         _print_stash_cleanup_guidance(stash_ref, stash_selector)
         return False
 
-    print("→ Discarded local source changes (updates.non_interactive_local_changes=discard).")
+    print(
+        "→ Discarded local source changes (updates.non_interactive_local_changes=discard)."
+    )
     return True
 
 
@@ -7111,6 +7282,7 @@ def _recover_from_interrupted_install() -> None:
                         _shim_set.add(str(_s).lower())
                 try:
                     import psutil
+
                     _me = psutil.Process()
                     for _anc in [_me] + list(_me.parents()):
                         try:
@@ -7129,10 +7301,7 @@ def _recover_from_interrupted_install() -> None:
                                 "then run the manual recovery command below:"
                             )
                             print(f'    cd /d "{PROJECT_ROOT}"')
-                            print(
-                                f'    "{sys.executable}" -m pip install '
-                                '-e ".[all]"'
-                            )
+                            print(f'    "{sys.executable}" -m pip install -e ".[all]"')
                             _clear_update_incomplete_marker()
                             try:
                                 lock_path.unlink()
@@ -7192,7 +7361,9 @@ def _recover_from_interrupted_install() -> None:
                 )
 
             _clear_update_incomplete_marker()
-            print("✓ Dependency installation recovered — your install is healthy again.")
+            print(
+                "✓ Dependency installation recovered — your install is healthy again."
+            )
         except Exception as exc:
             # Leave the marker in place so the next launch retries. Give the user
             # the exact manual recovery command in the meantime.
@@ -7278,7 +7449,11 @@ def _hercules_exe_shims(scripts_dir: Path) -> list[Path]:
     if not _is_windows():
         return []
 
-    names = set(_load_console_script_names()) or {"hercules", "hercules-agent", "hercules-acp"}
+    names = set(_load_console_script_names()) or {
+        "hercules",
+        "hercules-agent",
+        "hercules-acp",
+    }
     # The gateway shim is not a [project.scripts] entry point, but older
     # update/install paths still rewrite and quarantine it.
     names.add("hercules-gateway")
@@ -7784,7 +7959,9 @@ def _load_console_script_names() -> list[str]:
         scripts = data.get("project", {}).get("scripts", {}) or {}
         return [str(name) for name in scripts if name]
     except Exception as e:
-        logger.debug("console script verification: failed to read pyproject.toml: %s", e)
+        logger.debug(
+            "console script verification: failed to read pyproject.toml: %s", e
+        )
         return []
 
 
@@ -7817,11 +7994,7 @@ def _verify_console_scripts_installed(
         return
 
     def _missing() -> list[str]:
-        return [
-            name
-            for name in names
-            if not (scripts_dir / f"{name}.exe").is_file()
-        ]
+        return [name for name in names if not (scripts_dir / f"{name}.exe").is_file()]
 
     missing = _missing()
     if not missing:
@@ -8015,9 +8188,7 @@ def _verify_core_dependencies_installed(
         name_to_spec[bare.strip().split("[", 1)[0].strip()] = head
 
     specs = [name_to_spec.get(n, n) for n in still_missing]
-    print(
-        f"  → Force-installing remaining missing dep(s): {', '.join(specs)}"
-    )
+    print(f"  → Force-installing remaining missing dep(s): {', '.join(specs)}")
     try:
         _run_install_with_heartbeat(
             install_cmd_prefix + ["install", "--reinstall", *specs], env=env
@@ -8135,7 +8306,9 @@ def _ensure_uv_for_termux(pip_cmd: list[str]) -> str | None:
     if system_uv:
         return system_uv
     try:
-        print("  → Termux detected: trying to install uv for faster dependency updates...")
+        print(
+            "  → Termux detected: trying to install uv for faster dependency updates..."
+        )
         result = subprocess.run(
             pip_cmd + ["install", "uv", "--only-binary", ":all:"],
             cwd=PROJECT_ROOT,
@@ -8459,6 +8632,7 @@ def _cmd_update_check(branch: str = "main", *, branch_explicit: bool = False):
         format_unsupported_install_warning,
         is_unsupported_install_method,
     )
+
     method = detect_install_method(PROJECT_ROOT)
     if is_unsupported_install_method(method):
         print(f"⚠ {format_unsupported_install_warning(method)}")
@@ -8468,6 +8642,7 @@ def _cmd_update_check(branch: str = "main", *, branch_explicit: bool = False):
         # path) uses — telling the user to "reinstall via curl" or that
         # ".git is missing" would point them at the wrong remediation.
         from hercules_cli.config import format_docker_update_message
+
         print(format_docker_update_message())
         sys.exit(1)
     if method == "pip":
@@ -8478,6 +8653,7 @@ def _cmd_update_check(branch: str = "main", *, branch_explicit: bool = False):
             format_unsupported_install_warning,
             recommended_update_command_for_method,
         )
+
         print(format_unsupported_install_warning("pip"))
         print("→ Update from GitHub instead:")
         print(f"  {recommended_update_command_for_method('pip')}")
@@ -8576,11 +8752,15 @@ def _cmd_update_check(branch: str = "main", *, branch_explicit: bool = False):
         # report presence-only (mirrors the banner's _check_via_local_git).
         head_sha = subprocess.run(
             git_cmd + ["rev-parse", "HEAD"],
-            cwd=PROJECT_ROOT, capture_output=True, text=True,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
         target_sha = subprocess.run(
             git_cmd + ["rev-parse", compare_branch],
-            cwd=PROJECT_ROOT, capture_output=True, text=True,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
         ).stdout.strip()
         if head_sha and target_sha and head_sha == target_sha:
             print("✓ Already up to date.")
@@ -8629,7 +8809,9 @@ def _ensure_fhs_path_guard() -> None:
     if sys.platform != "linux":
         return
     try:
-        if os.geteuid() != 0:  # windows-footgun: ok — Linux FHS helper, guarded by sys.platform == "linux" above + AttributeError catch
+        if (
+            os.geteuid() != 0
+        ):  # windows-footgun: ok — Linux FHS helper, guarded by sys.platform == "linux" above + AttributeError catch
             return
     except AttributeError:
         return
@@ -8666,7 +8848,7 @@ def _ensure_fhs_path_guard() -> None:
 
     path_line = 'export PATH="/usr/local/bin:$PATH"'
     path_comment = (
-        "# Hercules Agent — ensure /usr/local/bin is on PATH " "(RHEL non-login shells)"
+        "# Hercules Agent — ensure /usr/local/bin is on PATH (RHEL non-login shells)"
     )
     wrote_any = False
     for candidate in (".bashrc", ".bash_profile"):
@@ -8917,7 +9099,9 @@ def _venv_core_imports_healthy() -> tuple[bool, str]:
         logger.debug("venv health probe failed to run: %s", exc)
         return True, ""
 
-    missing = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
+    missing = [
+        line.strip() for line in (result.stdout or "").splitlines() if line.strip()
+    ]
     if result.returncode != 0 and not missing:
         # Interpreter itself is broken (e.g. deleted stdlib) — that IS unhealthy.
         detail = (result.stderr or "").strip().splitlines()
@@ -9029,17 +9213,15 @@ def _format_venv_python_holders_message(matches: list[tuple[int, str, str]]) -> 
     if len(matches) > 6:
         lines.append(f"  ... and {len(matches) - 6} more")
     lines.append("")
-    lines.append(
-        "  On Windows these keep native extension files (.pyd) locked, so the"
-    )
-    lines.append(
-        "  dependency update would fail partway and leave a broken install."
-    )
+    lines.append("  On Windows these keep native extension files (.pyd) locked, so the")
+    lines.append("  dependency update would fail partway and leave a broken install.")
     lines.append(
         "  Close the Hercules desktop app / other Hercules terminals, then re-run:"
     )
     lines.append("    hercules update")
-    lines.append("  (or use `hercules update --force-venv` to proceed anyway at your own risk)")
+    lines.append(
+        "  (or use `hercules update --force-venv` to proceed anyway at your own risk)"
+    )
     return "\n".join(lines)
 
 
@@ -9425,9 +9607,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
     # the `updates.non_interactive_local_changes` config setting to decide
     # whether to auto-restore stashed local source changes or throw them away.
     _non_interactive_update = (
-        gateway_mode
-        or assume_yes
-        or not (sys.stdin.isatty() and sys.stdout.isatty())
+        gateway_mode or assume_yes or not (sys.stdin.isatty() and sys.stdout.isatty())
     )
     discard_local_changes = False
     if _non_interactive_update:
@@ -9436,11 +9616,15 @@ def _cmd_update_impl(args, gateway_mode: bool):
 
             _update_cfg = (load_config() or {}).get("updates", {})
             if isinstance(_update_cfg, dict):
-                _mode = str(_update_cfg.get("non_interactive_local_changes", "stash")).lower()
+                _mode = str(
+                    _update_cfg.get("non_interactive_local_changes", "stash")
+                ).lower()
                 discard_local_changes = _mode == "discard"
         except Exception as exc:
             # Never let a config read failure change the safe default.
-            logger.debug("Could not read updates.non_interactive_local_changes: %s", exc)
+            logger.debug(
+                "Could not read updates.non_interactive_local_changes: %s", exc
+            )
             discard_local_changes = False
 
     print("⚕ Updating Hercules Agent...")
@@ -9498,14 +9682,13 @@ def _cmd_update_impl(args, gateway_mode: bool):
             use_zip_update = True
         else:
             from hercules_cli.config import detect_install_method
+
             method = detect_install_method(PROJECT_ROOT)
             if method == "pip":
                 _cmd_update_pip(args)
                 return
             print("✗ Not a git repository. Please reinstall:")
-            print(
-                "  git clone https://github.com/mintoriakamoto/Hercules.git"
-            )
+            print("  git clone https://github.com/mintoriakamoto/Hercules.git")
             sys.exit(1)
 
     # On Windows, git can fail with "unable to write loose object file: Invalid argument"
@@ -9558,7 +9741,6 @@ def _cmd_update_impl(args, gateway_mode: bool):
 
     # Fetch and pull
     try:
-
         # Resolve the target branch up front so the fetch can be scoped to it.
         # A bare `git fetch origin` pulls every ref, and this repo carries
         # thousands of auto-generated branches — an unscoped fetch can stall for
@@ -9597,11 +9779,17 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 print("✗ Could not authenticate to the remote repository.")
                 print("  This repository is private, so updating requires access.")
                 print("  Set up one of the following, then re-run `hercules update`:")
-                print("    • SSH key    — https://github.com/settings/keys, then: ssh -T git@github.com")
+                print(
+                    "    • SSH key    — https://github.com/settings/keys, then: ssh -T git@github.com"
+                )
                 print("    • GitHub CLI — gh auth login")
                 print("    • Token      — git remote set-url origin \\")
-                print("                     https://<token>@github.com/mintoriakamoto/Hercules.git")
-                print("  If you do not have access, ask the repository owner to grant it.")
+                print(
+                    "                     https://<token>@github.com/mintoriakamoto/Hercules.git"
+                )
+                print(
+                    "  If you do not have access, ask the repository owner to grant it."
+                )
             else:
                 print("✗ Failed to fetch updates from origin.")
                 if stderr:
@@ -9741,7 +9929,10 @@ def _cmd_update_impl(args, gateway_mode: bool):
                         check=False,
                     )
                 if repair_uv:
-                    repair_env = {**os.environ, "VIRTUAL_ENV": str(PROJECT_ROOT / "venv")}
+                    repair_env = {
+                        **os.environ,
+                        "VIRTUAL_ENV": str(PROJECT_ROOT / "venv"),
+                    }
                     _install_python_dependencies_with_optional_fallback(
                         [repair_uv, "pip"], env=repair_env, group="all"
                     )
@@ -9755,7 +9946,9 @@ def _cmd_update_impl(args, gateway_mode: bool):
                     print("✓ Dependencies repaired!")
                 else:
                     print(f"⚠ Venv still unhealthy after repair: {detail_after}")
-                    print("  Close all Hercules windows/gateways and re-run: hercules update")
+                    print(
+                        "  Close all Hercules windows/gateways and re-run: hercules update"
+                    )
             else:
                 print("✓ Already up to date!")
             _resume_windows_gateways_after_update(_windows_gateway_resume)
@@ -9849,13 +10042,19 @@ def _cmd_update_impl(args, gateway_mode: bool):
                         print("  Try ``hercules update`` again later once a fix lands.")
                     else:
                         print("  ✗ Rollback failed. Recover manually with:")
-                        print(f"    cd {PROJECT_ROOT} && git reset --hard {pre_pull_sha}")
+                        print(
+                            f"    cd {PROJECT_ROOT} && git reset --hard {pre_pull_sha}"
+                        )
                         if rollback_result.stderr.strip():
-                            print(f"    ({rollback_result.stderr.strip().splitlines()[0]})")
+                            print(
+                                f"    ({rollback_result.stderr.strip().splitlines()[0]})"
+                            )
                 else:
                     print()
                     print("  Could not capture pre-pull SHA — recover manually with:")
-                    print(f"    cd {PROJECT_ROOT} && git reflog && git reset --hard <prev-sha>")
+                    print(
+                        f"    cd {PROJECT_ROOT} && git reflog && git reset --hard <prev-sha>"
+                    )
                 sys.exit(1)
 
             update_succeeded = True
@@ -9930,9 +10129,13 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 uv_env.pop("PYTHONPATH", None)
                 uv_env.pop("PYTHONHOME", None)
                 install_group = "termux-all"
-                print("  → Termux detected: using uv + curated termux-all optional profile...")
+                print(
+                    "  → Termux detected: using uv + curated termux-all optional profile..."
+                )
             if _is_termux_env(uv_env) and _is_android_python():
-                print("  → Termux/Android detected: prebuilding psutil with Linux source path compatibility...")
+                print(
+                    "  → Termux/Android detected: prebuilding psutil with Linux source path compatibility..."
+                )
                 _install_psutil_android_compat([uv_bin, "pip"], env=uv_env)
             _install_python_dependencies_with_optional_fallback(
                 [uv_bin, "pip"], env=uv_env, group=install_group
@@ -9958,11 +10161,17 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 )
             if _is_termux_env():
                 install_group = "termux-all"
-                print("  → Termux detected: using curated termux-all optional profile...")
+                print(
+                    "  → Termux detected: using curated termux-all optional profile..."
+                )
             if _is_termux_env() and _is_android_python():
-                print("  → Termux/Android detected: prebuilding psutil with Linux source path compatibility...")
+                print(
+                    "  → Termux/Android detected: prebuilding psutil with Linux source path compatibility..."
+                )
                 _install_psutil_android_compat(pip_cmd)
-            _install_python_dependencies_with_optional_fallback(pip_cmd, group=install_group)
+            _install_python_dependencies_with_optional_fallback(
+                pip_cmd, group=install_group
+            )
 
         # Core Python deps installed AND verified (the fallback helper runs
         # _verify_core_dependencies_installed). Clear the interrupted-install
@@ -9983,12 +10192,24 @@ def _cmd_update_impl(args, gateway_mode: bool):
         # never run ``hercules desktop`` shouldn't be forced into a full
         # Electron build by ``hercules update``.
         desktop_dir = PROJECT_ROOT / "apps" / "desktop"
-        has_desktop_app = _desktop_packaged_executable(desktop_dir) is not None or _desktop_dist_exists(desktop_dir)
+        has_desktop_app = _desktop_packaged_executable(
+            desktop_dir
+        ) is not None or _desktop_dist_exists(desktop_dir)
         from hercules_constants import find_node_executable
 
-        if (desktop_dir / "package.json").exists() and find_node_executable("npm") and has_desktop_app:
+        if (
+            (desktop_dir / "package.json").exists()
+            and find_node_executable("npm")
+            and has_desktop_app
+        ):
             print("→ Checking if desktop app needs rebuilding...")
-            _desktop_build_cmd = [sys.executable, "-m", "hercules_cli.main", "desktop", "--build-only"]
+            _desktop_build_cmd = [
+                sys.executable,
+                "-m",
+                "hercules_cli.main",
+                "desktop",
+                "--build-only",
+            ]
             # Capture the (very loud) Electron/vite build output into
             # update.log instead of streaming it to the terminal. On the rare
             # nonzero exit, retry once after waiting again for the venv — this
@@ -9997,13 +10218,18 @@ def _cmd_update_impl(args, gateway_mode: bool):
             # debuggable.
             build_result = _run_logged_subprocess(_desktop_build_cmd, cwd=PROJECT_ROOT)
             if build_result.returncode != 0:
-                build_result = _run_logged_subprocess(_desktop_build_cmd, cwd=PROJECT_ROOT)
+                build_result = _run_logged_subprocess(
+                    _desktop_build_cmd, cwd=PROJECT_ROOT
+                )
             if build_result.returncode != 0:
-                print("  ⚠ Desktop build failed (non-fatal; run `hercules desktop` to retry)")
+                print(
+                    "  ⚠ Desktop build failed (non-fatal; run `hercules desktop` to retry)"
+                )
                 tail = "\n".join((build_result.stdout or "").strip().splitlines()[-15:])
                 if tail:
                     print(tail)
                 from hercules_constants import display_hercules_home as _dhh
+
                 print(f"  Full build log: {_dhh()}/logs/update.log")
             else:
                 print("  ✓ Desktop app up to date")
@@ -10147,9 +10373,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
         current_ver, latest_ver = check_config_version()
 
         has_new_options = bool(missing_env or missing_config)
-        version_bump_only = (
-            not has_new_options and current_ver < latest_ver
-        )
+        version_bump_only = not has_new_options and current_ver < latest_ver
         needs_migration = has_new_options or current_ver < latest_ver
 
         if version_bump_only:
@@ -10159,9 +10383,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
             # bumps the version and looks like a no-op (issue: ScottFive /
             # Tt2021). Apply it silently and say what actually happened.
             print()
-            print(
-                f"  ℹ Updating config format (v{current_ver} → v{latest_ver})…"
-            )
+            print(f"  ℹ Updating config format (v{current_ver} → v{latest_ver})…")
             try:
                 migrate_config(interactive=False, quiet=True)
                 print("  ✓ Config format updated (no new settings to configure)")
@@ -10170,6 +10392,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 print("     Run 'hercules config migrate' to retry.")
         elif needs_migration:
             print()
+
             # Show WHAT changed, not just a count, so the user can make an
             # informed yes/no decision (previously the prompt named nothing).
             def _print_items(items, label, key, fallback_key=None):
@@ -10179,7 +10402,11 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 shown = items[:8]
                 for it in shown:
                     if isinstance(it, dict):
-                        name = it.get(key) or (fallback_key and it.get(fallback_key)) or "?"
+                        name = (
+                            it.get(key)
+                            or (fallback_key and it.get(fallback_key))
+                            or "?"
+                        )
                         desc = (it.get("description") or "").strip()
                     else:
                         # Defensive: some callers/mocks pass bare name strings.
@@ -10487,7 +10714,8 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 if (
                     scope_ == "system"
                     and hasattr(os, "geteuid")
-                    and os.geteuid() != 0  # windows-footgun: ok — systemd path, Linux-only
+                    and os.geteuid()
+                    != 0  # windows-footgun: ok — systemd path, Linux-only
                 ):
                     sudo_cmd = ["sudo", "-n"] + scope_cmd_ + ["--no-ask-password"]
                     sudo_ok = False
@@ -10814,8 +11042,12 @@ def _cmd_update_impl(args, gateway_mode: bool):
                                         restarted_services.append(svc_name)
                                         print(f"  ✓ {svc_name} recovered on retry")
                                     else:
-                                        _scope_flag = "--user " if scope == "user" else ""
-                                        _sudo_hint = "sudo " if scope == "system" else ""
+                                        _scope_flag = (
+                                            "--user " if scope == "user" else ""
+                                        )
+                                        _sudo_hint = (
+                                            "sudo " if scope == "system" else ""
+                                        )
                                         print(
                                             f"  ✗ {svc_name} failed to stay running after restart.\n"
                                             f"    Check logs: {_sudo_hint}journalctl {_scope_flag}-u {svc_name} --since '2 min ago'\n"
@@ -10978,6 +11210,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
                         f"  ⚠ {len(_stuck)} gateway process(es) ignored SIGTERM — force-killing"
                     )
                     from gateway.status import terminate_pid as _terminate_pid
+
                     for pid in _stuck:
                         try:
                             # Routes through taskkill /T /F on Windows,
@@ -11186,10 +11419,7 @@ def cmd_profile(args):
             f"\n {'Profile':<16} {'Model':<28} {'Gateway':<12} "
             f"{'Alias':<12} {'Distribution'}"
         )
-        print(
-            f" {'─' * 15}    {'─' * 27}    {'─' * 11}    "
-            f"{'─' * 11}    {'─' * 20}"
-        )
+        print(f" {'─' * 15}    {'─' * 27}    {'─' * 11}    {'─' * 11}    {'─' * 20}")
 
         for p in profiles:
             marker = (
@@ -11304,9 +11534,7 @@ def cmd_profile(args):
                         print(f"Wrapper created: {wrapper_path}")
                         if not _is_wrapper_dir_in_path():
                             print(f"\n⚠ {_get_wrapper_dir()} is not in your PATH.")
-                            print(
-                                "  Add to your shell config (~/.bashrc or ~/.zshrc):"
-                            )
+                            print("  Add to your shell config (~/.bashrc or ~/.zshrc):")
                             print('    export PATH="$HOME/.local/bin:$PATH"')
 
             # Profile dir for display
@@ -11366,7 +11594,10 @@ def cmd_profile(args):
             )
             sys.exit(2)
         if not all_flag and not name:
-            print("profile describe: profile name is required (or --all --auto)", file=sys.stderr)
+            print(
+                "profile describe: profile name is required (or --all --auto)",
+                file=sys.stderr,
+            )
             sys.exit(2)
         if text_value and auto_flag:
             print(
@@ -11380,6 +11611,7 @@ def cmd_profile(args):
             try:
                 if _profiles_mod.normalize_profile_name(name) == "default":
                     from hercules_constants import get_hercules_home as _hh
+
                     profile_dir = Path(_hh())
                 else:
                     profile_dir = _profiles_mod.get_profile_dir(name)
@@ -11403,6 +11635,7 @@ def cmd_profile(args):
             try:
                 if _profiles_mod.normalize_profile_name(name) == "default":
                     from hercules_constants import get_hercules_home as _hh
+
                     profile_dir = Path(_hh())
                 else:
                     profile_dir = _profiles_mod.get_profile_dir(name)
@@ -11487,7 +11720,9 @@ def cmd_profile(args):
             print(f"  (run `hercules profile info {name}` for full manifest)")
         if alias_name:
             is_windows = sys.platform == "win32"
-            wrapper = _get_wrapper_dir() / (f"{alias_name}.bat" if is_windows else alias_name)
+            wrapper = _get_wrapper_dir() / (
+                f"{alias_name}.bat" if is_windows else alias_name
+            )
             print(f"Alias:   {alias_name} → hercules -p {name}  ({wrapper})")
         print()
 
@@ -11650,8 +11885,12 @@ def cmd_profile(args):
                 if force_config:
                     print("  --force-config set: config.yaml WILL be overwritten.")
                 else:
-                    print("  config.yaml will be preserved (pass --force-config to overwrite).")
-                print("  User data (memories, sessions, auth, .env) will NOT be touched.")
+                    print(
+                        "  config.yaml will be preserved (pass --force-config to overwrite)."
+                    )
+                print(
+                    "  User data (memories, sessions, auth, .env) will NOT be touched."
+                )
                 try:
                     answer = input("\nProceed? [y/N] ").strip().lower()
                 except (EOFError, KeyboardInterrupt):
@@ -11672,7 +11911,10 @@ def cmd_profile(args):
             sys.exit(1)
 
     elif action == "info":
-        from hercules_cli.profile_distribution import describe_distribution, DistributionError
+        from hercules_cli.profile_distribution import (
+            describe_distribution,
+            DistributionError,
+        )
 
         try:
             data = describe_distribution(args.profile_name)
@@ -11716,6 +11958,7 @@ def cmd_profile(args):
 def _render_distribution_plan(plan) -> None:
     """Print a human-readable summary of a pending distribution install."""
     from hercules_cli.profile_distribution import MANIFEST_FILENAME
+
     mf = plan.manifest
     print(f"\nDistribution: {mf.name} v{mf.version}")
     if mf.description:
@@ -11798,7 +12041,8 @@ def _report_dashboard_status() -> int:
                 if os.path.exists(cmdline_path):
                     with open(cmdline_path, "rb") as f:
                         cmdline = (
-                            f.read()
+                            f
+                            .read()
                             .replace(b"\x00", b" ")
                             .decode("utf-8", errors="replace")
                             .strip()
@@ -11848,6 +12092,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
 
     try:
         from hercules_cli.web_server import should_require_auth
+
         if not should_require_auth(host):
             return  # loopback bind — gate never engages
     except Exception:
@@ -11855,6 +12100,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
 
     try:
         from hercules_cli.dashboard_auth import list_providers
+
         if list_providers():
             return  # a provider is already configured/registered
     except Exception:
@@ -11944,8 +12190,10 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
 
         discover_plugins(force=True)
     except Exception as exc:
-        print(f"  ⚠ Plugin re-discovery failed ({exc}); the gate may still "
-              "fail closed. Set the password again or restart the dashboard.")
+        print(
+            f"  ⚠ Plugin re-discovery failed ({exc}); the gate may still "
+            "fail closed. Set the password again or restart the dashboard."
+        )
 
     print()
     print(f"  ✓ Username/password auth configured (user: {username}).")
@@ -11994,6 +12242,7 @@ def cmd_dashboard(args):
     # `--isolated` opts out and preserves the old per-profile behavior.
     try:
         from hercules_cli.profiles import get_active_profile_name
+
         _launch_profile = get_active_profile_name()
     except Exception:
         _launch_profile = "default"
@@ -12005,13 +12254,16 @@ def cmd_dashboard(args):
         # Desktop pool backends are intentionally per-profile.
         and os.environ.get("HERCULES_DESKTOP") != "1"
     ):
-        url = f"http://{args.host or '127.0.0.1'}:{args.port}/?profile={_launch_profile}"
+        url = (
+            f"http://{args.host or '127.0.0.1'}:{args.port}/?profile={_launch_profile}"
+        )
         if _dashboard_listening(args.host, args.port):
             print(f"Machine dashboard already running on port {args.port}.")
             print(f"  Managing profile '{_launch_profile}': {url}")
             if not args.no_open:
                 try:
                     import webbrowser
+
                     webbrowser.open(url)
                 except Exception:
                     pass
@@ -12022,14 +12274,20 @@ def cmd_dashboard(args):
             f"preselected). Use --isolated for a dedicated per-profile server."
         )
         reexec_argv = [
-            sys.executable, "-m", "hercules_cli.main",
-            "-p", "default",
+            sys.executable,
+            "-m",
+            "hercules_cli.main",
+            "-p",
+            "default",
             # Preserve the lean serve path across the re-exec so a named-profile
             # `serve` doesn't silently rebuild the UI as `dashboard`.
             "serve" if _headless_backend else "dashboard",
-            "--port", str(args.port),
-            "--host", args.host,
-            "--open-profile", _launch_profile,
+            "--port",
+            str(args.port),
+            "--host",
+            args.host,
+            "--open-profile",
+            _launch_profile,
         ]
         if args.no_open:
             reexec_argv.append("--no-open")
@@ -12051,6 +12309,7 @@ def cmd_dashboard(args):
         # See the support report for the double-mount workaround this avoids.
         try:
             from hercules_constants import get_default_hercules_root
+
             env["HERCULES_HOME"] = str(get_default_hercules_root())
         except Exception:
             # Best-effort: if root resolution fails, fall back to the prior
@@ -12071,6 +12330,7 @@ def cmd_dashboard(args):
     # the same logs directory as every other Hercules surface.
     try:
         from hercules_logging import setup_logging as _setup_logging_gui
+
         _setup_logging_gui(mode="gui")
     except Exception:
         pass
@@ -12099,7 +12359,9 @@ def cmd_dashboard(args):
         # Don't build the SPA, and tell mount_spa() (read at web_server import
         # below) to disable it even if a stray dist exists. Set it first.
         os.environ["HERCULES_SERVE_HEADLESS"] = "1"
-    elif "HERCULES_WEB_DIST" not in os.environ and not getattr(args, "skip_build", False):
+    elif "HERCULES_WEB_DIST" not in os.environ and not getattr(
+        args, "skip_build", False
+    ):
         if not _build_web_ui(PROJECT_ROOT / "web", fatal=True):
             sys.exit(1)
     elif getattr(args, "skip_build", False):
@@ -12113,7 +12375,9 @@ def cmd_dashboard(args):
         )
         if not (_dist_root / "index.html").exists():
             print(f"✗ --skip-build was passed but no web dist found at: {_dist_root}")
-            print("  Pre-build first:  npm install --workspace web && npm run build -w web")
+            print(
+                "  Pre-build first:  npm install --workspace web && npm run build -w web"
+            )
             print("  Or drop --skip-build to build automatically.")
             sys.exit(1)
         print(f"→ Skipping web UI build (--skip-build); using dist at {_dist_root}")
@@ -12126,8 +12390,12 @@ def cmd_dashboard(args):
         _dist_root = Path(os.environ["HERCULES_WEB_DIST"]).expanduser()
         if not (_dist_root / "index.html").exists():
             print(f"✗ HERCULES_WEB_DIST is set but no web dist found at: {_dist_root}")
-            print("  Pre-build first:  npm install --workspace web && npm run build -w web")
-            print("  Or unset HERCULES_WEB_DIST to build and use the default web UI dist.")
+            print(
+                "  Pre-build first:  npm install --workspace web && npm run build -w web"
+            )
+            print(
+                "  Or unset HERCULES_WEB_DIST to build and use the default web UI dist."
+            )
             sys.exit(1)
         # Write the expanded path back: web_server reads HERCULES_WEB_DIST raw
         # at import (no expanduser), so a validated "~/dist" would otherwise
@@ -12144,6 +12412,7 @@ def cmd_dashboard(args):
     # providers (image_gen, web, dashboard_auth, …).
     try:
         from hercules_cli.plugins import discover_plugins
+
         discover_plugins()
     except Exception as exc:
         # Discovery failures must not block dashboard startup outright —
@@ -12191,8 +12460,6 @@ def cmd_dashboard(args):
         initial_profile=getattr(args, "open_profile", "") or "",
         headless=_headless_backend,
     )
-
-
 
 
 def cmd_gateway_enroll(args):
@@ -12254,16 +12521,43 @@ def _build_provider_choices() -> list[str]:
     """Build the --provider choices list from CANONICAL_PROVIDERS + 'auto'."""
     try:
         from hercules_cli.models import CANONICAL_PROVIDERS as _cp
+
         return ["auto"] + [p.slug for p in _cp]
     except Exception:
         # Fallback: static list guarantees the CLI always works
         return [
-            "auto", "openrouter", "openai-codex", "xai-oauth", "copilot-acp", "copilot",
-            "anthropic", "gemini", "vertex", "xai", "bedrock", "azure-foundry",
-            "ollama-cloud", "huggingface", "zai", "kimi-coding", "kimi-coding-cn",
+            "auto",
+            "openrouter",
+            "openai-codex",
+            "xai-oauth",
+            "copilot-acp",
+            "copilot",
+            "anthropic",
+            "gemini",
+            "vertex",
+            "xai",
+            "bedrock",
+            "azure-foundry",
+            "ollama-cloud",
+            "huggingface",
+            "zai",
+            "kimi-coding",
+            "kimi-coding-cn",
             "kimi-oauth",
-            "stepfun", "minimax", "minimax-cn", "kilocode", "novita", "xiaomi", "arcee",
-            "nvidia", "deepseek", "alibaba", "qwen-oauth", "gemini-oauth", "opencode-zen", "opencode-go",
+            "stepfun",
+            "minimax",
+            "minimax-cn",
+            "kilocode",
+            "novita",
+            "xiaomi",
+            "arcee",
+            "nvidia",
+            "deepseek",
+            "alibaba",
+            "qwen-oauth",
+            "gemini-oauth",
+            "opencode-zen",
+            "opencode-go",
         ]
 
 
@@ -12276,26 +12570,73 @@ def _build_provider_choices() -> list[str]:
 # below in ``main()``. Missing an entry here only costs a one-time
 # discovery; extra entries here would let a plugin command silently fail
 # to parse.
-_BUILTIN_SUBCOMMANDS = frozenset(
-    {
-        "acp", "auth", "backup", "bundles", "checkpoints", "claw", "completion",
-        "computer-use",
-        "config", "console", "cron", "curator", "dashboard", "serve", "debug", "doctor",
-        "dump", "fallback", "gateway", "hooks", "import", "insights",
-        "gui", "desktop", "kanban", "login", "logout", "logs", "lsp", "mcp", "memory", "migrate", "moa",
-        "journey", "memory-graph", "learning",
-        "model", "pairing", "pets", "plugins", "postinstall", "profile",
-        "project", "proxy",
-        "prompt-size",
-        "send", "sessions", "setup",
-        "skills", "slack", "status", "tools", "uninstall", "update",
-        "version", "webhook", "whatsapp", "whatsapp-cloud", "chat", "secrets", "security",
-        # Help-ish invocations — plugin commands not being listed in
-        # top-level --help is an acceptable trade-off for skipping an
-        # expensive eager import of every bundled plugin module.
-        "help",
-    }
-)
+_BUILTIN_SUBCOMMANDS = frozenset({
+    "acp",
+    "auth",
+    "backup",
+    "bundles",
+    "checkpoints",
+    "claw",
+    "completion",
+    "computer-use",
+    "config",
+    "console",
+    "cron",
+    "curator",
+    "dashboard",
+    "serve",
+    "debug",
+    "doctor",
+    "dump",
+    "fallback",
+    "gateway",
+    "hooks",
+    "import",
+    "insights",
+    "gui",
+    "desktop",
+    "kanban",
+    "login",
+    "logout",
+    "logs",
+    "lsp",
+    "mcp",
+    "memory",
+    "migrate",
+    "moa",
+    "journey",
+    "memory-graph",
+    "learning",
+    "model",
+    "pairing",
+    "pets",
+    "plugins",
+    "postinstall",
+    "profile",
+    "project",
+    "proxy",
+    "prompt-size",
+    "send",
+    "sessions",
+    "setup",
+    "skills",
+    "slack",
+    "status",
+    "tools",
+    "uninstall",
+    "update",
+    "version",
+    "webhook",
+    "whatsapp",
+    "whatsapp-cloud",
+    "chat",
+    "secrets",
+    "security",
+    # Help-ish invocations — plugin commands not being listed in
+    # top-level --help is an acceptable trade-off for skipping an
+    # expensive eager import of every bundled plugin module.
+    "help",
+})
 
 
 # Top-level flags that take a value. Needed by ``_first_positional_argv``
@@ -12306,22 +12647,26 @@ _BUILTIN_SUBCOMMANDS = frozenset(
 # Correctness-safe either way: missing an entry here only makes the
 # fast-path bail out too eagerly (we run plugin discovery when we didn't
 # need to); extra entries would make us skip a real positional.
-_TOP_LEVEL_VALUE_FLAGS = frozenset(
-    {
-        "-z", "--oneshot",
-        "-m", "--model",
-        "--provider",
-        "-t", "--toolsets",
-        "-r", "--resume",
-        "-s", "--skills",
-        "--usage-file",
-        # ``-c / --continue`` is nargs='?' (optional value). Treat it as
-        # value-taking: if the next token is a subcommand-looking word
-        # the user almost certainly meant it as the session name, and
-        # either interpretation keeps us on the safe side.
-        "-c", "--continue",
-    }
-)
+_TOP_LEVEL_VALUE_FLAGS = frozenset({
+    "-z",
+    "--oneshot",
+    "-m",
+    "--model",
+    "--provider",
+    "-t",
+    "--toolsets",
+    "-r",
+    "--resume",
+    "-s",
+    "--skills",
+    "--usage-file",
+    # ``-c / --continue`` is nargs='?' (optional value). Treat it as
+    # value-taking: if the next token is a subcommand-looking word
+    # the user almost certainly meant it as the session name, and
+    # either interpretation keeps us on the safe side.
+    "-c",
+    "--continue",
+})
 
 
 def _first_positional_argv() -> str | None:
@@ -12397,7 +12742,10 @@ def _command_has_dedicated_mcp_startup(args) -> bool:
         return True
     if args.command == "gateway" and getattr(args, "gateway_command", None) == "run":
         return True
-    if args.command == "cron" and getattr(args, "cron_command", None) in {"run", "tick"}:
+    if args.command == "cron" and getattr(args, "cron_command", None) in {
+        "run",
+        "tick",
+    }:
         return True
     return False
 
@@ -12566,7 +12914,9 @@ def _try_termux_fast_cli_launch() -> bool:
 
     if args.command in {None, "chat"}:
         _set_chat_arg_defaults(args)
-        interactive_prompt = not getattr(args, "query", None) and not getattr(args, "image", None)
+        interactive_prompt = not getattr(args, "query", None) and not getattr(
+            args, "image", None
+        )
         if interactive_prompt:
             # Bare Termux CLI should reach the prompt first and do agent-only
             # discovery on the first submitted turn instead of before input.
@@ -12648,9 +12998,7 @@ def cmd_memory(args):
             files_to_reset.append(("USER.md", "user profile"))
 
         # Check what exists
-        existing = [
-            (f, desc) for f, desc in files_to_reset if (mem_dir / f).exists()
-        ]
+        existing = [(f, desc) for f, desc in files_to_reset if (mem_dir / f).exists()]
         if not existing:
             print(
                 f"\n  Nothing to reset — no memory files found in {display_hercules_home()}/memories/\n"
@@ -12677,9 +13025,7 @@ def cmd_memory(args):
             (mem_dir / f).unlink()
             print(f"  ✓ Deleted {f} ({desc})")
 
-        print(
-            "\n  Memory reset complete. New sessions will start with a blank slate."
-        )
+        print("\n  Memory reset complete. New sessions will start with a blank slate.")
         print(f"  Files were in: {display_hercules_home()}/memories/\n")
     else:
         from hercules_cli.memory_setup import memory_command
@@ -12787,6 +13133,7 @@ def main():
     # Force UTF-8 stdio on Windows before anything prints.  No-op elsewhere.
     try:
         from hercules_cli.stdio import configure_windows_stdio
+
         configure_windows_stdio()
     except Exception:
         pass
@@ -12855,10 +13202,18 @@ def main():
         description="Configure the provider/model set used by /moa <prompt>.",
     )
     moa_subparsers = moa_parser.add_subparsers(dest="moa_command")
-    moa_subparsers.add_parser("list", aliases=["ls"], help="Show current MoA model slots")
-    moa_configure = moa_subparsers.add_parser("configure", aliases=["config"], help="Interactively pick MoA models")
-    moa_configure.add_argument("name", nargs="?", help="Preset name to create or update")
-    moa_delete = moa_subparsers.add_parser("delete", aliases=["rm"], help="Delete a MoA preset")
+    moa_subparsers.add_parser(
+        "list", aliases=["ls"], help="Show current MoA model slots"
+    )
+    moa_configure = moa_subparsers.add_parser(
+        "configure", aliases=["config"], help="Interactively pick MoA models"
+    )
+    moa_configure.add_argument(
+        "name", nargs="?", help="Preset name to create or update"
+    )
+    moa_delete = moa_subparsers.add_parser(
+        "delete", aliases=["rm"], help="Delete a MoA preset"
+    )
     moa_delete.add_argument("name", help="Preset name to delete")
     moa_parser.set_defaults(func=cmd_moa)
 
@@ -12987,7 +13342,10 @@ def main():
     # gateway + proxy commands  (parsers built in hercules_cli/subcommands/gateway.py)
     # =========================================================================
     build_gateway_parser(
-        subparsers, cmd_gateway=cmd_gateway, cmd_proxy=cmd_proxy, cmd_gateway_enroll=cmd_gateway_enroll
+        subparsers,
+        cmd_gateway=cmd_gateway,
+        cmd_proxy=cmd_proxy,
+        cmd_gateway_enroll=cmd_gateway_enroll,
     )
 
     # =========================================================================
@@ -12995,6 +13353,7 @@ def main():
     # =========================================================================
     try:
         from agent.lsp.cli import register_subparser as _lsp_register
+
         _lsp_register(subparsers)
     except Exception as _lsp_err:
         # LSP is optional infrastructure — never let a registration
@@ -13040,6 +13399,7 @@ def main():
     # send command — pipe shell-script output to any configured platform
     # =========================================================================
     from hercules_cli.send_cmd import register_send_subparser
+
     register_send_subparser(subparsers)
 
     # =========================================================================
@@ -13134,6 +13494,7 @@ def main():
         "space checkpoints occupy, force a prune, or wipe the base.",
     )
     from hercules_cli.checkpoints import register_cli as _register_checkpoints_cli
+
     _register_checkpoints_cli(checkpoints_parser)
 
     # =========================================================================
@@ -13174,6 +13535,7 @@ def main():
         ),
     )
     from hercules_cli.bundles import register_cli as _bundles_register, bundles_command
+
     _bundles_register(bundles_parser)
     bundles_parser.set_defaults(func=bundles_command)
 
@@ -13408,12 +13770,14 @@ def main():
         action = getattr(args, "computer_use_action", None)
         if action == "install":
             from hercules_cli.tools_config import install_cua_driver
+
             install_cua_driver(upgrade=bool(getattr(args, "upgrade", False)))
             return
         if action == "status":
             import shutil
             import subprocess
             from hercules_cli.tools_config import _cua_driver_cmd
+
             # Honor HERCULES_CUA_DRIVER_CMD for local-build testing — same
             # resolver `install_cua_driver` and the runtime backend use,
             # so `status` reports what `computer_use` will actually invoke.
@@ -13423,9 +13787,12 @@ def main():
                 version = ""
                 try:
                     from hercules_cli.tools_config import _cua_driver_env
+
                     version = subprocess.run(
                         [path, "--version"],
-                        capture_output=True, text=True, timeout=5,
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
                         env=_cua_driver_env(),
                     ).stdout.strip()
                 except Exception:
@@ -13436,6 +13803,7 @@ def main():
                     print(f"cua-driver: installed at {path}")
                 try:
                     from tools.computer_use.cua_backend import cua_driver_update_check
+
                     st = cua_driver_update_check()
                     if st and st.get("update_available"):
                         latest = st.get("latest_version") or "?"
@@ -13445,15 +13813,20 @@ def main():
                         print("  ✓ Up to date.")
                     else:
                         # Older driver (no check-update verb) or offline.
-                        print("  Refresh to latest: hercules computer-use install --upgrade")
+                        print(
+                            "  Refresh to latest: hercules computer-use install --upgrade"
+                        )
                 except Exception:
-                    print("  Refresh to latest: hercules computer-use install --upgrade")
+                    print(
+                        "  Refresh to latest: hercules computer-use install --upgrade"
+                    )
                 return
             print("cua-driver: not installed")
             print("  Run: hercules computer-use install")
             return
         if action == "doctor":
             from tools.computer_use.doctor import run_doctor
+
             code = run_doctor(
                 include=list(getattr(args, "include", []) or []),
                 skip=list(getattr(args, "skip", []) or []),
@@ -13464,10 +13837,12 @@ def main():
             perms_action = getattr(args, "computer_use_perms_action", None)
             if perms_action == "grant":
                 from tools.computer_use.permissions import request_permissions_grant
+
                 sys.exit(request_permissions_grant())
             if perms_action == "status":
                 import json as _json
                 from tools.computer_use.permissions import computer_use_status
+
                 st = computer_use_status()
                 if bool(getattr(args, "json", False)):
                     print(_json.dumps(st, indent=2, sort_keys=True))
@@ -13476,7 +13851,9 @@ def main():
                     print(f"Computer Use is not supported on {st['platform']}.")
                     sys.exit(1)
                 if not st["installed"]:
-                    print("cua-driver: not installed. Run: hercules computer-use install")
+                    print(
+                        "cua-driver: not installed. Run: hercules computer-use install"
+                    )
                     sys.exit(1)
                 glyph = lambda v: "✅" if v is True else ("❌" if v is False else "•")
                 print(f"cua-driver: {st['version'] or 'installed'} ({st['platform']})")
@@ -13486,7 +13863,9 @@ def main():
                     if not st["ready"]:
                         print("  Grant: hercules computer-use permissions grant")
                 else:  # no TCC model — readiness is driver health
-                    print(f"  {glyph(st['ready'])} driver health (no permission toggles on {st['platform']})")
+                    print(
+                        f"  {glyph(st['ready'])} driver health (no permission toggles on {st['platform']})"
+                    )
                 for c in st["checks"]:
                     if c["status"] != "ok":
                         print(f"  ⚠ {c['label']}: {c['message']}")
@@ -13556,11 +13935,10 @@ def main():
         p.add_argument(
             "--title", help="Only match sessions whose title contains this substring"
         )
+        p.add_argument("--end-reason", help="Only match sessions with this end reason")
         p.add_argument(
-            "--end-reason", help="Only match sessions with this end reason"
-        )
-        p.add_argument(
-            "--cwd", help="Only match sessions whose working directory is under this path"
+            "--cwd",
+            help="Only match sessions whose working directory is under this path",
         )
         p.add_argument(
             "--min-messages", type=int, help="Only match sessions with >= N messages"
@@ -13578,9 +13956,7 @@ def main():
             help="Only match sessions billed through this provider "
             "(e.g. openrouter, anthropic)",
         )
-        p.add_argument(
-            "--user", help="Only match sessions from this user ID"
-        )
+        p.add_argument("--user", help="Only match sessions from this user ID")
         p.add_argument(
             "--chat-id", help="Only match sessions from this chat/channel ID"
         )
@@ -13593,27 +13969,33 @@ def main():
             help="Only match sessions whose git branch contains this substring",
         )
         p.add_argument(
-            "--min-tokens", type=int,
+            "--min-tokens",
+            type=int,
             help="Only match sessions with >= N total tokens (input+output)",
         )
         p.add_argument(
-            "--max-tokens", type=int,
+            "--max-tokens",
+            type=int,
             help="Only match sessions with <= N total tokens (input+output)",
         )
         p.add_argument(
-            "--min-cost", type=float,
+            "--min-cost",
+            type=float,
             help="Only match sessions costing >= N USD (actual or estimated)",
         )
         p.add_argument(
-            "--max-cost", type=float,
+            "--max-cost",
+            type=float,
             help="Only match sessions costing <= N USD (actual or estimated)",
         )
         p.add_argument(
-            "--min-tool-calls", type=int,
+            "--min-tool-calls",
+            type=int,
             help="Only match sessions with >= N tool calls",
         )
         p.add_argument(
-            "--max-tool-calls", type=int,
+            "--max-tool-calls",
+            type=int,
             help="Only match sessions with <= N tool calls",
         )
         p.add_argument(
@@ -13621,9 +14003,7 @@ def main():
             action="store_true",
             help="List matching sessions without changing anything",
         )
-        p.add_argument(
-            "--yes", "-y", action="store_true", help="Skip confirmation"
-        )
+        p.add_argument("--yes", "-y", action="store_true", help="Skip confirmation")
 
     sessions_export = sessions_subparsers.add_parser(
         "export", help="Export sessions to JSONL, Markdown, or QMD"
@@ -13662,8 +14042,7 @@ def main():
         "--no-redact",
         action="store_true",
         help=(
-            "trace only: skip the forced secret redaction; "
-            "only use after manual review"
+            "trace only: skip the forced secret redaction; only use after manual review"
         ),
     )
     sessions_export.add_argument(
@@ -13827,9 +14206,11 @@ def main():
                 try:
                     from hercules_state import SessionDB
 
-                    n = SessionDB()._conn.execute(
-                        "SELECT COUNT(*) FROM sessions"
-                    ).fetchone()[0]
+                    n = (
+                        SessionDB()
+                        ._conn.execute("SELECT COUNT(*) FROM sessions")
+                        .fetchone()[0]
+                    )
                     print(f"✓ Repaired — {n} sessions recovered.")
                 except Exception:
                     print("✓ Repaired.")
@@ -13892,7 +14273,9 @@ def main():
                     print(f"{'Title':<28} {'Workspace':<18} {'Last Active':<13} {'ID'}")
                     print("─" * 110)
                 else:
-                    print(f"{'Preview':<38} {'Workspace':<18} {'Last Active':<13} {'Src':<6} {'ID'}")
+                    print(
+                        f"{'Preview':<38} {'Workspace':<18} {'Last Active':<13} {'Src':<6} {'ID'}"
+                    )
                     print("─" * 100)
                 for s in sessions:
                     last_active = _relative_time(s.get("last_active"))
@@ -13902,7 +14285,9 @@ def main():
                         print(f"{title:<28} {ws:<18} {last_active:<13} {s['id']}")
                     else:
                         preview = s.get("preview", "")[:36]
-                        print(f"{preview:<38} {ws:<18} {last_active:<13} {s['source']:<6} {s['id']}")
+                        print(
+                            f"{preview:<38} {ws:<18} {last_active:<13} {s['source']:<6} {s['id']}"
+                        )
                 return
 
             if has_titles:
@@ -13933,12 +14318,28 @@ def main():
             )
 
             _filter_arg_names = (
-                "older_than", "newer_than", "before", "after",
-                "source", "title", "end_reason", "cwd",
-                "min_messages", "max_messages", "model", "provider",
-                "user", "chat_id", "chat_type", "branch",
-                "min_tokens", "max_tokens", "min_cost", "max_cost",
-                "min_tool_calls", "max_tool_calls",
+                "older_than",
+                "newer_than",
+                "before",
+                "after",
+                "source",
+                "title",
+                "end_reason",
+                "cwd",
+                "min_messages",
+                "max_messages",
+                "model",
+                "provider",
+                "user",
+                "chat_id",
+                "chat_type",
+                "branch",
+                "min_tokens",
+                "max_tokens",
+                "min_cost",
+                "max_cost",
+                "min_tool_calls",
+                "max_tool_calls",
             )
             _any_filters = any(
                 getattr(args, a, None) is not None for a in _filter_arg_names
@@ -14049,7 +14450,9 @@ def main():
                 with open(args.output, "w", encoding="utf-8") as f:
                     f.write(content)
                 suffix = "" if len(sessions) == 1 else "s"
-                print(f"Exported {len(sessions)} session{suffix} to {args.output} (HTML)")
+                print(
+                    f"Exported {len(sessions)} session{suffix} to {args.output} (HTML)"
+                )
                 db.close()
                 return
 
@@ -14085,7 +14488,9 @@ def main():
 
                 if getattr(args, "upload", False):
                     if not session_id:
-                        print("--upload exports one session: pass --session-id (or drop filters to use the most recent).")
+                        print(
+                            "--upload exports one session: pass --session-id (or drop filters to use the most recent)."
+                        )
                         db.close()
                         return
                     resolved = db.resolve_session_id(session_id)
@@ -14165,7 +14570,9 @@ def main():
                             exported += 1
                         print(f"Exported {exported} session trace(s) to {out_dir}")
                 except TraceRedactionError:
-                    print("Redaction failed; refusing to export unredacted trace content.")
+                    print(
+                        "Redaction failed; refusing to export unredacted trace content."
+                    )
                 db.close()
                 return
 
@@ -14184,7 +14591,6 @@ def main():
                         return
                     line = _json.dumps(data, ensure_ascii=False) + "\n"
                     if args.output == "-":
-
                         sys.stdout.write(line)
                     else:
                         with open(args.output, "w", encoding="utf-8") as f:
@@ -14216,7 +14622,6 @@ def main():
                             return
                         sessions = db.export_all(source=None)
                     if args.output == "-":
-
                         for s in sessions:
                             sys.stdout.write(
                                 _json.dumps(_redact(s), ensure_ascii=False) + "\n"
@@ -14238,10 +14643,16 @@ def main():
             )
 
             if args.output == "-":
-                print("Markdown/QMD export writes files; stdout (-) is only supported with --format jsonl.")
+                print(
+                    "Markdown/QMD export writes files; stdout (-) is only supported with --format jsonl."
+                )
                 db.close()
                 return
-            output_dir = Path(args.output).expanduser() if args.output else get_hercules_home() / "session-exports"
+            output_dir = (
+                Path(args.output).expanduser()
+                if args.output
+                else get_hercules_home() / "session-exports"
+            )
 
             def _export_one(session_id: str):
                 data = (
@@ -14288,7 +14699,9 @@ def main():
                     return
                 message_count = len(data.get("messages") or [])
                 suffix = "" if message_count == 1 else "s"
-                print(f"Exported 1 session ({message_count} message{suffix}) to {exported_path}")
+                print(
+                    f"Exported 1 session ({message_count} message{suffix}) to {exported_path}"
+                )
                 if args.delete_after_verified:
                     ok, reason = verify_export_file(exported_path, data)
                     if not ok:
@@ -14296,10 +14709,14 @@ def main():
                         db.close()
                         return
                     sessions_dir = get_hercules_home() / "sessions"
-                    if db.delete_session(resolved_session_id, sessions_dir=sessions_dir):
+                    if db.delete_session(
+                        resolved_session_id, sessions_dir=sessions_dir
+                    ):
                         print(f"Deleted exported session '{resolved_session_id}'.")
                     else:
-                        print(f"Exported, but session '{resolved_session_id}' was not deleted because it was not found.")
+                        print(
+                            f"Exported, but session '{resolved_session_id}' was not deleted because it was not found."
+                        )
                 db.close()
                 return
 
@@ -14366,11 +14783,24 @@ def main():
             _non_time_filters = any(
                 getattr(args, a, None) is not None
                 for a in (
-                    "source", "title", "end_reason", "cwd",
-                    "min_messages", "max_messages", "model", "provider",
-                    "user", "chat_id", "chat_type", "branch",
-                    "min_tokens", "max_tokens", "min_cost", "max_cost",
-                    "min_tool_calls", "max_tool_calls",
+                    "source",
+                    "title",
+                    "end_reason",
+                    "cwd",
+                    "min_messages",
+                    "max_messages",
+                    "model",
+                    "provider",
+                    "user",
+                    "chat_id",
+                    "chat_type",
+                    "branch",
+                    "min_tokens",
+                    "max_tokens",
+                    "min_cost",
+                    "max_cost",
+                    "min_tool_calls",
+                    "max_tool_calls",
                 )
             )
             if (
@@ -14417,9 +14847,7 @@ def main():
             # the confirmation makes the blast radius obvious.
             _oldest = candidates[0].get("started_at")
             _newest = candidates[-1].get("started_at")
-            _span = (
-                f"oldest {format_epoch(_oldest)}, newest {format_epoch(_newest)}"
-            )
+            _span = f"oldest {format_epoch(_oldest)}, newest {format_epoch(_newest)}"
 
             if args.dry_run or not args.yes:
                 shown = candidates if args.dry_run else candidates[:15]
@@ -14438,7 +14866,9 @@ def main():
                 if len(candidates) > len(shown):
                     print(f"  … and {len(candidates) - len(shown)} more")
                 if args.dry_run:
-                    print(f"Dry run — nothing {'deleted' if action == 'prune' else 'archived'}.")
+                    print(
+                        f"Dry run — nothing {'deleted' if action == 'prune' else 'archived'}."
+                    )
                     return
 
             if not args.yes:
@@ -14500,9 +14930,7 @@ def main():
         elif action == "optimize":
             db_path = db.db_path
             before_mb = (
-                os.path.getsize(db_path) / (1024 * 1024)
-                if db_path.exists()
-                else 0.0
+                os.path.getsize(db_path) / (1024 * 1024) if db_path.exists() else 0.0
             )
             print("Optimizing session store (FTS merge + VACUUM)…")
             try:
@@ -14514,9 +14942,7 @@ def main():
                 db.close()
                 return
             after_mb = (
-                os.path.getsize(db_path) / (1024 * 1024)
-                if db_path.exists()
-                else 0.0
+                os.path.getsize(db_path) / (1024 * 1024) if db_path.exists() else 0.0
             )
             saved = before_mb - after_mb
             print(f"Optimized {n} FTS index(es).")
@@ -14604,7 +15030,6 @@ def main():
         subparsers,
         cmd_dashboard=cmd_dashboard,
     )
-
 
     # =========================================================================
     # desktop (a.k.a. gui) command

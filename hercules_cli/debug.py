@@ -62,6 +62,7 @@ _AUTO_DELETE_SECONDS = 21600
 # Pending-deletion tracking (replaces the old fork-and-sleep subprocess).
 # ---------------------------------------------------------------------------
 
+
 def _pending_file() -> Path:
     """Path to ``~/.hercules/pastes/pending.json``.
 
@@ -88,7 +89,8 @@ def _load_pending() -> list[dict]:
         if isinstance(data, list):
             # Filter to well-formed entries only
             return [
-                e for e in data
+                e
+                for e in data
                 if isinstance(e, dict) and "url" in e and "expire_at" in e
             ]
     except (OSError, ValueError, json.JSONDecodeError):
@@ -221,7 +223,7 @@ def _extract_paste_id(url: str) -> Optional[str]:
     url = url.strip().rstrip("/")
     for prefix in ("https://paste.rs/", "http://paste.rs/"):
         if url.startswith(prefix):
-            return url[len(prefix):]
+            return url[len(prefix) :]
     return None
 
 
@@ -239,7 +241,8 @@ def delete_paste(url: str) -> bool:
 
     target = f"{_PASTE_RS_URL}{paste_id}"
     req = urllib.request.Request(
-        target, method="DELETE",
+        target,
+        method="DELETE",
         headers={"User-Agent": "hercules-agent/debug-share"},
     )
     with urllib.request.urlopen(req, timeout=30) as resp:
@@ -261,7 +264,6 @@ def _schedule_auto_delete(urls: list[str], delay_seconds: int = _AUTO_DELETE_SEC
     policy handles cleanup.
     """
     _record_pending(urls, delay_seconds=delay_seconds)
-
 
 
 # ---------------------------------------------------------------------------
@@ -369,7 +371,11 @@ def _capture_log_snapshot(
                 total = 0
                 newline_count = 0
 
-                while pos > 0 and (total < max_bytes or newline_count <= tail_lines + 1) and total < max_bytes * 2:
+                while (
+                    pos > 0
+                    and (total < max_bytes or newline_count <= tail_lines + 1)
+                    and total < max_bytes * 2
+                ):
                     read_size = min(chunk_size, pos)
                     pos -= read_size
                     f.seek(pos)
@@ -395,7 +401,9 @@ def _capture_log_snapshot(
                 full_raw = full_raw.split(b"\n", 1)[1]
 
         all_text = raw.decode("utf-8", errors="replace")
-        tail_text = "".join(all_text.splitlines(keepends=True)[-tail_lines:]).rstrip("\n")
+        tail_text = "".join(all_text.splitlines(keepends=True)[-tail_lines:]).rstrip(
+            "\n"
+        )
 
         full_text = full_raw.decode("utf-8", errors="replace")
         if truncated:
@@ -407,7 +415,9 @@ def _capture_log_snapshot(
 
         return LogSnapshot(path=log_path, tail_text=tail_text, full_text=full_text)
     except Exception as exc:
-        return LogSnapshot(path=log_path, tail_text=f"(error reading: {exc})", full_text=None)
+        return LogSnapshot(
+            path=log_path, tail_text=f"(error reading: {exc})", full_text=None
+        )
 
 
 def _capture_default_log_snapshots(
@@ -420,18 +430,14 @@ def _capture_default_log_snapshots(
     """
     errors_lines = min(log_lines, 100)
     return {
-        "agent": _capture_log_snapshot(
-            "agent", tail_lines=log_lines, redact=redact
-        ),
+        "agent": _capture_log_snapshot("agent", tail_lines=log_lines, redact=redact),
         "errors": _capture_log_snapshot(
             "errors", tail_lines=errors_lines, redact=redact
         ),
         "gateway": _capture_log_snapshot(
             "gateway", tail_lines=errors_lines, redact=redact
         ),
-        "gui": _capture_log_snapshot(
-            "gui", tail_lines=errors_lines, redact=redact
-        ),
+        "gui": _capture_log_snapshot("gui", tail_lines=errors_lines, redact=redact),
         "desktop": _capture_log_snapshot(
             "desktop", tail_lines=errors_lines, redact=redact
         ),
@@ -441,6 +447,7 @@ def _capture_default_log_snapshots(
 # ---------------------------------------------------------------------------
 # Debug report collection
 # ---------------------------------------------------------------------------
+
 
 def _capture_dump() -> str:
     """Run ``hercules dump`` and return its stdout as a string."""
@@ -590,6 +597,7 @@ def collect_share_bundle(
 # CLI entry points
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class DebugShareResult:
     """Structured outcome of a ``debug share`` upload.
@@ -649,7 +657,9 @@ def _upload_to_github_gist(
         "description": description,
         "public": public,
         # A gist file may not be empty — substitute a single space.
-        "files": {name: {"content": (content or " ")} for name, content in files.items()},
+        "files": {
+            name: {"content": (content or " ")} for name, content in files.items()
+        },
     }
     req = urllib.request.Request(
         GITHUB_GIST_API,
@@ -726,9 +736,7 @@ def build_debug_share(
             gist_failure = f"GitHub gist upload failed: {exc}"
 
     # Fallback: write local files (no token, or the gist upload failed).
-    share_dir = (
-        get_hercules_home() / "debug-shares" / time.strftime("%Y%m%d-%H%M%S")
-    )
+    share_dir = get_hercules_home() / "debug-shares" / time.strftime("%Y%m%d-%H%M%S")
     share_dir.mkdir(parents=True, exist_ok=True)
 
     paths: dict[str, str] = {}
@@ -841,8 +849,11 @@ def run_debug_share(args):
     # your account; otherwise these are local file paths (no token configured).
     is_gist = "Gist" in result.urls
     label_width = max(len(k) for k in result.urls)
-    print("\nDebug report uploaded to a secret GitHub Gist:" if is_gist
-          else "\nDebug report written locally:")
+    print(
+        "\nDebug report uploaded to a secret GitHub Gist:"
+        if is_gist
+        else "\nDebug report written locally:"
+    )
     for label, target in result.urls.items():
         print(f"  {label:<{label_width}}  {target}")
 

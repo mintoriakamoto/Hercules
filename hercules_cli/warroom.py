@@ -154,7 +154,9 @@ def obliterate_cmd(args: list[str]) -> int:
     if dest.is_dir():
         env["PYTHONPATH"] = str(dest) + os.pathsep + env.get("PYTHONPATH", "")
     print("+", " ".join(bin_ + args), file=sys.stderr)
-    return subprocess.call(bin_ + args, env=env, cwd=str(dest) if dest.is_dir() else None)
+    return subprocess.call(
+        bin_ + args, env=env, cwd=str(dest) if dest.is_dir() else None
+    )
 
 
 def _help() -> int:
@@ -167,9 +169,14 @@ def _help() -> int:
 # intercepted before main.py's argparse: none of them are in its
 # _BUILTIN_SUBCOMMANDS set, so reaching it would trigger a full plugin
 # discovery pass and then still fail to parse.
-_WARROOM_VERBS = frozenset(
-    {"warroom", "tempest", "t3mp3st", "obliterate", "obliteratus", "abliterate"}
-)
+_WARROOM_VERBS = frozenset({
+    "warroom",
+    "tempest",
+    "t3mp3st",
+    "obliterate",
+    "obliteratus",
+    "abliterate",
+})
 
 
 def _delegate(args: list[str]) -> int:
@@ -222,7 +229,9 @@ def main(argv: list[str] | None = None) -> int:
     if verb in {"obliterate", "obliteratus", "abliterate"}:
         if verb == "obliteratus":
             return obliterate_cmd(rest)
-        return obliterate_cmd(["obliterate", *rest] if rest[:1] != ["obliterate"] else rest)
+        return obliterate_cmd(
+            ["obliterate", *rest] if rest[:1] != ["obliterate"] else rest
+        )
 
     return _help()
 

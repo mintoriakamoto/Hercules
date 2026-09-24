@@ -8,13 +8,15 @@ root context, logs/gateways/ is created root-owned; every profile
 registered later runs its log service as the dropped hercules user and
 s6-log crash-loops on mkdir: Permission denied.
 """
+
 from __future__ import annotations
 
 from tests.docker.conftest import docker_exec_sh, start_container
 
 
 def test_logs_gateways_seeded_and_hercules_owned(
-    built_image: str, container_name: str,
+    built_image: str,
+    container_name: str,
 ) -> None:
     """logs/ and logs/gateways/ must exist and be owned by hercules after boot."""
     start_container(built_image, container_name)
@@ -27,9 +29,7 @@ def test_logs_gateways_seeded_and_hercules_owned(
         "echo DIRS_OK || echo DIRS_MISSING",
         timeout=10,
     )
-    assert "DIRS_OK" in r.stdout, (
-        f"logs/ or logs/gateways/ not seeded: {r.stdout}"
-    )
+    assert "DIRS_OK" in r.stdout, f"logs/ or logs/gateways/ not seeded: {r.stdout}"
 
     # Both must be owned by hercules
     r = docker_exec_sh(
@@ -39,9 +39,7 @@ def test_logs_gateways_seeded_and_hercules_owned(
         'echo "logs=$logs_owner gateways=$gateways_owner"',
         timeout=10,
     )
-    assert "logs=hercules" in r.stdout, (
-        f"logs/ not owned by hercules: {r.stdout}"
-    )
+    assert "logs=hercules" in r.stdout, f"logs/ not owned by hercules: {r.stdout}"
     assert "gateways=hercules" in r.stdout, (
         f"logs/gateways/ not owned by hercules: {r.stdout}"
     )

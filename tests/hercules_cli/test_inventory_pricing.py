@@ -10,7 +10,9 @@ import hercules_cli.models as models_mod
 
 
 def _patch_pricing(monkeypatch, *, free_tier=False, pricing, unavailable=None):
-    monkeypatch.setattr(models_mod, "get_pricing_for_provider", lambda slug, **kw: pricing.get(slug, {}))
+    monkeypatch.setattr(
+        models_mod, "get_pricing_for_provider", lambda slug, **kw: pricing.get(slug, {})
+    )
 
 
 def test_apply_pricing_formats_per_model_prices(monkeypatch):
@@ -20,7 +22,11 @@ def test_apply_pricing_formats_per_model_prices(monkeypatch):
         free_tier=False,
         pricing={
             "openrouter": {
-                "a/paid": {"prompt": "0.000003", "completion": "0.000015", "input_cache_read": "0.0000003"},
+                "a/paid": {
+                    "prompt": "0.000003",
+                    "completion": "0.000015",
+                    "input_cache_read": "0.0000003",
+                },
                 "b/free": {"prompt": "0", "completion": "0"},
             }
         },
@@ -29,7 +35,12 @@ def test_apply_pricing_formats_per_model_prices(monkeypatch):
     inv._apply_pricing(rows)
 
     pricing = rows[0]["pricing"]
-    assert pricing["a/paid"] == {"input": "$3.00", "output": "$15.00", "cache": "$0.30", "free": False}
+    assert pricing["a/paid"] == {
+        "input": "$3.00",
+        "output": "$15.00",
+        "cache": "$0.30",
+        "free": False,
+    }
     assert pricing["b/free"]["free"] is True
     assert pricing["b/free"]["input"] == "free"
 
@@ -45,6 +56,7 @@ def test_apply_pricing_skips_providers_without_pricing(monkeypatch):
 
 def test_apply_pricing_failure_is_swallowed(monkeypatch):
     """A pricing fetch that raises must not break the whole payload."""
+
     def boom(slug, **kw):
         raise RuntimeError("network down")
 

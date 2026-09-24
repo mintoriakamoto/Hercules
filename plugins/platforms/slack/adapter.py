@@ -334,9 +334,18 @@ _SLACK_AUDIO_MIME_TO_EXT = {
 
 # Extensions OpenAI/Whisper-family STT backends accept (kept in sync with
 # tools/transcription_tools.SUPPORTED_FORMATS).
-_SLACK_STT_SUPPORTED_EXTS = frozenset(
-    {".mp3", ".mp4", ".mpeg", ".mpga", ".m4a", ".wav", ".webm", ".ogg", ".aac", ".flac"}
-)
+_SLACK_STT_SUPPORTED_EXTS = frozenset({
+    ".mp3",
+    ".mp4",
+    ".mpeg",
+    ".mpga",
+    ".m4a",
+    ".wav",
+    ".webm",
+    ".ogg",
+    ".aac",
+    ".flac",
+})
 
 # Cached-extension → reported ``audio/*`` mimetype. Used when re-routing a
 # ``video/mp4``-mislabeled voice clip onto the audio path so the reported
@@ -420,7 +429,9 @@ class SlackAdapter(BasePlatformAdapter):
 
     MAX_MESSAGE_LENGTH = 39000  # Slack API allows 40,000 chars; leave margin
     supports_code_blocks = True  # Slack mrkdwn renders fenced code blocks
-    splits_long_messages = True  # send() chunks via truncate_message(MAX_MESSAGE_LENGTH)
+    splits_long_messages = (
+        True  # send() chunks via truncate_message(MAX_MESSAGE_LENGTH)
+    )
     # Slack blocks typed native slash commands inside threads ("/approve is
     # not supported in threads. Sorry!").  The adapter rewrites a leading
     # "!" to "/" for known commands (see _handle_slack_message), so "!" is
@@ -1195,10 +1206,12 @@ class SlackAdapter(BasePlatformAdapter):
             # caught and logged, and slack_bolt still sees a clean ack.
             try:
                 from hercules_cli.plugins import get_plugin_manager
+
                 _plugin_handlers = get_plugin_manager().get_slack_action_handlers()
             except Exception as e:  # pragma: no cover - defensive
                 logger.warning(
-                    "[Slack] Could not load plugin action handlers: %s", e,
+                    "[Slack] Could not load plugin action handlers: %s",
+                    e,
                 )
                 _plugin_handlers = []
 
@@ -1215,20 +1228,24 @@ class SlackAdapter(BasePlatformAdapter):
                     except Exception as exc:  # pragma: no cover - defensive
                         logger.error(
                             "[Slack] Plugin '%s' action handler raised: %s",
-                            plugin_name, exc, exc_info=True,
+                            plugin_name,
+                            exc,
+                            exc_info=True,
                         )
                         # Best-effort ack so Slack doesn't retry the click.
                         try:
                             await ack()
                         except Exception:
                             pass
+
                 return _wrapped
 
             for _action_id, _cb, _plugin_name in _plugin_handlers:
                 self._app.action(_action_id)(_make_wrapper(_cb, _plugin_name))
                 logger.debug(
                     "[Slack] Registered plugin action handler %s (from %s)",
-                    _action_id, _plugin_name,
+                    _action_id,
+                    _plugin_name,
                 )
             if _plugin_handlers:
                 logger.info(
@@ -1760,12 +1777,10 @@ class SlackAdapter(BasePlatformAdapter):
                                     "[Slack] Skipping missing image: %s", local_path
                                 )
                                 continue
-                            file_uploads.append(
-                                {
-                                    "file": local_path,
-                                    "filename": os.path.basename(local_path),
-                                }
-                            )
+                            file_uploads.append({
+                                "file": local_path,
+                                "filename": os.path.basename(local_path),
+                            })
                         else:
                             if not _is_safe_url(image_url):
                                 logger.warning(
@@ -1783,12 +1798,10 @@ class SlackAdapter(BasePlatformAdapter):
                                     ext = "gif"
                                 elif "webp" in ct:
                                     ext = "webp"
-                                file_uploads.append(
-                                    {
-                                        "content": response.content,
-                                        "filename": f"image_{len(file_uploads)}.{ext}",
-                                    }
-                                )
+                                file_uploads.append({
+                                    "content": response.content,
+                                    "filename": f"image_{len(file_uploads)}.{ext}",
+                                })
                             except Exception as dl_err:
                                 logger.warning(
                                     "[Slack] Download failed for %s: %s",
@@ -2161,6 +2174,7 @@ class SlackAdapter(BasePlatformAdapter):
             async def _ssrf_redirect_guard(response):
                 """Re-check redirect targets so public URLs cannot bounce into private IPs."""
                 from tools.url_safety import redirect_target_from_response
+
                 redirect_url = redirect_target_from_response(response)
                 if redirect_url and not is_safe_url(redirect_url):
                     raise ValueError("Blocked redirect to private/internal address")
@@ -2529,7 +2543,11 @@ class SlackAdapter(BasePlatformAdapter):
         except Exception as exc:
             response = getattr(exc, "response", None)
             detail = self._describe_slack_api_error(response, file_obj={"id": file_id})
-            logger.warning("[Slack] files.info error for file_shared %s: %s", file_id, detail or exc)
+            logger.warning(
+                "[Slack] files.info error for file_shared %s: %s",
+                file_id,
+                detail or exc,
+            )
             return
 
         if not info_resp.get("ok"):
@@ -3008,9 +3026,7 @@ class SlackAdapter(BasePlatformAdapter):
                     media_urls.append(cached)
                     # Report a coherent audio mimetype matching the cached
                     # extension so downstream STT routing recognizes it.
-                    media_types.append(
-                        _SLACK_EXT_TO_AUDIO_MIME.get(ext, "audio/mp4")
-                    )
+                    media_types.append(_SLACK_EXT_TO_AUDIO_MIME.get(ext, "audio/mp4"))
                     logger.debug(
                         "[Slack] Cached voice clip (mislabeled %s) as audio: %s",
                         mimetype,
@@ -3035,9 +3051,7 @@ class SlackAdapter(BasePlatformAdapter):
                     ext = ext.lower()
                     if ext not in SUPPORTED_VIDEO_TYPES:
                         mime_to_ext = {v: k for k, v in SUPPORTED_VIDEO_TYPES.items()}
-                        ext = mime_to_ext.get(
-                            mimetype.split(";", 1)[0].lower(), ".mp4"
-                        )
+                        ext = mime_to_ext.get(mimetype.split(";", 1)[0].lower(), ".mp4")
 
                     raw_bytes = await self._download_slack_file_bytes(
                         url, team_id=team_id
@@ -3103,7 +3117,9 @@ class SlackAdapter(BasePlatformAdapter):
                         doc_mime = mimetype or "application/octet-stream"
                     media_urls.append(cached_path)
                     media_types.append(doc_mime)
-                    logger.debug("[Slack] Cached user document: %s (%s)", cached_path, doc_mime)
+                    logger.debug(
+                        "[Slack] Cached user document: %s (%s)", cached_path, doc_mime
+                    )
 
                     # Inject small text-ish files directly into the prompt so
                     # snippets like JSON/YAML/configs are actually visible to the
@@ -3112,11 +3128,15 @@ class SlackAdapter(BasePlatformAdapter):
                     # decodable ASCII headers. Binary files are surfaced as a
                     # cached path only (run.py emits a path-pointing note).
                     MAX_TEXT_INJECT_BYTES = 100 * 1024
-                    _is_text = ext in _TEXT_INJECT_EXTENSIONS or (mimetype or "").startswith("text/")
+                    _is_text = ext in _TEXT_INJECT_EXTENSIONS or (
+                        mimetype or ""
+                    ).startswith("text/")
                     if _is_text and len(raw_bytes) <= MAX_TEXT_INJECT_BYTES:
                         try:
                             text_content = raw_bytes.decode("utf-8")
-                            display_name = original_filename or f"document{ext or '.txt'}"
+                            display_name = (
+                                original_filename or f"document{ext or '.txt'}"
+                            )
                             display_name = re.sub(r"[^\w.\- ]", "_", display_name)
                             injection = f"[Content of {display_name}]:\n{text_content}"
                             if text:
@@ -3422,7 +3442,9 @@ class SlackAdapter(BasePlatformAdapter):
                 source = SessionSource(
                     platform=Platform.SLACK,
                     chat_id=str(channel_id or normalized_user_id),
-                    chat_type="dm" if str(channel_id or "").startswith("D") else "group",
+                    chat_type="dm"
+                    if str(channel_id or "").startswith("D")
+                    else "group",
                     user_id=normalized_user_id,
                     user_name=str(user_name).strip() if user_name else None,
                 )
@@ -3440,10 +3462,14 @@ class SlackAdapter(BasePlatformAdapter):
         allowed_ids = set()
         platform_allowlist = os.getenv("SLACK_ALLOWED_USERS", "").strip()
         if platform_allowlist:
-            allowed_ids.update(uid.strip() for uid in platform_allowlist.split(",") if uid.strip())
+            allowed_ids.update(
+                uid.strip() for uid in platform_allowlist.split(",") if uid.strip()
+            )
         global_allowlist = os.getenv("GATEWAY_ALLOWED_USERS", "").strip()
         if global_allowlist:
-            allowed_ids.update(uid.strip() for uid in global_allowlist.split(",") if uid.strip())
+            allowed_ids.update(
+                uid.strip() for uid in global_allowlist.split(",") if uid.strip()
+            )
 
         if allowed_ids:
             return "*" in allowed_ids or normalized_user_id in allowed_ids
@@ -3468,7 +3494,8 @@ class SlackAdapter(BasePlatformAdapter):
         ):
             logger.warning(
                 "[Slack] Unauthorized slash-confirm click by %s (%s) - ignoring",
-                user_name, user_id,
+                user_name,
+                user_id,
             )
             return
 
@@ -3587,7 +3614,8 @@ class SlackAdapter(BasePlatformAdapter):
         ):
             logger.warning(
                 "[Slack] Unauthorized approval click by %s (%s) - ignoring",
-                user_name, user_id,
+                user_name,
+                user_id,
             )
             return
 
@@ -3805,7 +3833,9 @@ class SlackAdapter(BasePlatformAdapter):
                 trust_tag = ""
                 if not is_bot and msg_user:
                     is_authorized = self._is_sender_authorized(
-                        msg_user, chat_type="thread", chat_id=channel_id,
+                        msg_user,
+                        chat_type="thread",
+                        chat_id=channel_id,
                     )
                     if is_authorized is False:
                         trust_tag = "[unverified] "
@@ -3833,7 +3863,8 @@ class SlackAdapter(BasePlatformAdapter):
                         "(not yet in conversation history):]"
                     )
                 content = (
-                    header + "\n"
+                    header
+                    + "\n"
                     + "\n".join(context_parts)
                     + "\n[End of thread context]\n\n"
                 )
@@ -4236,15 +4267,22 @@ class SlackAdapter(BasePlatformAdapter):
         if cached is not None:
             return cached
 
-        patterns = self.config.extra.get("mention_patterns") if self.config.extra else None
+        patterns = (
+            self.config.extra.get("mention_patterns") if self.config.extra else None
+        )
         if patterns is None:
             raw = os.getenv("SLACK_MENTION_PATTERNS", "").strip()
             if raw:
                 try:
                     import json as _json
+
                     patterns = _json.loads(raw)
                 except Exception:
-                    patterns = [p.strip() for p in raw.replace("\n", ",").split(",") if p.strip()]
+                    patterns = [
+                        p.strip()
+                        for p in raw.replace("\n", ",").split(",")
+                        if p.strip()
+                    ]
 
         if isinstance(patterns, str):
             patterns = [patterns]
@@ -4437,7 +4475,9 @@ def interactive_setup() -> None:
     print_info("   3. Install to Workspace: Settings → Install App")
     print_info("   4. After installing, invite the bot to channels: /invite @YourBot")
     print()
-    print_info("   Full guide: https://github.com/mintoriakamoto/Hercules/blob/main/website/docs/user-guide/messaging/slack.md")
+    print_info(
+        "   Full guide: https://github.com/mintoriakamoto/Hercules/blob/main/website/docs/user-guide/messaging/slack.md"
+    )
     print()
 
     # Generate and write manifest up-front so the user can paste it into
@@ -4457,7 +4497,9 @@ def interactive_setup() -> None:
 
     print()
     print_info("🔒 Security: Restrict who can use your bot")
-    print_info("   To find a Member ID: click a user's name → View full profile → ⋮ → Copy member ID")
+    print_info(
+        "   To find a Member ID: click a user's name → View full profile → ⋮ → Copy member ID"
+    )
     print()
     allowed_users = prompt(
         "Allowed user IDs (comma-separated, leave empty to deny everyone except paired users)"
@@ -4466,14 +4508,20 @@ def interactive_setup() -> None:
         save_env_value("SLACK_ALLOWED_USERS", allowed_users.replace(" ", ""))
         print_success("Slack allowlist configured")
     else:
-        print_warning("⚠️  No Slack allowlist set - unpaired users will be denied by default.")
-        print_info("   Set SLACK_ALLOW_ALL_USERS=true or GATEWAY_ALLOW_ALL_USERS=true only if you intentionally want open workspace access.")
+        print_warning(
+            "⚠️  No Slack allowlist set - unpaired users will be denied by default."
+        )
+        print_info(
+            "   Set SLACK_ALLOW_ALL_USERS=true or GATEWAY_ALLOW_ALL_USERS=true only if you intentionally want open workspace access."
+        )
 
     print()
     print_info("📬 Home Channel: where Hercules delivers cron job results,")
     print_info("   cross-platform messages, and notifications.")
     print_info("   To get a channel ID: open the channel in Slack, then right-click")
-    print_info("   the channel name → Copy link — the ID starts with C (e.g. C01ABC2DE3F).")
+    print_info(
+        "   the channel name → Copy link — the ID starts with C (e.g. C01ABC2DE3F)."
+    )
     print_info("   You can also set this later by typing /set-home in a Slack channel.")
     home_channel = prompt("Home channel ID (leave empty to set later with /set-home)")
     if home_channel:

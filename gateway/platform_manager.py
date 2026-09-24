@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 class PlatformType(Enum):
     """Types of message platforms supported by Hercules Gateway."""
+
     TELEGRAM = "telegram"
     DISCORD = "discord"
     FEISHU = "feishu"
@@ -38,6 +39,7 @@ class PlatformType(Enum):
 @dataclass
 class PlatformConfig:
     """Configuration for a message platform."""
+
     platform_type: PlatformType
     name: str
     enabled: bool = True
@@ -61,12 +63,11 @@ class PlatformConfig:
 
 class PlatformError(Exception):
     """Raised when platform operation fails."""
+
     def __init__(self, platform_name: str, reason: str):
         self.platform_name = platform_name
         self.reason = reason
-        super().__init__(
-            f"Platform '{platform_name}' error: {reason}"
-        )
+        super().__init__(f"Platform '{platform_name}' error: {reason}")
 
 
 class PlatformHandler(abc.ABC):
@@ -148,7 +149,11 @@ class PlatformRegistry:
         platform_name = config.name
         self.configs[platform_name] = config
         self.handlers[platform_name] = handler
-        logger.info("Registered platform handler: %s (%s)", platform_name, config.platform_type.value)
+        logger.info(
+            "Registered platform handler: %s (%s)",
+            platform_name,
+            config.platform_type.value,
+        )
 
     def get_handler(self, platform_name: str) -> Optional[PlatformHandler]:
         """Get a platform handler by name."""
@@ -164,10 +169,7 @@ class PlatformRegistry:
 
     def list_enabled(self) -> List[str]:
         """List enabled platform names."""
-        return [
-            name for name, config in self.configs.items()
-            if config.enabled
-        ]
+        return [name for name, config in self.configs.items() if config.enabled]
 
 
 class PlatformManager:
@@ -199,7 +201,7 @@ class PlatformManager:
             return
 
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             for platform_name, platform_data in data.items():
@@ -224,8 +226,7 @@ class PlatformManager:
                     logger.error("Failed to load platform %s: %s", platform_name, e)
 
             logger.info(
-                "Loaded %d platform configurations",
-                len(self.registry.list_handlers())
+                "Loaded %d platform configurations", len(self.registry.list_handlers())
             )
 
         except Exception as e:
@@ -250,8 +251,7 @@ class PlatformManager:
         handler_cls = handlers.get(config.platform_type)
         if not handler_cls:
             logger.warning(
-                "No handler available for platform type: %s",
-                config.platform_type.value
+                "No handler available for platform type: %s", config.platform_type.value
             )
             return None
 
@@ -270,9 +270,7 @@ class PlatformManager:
         for platform_name in enabled_platforms:
             handler = self.registry.get_handler(platform_name)
             if handler:
-                task = asyncio.create_task(
-                    self._start_platform(platform_name, handler)
-                )
+                task = asyncio.create_task(self._start_platform(platform_name, handler))
                 self.startup_tasks.append(task)
 
         # Wait for all to start
@@ -315,9 +313,7 @@ class PlatformManager:
         for platform_name in self.registry.list_handlers():
             handler = self.registry.get_handler(platform_name)
             if handler and handler.is_running:
-                stop_tasks.append(
-                    self._stop_platform(platform_name, handler)
-                )
+                stop_tasks.append(self._stop_platform(platform_name, handler))
 
         if stop_tasks:
             await asyncio.gather(*stop_tasks, return_exceptions=True)
@@ -350,14 +346,11 @@ class PlatformManager:
                             is_healthy = await handler.health_check()
                             if not is_healthy:
                                 logger.warning(
-                                    "Platform health check failed: %s",
-                                    platform_name
+                                    "Platform health check failed: %s", platform_name
                                 )
                         except Exception as e:
                             logger.error(
-                                "Health check error for %s: %s",
-                                platform_name,
-                                e
+                                "Health check error for %s: %s", platform_name, e
                             )
 
             except asyncio.CancelledError:
@@ -367,9 +360,7 @@ class PlatformManager:
 
     def get_status(self) -> Dict[str, Any]:
         """Get status of all platforms."""
-        status = {
-            "platforms": {}
-        }
+        status = {"platforms": {}}
 
         for platform_name in self.registry.list_handlers():
             config = self.registry.get_config(platform_name)

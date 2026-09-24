@@ -52,6 +52,7 @@ _ONBOARD_TIMEOUT_S = 60.0
 # Pure translation: OpenAI chat  ->  Gemini GenerateContentRequest
 # ---------------------------------------------------------------------------
 
+
 def _content_to_text(content: Any) -> str:
     """OpenAI message content may be a string or a list of parts."""
     if content is None:
@@ -71,7 +72,7 @@ def _content_to_text(content: Any) -> str:
 
 
 def openai_messages_to_gemini(
-    messages: List[Dict[str, Any]]
+    messages: List[Dict[str, Any]],
 ) -> Tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
     """Return (contents, systemInstruction) in Gemini shape.
 
@@ -94,7 +95,9 @@ def openai_messages_to_gemini(
             continue
 
         if role == "tool":
-            name = call_id_to_name.get(str(msg.get("tool_call_id", "")), msg.get("name", "tool"))
+            name = call_id_to_name.get(
+                str(msg.get("tool_call_id", "")), msg.get("name", "tool")
+            )
             raw = msg.get("content")
             try:
                 response_obj = json.loads(raw) if isinstance(raw, str) else raw
@@ -104,7 +107,9 @@ def openai_messages_to_gemini(
                 response_obj = {"result": response_obj}
             contents.append({
                 "role": "user",
-                "parts": [{"functionResponse": {"name": name, "response": response_obj}}],
+                "parts": [
+                    {"functionResponse": {"name": name, "response": response_obj}}
+                ],
             })
             continue
 
@@ -118,7 +123,11 @@ def openai_messages_to_gemini(
             name = fn.get("name", "")
             args_raw = fn.get("arguments", "{}")
             try:
-                args = json.loads(args_raw) if isinstance(args_raw, str) else (args_raw or {})
+                args = (
+                    json.loads(args_raw)
+                    if isinstance(args_raw, str)
+                    else (args_raw or {})
+                )
             except ValueError:
                 args = {}
             if not isinstance(args, dict):
@@ -128,7 +137,10 @@ def openai_messages_to_gemini(
             parts.append({"functionCall": {"name": name, "args": args}})
         if not parts:
             parts.append({"text": ""})
-        contents.append({"role": "model" if role == "assistant" else "user", "parts": parts})
+        contents.append({
+            "role": "model" if role == "assistant" else "user",
+            "parts": parts,
+        })
 
     system_instruction = (
         {"parts": [{"text": "\n\n".join(system_texts)}]} if system_texts else None
@@ -136,7 +148,9 @@ def openai_messages_to_gemini(
     return contents, system_instruction
 
 
-def openai_tools_to_gemini(tools: Optional[List[Dict[str, Any]]]) -> Optional[List[Dict[str, Any]]]:
+def openai_tools_to_gemini(
+    tools: Optional[List[Dict[str, Any]]],
+) -> Optional[List[Dict[str, Any]]]:
     """OpenAI ``tools`` -> Gemini ``[{"functionDeclarations": [...]}]``."""
     if not tools:
         return None
@@ -253,7 +267,10 @@ def gemini_response_to_openai_message(
                     },
                 })
 
-    message: Dict[str, Any] = {"role": "assistant", "content": "".join(text_out) or None}
+    message: Dict[str, Any] = {
+        "role": "assistant",
+        "content": "".join(text_out) or None,
+    }
     if tool_calls:
         message["tool_calls"] = tool_calls
         finish_reason = "tool_calls"
@@ -315,7 +332,7 @@ def iter_sse_json(lines: Iterable[str]) -> Iterable[Dict[str, Any]]:
                 yield obj
             continue
         if line.startswith("data:"):
-            buf.append(line[len("data:"):].lstrip())
+            buf.append(line[len("data:") :].lstrip())
     obj = _flush()
     if obj is not None:
         yield obj
@@ -325,6 +342,7 @@ def iter_sse_json(lines: Iterable[str]) -> Iterable[Dict[str, Any]]:
 # Live client (handshake + HTTP). Grounded in spec; NEEDS a real-login field
 # test — kept isolated from the pure helpers above.
 # ---------------------------------------------------------------------------
+
 
 def _onboard(http, headers: Dict[str, str], project_override: Optional[str]) -> str:
     """Run loadCodeAssist -> (tier) -> onboardUser and return the project id.
@@ -499,14 +517,18 @@ class GeminiCodeAssistTransport(httpx.BaseTransport):
                 json=ca_req,
             )
             if upstream.status_code >= 400:
-                return httpx.Response(upstream.status_code, content=upstream.content, request=request)
+                return httpx.Response(
+                    upstream.status_code, content=upstream.content, request=request
+                )
 
             created = int(time.time())
 
             def _sse_iter() -> Iterable[bytes]:
                 first = True
                 for chunk in iter_sse_json(upstream.iter_lines()):
-                    oai = gemini_chunk_to_openai_chunk(chunk, model=model, emit_role=first)
+                    oai = gemini_chunk_to_openai_chunk(
+                        chunk, model=model, emit_role=first
+                    )
                     oai["created"] = created
                     first = False
                     yield f"data: {json.dumps(oai)}\n\n".encode("utf-8")
@@ -525,7 +547,9 @@ class GeminiCodeAssistTransport(httpx.BaseTransport):
             json=ca_req,
         )
         if upstream.status_code >= 400:
-            return httpx.Response(upstream.status_code, content=upstream.content, request=request)
+            return httpx.Response(
+                upstream.status_code, content=upstream.content, request=request
+            )
         completion = gemini_response_to_openai_completion(upstream.json(), model=model)
         completion["created"] = int(time.time())
         return httpx.Response(

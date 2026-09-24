@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 # Public helpers
 # ---------------------------------------------------------------------------
 
+
 def managed_uv_path() -> Path:
     """Return the path where Hercules keeps *its* uv binary.
 
@@ -182,13 +183,16 @@ def update_managed_uv() -> Optional[str]:
         print(f"  ✓ Managed uv updated ({version})")
     else:
         # Non-fatal — old uv still works fine.
-        logger.debug("uv self update failed (rc=%d): %s", result.returncode, result.stderr)
+        logger.debug(
+            "uv self update failed (rc=%d): %s", result.returncode, result.stderr
+        )
     return existing
 
 
 # ---------------------------------------------------------------------------
 # Installer internals
 # ---------------------------------------------------------------------------
+
 
 def _install_uv(target: Path) -> None:
     """Bootstrap uv into *target* using the official standalone installer.
@@ -239,15 +243,14 @@ def _install_uv_posix(env: dict[str, str]) -> None:
 
 def _install_uv_windows(env: dict[str, str]) -> None:
     """Invoke the PowerShell installer."""
-    cmd = (
-        'irm https://astral.sh/uv/install.ps1 | iex'
-    )
+    cmd = "irm https://astral.sh/uv/install.ps1 | iex"
     subprocess.run(
         ["powershell", "-ExecutionPolicy", "Bypass", "-c", cmd],
         env=env,
         check=True,
         capture_output=True,
     )
+
 
 def rebuild_venv(uv_bin: str, venv_dir: Path, python_version: str = "3.11") -> bool:
     """Recreate *venv_dir* from scratch with ``uv venv``.
@@ -283,7 +286,9 @@ def rebuild_venv(uv_bin: str, venv_dir: Path, python_version: str = "3.11") -> b
     if result.returncode != 0:
         logger.warning(
             "uv venv failed for %s (rc=%d): %s",
-            venv_dir, result.returncode, (result.stderr or "").strip(),
+            venv_dir,
+            result.returncode,
+            (result.stderr or "").strip(),
         )
         return False
 

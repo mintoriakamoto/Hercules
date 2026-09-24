@@ -13,7 +13,10 @@ import pytest
 def test_version_string_no_v_prefix():
     """__version__ should be bare semver without a 'v' prefix."""
     from hercules_cli import __version__
-    assert not __version__.startswith("v"), f"__version__ should not start with 'v', got {__version__!r}"
+
+    assert not __version__.startswith("v"), (
+        f"__version__ should not start with 'v', got {__version__!r}"
+    )
 
 
 def test_check_for_updates_uses_cache(tmp_path, monkeypatch):
@@ -27,7 +30,9 @@ def test_check_for_updates_uses_cache(tmp_path, monkeypatch):
     (repo_dir / ".git").mkdir()
 
     cache_file = tmp_path / ".update_check"
-    cache_file.write_text(json.dumps({"ts": time.time(), "behind": 3, "ver": __version__}))
+    cache_file.write_text(
+        json.dumps({"ts": time.time(), "behind": 3, "ver": __version__})
+    )
 
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
     with patch("hercules_cli.banner.subprocess.run") as mock_run:
@@ -88,7 +93,9 @@ def test_check_for_updates_expired_cache(tmp_path, monkeypatch):
     mock_result = MagicMock(returncode=0, stdout="5\n")
 
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
-    with patch("hercules_cli.banner.subprocess.run", return_value=mock_result) as mock_run:
+    with patch(
+        "hercules_cli.banner.subprocess.run", return_value=mock_result
+    ) as mock_run:
         result = check_for_updates()
 
     assert result == 5
@@ -109,7 +116,9 @@ def test_check_for_updates_official_ssh_origin_uses_https_probe(tmp_path):
     def fake_run(cmd, **kwargs):
         calls.append(cmd)
         if cmd == ["git", "remote", "get-url", "origin"]:
-            return MagicMock(returncode=0, stdout="git@github.com:mintoriakamoto/Hercules.git\n")
+            return MagicMock(
+                returncode=0, stdout="git@github.com:mintoriakamoto/Hercules.git\n"
+            )
         if cmd == ["git", "rev-parse", "HEAD"]:
             return MagicMock(returncode=0, stdout="local-sha\n")
         if cmd == [
@@ -148,7 +157,9 @@ def test_check_via_local_git_shallow_clone_behind_reports_no_count(tmp_path):
     def fake_run(cmd, **kwargs):
         calls.append(cmd)
         if cmd == ["git", "remote", "get-url", "origin"]:
-            return MagicMock(returncode=0, stdout="https://github.com/mintoriakamoto/Hercules.git\n")
+            return MagicMock(
+                returncode=0, stdout="https://github.com/mintoriakamoto/Hercules.git\n"
+            )
         if cmd == ["git", "rev-parse", "--is-shallow-repository"]:
             return MagicMock(returncode=0, stdout="true\n")
         if cmd[:2] == ["git", "fetch"]:
@@ -179,7 +190,9 @@ def test_check_via_local_git_shallow_clone_up_to_date(tmp_path):
 
     def fake_run(cmd, **kwargs):
         if cmd == ["git", "remote", "get-url", "origin"]:
-            return MagicMock(returncode=0, stdout="https://github.com/mintoriakamoto/Hercules.git\n")
+            return MagicMock(
+                returncode=0, stdout="https://github.com/mintoriakamoto/Hercules.git\n"
+            )
         if cmd == ["git", "rev-parse", "--is-shallow-repository"]:
             return MagicMock(returncode=0, stdout="true\n")
         if cmd[:2] == ["git", "fetch"]:
@@ -206,7 +219,9 @@ def test_check_via_local_git_full_clone_keeps_exact_count(tmp_path):
 
     def fake_run(cmd, **kwargs):
         if cmd == ["git", "remote", "get-url", "origin"]:
-            return MagicMock(returncode=0, stdout="https://github.com/mintoriakamoto/Hercules.git\n")
+            return MagicMock(
+                returncode=0, stdout="https://github.com/mintoriakamoto/Hercules.git\n"
+            )
         if cmd == ["git", "rev-parse", "--is-shallow-repository"]:
             return MagicMock(returncode=0, stdout="false\n")
         if cmd[:2] == ["git", "fetch"]:
@@ -272,8 +287,10 @@ def test_check_for_updates_docker_returns_none(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
     cache_file = tmp_path / ".update_check"
 
-    with patch("hercules_cli.config.detect_install_method", return_value="docker"), \
-         patch("hercules_cli.banner.subprocess.run") as mock_run:
+    with (
+        patch("hercules_cli.config.detect_install_method", return_value="docker"),
+        patch("hercules_cli.banner.subprocess.run") as mock_run,
+    ):
         result = banner.check_for_updates()
 
     assert result is None
@@ -299,8 +316,10 @@ def test_check_for_updates_pip_install_returns_none(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
     monkeypatch.delenv("HERCULES_REVISION", raising=False)
 
-    with patch("hercules_cli.config.detect_install_method", return_value="pip"), \
-         patch("hercules_cli.banner.subprocess.run") as mock_run:
+    with (
+        patch("hercules_cli.config.detect_install_method", return_value="pip"),
+        patch("hercules_cli.banner.subprocess.run") as mock_run,
+    ):
         result = banner.check_for_updates()
 
     assert result is None
@@ -393,14 +412,22 @@ def test_invalidate_update_cache_clears_all_profiles(tmp_path):
         p.mkdir(parents=True)
         (p / ".update_check").write_text('{"ts":1,"behind":50}')
 
-    with patch.object(Path, "home", return_value=tmp_path), \
-         patch.dict(os.environ, {"HERCULES_HOME": str(default_home)}):
+    with (
+        patch.object(Path, "home", return_value=tmp_path),
+        patch.dict(os.environ, {"HERCULES_HOME": str(default_home)}),
+    ):
         _invalidate_update_cache()
 
     # All three caches should be gone
-    assert not (default_home / ".update_check").exists(), "default profile cache not cleared"
-    assert not (profiles_root / "ops" / ".update_check").exists(), "ops profile cache not cleared"
-    assert not (profiles_root / "dev" / ".update_check").exists(), "dev profile cache not cleared"
+    assert not (default_home / ".update_check").exists(), (
+        "default profile cache not cleared"
+    )
+    assert not (profiles_root / "ops" / ".update_check").exists(), (
+        "ops profile cache not cleared"
+    )
+    assert not (profiles_root / "dev" / ".update_check").exists(), (
+        "dev profile cache not cleared"
+    )
 
 
 def test_invalidate_update_cache_no_profiles_dir(tmp_path):
@@ -411,8 +438,10 @@ def test_invalidate_update_cache_no_profiles_dir(tmp_path):
     default_home.mkdir()
     (default_home / ".update_check").write_text('{"ts":1,"behind":5}')
 
-    with patch.object(Path, "home", return_value=tmp_path), \
-         patch.dict(os.environ, {"HERCULES_HOME": str(default_home)}):
+    with (
+        patch.object(Path, "home", return_value=tmp_path),
+        patch.dict(os.environ, {"HERCULES_HOME": str(default_home)}),
+    ):
         _invalidate_update_cache()
 
     assert not (default_home / ".update_check").exists()

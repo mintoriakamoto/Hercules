@@ -74,9 +74,17 @@ class TestNonInteractiveSetup:
         with (
             patch("hercules_cli.setup.ensure_hercules_home"),
             patch("hercules_cli.setup.load_config", return_value={}),
-            patch("hercules_cli.setup.get_hercules_home", return_value="/tmp/.hercules"),
-            patch("hercules_cli.auth.get_active_provider", side_effect=AssertionError("wizard continued")),
-            patch("builtins.input", side_effect=AssertionError("input should not be called")),
+            patch(
+                "hercules_cli.setup.get_hercules_home", return_value="/tmp/.hercules"
+            ),
+            patch(
+                "hercules_cli.auth.get_active_provider",
+                side_effect=AssertionError("wizard continued"),
+            ),
+            patch(
+                "builtins.input",
+                side_effect=AssertionError("input should not be called"),
+            ),
         ):
             run_setup_wizard(args)
 
@@ -92,10 +100,18 @@ class TestNonInteractiveSetup:
         with (
             patch("hercules_cli.setup.ensure_hercules_home"),
             patch("hercules_cli.setup.load_config", return_value={}),
-            patch("hercules_cli.setup.get_hercules_home", return_value="/tmp/.hercules"),
-            patch("hercules_cli.auth.get_active_provider", side_effect=AssertionError("wizard continued")),
+            patch(
+                "hercules_cli.setup.get_hercules_home", return_value="/tmp/.hercules"
+            ),
+            patch(
+                "hercules_cli.auth.get_active_provider",
+                side_effect=AssertionError("wizard continued"),
+            ),
             patch("sys.stdin") as mock_stdin,
-            patch("builtins.input", side_effect=AssertionError("input should not be called")),
+            patch(
+                "builtins.input",
+                side_effect=AssertionError("input should not be called"),
+            ),
         ):
             mock_stdin.isatty.return_value = False
             run_setup_wizard(args)
@@ -103,13 +119,19 @@ class TestNonInteractiveSetup:
         out = capsys.readouterr().out
         assert "hercules config set model.provider custom" in out
 
-    def test_reset_flag_rewrites_config_before_noninteractive_exit(self, tmp_path, monkeypatch, capsys):
+    def test_reset_flag_rewrites_config_before_noninteractive_exit(
+        self, tmp_path, monkeypatch, capsys
+    ):
         """--reset should rewrite config.yaml even when the wizard cannot run interactively."""
         from hercules_cli.setup import run_setup_wizard
 
         monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
         cfg = load_config()
-        cfg["model"] = {"provider": "custom", "base_url": "http://localhost:8080/v1", "default": "llama3"}
+        cfg["model"] = {
+            "provider": "custom",
+            "base_url": "http://localhost:8080/v1",
+            "default": "llama3",
+        }
         cfg["agent"]["max_turns"] = 12
         save_config(cfg)
 
@@ -133,7 +155,10 @@ class TestNonInteractiveSetup:
             patch("hercules_cli.main._has_any_provider_configured", return_value=False),
             patch("hercules_cli.main.cmd_setup") as mock_setup,
             patch("sys.stdin") as mock_stdin,
-            patch("builtins.input", side_effect=AssertionError("input should not be called")),
+            patch(
+                "builtins.input",
+                side_effect=AssertionError("input should not be called"),
+            ),
         ):
             mock_stdin.isatty.return_value = False
             with pytest.raises(SystemExit) as exc:

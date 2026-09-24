@@ -24,6 +24,7 @@ from hercules_constants import get_hercules_home
 
 class ReasoningComplexity(Enum):
     """Complexity levels for extended reasoning."""
+
     SIMPLE = "simple"  # Straightforward decisions, direct tool use
     MODERATE = "moderate"  # Multi-step reasoning, some uncertainty
     COMPLEX = "complex"  # Deep reasoning required, high stakes
@@ -32,6 +33,7 @@ class ReasoningComplexity(Enum):
 
 class ConfidenceLevel(Enum):
     """Confidence levels for agent decisions."""
+
     UNCERTAIN = "uncertain"  # < 0.4 confidence
     MODERATE = "moderate"  # 0.4-0.7 confidence
     HIGH = "high"  # 0.7-0.9 confidence
@@ -41,6 +43,7 @@ class ConfidenceLevel(Enum):
 @dataclass
 class ReasoningChain:
     """Step-by-step reasoning for a decision."""
+
     problem_statement: str
     reasoning_steps: List[str] = field(default_factory=list)
     key_constraints: List[str] = field(default_factory=list)
@@ -88,6 +91,7 @@ class ReasoningChain:
 @dataclass
 class DecisionContext:
     """Full context for an agent decision."""
+
     task_description: str
     user_intent: str
     available_tools: List[str]
@@ -129,13 +133,31 @@ class ExtendedReasoningEngine:
 
         # Check for complexity indicators in task description
         simple_keywords = [
-            "read", "list", "get", "find", "extract", "check",
-            "describe", "summarize", "count"
+            "read",
+            "list",
+            "get",
+            "find",
+            "extract",
+            "check",
+            "describe",
+            "summarize",
+            "count",
         ]
         complex_keywords = [
-            "optimize", "improve", "design", "plan", "analyze",
-            "diagnose", "decide", "compare", "trade-off", "risk",
-            "vulnerability", "security", "attack", "defense"
+            "optimize",
+            "improve",
+            "design",
+            "plan",
+            "analyze",
+            "diagnose",
+            "decide",
+            "compare",
+            "trade-off",
+            "risk",
+            "vulnerability",
+            "security",
+            "attack",
+            "defense",
         ]
 
         task_lower = task_description.lower()
@@ -160,7 +182,11 @@ class ExtendedReasoningEngine:
 
         # Determine complexity
         if indicators["complex"] > indicators["simple"]:
-            return ReasoningComplexity.CRITICAL if indicators["complex"] > 3 else ReasoningComplexity.COMPLEX
+            return (
+                ReasoningComplexity.CRITICAL
+                if indicators["complex"] > 3
+                else ReasoningComplexity.COMPLEX
+            )
         elif indicators["simple"] > indicators["complex"]:
             return ReasoningComplexity.SIMPLE
         else:
@@ -186,12 +212,8 @@ class ExtendedReasoningEngine:
         )
 
         # Step 1: Parse the problem
-        reasoning.add_reasoning_step(
-            f"Problem: {context.task_description}"
-        )
-        reasoning.add_reasoning_step(
-            f"User Intent: {context.user_intent}"
-        )
+        reasoning.add_reasoning_step(f"Problem: {context.task_description}")
+        reasoning.add_reasoning_step(f"User Intent: {context.user_intent}")
         reasoning.add_reasoning_step(
             f"Domain: {context.domain}, Complexity: {context.complexity.value}"
         )
@@ -203,11 +225,18 @@ class ExtendedReasoningEngine:
         reasoning.add_constraint(f"Available tools: {len(context.available_tools)}")
 
         # Step 3: Consider alternatives based on complexity
-        if context.complexity in [ReasoningComplexity.COMPLEX, ReasoningComplexity.CRITICAL]:
+        if context.complexity in [
+            ReasoningComplexity.COMPLEX,
+            ReasoningComplexity.CRITICAL,
+        ]:
             # For complex tasks, generate multiple approaches
-            reasoning.add_alternative("Direct tool sequence (fastest, may miss nuances)")
+            reasoning.add_alternative(
+                "Direct tool sequence (fastest, may miss nuances)"
+            )
             reasoning.add_alternative("Exploratory approach (slower, more thorough)")
-            reasoning.add_alternative("Verification-first approach (slowest, most reliable)")
+            reasoning.add_alternative(
+                "Verification-first approach (slowest, most reliable)"
+            )
 
             # Add uncertainty factors
             reasoning.add_uncertainty_factor("Incomplete problem specification")
@@ -277,7 +306,7 @@ class ExtendedReasoningEngine:
         if "success_rate" in context:
             success_rate = float(context.get("success_rate", 0.5))
             relevance_score += success_rate * 0.2
-            factors.append(f"Historical success rate: {success_rate*100:.0f}%")
+            factors.append(f"Historical success rate: {success_rate * 100:.0f}%")
 
         # Confidence based on alignment strength
         confidence = relevance_score
@@ -309,14 +338,19 @@ class ExtendedReasoningEngine:
         fallback = []
 
         # If failure is reliability-related, use verification tools
-        if "reliability" in failure_reason.lower() or "inconsistent" in failure_reason.lower():
+        if (
+            "reliability" in failure_reason.lower()
+            or "inconsistent" in failure_reason.lower()
+        ):
             fallback.append("record_skill_execution")  # Track for improvement
 
         # If failure is due to missing tool, find alternatives
         if "not found" in failure_reason.lower():
             # Look for similar tools
             for tool in available_tools:
-                if any(keyword in tool for keyword in ["search", "find", "query", "fetch"]):
+                if any(
+                    keyword in tool for keyword in ["search", "find", "query", "fetch"]
+                ):
                     fallback.append(tool)
                     break
 
@@ -329,7 +363,9 @@ class ExtendedReasoningEngine:
 
         return fallback if fallback else original_approach
 
-    def save_reasoning_trace(self, reasoning: ReasoningChain, trace_id: str = "") -> Path:
+    def save_reasoning_trace(
+        self, reasoning: ReasoningChain, trace_id: str = ""
+    ) -> Path:
         """Save reasoning chain for analysis and learning.
 
         Args:
@@ -426,7 +462,10 @@ class ExtendedReasoningEngine:
             return "file_system"
         elif any(word in task_lower for word in ["json", "data", "format", "parse"]):
             return "data"
-        elif any(word in task_lower for word in ["security", "pentest", "vulnerability", "scan"]):
+        elif any(
+            word in task_lower
+            for word in ["security", "pentest", "vulnerability", "scan"]
+        ):
             return "security"
         else:
             return "general"

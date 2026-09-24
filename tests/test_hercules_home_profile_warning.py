@@ -23,6 +23,7 @@ def fresh_constants(monkeypatch, tmp_path):
     """Import hercules_constants fresh and reset the one-shot warn flag."""
     import importlib
     import hercules_constants
+
     importlib.reload(hercules_constants)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     monkeypatch.delenv("HERCULES_HOME", raising=False)
@@ -38,9 +39,7 @@ class TestGetHerculesHomeProfileWarning:
         assert result == tmp_path / ".hercules"
         assert "HERCULES_HOME fallback" not in capsys.readouterr().err
 
-    def test_default_active_profile_no_warning(
-        self, fresh_constants, tmp_path, capsys
-    ):
+    def test_default_active_profile_no_warning(self, fresh_constants, tmp_path, capsys):
         """active_profile=default → still no warning, returns ~/.hercules."""
         hercules_dir = tmp_path / ".hercules"
         hercules_dir.mkdir()
@@ -102,9 +101,7 @@ class TestGetHerculesHomeProfileWarning:
         # Shouldn't crash; shouldn't warn either (can't tell what profile was intended)
         assert "HERCULES_HOME fallback" not in capsys.readouterr().err
 
-    def test_empty_active_profile_no_warning(
-        self, fresh_constants, tmp_path, capsys
-    ):
+    def test_empty_active_profile_no_warning(self, fresh_constants, tmp_path, capsys):
         """Empty active_profile file → treated as default, no warning."""
         hercules_dir = tmp_path / ".hercules"
         hercules_dir.mkdir()

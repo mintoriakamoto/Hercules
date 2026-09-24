@@ -26,10 +26,10 @@ T = TypeVar("T")
 class ErrorSeverity(Enum):
     """Severity classification for errors."""
 
-    CRITICAL = "critical"    # Service halt required
-    ERROR = "error"          # Service degradation
-    WARNING = "warning"      # Recoverable issue
-    INFO = "info"            # Informational only
+    CRITICAL = "critical"  # Service halt required
+    ERROR = "error"  # Service degradation
+    WARNING = "warning"  # Recoverable issue
+    INFO = "info"  # Informational only
 
 
 class HerculesException(Exception):
@@ -120,7 +120,11 @@ def safe_operation(
                 e.log(logger)
                 return fallback
             except (OSError, IOError) as e:
-                level = logging.ERROR if severity == ErrorSeverity.CRITICAL else logging.WARNING
+                level = (
+                    logging.ERROR
+                    if severity == ErrorSeverity.CRITICAL
+                    else logging.WARNING
+                )
                 logger.log(
                     level,
                     f"{operation_name} failed: file/resource error: {e}",
@@ -134,7 +138,11 @@ def safe_operation(
                 )
                 return fallback
             except Exception as e:
-                level = logging.ERROR if severity == ErrorSeverity.CRITICAL else logging.WARNING
+                level = (
+                    logging.ERROR
+                    if severity == ErrorSeverity.CRITICAL
+                    else logging.WARNING
+                )
                 logger.log(
                     level,
                     f"{operation_name} failed: unexpected error: {e}",
@@ -178,14 +186,18 @@ def safe_context(
             exc_info=True,
         )
         if not suppress_exception:
-            raise ResourceError(f"{context_name}: {e}", {"operation": context_name}) from e
+            raise ResourceError(
+                f"{context_name}: {e}", {"operation": context_name}
+            ) from e
     except (ValueError, TypeError) as e:
         logger.warning(
             f"{context_name}: data validation error: {e}",
             exc_info=True,
         )
         if not suppress_exception:
-            raise DataValidationError(f"{context_name}: {e}", {"operation": context_name}) from e
+            raise DataValidationError(
+                f"{context_name}: {e}", {"operation": context_name}
+            ) from e
     except Exception as e:
         level = logging.ERROR if severity == ErrorSeverity.CRITICAL else logging.WARNING
         logger.log(
@@ -256,6 +268,7 @@ def log_exception(
 
 # Common exception patterns
 
+
 class RetryableError(RecoverableError):
     """Error that should trigger a retry."""
 
@@ -290,12 +303,14 @@ class PermissionError(HerculesException):
 
 # Example usage patterns
 
+
 def example_safe_operation():
     """Example of using safe_operation decorator."""
 
     @safe_operation("json_load", fallback={})
     def load_config(path: str) -> dict:
         import json
+
         with open(path, encoding="utf-8") as f:
             return json.load(f)
 

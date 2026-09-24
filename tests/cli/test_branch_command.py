@@ -31,6 +31,7 @@ def session_db(tmp_path):
     setup_hercules_home(hercules_home)
     os.environ["HERCULES_HOME"] = str(hercules_home)
     from hercules_state import SessionDB
+
     db = SessionDB(db_path=hercules_home / "test_sessions.db")
     yield db
     db.close()
@@ -97,6 +98,7 @@ class TestBranchCommandCLI:
     def test_branch_preserves_parent_link(self, cli_instance, session_db):
         """The new session should reference the original as parent."""
         from cli import HerculesCLI
+
         original_id = cli_instance.session_id
 
         HerculesCLI._handle_branch_command(cli_instance, "/branch")
@@ -107,6 +109,7 @@ class TestBranchCommandCLI:
     def test_branch_ends_original_session(self, cli_instance, session_db):
         """The original session should be marked as ended with 'branched' reason."""
         from cli import HerculesCLI
+
         original_id = cli_instance.session_id
 
         HerculesCLI._handle_branch_command(cli_instance, "/branch")
@@ -135,6 +138,7 @@ class TestBranchCommandCLI:
     def test_branch_empty_conversation(self, cli_instance, session_db):
         """Branching with no history should show an error."""
         from cli import HerculesCLI
+
         cli_instance.conversation_history = []
 
         HerculesCLI._handle_branch_command(cli_instance, "/branch")
@@ -145,6 +149,7 @@ class TestBranchCommandCLI:
     def test_branch_no_session_db(self, cli_instance):
         """Branching without a session DB should show an error."""
         from cli import HerculesCLI
+
         cli_instance._session_db = None
 
         HerculesCLI._handle_branch_command(cli_instance, "/branch")
@@ -175,7 +180,9 @@ class TestBranchCommandCLI:
 
         assert cli_instance._resumed is True
 
-    def test_branch_rotates_hercules_session_id_env_and_context(self, cli_instance, session_db):
+    def test_branch_rotates_hercules_session_id_env_and_context(
+        self, cli_instance, session_db
+    ):
         """Branching must update process-local session-id readers too."""
         from cli import HerculesCLI
         from gateway.session_context import _UNSET, _VAR_MAP, get_session_env
@@ -224,6 +231,7 @@ class TestBranchCommandCLI:
     def test_fork_alias(self):
         """The /fork alias should resolve to 'branch'."""
         from hercules_cli.commands import resolve_command
+
         result = resolve_command("fork")
         assert result is not None
         assert result.name == "branch"
@@ -235,18 +243,21 @@ class TestBranchCommandDef:
     def test_branch_in_registry(self):
         """The branch command should be in the command registry."""
         from hercules_cli.commands import COMMAND_REGISTRY
+
         names = [c.name for c in COMMAND_REGISTRY]
         assert "branch" in names
 
     def test_branch_has_fork_alias(self):
         """The branch command should have 'fork' as an alias."""
         from hercules_cli.commands import COMMAND_REGISTRY
+
         branch = next(c for c in COMMAND_REGISTRY if c.name == "branch")
         assert "fork" in branch.aliases
 
     def test_branch_in_session_category(self):
         """The branch command should be in the Session category."""
         from hercules_cli.commands import COMMAND_REGISTRY
+
         branch = next(c for c in COMMAND_REGISTRY if c.name == "branch")
         assert branch.category == "Session"
 

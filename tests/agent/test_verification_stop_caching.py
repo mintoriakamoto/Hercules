@@ -21,9 +21,15 @@ import pytest
 
 def _fresh_run_agent(hercules_home):
     for mod in list(sys.modules):
-        if mod == "run_agent" or mod.startswith("agent.") or mod.startswith("tools.") or mod.startswith("hercules_"):
+        if (
+            mod == "run_agent"
+            or mod.startswith("agent.")
+            or mod.startswith("tools.")
+            or mod.startswith("hercules_")
+        ):
             del sys.modules[mod]
     import run_agent  # noqa: F401
+
     return sys.modules["run_agent"]
 
 
@@ -35,12 +41,16 @@ def test_verification_flags_registered_as_ephemeral(tmp_path, monkeypatch):
     assert "_pre_verify_synthetic" in ra._EPHEMERAL_SCAFFOLDING_FLAGS
 
     # The central classifier drives both persistence sinks.
-    assert ra._is_ephemeral_scaffolding(
-        {"role": "assistant", "content": "done", "_verification_stop_synthetic": True}
-    )
-    assert ra._is_ephemeral_scaffolding(
-        {"role": "user", "content": "[System: run tests]", "_pre_verify_synthetic": True}
-    )
+    assert ra._is_ephemeral_scaffolding({
+        "role": "assistant",
+        "content": "done",
+        "_verification_stop_synthetic": True,
+    })
+    assert ra._is_ephemeral_scaffolding({
+        "role": "user",
+        "content": "[System: run tests]",
+        "_pre_verify_synthetic": True,
+    })
     # Real messages are not scaffolding.
     assert not ra._is_ephemeral_scaffolding({"role": "user", "content": "hi"})
 
@@ -71,8 +81,16 @@ def test_db_flush_drops_verification_scaffolding(tmp_path, monkeypatch):
 
     messages = [
         {"role": "user", "content": "hi"},
-        {"role": "assistant", "content": "premature done", "_verification_stop_synthetic": True},
-        {"role": "user", "content": "[System: run tests]", "_verification_stop_synthetic": True},
+        {
+            "role": "assistant",
+            "content": "premature done",
+            "_verification_stop_synthetic": True,
+        },
+        {
+            "role": "user",
+            "content": "[System: run tests]",
+            "_verification_stop_synthetic": True,
+        },
         {"role": "assistant", "content": "verified and clean"},
     ]
 
@@ -95,8 +113,16 @@ def test_json_log_drops_verification_scaffolding(tmp_path, monkeypatch):
 
     messages = [
         {"role": "user", "content": "hi"},
-        {"role": "assistant", "content": "premature done", "_pre_verify_synthetic": True},
-        {"role": "user", "content": "[System: run tests]", "_pre_verify_synthetic": True},
+        {
+            "role": "assistant",
+            "content": "premature done",
+            "_pre_verify_synthetic": True,
+        },
+        {
+            "role": "user",
+            "content": "[System: run tests]",
+            "_pre_verify_synthetic": True,
+        },
         {"role": "assistant", "content": "verified and clean"},
     ]
 

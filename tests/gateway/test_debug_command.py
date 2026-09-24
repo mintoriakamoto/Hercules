@@ -9,8 +9,9 @@ from gateway.platforms.base import MessageEvent
 from gateway.session import SessionSource
 
 
-def _make_event(text="/debug", platform=Platform.TELEGRAM,
-                user_id="12345", chat_id="67890"):
+def _make_event(
+    text="/debug", platform=Platform.TELEGRAM, user_id="12345", chat_id="67890"
+):
     source = SessionSource(
         platform=platform,
         user_id=user_id,
@@ -39,11 +40,16 @@ class TestHandleDebugCommand:
 
         # The pastebin symbol is gone entirely.
         import hercules_cli.debug as debug_mod
+
         assert not hasattr(debug_mod, "upload_to_pastebin")
 
-        with patch("hercules_cli.debug._capture_dump", return_value="dump"), \
-             patch("hercules_cli.debug.collect_debug_report", return_value="report-body"), \
-             patch("hercules_cli.debug._github_token", return_value=None):
+        with (
+            patch("hercules_cli.debug._capture_dump", return_value="dump"),
+            patch(
+                "hercules_cli.debug.collect_debug_report", return_value="report-body"
+            ),
+            patch("hercules_cli.debug._github_token", return_value=None),
+        ):
             result = await runner._handle_debug_command(event)
 
         # A local report file was written under HERCULES_HOME/debug-shares/.
@@ -63,10 +69,16 @@ class TestHandleDebugCommand:
         event = _make_event()
 
         gist_url = "https://gist.github.com/mintoriakamoto/cafef00d"
-        with patch("hercules_cli.debug._capture_dump", return_value="dump"), \
-             patch("hercules_cli.debug.collect_debug_report", return_value="report-body"), \
-             patch("hercules_cli.debug._github_token", return_value="ghp_test"), \
-             patch("hercules_cli.debug._upload_to_github_gist", return_value=gist_url) as mock_gist:
+        with (
+            patch("hercules_cli.debug._capture_dump", return_value="dump"),
+            patch(
+                "hercules_cli.debug.collect_debug_report", return_value="report-body"
+            ),
+            patch("hercules_cli.debug._github_token", return_value="ghp_test"),
+            patch(
+                "hercules_cli.debug._upload_to_github_gist", return_value=gist_url
+            ) as mock_gist,
+        ):
             result = await runner._handle_debug_command(event)
 
         mock_gist.assert_called_once()
@@ -82,10 +94,14 @@ class TestHandleDebugCommand:
         runner = _make_runner()
         event = _make_event()
 
-        with patch("hercules_cli.debug._capture_dump", return_value="dump"), \
-             patch("hercules_cli.debug.collect_debug_report", return_value="report-body"), \
-             patch("hercules_cli.debug._github_token", return_value=None), \
-             patch("pathlib.Path.write_text", side_effect=OSError("disk full")):
+        with (
+            patch("hercules_cli.debug._capture_dump", return_value="dump"),
+            patch(
+                "hercules_cli.debug.collect_debug_report", return_value="report-body"
+            ),
+            patch("hercules_cli.debug._github_token", return_value=None),
+            patch("pathlib.Path.write_text", side_effect=OSError("disk full")),
+        ):
             result = await runner._handle_debug_command(event)
 
         assert "paste.rs" not in result

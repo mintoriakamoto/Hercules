@@ -13,7 +13,7 @@ from typing import Optional
 
 
 def validate_media_delivery_path(path: str) -> Optional[str]:
-    """Media delivery path validation disabled - all paths allowed. """
+    """Media delivery path validation disabled - all paths allowed."""
     if not path:
         return None
     candidate = str(path).strip()

@@ -49,9 +49,11 @@ class TestParseDependencies(unittest.TestCase):
         self.assertEqual(deps, {0: set(), 1: set()})
 
     def test_valid_chain(self):
-        deps, err = _parse_dependencies(
-            [{"goal": "a"}, {"goal": "b", "depends_on": [0]}, {"goal": "c", "depends_on": [0, 1]}]
-        )
+        deps, err = _parse_dependencies([
+            {"goal": "a"},
+            {"goal": "b", "depends_on": [0]},
+            {"goal": "c", "depends_on": [0, 1]},
+        ])
         self.assertIsNone(err)
         self.assertEqual(deps, {0: set(), 1: {0}, 2: {0, 1}})
 
@@ -66,14 +68,18 @@ class TestParseDependencies(unittest.TestCase):
         self.assertIn("itself", err)
 
     def test_cycle_rejected(self):
-        deps, err = _parse_dependencies(
-            [{"goal": "a", "depends_on": [1]}, {"goal": "b", "depends_on": [0]}]
-        )
+        deps, err = _parse_dependencies([
+            {"goal": "a", "depends_on": [1]},
+            {"goal": "b", "depends_on": [0]},
+        ])
         self.assertIsNone(deps)
         self.assertIn("cycle", err)
 
     def test_non_integer_rejected(self):
-        deps, err = _parse_dependencies([{"goal": "a"}, {"goal": "b", "depends_on": ["x"]}])
+        deps, err = _parse_dependencies([
+            {"goal": "a"},
+            {"goal": "b", "depends_on": ["x"]},
+        ])
         self.assertIsNone(deps)
         self.assertIn("non-integer", err)
 
@@ -96,18 +102,26 @@ class TestDagExecution(unittest.TestCase):
             # Task 0 is the producer; give it a beat so a broken scheduler that
             # ignores deps would let task 1 start first.
             import time as _t
+
             if task_index == 0:
                 _t.sleep(0.15)
             with order_lock:
                 order.append(("end", task_index))
-            return {"task_index": task_index, "status": "completed",
-                    "summary": f"out{task_index}", "duration_seconds": 0}
+            return {
+                "task_index": task_index,
+                "status": "completed",
+                "summary": f"out{task_index}",
+                "duration_seconds": 0,
+            }
 
         with patch("tools.delegate_tool._run_single_child", side_effect=fake_run):
             parent = _make_mock_parent()
             result = json.loads(
                 delegate_task(
-                    tasks=[{"goal": "producer"}, {"goal": "consumer", "depends_on": [0]}],
+                    tasks=[
+                        {"goal": "producer"},
+                        {"goal": "consumer", "depends_on": [0]},
+                    ],
                     parent_agent=parent,
                 )
             )
@@ -115,7 +129,9 @@ class TestDagExecution(unittest.TestCase):
         self.assertEqual(order[0], ("start", 0))
         end0 = order.index(("end", 0))
         start1 = order.index(("start", 1))
-        self.assertLess(end0, start1, f"consumer started before producer finished: {order}")
+        self.assertLess(
+            end0, start1, f"consumer started before producer finished: {order}"
+        )
         # Both tasks reported, in input order.
         statuses = [(e["task_index"], e["status"]) for e in result["results"]]
         self.assertEqual(statuses, [(0, "completed"), (1, "completed")])
@@ -126,13 +142,20 @@ class TestDagExecution(unittest.TestCase):
 
         def fake_run(task_index=0, goal="", child=None, parent_agent=None, **kw):
             seen_goals[task_index] = goal
-            return {"task_index": task_index, "status": "completed",
-                    "summary": f"PRODUCED-BY-{task_index}", "duration_seconds": 0}
+            return {
+                "task_index": task_index,
+                "status": "completed",
+                "summary": f"PRODUCED-BY-{task_index}",
+                "duration_seconds": 0,
+            }
 
         with patch("tools.delegate_tool._run_single_child", side_effect=fake_run):
             parent = _make_mock_parent()
             delegate_task(
-                tasks=[{"goal": "make data"}, {"goal": "summarize it", "depends_on": [0]}],
+                tasks=[
+                    {"goal": "make data"},
+                    {"goal": "summarize it", "depends_on": [0]},
+                ],
                 parent_agent=parent,
             )
         # Producer goal is untouched; consumer goal embeds producer output.
@@ -149,8 +172,12 @@ class TestDagExecution(unittest.TestCase):
         def fake_run(task_index=0, goal="", child=None, parent_agent=None, **kw):
             with lock:
                 order.append(task_index)
-            return {"task_index": task_index, "status": "completed",
-                    "summary": f"o{task_index}", "duration_seconds": 0}
+            return {
+                "task_index": task_index,
+                "status": "completed",
+                "summary": f"o{task_index}",
+                "duration_seconds": 0,
+            }
 
         with patch("tools.delegate_tool._run_single_child", side_effect=fake_run):
             parent = _make_mock_parent()
@@ -166,8 +193,8 @@ class TestDagExecution(unittest.TestCase):
                 )
             )
         self.assertEqual(sorted(order), [0, 1, 2, 3])
-        self.assertEqual(order[0], 0)          # root first
-        self.assertEqual(order[-1], 3)         # merge last
+        self.assertEqual(order[0], 0)  # root first
+        self.assertEqual(order[-1], 3)  # merge last
         self.assertEqual(len(result["results"]), 4)
 
     def test_cycle_returns_error_without_spawning(self, _build):

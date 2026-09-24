@@ -10,15 +10,19 @@ class TestCoalesceSessionNameArgs:
 
     def test_continue_multiword_unquoted(self):
         """hercules -c Pokemon Agent Dev → -c 'Pokemon Agent Dev'"""
-        assert _coalesce_session_name_args(
-            ["-c", "Pokemon", "Agent", "Dev"]
-        ) == ["-c", "Pokemon Agent Dev"]
+        assert _coalesce_session_name_args(["-c", "Pokemon", "Agent", "Dev"]) == [
+            "-c",
+            "Pokemon Agent Dev",
+        ]
 
     def test_continue_long_form_multiword(self):
         """hercules --continue Pokemon Agent Dev"""
-        assert _coalesce_session_name_args(
-            ["--continue", "Pokemon", "Agent", "Dev"]
-        ) == ["--continue", "Pokemon Agent Dev"]
+        assert _coalesce_session_name_args([
+            "--continue",
+            "Pokemon",
+            "Agent",
+            "Dev",
+        ]) == ["--continue", "Pokemon Agent Dev"]
 
     def test_continue_single_word(self):
         """hercules -c MyProject (no merging needed)"""
@@ -29,9 +33,10 @@ class TestCoalesceSessionNameArgs:
 
     def test_continue_already_quoted(self):
         """hercules -c 'Pokemon Agent Dev' (shell already merged)"""
-        assert _coalesce_session_name_args(
-            ["-c", "Pokemon Agent Dev"]
-        ) == ["-c", "Pokemon Agent Dev"]
+        assert _coalesce_session_name_args(["-c", "Pokemon Agent Dev"]) == [
+            "-c",
+            "Pokemon Agent Dev",
+        ]
 
     def test_continue_bare_flag(self):
         """hercules -c (no name — means 'continue latest')"""
@@ -43,49 +48,64 @@ class TestCoalesceSessionNameArgs:
 
     def test_continue_multiword_then_flag(self):
         """hercules -c my project -w"""
-        assert _coalesce_session_name_args(
-            ["-c", "my", "project", "-w"]
-        ) == ["-c", "my project", "-w"]
+        assert _coalesce_session_name_args(["-c", "my", "project", "-w"]) == [
+            "-c",
+            "my project",
+            "-w",
+        ]
 
     def test_continue_multiword_then_subcommand(self):
         """hercules -c my project chat -q hello"""
-        assert _coalesce_session_name_args(
-            ["-c", "my", "project", "chat", "-q", "hello"]
-        ) == ["-c", "my project", "chat", "-q", "hello"]
+        assert _coalesce_session_name_args([
+            "-c",
+            "my",
+            "project",
+            "chat",
+            "-q",
+            "hello",
+        ]) == ["-c", "my project", "chat", "-q", "hello"]
 
     # ── -r / --resume ────────────────────────────────────────────────────
 
     def test_resume_multiword(self):
         """hercules -r My Session Name"""
-        assert _coalesce_session_name_args(
-            ["-r", "My", "Session", "Name"]
-        ) == ["-r", "My Session Name"]
+        assert _coalesce_session_name_args(["-r", "My", "Session", "Name"]) == [
+            "-r",
+            "My Session Name",
+        ]
 
     def test_resume_long_form_multiword(self):
         """hercules --resume My Session Name"""
-        assert _coalesce_session_name_args(
-            ["--resume", "My", "Session", "Name"]
-        ) == ["--resume", "My Session Name"]
+        assert _coalesce_session_name_args(["--resume", "My", "Session", "Name"]) == [
+            "--resume",
+            "My Session Name",
+        ]
 
     def test_resume_multiword_then_flag(self):
         """hercules -r My Session -w"""
-        assert _coalesce_session_name_args(
-            ["-r", "My", "Session", "-w"]
-        ) == ["-r", "My Session", "-w"]
+        assert _coalesce_session_name_args(["-r", "My", "Session", "-w"]) == [
+            "-r",
+            "My Session",
+            "-w",
+        ]
 
     # ── combined flags ───────────────────────────────────────────────────
 
     def test_worktree_and_continue_multiword(self):
         """hercules -w -c Pokemon Agent Dev (the original failing case)"""
-        assert _coalesce_session_name_args(
-            ["-w", "-c", "Pokemon", "Agent", "Dev"]
-        ) == ["-w", "-c", "Pokemon Agent Dev"]
+        assert _coalesce_session_name_args(["-w", "-c", "Pokemon", "Agent", "Dev"]) == [
+            "-w",
+            "-c",
+            "Pokemon Agent Dev",
+        ]
 
     def test_continue_multiword_and_worktree(self):
         """hercules -c Pokemon Agent Dev -w (order reversed)"""
-        assert _coalesce_session_name_args(
-            ["-c", "Pokemon", "Agent", "Dev", "-w"]
-        ) == ["-c", "Pokemon Agent Dev", "-w"]
+        assert _coalesce_session_name_args(["-c", "Pokemon", "Agent", "Dev", "-w"]) == [
+            "-c",
+            "Pokemon Agent Dev",
+            "-w",
+        ]
 
     # ── passthrough (no session flags) ───────────────────────────────────
 
@@ -101,12 +121,18 @@ class TestCoalesceSessionNameArgs:
 
     def test_stops_at_sessions_subcommand(self):
         """hercules -c my project sessions list → stops before 'sessions'"""
-        assert _coalesce_session_name_args(
-            ["-c", "my", "project", "sessions", "list"]
-        ) == ["-c", "my project", "sessions", "list"]
+        assert _coalesce_session_name_args([
+            "-c",
+            "my",
+            "project",
+            "sessions",
+            "list",
+        ]) == ["-c", "my project", "sessions", "list"]
 
     def test_stops_at_setup_subcommand(self):
         """hercules -c my setup → 'setup' is a subcommand, not part of name"""
-        assert _coalesce_session_name_args(
-            ["-c", "my", "setup"]
-        ) == ["-c", "my", "setup"]
+        assert _coalesce_session_name_args(["-c", "my", "setup"]) == [
+            "-c",
+            "my",
+            "setup",
+        ]

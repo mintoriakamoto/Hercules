@@ -83,10 +83,14 @@ class TestRepairLoop(unittest.TestCase):
     def test_refuted_task_repaired_then_verified(self, mock_run, _rounds, _build):
         """A refuted task is repaired and, once re-verified, adopts the fix."""
         mock_run.side_effect = [
-            _primary(),                                            # primary work
+            _primary(),  # primary work
             _child("VERDICT: refuted — /tmp/out.txt does not exist"),  # verify
-            _child("Created /tmp/out.txt with 3 rows; confirmed via wc -l => 3"),  # repair
-            _child("VERDICT: verified\nRead /tmp/out.txt: 3 rows present."),       # re-verify
+            _child(
+                "Created /tmp/out.txt with 3 rows; confirmed via wc -l => 3"
+            ),  # repair
+            _child(
+                "VERDICT: verified\nRead /tmp/out.txt: 3 rows present."
+            ),  # re-verify
         ]
         parent = _make_mock_parent()
         result = json.loads(
@@ -114,18 +118,20 @@ class TestRepairLoop(unittest.TestCase):
         and every round is recorded — the loop is bounded by the round budget."""
         mock_run.side_effect = [
             _primary(),
-            _child("VERDICT: refuted — missing file"),          # verify
-            _child("Attempted fix A"),                          # repair r1
-            _child("VERDICT: refuted — still missing"),         # re-verify r1
-            _child("Attempted fix B"),                          # repair r2
-            _child("VERDICT: refuted — still missing"),         # re-verify r2
+            _child("VERDICT: refuted — missing file"),  # verify
+            _child("Attempted fix A"),  # repair r1
+            _child("VERDICT: refuted — still missing"),  # re-verify r1
+            _child("Attempted fix B"),  # repair r2
+            _child("VERDICT: refuted — still missing"),  # re-verify r2
         ]
         parent = _make_mock_parent()
         result = json.loads(
             delegate_task(goal="do thing", verify=True, parent_agent=parent)
         )
         entry = result["results"][0]
-        self.assertEqual(mock_run.call_count, 6)  # 2 rounds * (repair+reverify) + primary + verify
+        self.assertEqual(
+            mock_run.call_count, 6
+        )  # 2 rounds * (repair+reverify) + primary + verify
         self.assertTrue(entry["verification"]["verdict"].startswith("VERDICT: refuted"))
         self.assertEqual(len(entry["repairs"]), 2)
 
@@ -136,8 +142,8 @@ class TestRepairLoop(unittest.TestCase):
         pointless re-verify), and the failure is recorded."""
         mock_run.side_effect = [
             _primary(),
-            _child("VERDICT: refuted — nope"),                  # verify
-            _child(None, status="failed"),                      # repair fails
+            _child("VERDICT: refuted — nope"),  # verify
+            _child(None, status="failed"),  # repair fails
         ]
         parent = _make_mock_parent()
         result = json.loads(
@@ -186,13 +192,25 @@ class TestRepairHelpers(unittest.TestCase):
         self.assertIn("REFUTED", g)
 
     def test_repair_rounds_clamped(self):
-        from tools.delegate_tool import _get_verify_repair_rounds, _VERIFY_REPAIR_MAX_ROUNDS
+        from tools.delegate_tool import (
+            _get_verify_repair_rounds,
+            _VERIFY_REPAIR_MAX_ROUNDS,
+        )
 
-        with patch("tools.delegate_tool._load_config", return_value={"verify_repair_rounds": 99}):
+        with patch(
+            "tools.delegate_tool._load_config",
+            return_value={"verify_repair_rounds": 99},
+        ):
             self.assertEqual(_get_verify_repair_rounds(), _VERIFY_REPAIR_MAX_ROUNDS)
-        with patch("tools.delegate_tool._load_config", return_value={"verify_repair_rounds": -5}):
+        with patch(
+            "tools.delegate_tool._load_config",
+            return_value={"verify_repair_rounds": -5},
+        ):
             self.assertEqual(_get_verify_repair_rounds(), 0)
-        with patch("tools.delegate_tool._load_config", return_value={"verify_repair_rounds": "bad"}):
+        with patch(
+            "tools.delegate_tool._load_config",
+            return_value={"verify_repair_rounds": "bad"},
+        ):
             self.assertEqual(_get_verify_repair_rounds(), 0)
         with patch("tools.delegate_tool._load_config", return_value={}):
             self.assertEqual(_get_verify_repair_rounds(), 0)

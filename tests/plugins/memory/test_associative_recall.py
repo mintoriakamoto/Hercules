@@ -9,6 +9,7 @@ surfaces the cluster by association strength — "fire together" completing the
 Store-level tests cover the edge table directly; provider-level tests cover the
 end-to-end learn-then-recall loop through ``fact_feedback`` and ``spread``.
 """
+
 from __future__ import annotations
 
 import json
@@ -24,6 +25,7 @@ from plugins.memory.holographic.store import MemoryStore
 # ---------------------------------------------------------------------------
 # Store-level: fact_associations
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def store(tmp_path):
@@ -138,6 +140,7 @@ def test_batched_fetch_skips_superseded_and_still_fills_limit(store):
 # Provider-level: learn via feedback, recall via spread
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def provider(tmp_path):
     p = HolographicMemoryProvider(config={"db_path": str(tmp_path / "spread.db")})
@@ -149,11 +152,17 @@ def provider(tmp_path):
 
 
 def _add(provider, content, **kw):
-    return int(json.loads(provider._handle_fact_store({"action": "add", "content": content, **kw}))["fact_id"])
+    return int(
+        json.loads(
+            provider._handle_fact_store({"action": "add", "content": content, **kw})
+        )["fact_id"]
+    )
 
 
 def _search(provider, query, **kw):
-    return json.loads(provider._handle_fact_store({"action": "search", "query": query, **kw}))
+    return json.loads(
+        provider._handle_fact_store({"action": "search", "query": query, **kw})
+    )
 
 
 def _spread(provider, **kw):
@@ -161,7 +170,9 @@ def _spread(provider, **kw):
 
 
 def _feedback(provider, fact_id, action="helpful"):
-    return json.loads(provider._handle_fact_feedback({"action": action, "fact_id": fact_id}))
+    return json.loads(
+        provider._handle_fact_feedback({"action": action, "fact_id": fact_id})
+    )
 
 
 def test_helpful_feedback_lays_down_durable_edges(provider):

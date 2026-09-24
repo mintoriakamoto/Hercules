@@ -29,6 +29,7 @@ def cron_env(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
 
     import cron.jobs as jobs_mod
+
     monkeypatch.setattr(jobs_mod, "HERCULES_DIR", hercules_home)
     monkeypatch.setattr(jobs_mod, "CRON_DIR", hercules_home / "cron")
     monkeypatch.setattr(jobs_mod, "JOBS_FILE", hercules_home / "cron" / "jobs.json")

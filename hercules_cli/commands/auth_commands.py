@@ -30,7 +30,9 @@ def add_auth_subcommands(subparsers: argparse._SubParsersAction) -> None:
         "login",
         help="Authenticate with Hercules",
     )
-    login_parser.add_argument("--provider", help="Auth provider (anthropic, oauth, etc.)")
+    login_parser.add_argument(
+        "--provider", help="Auth provider (anthropic, oauth, etc.)"
+    )
     login_parser.set_defaults(func=handle_auth_login)
 
     # Logout

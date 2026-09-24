@@ -160,7 +160,9 @@ class TestToolEntryPoint:
         assert "unknown action" in bb.blackboard_tool("bogus")
 
     def test_value_size_cap(self):
-        out = bb.blackboard_tool("post", key="big", value="x" * (bb._MAX_VALUE_CHARS + 1))
+        out = bb.blackboard_tool(
+            "post", key="big", value="x" * (bb._MAX_VALUE_CHARS + 1)
+        )
         assert "too large" in out
 
     def test_dispatch_roundtrip(self):
@@ -252,7 +254,9 @@ class TestClaims:
 
         def contend(n):
             start.wait()
-            if bb.claim("task:contended", owner=f"worker:{n}", ttl_seconds=600)["acquired"]:
+            if bb.claim("task:contended", owner=f"worker:{n}", ttl_seconds=600)[
+                "acquired"
+            ]:
                 with lock:
                     winners.append(n)
 
@@ -263,7 +267,9 @@ class TestClaims:
             t.join(timeout=30)
 
         assert len(winners) == 1, f"expected a single winner, got {winners}"
-        assert bb.claim("task:contended", owner="late")["owner"] == f"worker:{winners[0]}"
+        assert (
+            bb.claim("task:contended", owner="late")["owner"] == f"worker:{winners[0]}"
+        )
 
     def test_claims_lists_live_leases_and_drops_expired(self):
         bb.claim("live", owner="worker:a", ttl_seconds=600)

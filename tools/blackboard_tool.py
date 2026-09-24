@@ -119,7 +119,9 @@ def _normalize_value(raw: str) -> str:
         return json.dumps(text, ensure_ascii=False)
 
 
-def post(key: str, value: str, *, author: str = "agent", board: Optional[str] = None) -> dict[str, Any]:
+def post(
+    key: str, value: str, *, author: str = "agent", board: Optional[str] = None
+) -> dict[str, Any]:
     """Append one update; later posts to the same key win on read."""
     key = (key or "").strip()
     if not key:
@@ -134,7 +136,13 @@ def post(key: str, value: str, *, author: str = "agent", board: Optional[str] = 
         cur = conn.execute(
             "INSERT INTO blackboard_entries (board, key, value, author, created_at)"
             " VALUES (?, ?, ?, ?, ?)",
-            (resolved, key, _normalize_value(value or ""), (author or "agent").strip() or "agent", time.time()),
+            (
+                resolved,
+                key,
+                _normalize_value(value or ""),
+                (author or "agent").strip() or "agent",
+                time.time(),
+            ),
         )
         return {"board": resolved, "key": key, "seq": cur.lastrowid}
 
@@ -462,7 +470,9 @@ def blackboard_tool(
     act = (action or "").strip().lower()
     try:
         if act == "post":
-            result: Any = post(key, value, author=author or "agent", board=board or None)
+            result: Any = post(
+                key, value, author=author or "agent", board=board or None
+            )
         elif act == "wait":
             try:
                 result = wait(key, board=board or None, timeout_seconds=timeout_seconds)

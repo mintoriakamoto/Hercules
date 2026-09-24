@@ -16,6 +16,7 @@ def _make_cli():
     the /exit branch touches.
     """
     from cli import HerculesCLI
+
     cli = HerculesCLI.__new__(HerculesCLI)
     cli.config = {}
     cli.console = MagicMock()
@@ -107,12 +108,14 @@ class TestCommandRegistry:
         """The CommandDef args_hint should surface `--delete` in /help and
         CLI autocomplete."""
         from hercules_cli.commands import resolve_command
+
         cmd = resolve_command("quit")
         assert cmd is not None
         assert cmd.args_hint == "[--delete]"
 
     def test_exit_alias_resolves_to_quit_with_hint(self):
         from hercules_cli.commands import resolve_command
+
         cmd = resolve_command("exit")
         assert cmd is not None
         assert cmd.name == "quit"

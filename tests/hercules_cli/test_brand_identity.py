@@ -55,8 +55,7 @@ class TestHeroMark:
         from hercules_cli.banner import HERCULES_PILLARS
 
         rows = [
-            re.sub(r"\[/?[^\]]*\]", "", row)
-            for row in HERCULES_PILLARS.split("\n")
+            re.sub(r"\[/?[^\]]*\]", "", row) for row in HERCULES_PILLARS.split("\n")
         ]
         assert len(rows) == 8
         for row in rows:

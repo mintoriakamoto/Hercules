@@ -92,10 +92,15 @@ class TestDynamicSchemaBuilder:
         assert "hercules tools" in desc
 
     def test_generic_description_keeps_edit_extend_out_of_surface(self, cfg_home):
-        from tools.video_generation_tool import _build_dynamic_video_schema, _GENERIC_DESCRIPTION
+        from tools.video_generation_tool import (
+            _build_dynamic_video_schema,
+            _GENERIC_DESCRIPTION,
+        )
 
         desc = _build_dynamic_video_schema()["description"]
-        assert "Video edit/extend workflows are not part of this unified surface" in desc
+        assert (
+            "Video edit/extend workflows are not part of this unified surface" in desc
+        )
         assert "operation='edit'" not in _GENERIC_DESCRIPTION
         assert "operation='extend'" not in _GENERIC_DESCRIPTION
 
@@ -106,6 +111,7 @@ class TestDynamicSchemaBuilder:
         video_gen_registry.register_provider(_BothModalitiesProvider())
 
         import hercules_cli.plugins as plugins_module
+
         saved = plugins_module._ensure_plugins_discovered
         plugins_module._ensure_plugins_discovered = lambda *a, **k: None
         try:
@@ -125,6 +131,7 @@ class TestDynamicSchemaBuilder:
         video_gen_registry.register_provider(_ImageOnlyProvider())
 
         import hercules_cli.plugins as plugins_module
+
         saved = plugins_module._ensure_plugins_discovered
         plugins_module._ensure_plugins_discovered = lambda *a, **k: None
         try:

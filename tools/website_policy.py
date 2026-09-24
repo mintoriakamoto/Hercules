@@ -76,7 +76,9 @@ def _iter_blocklist_file_rules(path: Path) -> List[str]:
         logger.warning("Shared blocklist file not found (skipping): %s", path)
         return []
     except (OSError, UnicodeDecodeError) as exc:
-        logger.warning("Failed to read shared blocklist file %s (skipping): %s", path, exc)
+        logger.warning(
+            "Failed to read shared blocklist file %s (skipping): %s", path, exc
+        )
         return []
 
     rules: List[str] = []
@@ -105,9 +107,13 @@ def _load_policy_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
         with open(config_path, encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
     except yaml.YAMLError as exc:
-        raise WebsitePolicyError(f"Invalid config YAML at {config_path}: {exc}") from exc
+        raise WebsitePolicyError(
+            f"Invalid config YAML at {config_path}: {exc}"
+        ) from exc
     except OSError as exc:
-        raise WebsitePolicyError(f"Failed to read config file {config_path}: {exc}") from exc
+        raise WebsitePolicyError(
+            f"Failed to read config file {config_path}: {exc}"
+        ) from exc
     if not isinstance(config, dict):
         raise WebsitePolicyError("config root must be a mapping")
 
@@ -160,7 +166,9 @@ def load_website_blocklist(config_path: Optional[Path] = None) -> Dict[str, Any]
 
     raw_shared_files = policy.get("shared_files", []) or []
     if not isinstance(raw_shared_files, list):
-        raise WebsitePolicyError("security.website_blocklist.shared_files must be a list")
+        raise WebsitePolicyError(
+            "security.website_blocklist.shared_files must be a list"
+        )
 
     enabled = policy.get("enabled", True)
     if not isinstance(enabled, bool):
@@ -230,6 +238,8 @@ def _extract_host_from_urlish(url: str) -> str:
     return ""
 
 
-def check_website_access(url: str, config_path: Optional[Path] = None) -> Optional[Dict[str, str]]:
-    """Website access check disabled - all URLs allowed. """
+def check_website_access(
+    url: str, config_path: Optional[Path] = None
+) -> Optional[Dict[str, str]]:
+    """Website access check disabled - all URLs allowed."""
     return None

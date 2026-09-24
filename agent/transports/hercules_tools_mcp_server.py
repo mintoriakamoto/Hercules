@@ -221,9 +221,7 @@ def _build_server() -> Any:
     for name in EXPOSED_TOOLS:
         spec = all_defs.get(name)
         if spec is None:
-            logger.debug(
-                "skipping %s — not registered in this Hercules process", name
-            )
+            logger.debug("skipping %s — not registered in this Hercules process", name)
             continue
 
         description = spec.get("description") or f"Hercules {name} tool"

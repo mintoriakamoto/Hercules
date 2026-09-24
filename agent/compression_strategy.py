@@ -26,16 +26,18 @@ logger = logging.getLogger(__name__)
 
 class CompressionLevel(Enum):
     """Compression strategy intensity levels."""
-    NONE = "none"              # No compression
+
+    NONE = "none"  # No compression
     CONSERVATIVE = "conservative"  # Minimal compression
-    BALANCED = "balanced"      # Default balance of compression vs. quality
+    BALANCED = "balanced"  # Default balance of compression vs. quality
     AGGRESSIVE = "aggressive"  # Maximum compression
-    CUSTOM = "custom"          # User-provided custom settings
+    CUSTOM = "custom"  # User-provided custom settings
 
 
 @dataclass
 class CompressionMetrics:
     """Metrics for a compression operation."""
+
     original_size: int
     compressed_size: int
     ratio: float  # compressed / original
@@ -142,7 +144,7 @@ class ConservativeCompression(CompressionStrategy):
             return content
 
         # Graceful truncation with ellipsis
-        truncated = content[:target_chars].rsplit(' ', 1)[0]
+        truncated = content[:target_chars].rsplit(" ", 1)[0]
         return f"{truncated}...[truncated]"
 
 
@@ -177,17 +179,17 @@ class BalancedCompression(CompressionStrategy):
         truncated = content[:target_chars]
 
         # Look for paragraph break
-        last_break = truncated.rfind('\n\n')
+        last_break = truncated.rfind("\n\n")
         if last_break > target_chars * 0.8:
             return content[:last_break].strip()
 
         # Look for sentence break
-        last_sentence = truncated.rfind('. ')
+        last_sentence = truncated.rfind(". ")
         if last_sentence > target_chars * 0.75:
-            return content[:last_sentence + 1].strip()
+            return content[: last_sentence + 1].strip()
 
         # Fallback: word boundary
-        last_word = truncated.rsplit(' ', 1)[0]
+        last_word = truncated.rsplit(" ", 1)[0]
         return f"{last_word}...[compressed]"
 
 
@@ -216,7 +218,7 @@ class AggressiveCompression(CompressionStrategy):
         target_chars = target_tokens * 4
 
         # Extract key lines (first of each paragraph)
-        lines = content.split('\n')
+        lines = content.split("\n")
         key_lines = []
         current_size = 0
 
@@ -230,7 +232,7 @@ class AggressiveCompression(CompressionStrategy):
                 break
 
         if key_lines:
-            return '\n'.join(key_lines) + '\n[...compressed significantly...]'
+            return "\n".join(key_lines) + "\n[...compressed significantly...]"
 
         # Fallback to hard truncation
         truncated = content[:target_chars]
@@ -330,6 +332,7 @@ class Compressor:
             Compressed content
         """
         import time
+
         start_time = time.time()
         original_size = len(content)
 

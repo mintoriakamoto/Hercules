@@ -5,6 +5,7 @@ file is quarantined (backed up) and rebuilt empty rather than crashing the
 memory subsystem on every session. Recovery covers the broad "this isn't a
 database" class, but never transient errors like "database is locked".
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -17,7 +18,9 @@ from plugins.memory.holographic.store import MemoryStore, _is_corrupt_db_error
 
 def test_is_corrupt_db_error_matches_corruption_only():
     assert _is_corrupt_db_error(sqlite3.DatabaseError("file is not a database"))
-    assert _is_corrupt_db_error(sqlite3.DatabaseError("database disk image is malformed"))
+    assert _is_corrupt_db_error(
+        sqlite3.DatabaseError("database disk image is malformed")
+    )
     assert _is_corrupt_db_error(sqlite3.DatabaseError("malformed database schema"))
     # Transient/operational errors are NOT corruption — must not trigger rebuild.
     assert not _is_corrupt_db_error(sqlite3.OperationalError("database is locked"))

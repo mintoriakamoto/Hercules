@@ -20,8 +20,9 @@ from gateway.platforms.base import MessageEvent
 from gateway.session import SessionSource
 
 
-def _make_event(text="/update", platform=Platform.TELEGRAM,
-                user_id="12345", chat_id="67890"):
+def _make_event(
+    text="/update", platform=Platform.TELEGRAM, user_id="12345", chat_id="67890"
+):
     """Build a MessageEvent for testing."""
     source = SessionSource(
         platform=platform,
@@ -35,6 +36,7 @@ def _make_event(text="/update", platform=Platform.TELEGRAM,
 def _make_runner(hercules_home=None):
     """Create a bare GatewayRunner without calling __init__."""
     from gateway.run import GatewayRunner
+
     runner = object.__new__(GatewayRunner)
     runner.adapters = {}
     runner._voice_mode = {}
@@ -66,6 +68,7 @@ class TestGatewayPrompt:
     def test_writes_prompt_file_and_reads_response(self, tmp_path):
         """Writes .update_prompt.json, reads .update_response, returns answer."""
         import threading
+
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
 
@@ -79,6 +82,7 @@ class TestGatewayPrompt:
 
         with patch.dict(os.environ, {"HERCULES_HOME": str(hercules_home)}):
             from hercules_cli.main import _gateway_prompt
+
             result = _gateway_prompt("Restore? [Y/n]", "y", timeout=5.0)
 
         thread.join()
@@ -90,6 +94,7 @@ class TestGatewayPrompt:
     def test_prompt_file_content(self, tmp_path):
         """Verifies the prompt JSON structure."""
         import threading
+
         hercules_home = tmp_path / ".hercules"
         hercules_home.mkdir()
 
@@ -110,6 +115,7 @@ class TestGatewayPrompt:
 
         with patch.dict(os.environ, {"HERCULES_HOME": str(hercules_home)}):
             from hercules_cli.main import _gateway_prompt
+
             _gateway_prompt("Configure now? [Y/n]", "n", timeout=5.0)
 
         thread.join()
@@ -125,6 +131,7 @@ class TestGatewayPrompt:
 
         with patch.dict(os.environ, {"HERCULES_HOME": str(hercules_home)}):
             from hercules_cli.main import _gateway_prompt
+
             result = _gateway_prompt("test?", "default_val", timeout=0.5)
 
         assert result == "default_val"
@@ -138,6 +145,7 @@ class TestGatewayPrompt:
         # Write prompt file so the function starts polling
         with patch.dict(os.environ, {"HERCULES_HOME": str(hercules_home)}):
             from hercules_cli.main import _gateway_prompt
+
             # Pre-create the response
             result = _gateway_prompt("test?", "default_val", timeout=2.0)
 
@@ -163,11 +171,11 @@ class TestRestoreStashWithInputFn:
             return "n"
 
         with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0, stdout="", stderr=""
-            )
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
             result = _restore_stashed_changes(
-                ["git"], tmp_path, "abc123",
+                ["git"],
+                tmp_path,
+                "abc123",
                 prompt_user=True,
                 input_fn=fake_input_fn,
             )
@@ -192,7 +200,9 @@ class TestRestoreStashWithInputFn:
 
         with patch("subprocess.run", side_effect=fake_run):
             _restore_stashed_changes(
-                ["git"], tmp_path, "abc123",
+                ["git"],
+                tmp_path,
+                "abc123",
                 prompt_user=True,
                 input_fn=lambda p, d="": "y",
             )
@@ -225,10 +235,12 @@ class TestUpdateCommandGatewayFlag:
         hercules_home.mkdir()
 
         mock_popen = MagicMock()
-        with patch("gateway.run._hercules_home", hercules_home), \
-             patch("gateway.run.__file__", fake_file), \
-             patch("shutil.which", side_effect=lambda x: f"/usr/bin/{x}"), \
-             patch("subprocess.Popen", mock_popen):
+        with (
+            patch("gateway.run._hercules_home", hercules_home),
+            patch("gateway.run.__file__", fake_file),
+            patch("shutil.which", side_effect=lambda x: f"/usr/bin/{x}"),
+            patch("subprocess.Popen", mock_popen),
+        ):
             result = await runner._handle_update_command(event)
 
         # Check the bash command string contains --gateway and PYTHONUNBUFFERED
@@ -256,11 +268,17 @@ class TestWatchUpdateProgress:
         hercules_home = tmp_path / "hercules"
         hercules_home.mkdir()
 
-        pending = {"platform": "telegram", "chat_id": "111", "user_id": "222",
-                   "session_key": "agent:main:telegram:dm:111"}
+        pending = {
+            "platform": "telegram",
+            "chat_id": "111",
+            "user_id": "222",
+            "session_key": "agent:main:telegram:dm:111",
+        }
         (hercules_home / ".update_pending.json").write_text(json.dumps(pending))
         # Write output
-        (hercules_home / ".update_output.txt").write_text("→ Fetching updates...\n", encoding="utf-8")
+        (hercules_home / ".update_output.txt").write_text(
+            "→ Fetching updates...\n", encoding="utf-8"
+        )
 
         mock_adapter = AsyncMock()
         runner.adapters = {Platform.TELEGRAM: mock_adapter}
@@ -269,8 +287,8 @@ class TestWatchUpdateProgress:
         async def write_exit_code():
             await asyncio.sleep(0.3)
             (hercules_home / ".update_output.txt").write_text(
-                "→ Fetching updates...\n✓ Code updated!\n"
-            , encoding="utf-8")
+                "→ Fetching updates...\n✓ Code updated!\n", encoding="utf-8"
+            )
             (hercules_home / ".update_exit_code").write_text("0")
 
         with patch("gateway.run._hercules_home", hercules_home):
@@ -294,8 +312,12 @@ class TestWatchUpdateProgress:
         hercules_home = tmp_path / "hercules"
         hercules_home.mkdir()
 
-        pending = {"platform": "telegram", "chat_id": "111", "user_id": "222",
-                   "session_key": "agent:main:telegram:dm:111"}
+        pending = {
+            "platform": "telegram",
+            "chat_id": "111",
+            "user_id": "222",
+            "session_key": "agent:main:telegram:dm:111",
+        }
         (hercules_home / ".update_pending.json").write_text(json.dumps(pending))
         (hercules_home / ".update_output.txt").write_text("output\n")
 
@@ -305,7 +327,11 @@ class TestWatchUpdateProgress:
         # Write a prompt, then respond and finish
         async def simulate_prompt_cycle():
             await asyncio.sleep(0.3)
-            prompt = {"prompt": "Restore local changes? [Y/n]", "default": "y", "id": "test1"}
+            prompt = {
+                "prompt": "Restore local changes? [Y/n]",
+                "default": "y",
+                "id": "test1",
+            }
             (hercules_home / ".update_prompt.json").write_text(json.dumps(prompt))
             # Simulate user responding
             await asyncio.sleep(0.5)
@@ -346,11 +372,13 @@ class TestWatchUpdateProgress:
         }
         (hercules_home / ".update_pending.json").write_text(json.dumps(pending))
         (hercules_home / ".update_output.txt").write_text("")
-        (hercules_home / ".update_prompt.json").write_text(json.dumps({
-            "prompt": "Restore local changes? [Y/n]",
-            "default": "y",
-            "id": "threaded-prompt",
-        }))
+        (hercules_home / ".update_prompt.json").write_text(
+            json.dumps({
+                "prompt": "Restore local changes? [Y/n]",
+                "default": "y",
+                "id": "threaded-prompt",
+            })
+        )
 
         class _PromptCapableAdapter:
             def __init__(self):
@@ -389,8 +417,12 @@ class TestWatchUpdateProgress:
         hercules_home = tmp_path / "hercules"
         hercules_home.mkdir()
 
-        pending = {"platform": "telegram", "chat_id": "111", "user_id": "222",
-                   "session_key": "agent:main:telegram:dm:111"}
+        pending = {
+            "platform": "telegram",
+            "chat_id": "111",
+            "user_id": "222",
+            "session_key": "agent:main:telegram:dm:111",
+        }
         pending_path = hercules_home / ".update_pending.json"
         output_path = hercules_home / ".update_output.txt"
         exit_code_path = hercules_home / ".update_exit_code"
@@ -419,8 +451,12 @@ class TestWatchUpdateProgress:
         hercules_home = tmp_path / "hercules"
         hercules_home.mkdir()
 
-        pending = {"platform": "telegram", "chat_id": "111", "user_id": "222",
-                   "session_key": "agent:main:telegram:dm:111"}
+        pending = {
+            "platform": "telegram",
+            "chat_id": "111",
+            "user_id": "222",
+            "session_key": "agent:main:telegram:dm:111",
+        }
         (hercules_home / ".update_pending.json").write_text(json.dumps(pending))
         (hercules_home / ".update_output.txt").write_text("error occurred\n")
         (hercules_home / ".update_exit_code").write_text("1")
@@ -495,8 +531,12 @@ class TestWatchUpdateProgress:
         hercules_home = tmp_path / "hercules"
         hercules_home.mkdir()
 
-        pending = {"platform": "telegram", "chat_id": "111", "user_id": "222",
-                   "session_key": "agent:main:telegram:dm:111"}
+        pending = {
+            "platform": "telegram",
+            "chat_id": "111",
+            "user_id": "222",
+            "session_key": "agent:main:telegram:dm:111",
+        }
         (hercules_home / ".update_pending.json").write_text(json.dumps(pending))
         (hercules_home / ".update_output.txt").write_text("")
 
@@ -505,8 +545,11 @@ class TestWatchUpdateProgress:
 
         # Write the prompt file up front (before the watcher starts).
         # The watcher should forward it exactly once, then delete it.
-        prompt = {"prompt": "Would you like to configure new options now? Y/n",
-                  "default": "n", "id": "dup-test"}
+        prompt = {
+            "prompt": "Would you like to configure new options now? Y/n",
+            "default": "n",
+            "id": "dup-test",
+        }
         (hercules_home / ".update_prompt.json").write_text(json.dumps(prompt))
 
         async def finish_after_polls():
@@ -598,7 +641,8 @@ class TestWatchUpdateProgress:
             await finisher
 
         prompt_sends = [
-            str(call) for call in adapter2.send.call_args_list
+            str(call)
+            for call in adapter2.send.call_args_list
             if "Restore local changes" in str(call)
         ]
         assert len(prompt_sends) == 1
@@ -623,7 +667,9 @@ class TestUpdatePromptInterception:
         # The session key uses the full format from build_session_key
         session_key = "agent:main:telegram:dm:67890"
         runner._update_prompt_pending[session_key] = True
-        (hercules_home / ".update_prompt.json").write_text(json.dumps({"prompt": "test"}))
+        (hercules_home / ".update_prompt.json").write_text(
+            json.dumps({"prompt": "test"})
+        )
 
         # Mock authorization and _session_key_for_source
         runner._is_user_authorized = MagicMock(return_value=True)
@@ -642,7 +688,9 @@ class TestUpdatePromptInterception:
         assert session_key not in runner._update_prompt_pending
 
     @pytest.mark.asyncio
-    async def test_recognized_slash_command_bypasses_pending_update_prompt(self, tmp_path):
+    async def test_recognized_slash_command_bypasses_pending_update_prompt(
+        self, tmp_path
+    ):
         """Known slash commands must dispatch normally instead of being consumed.
 
         The update subprocess is still blocked on stdin waiting for
@@ -660,7 +708,9 @@ class TestUpdatePromptInterception:
         runner._is_user_authorized = MagicMock(return_value=True)
         runner._session_key_for_source = MagicMock(return_value=session_key)
         runner._handle_reset_command = AsyncMock(return_value="reset ok")
-        (hercules_home / ".update_prompt.json").write_text(json.dumps({"prompt": "test"}))
+        (hercules_home / ".update_prompt.json").write_text(
+            json.dumps({"prompt": "test"})
+        )
 
         with patch("gateway.run._hercules_home", hercules_home):
             result = await runner._handle_message(event)
@@ -679,7 +729,9 @@ class TestUpdatePromptInterception:
         assert session_key not in runner._update_prompt_pending
 
     @pytest.mark.asyncio
-    async def test_unrecognized_slash_command_still_consumed_as_response(self, tmp_path):
+    async def test_unrecognized_slash_command_still_consumed_as_response(
+        self, tmp_path
+    ):
         """Unknown /foo is written verbatim to .update_response (legacy behavior)."""
         runner = _make_runner()
         hercules_home = tmp_path / "hercules"
@@ -690,7 +742,9 @@ class TestUpdatePromptInterception:
         runner._update_prompt_pending[session_key] = True
         runner._is_user_authorized = MagicMock(return_value=True)
         runner._session_key_for_source = MagicMock(return_value=session_key)
-        (hercules_home / ".update_prompt.json").write_text(json.dumps({"prompt": "test"}))
+        (hercules_home / ".update_prompt.json").write_text(
+            json.dumps({"prompt": "test"})
+        )
 
         with patch("gateway.run._hercules_home", hercules_home):
             result = await runner._handle_message(event)
@@ -742,7 +796,9 @@ class TestCmdUpdateGatewayMode:
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
             _restore_stashed_changes(
-                ["git"], tmp_path, "abc123",
+                ["git"],
+                tmp_path,
+                "abc123",
                 prompt_user=True,
                 input_fn=fake_input,
             )
@@ -755,5 +811,6 @@ class TestCmdUpdateGatewayMode:
         # Verify the argparse parser accepts --gateway by checking cmd_update
         # receives gateway=True when the flag is set
         from types import SimpleNamespace
+
         args = SimpleNamespace(gateway=True)
         assert args.gateway is True

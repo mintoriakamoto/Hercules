@@ -7,12 +7,14 @@ from hercules_cli.cooklabs_remote import (
 
 
 def test_canonical_https_and_ssh():
-    assert canonical_github_remote(
-        "https://github.com/mintoriakamoto/Hercules.git"
-    ) == "github.com/mintoriakamoto/hercules"
-    assert canonical_github_remote(
-        "git@github.com:mintoriakamoto/Hercules.git"
-    ) == "github.com/mintoriakamoto/hercules"
+    assert (
+        canonical_github_remote("https://github.com/mintoriakamoto/Hercules.git")
+        == "github.com/mintoriakamoto/hercules"
+    )
+    assert (
+        canonical_github_remote("git@github.com:mintoriakamoto/Hercules.git")
+        == "github.com/mintoriakamoto/hercules"
+    )
 
 
 def test_nous_is_not_cooklabs():
@@ -21,5 +23,7 @@ def test_nous_is_not_cooklabs():
 
 
 def test_prefer_ssh_when_origin_was_ssh():
-    assert preferred_remote_url("git@github.com:NousResearch/hercules-agent.git").startswith("git@")
+    assert preferred_remote_url(
+        "git@github.com:NousResearch/hercules-agent.git"
+    ).startswith("git@")
     assert preferred_remote_url("https://example/x") == COOKLABS_HTTPS

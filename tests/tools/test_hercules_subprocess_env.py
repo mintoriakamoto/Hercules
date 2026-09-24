@@ -60,7 +60,9 @@ class TestStripByDefault:
     def test_tier1_secrets_stripped_by_default(self):
         result = _build(_TIER1_SAMPLE)
         for var in _TIER1_SAMPLE:
-            assert var not in result, f"{var} leaked (Tier-1) with inherit_credentials=False"
+            assert var not in result, (
+                f"{var} leaked (Tier-1) with inherit_credentials=False"
+            )
 
     def test_safe_vars_preserved(self):
         result = _build()
@@ -70,7 +72,9 @@ class TestStripByDefault:
         assert result["MY_APP_VAR"] == "keep-me"
 
     def test_force_prefix_hints_stripped(self):
-        result = _build({f"{_HERCULES_PROVIDER_ENV_FORCE_PREFIX}OPENAI_API_KEY": "sk-x"})
+        result = _build({
+            f"{_HERCULES_PROVIDER_ENV_FORCE_PREFIX}OPENAI_API_KEY": "sk-x"
+        })
         assert f"{_HERCULES_PROVIDER_ENV_FORCE_PREFIX}OPENAI_API_KEY" not in result
         assert "OPENAI_API_KEY" not in result
 
@@ -83,7 +87,9 @@ class TestInheritCredentials:
     def test_provider_keys_preserved_when_inheriting(self):
         result = _build(_PROVIDER_SAMPLE, inherit_credentials=True)
         for var, val in _PROVIDER_SAMPLE.items():
-            assert result.get(var) == val, f"{var} should survive inherit_credentials=True"
+            assert result.get(var) == val, (
+                f"{var} should survive inherit_credentials=True"
+            )
 
     def test_tier1_secrets_stripped_even_when_inheriting(self):
         """The whole point of Tier 1: gateway/GitHub/infra secrets never reach
@@ -122,7 +128,11 @@ class TestTierInvariants:
         assert {"GH_TOKEN", "GITHUB_TOKEN"} <= _ALWAYS_STRIP_KEYS
 
     def test_tier1_covers_infra_secrets(self):
-        assert {"MODAL_TOKEN_ID", "MODAL_TOKEN_SECRET", "DAYTONA_API_KEY"} <= _ALWAYS_STRIP_KEYS
+        assert {
+            "MODAL_TOKEN_ID",
+            "MODAL_TOKEN_SECRET",
+            "DAYTONA_API_KEY",
+        } <= _ALWAYS_STRIP_KEYS
 
 
 class TestBrowserPassthroughPattern:
@@ -207,5 +217,7 @@ class TestInternalDynamicSecrets:
 
     def test_relay_triplet_in_always_strip(self):
         assert {
-            "GATEWAY_RELAY_ID", "GATEWAY_RELAY_SECRET", "GATEWAY_RELAY_DELIVERY_KEY",
+            "GATEWAY_RELAY_ID",
+            "GATEWAY_RELAY_SECRET",
+            "GATEWAY_RELAY_DELIVERY_KEY",
         } <= _ALWAYS_STRIP_KEYS

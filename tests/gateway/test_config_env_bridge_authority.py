@@ -21,7 +21,9 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _run_gateway_import(hercules_home: Path, initial_env: dict[str, str]) -> dict[str, str]:
+def _run_gateway_import(
+    hercules_home: Path, initial_env: dict[str, str]
+) -> dict[str, str]:
     """Import gateway.run in a clean subprocess and return the post-import env.
 
     The bridge runs at module-import time, so simply importing is enough
@@ -81,9 +83,15 @@ def _run_gateway_import(hercules_home: Path, initial_env: dict[str, str]) -> dic
     return out
 
 
-def _write_config(home: Path, agent_cfg: dict | None = None, display_cfg: dict | None = None,
-                  timezone: str | None = None, gateway_cfg: dict | None = None) -> None:
+def _write_config(
+    home: Path,
+    agent_cfg: dict | None = None,
+    display_cfg: dict | None = None,
+    timezone: str | None = None,
+    gateway_cfg: dict | None = None,
+) -> None:
     import yaml
+
     cfg: dict = {}
     if agent_cfg:
         cfg["agent"] = agent_cfg
@@ -123,14 +131,20 @@ def test_config_max_turns_wins_over_stale_env(hercules_home: Path) -> None:
 
 def test_config_gateway_timeout_wins_over_stale_env(hercules_home: Path) -> None:
     """Every agent.* bridge key must be config-authoritative, not .env-authoritative."""
-    _write_config(hercules_home, agent_cfg={
-        "gateway_timeout": 1800,
-        "gateway_timeout_warning": 900,
-    })
-    _write_env(hercules_home, {
-        "HERCULES_AGENT_TIMEOUT": "60",
-        "HERCULES_AGENT_TIMEOUT_WARNING": "30",
-    })
+    _write_config(
+        hercules_home,
+        agent_cfg={
+            "gateway_timeout": 1800,
+            "gateway_timeout_warning": 900,
+        },
+    )
+    _write_env(
+        hercules_home,
+        {
+            "HERCULES_AGENT_TIMEOUT": "60",
+            "HERCULES_AGENT_TIMEOUT_WARNING": "30",
+        },
+    )
 
     env = _run_gateway_import(hercules_home, initial_env={})
 
@@ -138,7 +152,9 @@ def test_config_gateway_timeout_wins_over_stale_env(hercules_home: Path) -> None
     assert env.get("HERCULES_AGENT_TIMEOUT_WARNING") == "900"
 
 
-def test_config_display_busy_input_mode_wins_over_stale_env(hercules_home: Path) -> None:
+def test_config_display_busy_input_mode_wins_over_stale_env(
+    hercules_home: Path,
+) -> None:
     _write_config(hercules_home, display_cfg={"busy_input_mode": "interrupt"})
     _write_env(hercules_home, {"HERCULES_GATEWAY_BUSY_INPUT_MODE": "queue"})
 
@@ -179,7 +195,9 @@ def test_env_value_survives_when_config_omits_key(hercules_home: Path) -> None:
     assert env.get("HERCULES_MAX_ITERATIONS") == "123"
 
 
-def test_config_platform_connect_timeout_supplies_env_when_unset(hercules_home: Path) -> None:
+def test_config_platform_connect_timeout_supplies_env_when_unset(
+    hercules_home: Path,
+) -> None:
     """config.yaml:gateway.platform_connect_timeout supplies the env var when
     it isn't already set (#19776 — config surface for the Discord connect
     timeout, replacing the undocumented env-var-only workaround)."""

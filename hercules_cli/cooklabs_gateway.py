@@ -15,14 +15,12 @@ AGENT_API_BASE = "http://127.0.0.1:8642/v1"
 AGENT_GATEWAY_HINT = "hercules gateway run"
 
 # Never default these to nousresearch.com
-BLOCKED_DEFAULT_DOMAINS = frozenset(
-    {
-        "nousresearch.com",
-        "portal.nousresearch.com",
-        "inference-api.nousresearch.com",
-        "hercules-agent.nousresearch.com",
-    }
-)
+BLOCKED_DEFAULT_DOMAINS = frozenset({
+    "nousresearch.com",
+    "portal.nousresearch.com",
+    "inference-api.nousresearch.com",
+    "hercules-agent.nousresearch.com",
+})
 
 
 @dataclass(frozen=True)
@@ -47,7 +45,9 @@ def tool_gateway_domain() -> str:
 
 
 def current() -> CooklabsGateway:
-    inference = _env("OPENAI_BASE_URL") or _env("TENSELERATE_BASE_URL") or TENSELERATE_BASE
+    inference = (
+        _env("OPENAI_BASE_URL") or _env("TENSELERATE_BASE_URL") or TENSELERATE_BASE
+    )
     agent = _env("API_SERVER_HOST")
     port = _env("API_SERVER_PORT", "8642")
     if agent:
@@ -83,5 +83,7 @@ def report() -> str:
         f"  local_only {gw.local_only}",
     ]
     if gw.tool_domain.lower() in BLOCKED_DEFAULT_DOMAINS:
-        lines.append("  BLOCKED Nous domain — cleared conceptually; set your own or leave empty")
+        lines.append(
+            "  BLOCKED Nous domain — cleared conceptually; set your own or leave empty"
+        )
     return "\n".join(lines)
