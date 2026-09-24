@@ -554,6 +554,28 @@ def run_conversation(
     # over instead of spinning. Reset here so each turn starts fresh. See #26080.
     agent._auth_pool_refresh_counts = {}
 
+    # ── Cross-turn stagnation guard state ──────────────────────────────
+    # Detects the model repeating the SAME tool call(s) with identical
+    # arguments across successive internal iterations of THIS user turn
+    # (identical inputs -> identical result -> no progress). Resolved once per
+    # turn so config/env are read a single time rather than every iteration;
+    # the counters reset here so each user turn starts with a clean slate.
+    try:
+        from agent.stagnation_guard import (
+            stagnation_guard_enabled,
+            stagnation_limits,
+        )
+
+        agent._stagnation_guard_enabled = stagnation_guard_enabled()
+        agent._stagnation_limits = stagnation_limits()
+    except Exception:
+        agent._stagnation_guard_enabled = False
+        agent._stagnation_limits = (3, 6)
+    agent._stagnation_last_fp = ""
+    agent._stagnation_run = 0
+    agent._stagnation_nudged = False
+    agent._stagnation_nudge_pending = None
+
     # Optional opt-in runtime: if api_mode == codex_app_server, hand the
     # turn to the codex app-server subprocess (terminal/file ops/patching
     # all run inside Codex). Default Hercules path is bypassed entirely.
@@ -4485,6 +4507,65 @@ def run_conversation(
                     assistant_message.tool_calls
                 )
 
+                # ── Cross-turn stagnation guard ───────────────────
+                # If the model emits the SAME tool call(s) with the SAME
+                # arguments turn after turn, the result cannot change and the
+                # run makes no progress. Soft limit: mark a one-shot corrective
+                # nudge to piggyback on this turn's tool results (applied after
+                # execution below). Hard limit: stop cleanly instead of
+                # spending the rest of the iteration budget on an unchanging
+                # result — same clean-exit shape as the tool-guardrail halt.
+                if agent._stagnation_guard_enabled and assistant_message.tool_calls:
+                    from agent.stagnation_guard import (
+                        build_stagnation_halt_message,
+                        build_stagnation_nudge,
+                        tool_calls_fingerprint,
+                    )
+
+                    _stag_fp = tool_calls_fingerprint(assistant_message.tool_calls)
+                    if _stag_fp and _stag_fp == agent._stagnation_last_fp:
+                        agent._stagnation_run += 1
+                    else:
+                        agent._stagnation_last_fp = _stag_fp
+                        agent._stagnation_run = 1 if _stag_fp else 0
+                        agent._stagnation_nudged = False
+                    _stag_soft, _stag_hard = agent._stagnation_limits
+                    _stag_names = [
+                        tc.function.name for tc in assistant_message.tool_calls
+                    ]
+                    if _stag_fp and agent._stagnation_run >= _stag_hard:
+                        _turn_exit_reason = "stagnation_halt"
+                        final_response = build_stagnation_halt_message(
+                            agent._stagnation_run, _stag_names
+                        )
+                        agent._emit_status(
+                            "⚠️ Stopped a repeating tool-call loop "
+                            f"({agent._stagnation_run}× "
+                            f"{', '.join(dict.fromkeys(_stag_names))})"
+                        )
+                        messages.append(
+                            {"role": "assistant", "content": final_response}
+                        )
+                        if final_response:
+                            agent._safe_print(f"\n{final_response}\n")
+                            if agent.stream_delta_callback:
+                                try:
+                                    agent.stream_delta_callback(final_response)
+                                    agent.stream_delta_callback(None)
+                                except Exception:
+                                    pass
+                        agent._session_messages = messages
+                        break
+                    if (
+                        _stag_fp
+                        and agent._stagnation_run >= _stag_soft
+                        and not agent._stagnation_nudged
+                    ):
+                        agent._stagnation_nudge_pending = build_stagnation_nudge(
+                            agent._stagnation_run, _stag_names
+                        )
+                        agent._stagnation_nudged = True
+
                 assistant_msg = agent._build_assistant_message(assistant_message, finish_reason)
                 
                 # If this turn has both content AND tool_calls, capture the content
@@ -4592,6 +4673,29 @@ def run_conversation(
                             except Exception:
                                 pass
                     break
+
+                # Piggyback a pending stagnation nudge (soft limit) onto this
+                # turn's tool results so the next iteration sees the correction
+                # before repeating again. Appending to the last tool-role
+                # message — never a fresh user turn — preserves role
+                # alternation, the same seam the /steer drain uses above.
+                if agent._stagnation_nudge_pending:
+                    for _si in range(len(messages) - 1, -1, -1):
+                        _sm = messages[_si]
+                        if isinstance(_sm, dict) and _sm.get("role") == "tool":
+                            _note = "\n\n" + agent._stagnation_nudge_pending
+                            _existing = _sm.get("content", "")
+                            if isinstance(_existing, str):
+                                _sm["content"] = _existing + _note
+                            else:
+                                try:
+                                    _blocks = list(_existing) if _existing else []
+                                    _blocks.append({"type": "text", "text": _note})
+                                    _sm["content"] = _blocks
+                                except Exception:
+                                    pass
+                            break
+                    agent._stagnation_nudge_pending = None
 
                 # Reset per-turn retry counters after successful tool
                 # execution so a single truncation doesn't poison the

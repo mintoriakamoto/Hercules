@@ -26,7 +26,7 @@ from hercules_constants import (
 from hercules_cli.env_loader import load_hercules_dotenv
 from utils import is_truthy_value
 from tools.environments.local import hercules_subprocess_env
-from agent.replay_cleanup import sanitize_replay_history
+from agent.replay_cleanup import canonicalize_replay_history
 from tui_gateway import git_probe
 from tui_gateway.transport import (
     StdioTransport,
@@ -5719,7 +5719,7 @@ def _(rid, params: dict) -> dict:
         # dangling/interrupted tool-call tail so a session killed mid-loop does
         # not replay the unanswered call forever (#29086).
         prefix = display_history[: max(0, len(display_history) - len(raw_history))]
-        history = sanitize_replay_history(raw_history)
+        history = canonicalize_replay_history(raw_history)
         # Restore the model/provider/reasoning/tier this chat last used so the
         # deferred build (and the info below) match the eager path — without them
         # the build drops the provider ("No LLM provider configured").
@@ -5797,7 +5797,7 @@ def _(rid, params: dict) -> dict:
         display_history_prefix = display_history[
             : max(0, len(display_history) - len(raw_history))
         ]
-        history = sanitize_replay_history(raw_history)
+        history = canonicalize_replay_history(raw_history)
         messages = _history_to_messages(display_history)
         tokens = _set_session_context(target)
         try:

@@ -1104,6 +1104,17 @@ DEFAULT_CONFIG = {
         # a human as chat noise. Doc/markdown/skill-only edits never fire it.
         # Set true to force on everywhere, or false to disable.
         "verify_on_stop": "auto",
+        # Cross-turn stagnation guard: detect the model repeating the SAME
+        # tool call(s) with identical arguments turn after turn (identical
+        # inputs -> identical result -> no progress) and stop the run instead
+        # of spending the whole iteration budget on an unchanging result. At
+        # ``stagnation_soft_limit`` consecutive repeats a one-shot corrective
+        # nudge is injected; at ``stagnation_hard_limit`` the loop finishes
+        # with an explanation. Default on. Set stagnation_guard false to
+        # disable, or tune the limits (soft must be >= 2 and < hard).
+        "stagnation_guard": True,
+        "stagnation_soft_limit": 3,
+        "stagnation_hard_limit": 6,
         # Staged inactivity warning: send a warning to the user at this
         # threshold before escalating to a full timeout.  The warning fires
         # once per run and does not interrupt the agent.  0 = disable warning.

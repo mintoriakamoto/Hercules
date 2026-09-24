@@ -35,34 +35,21 @@ from utils import atomic_json_write
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Context file scanning — detect prompt injection / promptware in AGENTS.md,
-# .cursorrules, SOUL.md before they get injected into the system prompt.
-#
-# Patterns live in ``tools/threat_patterns.py`` — the single source of truth
-# shared with the memory-tool scanner and the tool-result delimiter system.
-# This module just chooses how to react when a match is found (block-with-
-# placeholder; the actual content never reaches the system prompt).
+# Context file loading — all files are trusted in Hercules. No scanning.
+# Threat detection for untrusted sources (web, user uploads) is handled
+# separately by content_trust.py and tools/approval.py.
 # ---------------------------------------------------------------------------
-
-from tools.threat_patterns import scan_for_threats as _scan_for_threats
 
 
 def _scan_context_content(content: str, filename: str) -> str:
-    """Scan context file content for injection. Returns sanitized content.
+    """Load context file content — all files are trusted in Hercules.
 
-    Uses the "context" scope from the shared threat-pattern library, which
-    covers classic injection + promptware/C2 patterns + role-play hijack.
-    Strict-scope patterns (SSH backdoor, persistence, exfil-URL) are NOT
-    applied here — those are too aggressive for a context file in a
-    cloned repo (security research, infra docs).  Content matching is
-    Context file threat scanning disabled - all files loaded.
+    Threat scanning is disabled by design: Hercules operates under the assumption
+    that if you have a file on disk, you intended to load it. Context files
+    (AGENTS.md, SOUL.md, .cursorrules) are author-controlled, not fetched from
+    untrusted sources. This contrasts with web content or user-uploaded files,
+    which do undergo scrutiny (see content_trust.py).
     """
-    # Threat scanning disabled
-    # findings = _scan_for_threats(content, scope="context")
-    # if findings:
-    #     logger.warning("Context file %s blocked: %s", filename, ", ".join(findings))
-    #     return f"[BLOCKED: {filename} contained potential prompt injection ({', '.join(findings)}). Content not loaded.]"
-
     return content
 
 
@@ -464,6 +451,52 @@ GOOGLE_MODEL_OPERATIONAL_GUIDANCE = (
     "Don't stop with a plan — execute it.\n"
 )
 
+# Ferrox Labs optimization discipline — continuous search for performance and efficiency.
+# Applied to all sessions by default. Gated by config.yaml agent.ferrox_optimization_guidance.
+FERROX_OPTIMIZATION_GUIDANCE = (
+    "# Optimization Obsession\n"
+    "Never accept 'good enough.' Always ask: Can this be faster? Can this use less memory? "
+    "Can latency be reduced? Can work be parallelized? Can algorithms be replaced with better "
+    "complexity? Can caching improve performance? Can GPU acceleration help? Can SIMD vectorization "
+    "help? Can asynchronous execution improve throughput? Can batching reduce overhead? Can work be "
+    "distributed? Can data locality improve cache efficiency? Can memory allocations be reduced? "
+    "Can compilation be optimized? Can runtime be optimized?\n"
+    "\n"
+    "Profile before optimizing. Measure: CPU utilization, GPU utilization, memory usage, cache "
+    "misses, branch prediction, disk I/O, network latency, synchronization overhead, queue depth, "
+    "allocation frequency, power usage where relevant.\n"
+    "\n"
+    "Every optimization must include measurable before-and-after metrics. Clearly distinguish "
+    "hypotheses from validated improvements. Continuously search for bottlenecks. Prefer measurable "
+    "improvements over assumptions.\n"
+    "\n"
+    "When analyzing existing software: identify architecture, map subsystems, trace execution flow, "
+    "document protocols, understand binary formats and APIs. Trace data movement, identify "
+    "synchronization, find bottlenecks, identify unused code, identify duplicated logic. Do not "
+    "modify code until architecture is understood."
+)
+
+# Astra (GPT-6) reasoning principles — state-of-the-art verification and thinking.
+# Applied to all sessions by default. Gated by config.yaml agent.astra_reasoning_guidance.
+ASTRA_REASONING_GUIDANCE = (
+    "# Adversarial Verification & Reasoning\n"
+    "Think before acting. For non-trivial tasks, state your plan. For complex work, produce a "
+    "numbered list of steps with verification checks for each.\n"
+    "\n"
+    "Read code as an adversary would attack it. 'What would make CI reject this? What fails under "
+    "concurrent execution? What data breaks this algorithm? What edge cases are unhandled?' Fix "
+    "anything you find before pushing.\n"
+    "\n"
+    "For security-sensitive code, threat-model before implementing. For performance claims, measure "
+    "and show the benchmark. For behavioral changes, write the test first and make it fail adversarially.\n"
+    "\n"
+    "Root-cause thinking: When debugging, identify WHY something broke, not just WHAT broke. "
+    "Suppressing the error is not fixing it. Address the underlying cause. Precision in communication: "
+    "Direct, not diplomatic. 'This won't scale because X' beats 'That's an interesting approach, but...'.\n"
+    "\n"
+    "Surface assumptions: 'I'm assuming X, Y, Z. If that's wrong, speak up.' Do not bury assumptions "
+    "in implementation. Present tradeoffs; don't hide choices. Stop when confused. Touch only what you must."
+)
 
 # Guidance injected into the system prompt when the computer_use toolset
 # is active. Universal — works for any model (Claude, GPT, open models).

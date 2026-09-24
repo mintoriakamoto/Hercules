@@ -334,7 +334,7 @@ all = [
 # Unified front door: warroom:main owns the warroom/tempest/obliterate verbs
 # and delegates every other invocation to hercules_cli.main:main.
 hercules = "hercules_cli.warroom:main"
-hercules-agent = "run_agent:main"
+hercules-agent = "hercules_agent.run_agent:main"
 hercules-acp = "acp_adapter.entry:main"
 
 [tool.setuptools]
@@ -384,7 +384,7 @@ plugins = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["agent", "agent.*", "tools", "tools.*", "hercules_cli", "hercules_cli.*", "gateway", "gateway.*", "tui_gateway", "tui_gateway.*", "cron", "cron.*", "acp_adapter", "plugins", "plugins.*", "providers", "providers.*"]
+include = ["hercules_agent", "hercules_agent.*", "agent", "agent.*", "tools", "tools.*", "hercules_cli", "hercules_cli.*", "gateway", "gateway.*", "tui_gateway", "tui_gateway.*", "cron", "cron.*", "acp_adapter", "plugins", "plugins.*", "providers", "providers.*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
