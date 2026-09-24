@@ -10,6 +10,7 @@ This file tests that the tool surfaces:
   4. skill_manage's "not found" error names other profiles where the
      skill exists.
 """
+
 from __future__ import annotations
 
 import json
@@ -38,9 +39,11 @@ def fake_hercules(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(sec_home))
 
     import hercules_constants
+
     monkeypatch.setattr(hercules_constants, "get_default_hercules_root", lambda: root)
 
     import agent.file_safety as fs
+
     monkeypatch.setattr(fs, "_hercules_home_path", lambda: sec_home)
     monkeypatch.setattr(fs, "_hercules_root_path", lambda: root)
 
@@ -59,6 +62,7 @@ def fake_hercules(tmp_path, monkeypatch):
 class TestWriteFileCrossProfileGuard:
     def test_in_profile_write_allowed(self, fake_hercules):
         from tools.file_tools import write_file_tool
+
         target = fake_hercules["sec_home"] / "skills" / "new-skill" / "SKILL.md"
         target.parent.mkdir(parents=True)
         result_json = write_file_tool(str(target), "in-profile content")
@@ -71,6 +75,7 @@ class TestWriteFileCrossProfileGuard:
         """The May 2026 incident — security-profile session edits default
         profile's skill. Must be blocked."""
         from tools.file_tools import write_file_tool
+
         target = fake_hercules["root"] / "skills" / "shared-skill" / "SKILL.md"
         original = target.read_text()
         result_json = write_file_tool(str(target), "OVERWRITTEN")
@@ -85,6 +90,7 @@ class TestWriteFileCrossProfileGuard:
     def test_cross_profile_True_bypass(self, fake_hercules):
         """Explicit override after user direction must succeed."""
         from tools.file_tools import write_file_tool
+
         target = fake_hercules["root"] / "skills" / "shared-skill" / "SKILL.md"
         result_json = write_file_tool(
             str(target), "user-directed override", cross_profile=True
@@ -95,6 +101,7 @@ class TestWriteFileCrossProfileGuard:
 
     def test_non_hercules_path_unaffected(self, fake_hercules, tmp_path):
         from tools.file_tools import write_file_tool
+
         target = tmp_path / "outside" / "main.py"
         target.parent.mkdir()
         result_json = write_file_tool(str(target), "print('hello')")
@@ -111,6 +118,7 @@ class TestWriteFileCrossProfileGuard:
 class TestPatchCrossProfileGuard:
     def test_cross_profile_patch_blocked(self, fake_hercules):
         from tools.file_tools import patch_tool
+
         target = fake_hercules["root"] / "skills" / "shared-skill" / "SKILL.md"
         original = target.read_text()
         result_json = patch_tool(
@@ -126,6 +134,7 @@ class TestPatchCrossProfileGuard:
 
     def test_cross_profile_patch_bypass(self, fake_hercules):
         from tools.file_tools import patch_tool
+
         target = fake_hercules["root"] / "skills" / "shared-skill" / "SKILL.md"
         result_json = patch_tool(
             mode="replace",
@@ -142,6 +151,7 @@ class TestPatchCrossProfileGuard:
         """V4A patches embed the target paths in the patch body, not in
         a ``path`` kwarg. The guard must still apply."""
         from tools.file_tools import patch_tool
+
         target = fake_hercules["root"] / "skills" / "shared-skill" / "SKILL.md"
         original = target.read_text()
         v4a = (
@@ -168,9 +178,7 @@ class TestSkillManageCrossProfileErrorUX:
     def _make_skill_in_profile(self, profile_dir: Path, name: str):
         d = profile_dir / "skills" / name
         d.mkdir(parents=True, exist_ok=True)
-        (d / "SKILL.md").write_text(
-            f"---\nname: {name}\ndescription: a skill.\n---\n"
-        )
+        (d / "SKILL.md").write_text(f"---\nname: {name}\ndescription: a skill.\n---\n")
 
     def test_error_names_other_profile_when_skill_lives_there(
         self, fake_hercules, monkeypatch
@@ -183,6 +191,7 @@ class TestSkillManageCrossProfileErrorUX:
         # the fixture). Skill_manager_tool computes SKILLS_DIR at import.
         import importlib
         import tools.skill_manager_tool
+
         importlib.reload(tools.skill_manager_tool)
         from tools.skill_manager_tool import _skill_not_found_error
 
@@ -198,6 +207,7 @@ class TestSkillManageCrossProfileErrorUX:
 
         import importlib
         import tools.skill_manager_tool
+
         importlib.reload(tools.skill_manager_tool)
         from tools.skill_manager_tool import _skill_not_found_error
 
@@ -213,6 +223,7 @@ class TestSkillManageCrossProfileErrorUX:
         """When no profile has the skill, error falls back to skills_list hint."""
         import importlib
         import tools.skill_manager_tool
+
         importlib.reload(tools.skill_manager_tool)
         from tools.skill_manager_tool import _skill_not_found_error
 
@@ -232,10 +243,12 @@ class TestSystemPromptActiveProfile:
         about ~/.hercules/profiles/<name>/."""
         # Don't set HERCULES_HOME — falls back to default.
         import agent.file_safety as fs
+
         monkeypatch.setattr(fs, "_hercules_home_path", lambda: tmp_path / "fake")
         monkeypatch.setattr(fs, "_hercules_root_path", lambda: tmp_path / "fake")
 
         from agent.file_safety import _resolve_active_profile_name
+
         assert _resolve_active_profile_name() == "default"
         # Build the line manually to pin the contract — the prompt builder
         # is too heavy to instantiate end-to-end in a unit test.
@@ -249,6 +262,7 @@ class TestSystemPromptActiveProfile:
         # paths, (3) says "do not modify another profile's" without
         # explicit user direction.
         from pathlib import Path
+
         src = Path("agent/system_prompt.py").read_text()
         assert "Active Hercules profile" in src
         assert "cross_profile=True" in src

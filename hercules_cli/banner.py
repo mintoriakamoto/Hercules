@@ -2,6 +2,7 @@
 
 Pure display functions with no HerculesCLI state dependency.
 """
+
 import json
 import logging
 import os
@@ -41,6 +42,7 @@ def cprint(text: str):
     """Print ANSI-colored text through prompt_toolkit's renderer."""
     from prompt_toolkit import print_formatted_text as _pt_print
     from prompt_toolkit.formatted_text import ANSI as _PT_ANSI
+
     _pt_print(_PT_ANSI(text))
 
 
@@ -48,13 +50,17 @@ def cprint(text: str):
 # Skin-aware color helpers
 # =========================================================================
 
+
 def _skin_color(key: str, fallback: str) -> str:
     """Get a color from the active skin, or return fallback."""
     try:
         from hercules_cli.skin_engine import get_active_skin
+
         return get_active_skin().get_color(key, fallback)
     except Exception:
         return fallback
+
+
 # =========================================================================
 # ASCII Art & Branding
 # =========================================================================
@@ -197,13 +203,17 @@ def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
     # A skin may override the logo with its own pre-styled art.
     try:
         from hercules_cli.skin_engine import get_active_skin
+
         _bskin = get_active_skin()
         skin_logo = getattr(_bskin, "banner_logo", None)
     except Exception:
         skin_logo = None
     if skin_logo:
         console.print(skin_logo)
-        console.print("[dim #C73E3A]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
+        console.print(
+            "[dim #C73E3A]by mintoriakamoto · the self-improving AI agent[/]",
+            justify="center",
+        )
         return
 
     if animate is None:
@@ -214,12 +224,16 @@ def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
         console.print(_gradient_line_markup(line, row, nrows))
         if animate:
             time.sleep(0.045)
-    console.print("[dim #C73E3A]by mintoriakamoto · the self-improving AI agent[/]", justify="center")
+    console.print(
+        "[dim #C73E3A]by mintoriakamoto · the self-improving AI agent[/]",
+        justify="center",
+    )
 
 
 # =========================================================================
 # Skills scanning
 # =========================================================================
+
 
 def get_available_skills() -> Dict[str, List[str]]:
     """Return skills grouped by category, filtered by platform and disabled state.
@@ -230,6 +244,7 @@ def get_available_skills() -> Dict[str, List[str]]:
     """
     try:
         from tools.skills_tool import _find_all_skills
+
         all_skills = _find_all_skills()  # already filtered
     except Exception:
         return {}
@@ -262,9 +277,9 @@ def _canonical_github_remote(url: str | None) -> str:
         return ""
     value = url.strip()
     if value.startswith("git@github.com:"):
-        value = "github.com/" + value[len("git@github.com:"):]
+        value = "github.com/" + value[len("git@github.com:") :]
     elif value.startswith("ssh://git@github.com/"):
-        value = "github.com/" + value[len("ssh://git@github.com/"):]
+        value = "github.com/" + value[len("ssh://git@github.com/") :]
     else:
         parsed = urlparse(value)
         if parsed.netloc and parsed.path:
@@ -283,7 +298,10 @@ def _is_ssh_remote(url: str | None) -> bool:
 
 
 def _is_official_ssh_remote(url: str | None) -> bool:
-    return _is_ssh_remote(url) and _canonical_github_remote(url) == _OFFICIAL_REPO_CANONICAL
+    return (
+        _is_ssh_remote(url)
+        and _canonical_github_remote(url) == _OFFICIAL_REPO_CANONICAL
+    )
 
 
 def _git_stdout(args: list[str], *, cwd: Path, timeout: int = 5) -> Optional[str]:
@@ -311,7 +329,9 @@ def _check_via_rev(local_rev: str) -> Optional[int]:
     try:
         result = subprocess.run(
             ["git", "ls-remote", _UPSTREAM_REPO_URL, "refs/heads/main"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
     except Exception:
         return None
@@ -351,7 +371,8 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
         fetch_args.append("--quiet")
         subprocess.run(
             fetch_args,
-            capture_output=True, timeout=10,
+            capture_output=True,
+            timeout=10,
             cwd=str(repo_dir),
         )
     except Exception:
@@ -362,10 +383,9 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
         # be a tracking ref in a `clone --depth 1`, so prefer FETCH_HEAD (just
         # updated by the fetch above) and fall back to origin/main.
         head_rev = _git_stdout(["rev-parse", "HEAD"], cwd=repo_dir)
-        target_rev = (
-            _git_stdout(["rev-parse", "FETCH_HEAD"], cwd=repo_dir)
-            or _git_stdout(["rev-parse", "origin/main"], cwd=repo_dir)
-        )
+        target_rev = _git_stdout(
+            ["rev-parse", "FETCH_HEAD"], cwd=repo_dir
+        ) or _git_stdout(["rev-parse", "origin/main"], cwd=repo_dir)
         if not head_rev or not target_rev:
             return None
         return 0 if head_rev == target_rev else UPDATE_AVAILABLE_NO_COUNT
@@ -373,7 +393,9 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
     try:
         result = subprocess.run(
             ["git", "rev-list", "--count", "HEAD..origin/main"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
             cwd=str(repo_dir),
         )
         if result.returncode == 0:
@@ -420,6 +442,7 @@ def check_for_updates() -> Optional[int]:
     # (branding.tsx, guarded on `typeof === 'number' && > 0`) show nothing.
     try:
         from hercules_cli.config import detect_install_method, get_project_root
+
         if detect_install_method(get_project_root()) == "docker":
             return None
     except Exception:
@@ -462,7 +485,12 @@ def check_for_updates() -> Optional[int]:
 
     try:
         cache_file.write_text(
-            json.dumps({"ts": now, "behind": behind, "rev": embedded_rev, "ver": VERSION})
+            json.dumps({
+                "ts": now,
+                "behind": behind,
+                "rev": embedded_rev,
+                "ver": VERSION,
+            })
         )
     except Exception:
         pass
@@ -520,6 +548,7 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
         # No git checkout — try the baked build SHA (Docker image path).
         try:
             from hercules_cli.build_info import get_build_sha
+
             baked = get_build_sha(short=8)
             if baked:
                 return {"upstream": baked, "local": baked, "ahead": 0}
@@ -534,6 +563,7 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
         # Fall back to the baked build SHA if available.
         try:
             from hercules_cli.build_info import get_build_sha
+
             baked = get_build_sha(short=8)
             if baked:
                 return {"upstream": baked, "local": baked, "ahead": 0}
@@ -656,10 +686,12 @@ def prefetch_update_check():
     if not auto_update_check_enabled():
         _update_check_done.set()
         return
+
     def _run():
         global _update_result
         _update_result = check_for_updates()
         _update_check_done.set()
+
     t = threading.Thread(target=_run, daemon=True)
     t.start()
 
@@ -673,6 +705,7 @@ def get_update_result(timeout: float = 0.5) -> Optional[int]:
 # =========================================================================
 # Welcome banner
 # =========================================================================
+
 
 def _format_context_length(tokens: int) -> str:
     """Format a token count for display (e.g. 128000 → '128K', 1048576 → '1M')."""
@@ -695,20 +728,20 @@ def _display_toolset_name(toolset_name: str) -> str:
     """Normalize internal/legacy toolset identifiers for banner display."""
     if not toolset_name:
         return "unknown"
-    return (
-        toolset_name[:-6]
-        if toolset_name.endswith("_tools")
-        else toolset_name
-    )
+    return toolset_name[:-6] if toolset_name.endswith("_tools") else toolset_name
 
 
-def build_welcome_banner(console: "Console", model: str, cwd: str,
-                         tools: Optional[List[dict]] = None,
-                         enabled_toolsets: Optional[List[str]] = None,
-                         session_id: Optional[str] = None,
-                         get_toolset_for_tool=None,
-                         context_length: Optional[int] = None,
-                         provider: Optional[str] = None):
+def build_welcome_banner(
+    console: "Console",
+    model: str,
+    cwd: str,
+    tools: Optional[List[dict]] = None,
+    enabled_toolsets: Optional[List[str]] = None,
+    session_id: Optional[str] = None,
+    get_toolset_for_tool=None,
+    context_length: Optional[int] = None,
+    provider: Optional[str] = None,
+):
     """Build and print a welcome banner with the pillars on left and info on right.
 
     Args:
@@ -727,6 +760,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     from model_tools import check_tool_availability, TOOLSET_REQUIREMENTS
     from rich.panel import Panel
     from rich.table import Table
+
     if get_toolset_for_tool is None:
         from model_tools import get_toolset_for_tool
 
@@ -743,7 +777,8 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     _enabled_ts = {str(t) for t in enabled_toolsets}
     if _enabled_ts:
         unavailable_toolsets = [
-            item for item in unavailable_toolsets
+            item
+            for item in unavailable_toolsets
             if str(item.get("id", item.get("name", ""))) in _enabled_ts
         ]
     disabled_tools = set()
@@ -773,8 +808,13 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     # Use skin's custom hero art if provided
     try:
         from hercules_cli.skin_engine import get_active_skin
+
         _bskin = get_active_skin()
-        _hero = _bskin.banner_hero if hasattr(_bskin, 'banner_hero') and _bskin.banner_hero else HERCULES_PILLARS
+        _hero = (
+            _bskin.banner_hero
+            if hasattr(_bskin, "banner_hero") and _bskin.banner_hero
+            else HERCULES_PILLARS
+        )
     except Exception:
         _bskin = None
         _hero = HERCULES_PILLARS
@@ -799,19 +839,33 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
         if len(preset_name) > 28:
             preset_name = preset_name[:25] + "..."
         agg_str = f" [dim {dim}]·[/] [dim {dim}]agg {agg_label}[/]" if agg_label else ""
-        ctx_str = f" [dim {dim}]·[/] [dim {dim}]{_format_context_length(context_length)} context[/]" if context_length else ""
-        left_lines.append(f"[{accent}]MoA: {preset_name}[/]{agg_str}{ctx_str} [dim {dim}]·[/] [dim {dim}]mintoriakamoto[/]")
+        ctx_str = (
+            f" [dim {dim}]·[/] [dim {dim}]{_format_context_length(context_length)} context[/]"
+            if context_length
+            else ""
+        )
+        left_lines.append(
+            f"[{accent}]MoA: {preset_name}[/]{agg_str}{ctx_str} [dim {dim}]·[/] [dim {dim}]mintoriakamoto[/]"
+        )
     else:
         model_short = model.split("/")[-1] if "/" in model else model
         if model_short.endswith(".gguf"):
             model_short = model_short[:-5]
         if len(model_short) > 28:
             model_short = model_short[:25] + "..."
-        ctx_str = f" [dim {dim}]·[/] [dim {dim}]{_format_context_length(context_length)} context[/]" if context_length else ""
-        left_lines.append(f"[{accent}]{model_short}[/]{ctx_str} [dim {dim}]·[/] [dim {dim}]mintoriakamoto[/]")
+        ctx_str = (
+            f" [dim {dim}]·[/] [dim {dim}]{_format_context_length(context_length)} context[/]"
+            if context_length
+            else ""
+        )
+        left_lines.append(
+            f"[{accent}]{model_short}[/]{ctx_str} [dim {dim}]·[/] [dim {dim}]mintoriakamoto[/]"
+        )
 
     if os.getenv("HERCULES_YOLO_MODE"):
-        left_lines.append(f"[bold red]⚠ YOLO mode[/] [dim {dim}]— all approval prompts bypassed[/]")
+        left_lines.append(
+            f"[bold red]⚠ YOLO mode[/] [dim {dim}]— all approval prompts bypassed[/]"
+        )
     left_lines.append(f"[dim {dim}]{cwd}[/]")
     if session_id:
         left_lines.append(f"[dim {session_color}]Session: {session_id}[/]")
@@ -879,6 +933,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     # MCP Servers section (only if configured)
     try:
         from tools.mcp_tool import get_mcp_status
+
         mcp_status = get_mcp_status()
     except Exception:
         mcp_status = []
@@ -972,6 +1027,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     try:
         from hercules_cli.codex_runtime_switch import get_current_runtime
         from hercules_cli.config import load_config as _load_cfg
+
         if get_current_runtime(_load_cfg()) == "codex_app_server":
             right_lines.append(
                 f"[bold {accent}]Runtime:[/] [{text}]codex app-server[/] "
@@ -982,6 +1038,7 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     # Show active profile name when not 'default'
     try:
         from hercules_cli.profiles import get_active_profile_name
+
         _profile_name = get_active_profile_name()
         if _profile_name and _profile_name != "default":
             right_lines.append(f"[bold {accent}]Profile:[/] [{text}]{_profile_name}[/]")
@@ -994,7 +1051,11 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
     try:
         behind = get_update_result(timeout=0.5)
         if behind is not None and behind != 0:
-            from hercules_cli.config import get_managed_update_command, recommended_update_command
+            from hercules_cli.config import (
+                get_managed_update_command,
+                recommended_update_command,
+            )
+
             if behind > 0:
                 commits_word = "commit" if behind == 1 else "commits"
                 right_lines.append(
@@ -1024,8 +1085,9 @@ def build_welcome_banner(console: "Console", model: str, cwd: str,
             detect_install_method,
             format_unsupported_install_warning,
             is_unsupported_install_method,
-            get_project_root
+            get_project_root,
         )
+
         _install_method = detect_install_method(get_project_root())
         if is_unsupported_install_method(_install_method):
             right_lines.append(

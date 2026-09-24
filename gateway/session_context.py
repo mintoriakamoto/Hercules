@@ -66,6 +66,7 @@ def session_context_engaged() -> bool:
     """
     return _session_context_engaged
 
+
 # ---------------------------------------------------------------------------
 # Per-task session variables
 # ---------------------------------------------------------------------------
@@ -73,10 +74,16 @@ def session_context_engaged() -> bool:
 _SESSION_PLATFORM: ContextVar = ContextVar("HERCULES_SESSION_PLATFORM", default=_UNSET)
 _SESSION_SOURCE: ContextVar = ContextVar("HERCULES_SESSION_SOURCE", default=_UNSET)
 _SESSION_CHAT_ID: ContextVar = ContextVar("HERCULES_SESSION_CHAT_ID", default=_UNSET)
-_SESSION_CHAT_NAME: ContextVar = ContextVar("HERCULES_SESSION_CHAT_NAME", default=_UNSET)
-_SESSION_THREAD_ID: ContextVar = ContextVar("HERCULES_SESSION_THREAD_ID", default=_UNSET)
+_SESSION_CHAT_NAME: ContextVar = ContextVar(
+    "HERCULES_SESSION_CHAT_NAME", default=_UNSET
+)
+_SESSION_THREAD_ID: ContextVar = ContextVar(
+    "HERCULES_SESSION_THREAD_ID", default=_UNSET
+)
 _SESSION_USER_ID: ContextVar = ContextVar("HERCULES_SESSION_USER_ID", default=_UNSET)
-_SESSION_USER_NAME: ContextVar = ContextVar("HERCULES_SESSION_USER_NAME", default=_UNSET)
+_SESSION_USER_NAME: ContextVar = ContextVar(
+    "HERCULES_SESSION_USER_NAME", default=_UNSET
+)
 _SESSION_KEY: ContextVar = ContextVar("HERCULES_SESSION_KEY", default=_UNSET)
 _SESSION_ID: ContextVar = ContextVar("HERCULES_SESSION_ID", default=_UNSET)
 # In-process UI session/window id for multi-session desktop/TUI hosts. This is
@@ -85,11 +92,15 @@ _SESSION_ID: ContextVar = ContextVar("HERCULES_SESSION_ID", default=_UNSET)
 # that commissioned a detached completion. Background completions use it as a
 # precise return address so a stale/rotated durable session key cannot be
 # consumed by whichever desktop poller wakes first.
-_SESSION_UI_SESSION_ID: ContextVar = ContextVar("HERCULES_UI_SESSION_ID", default=_UNSET)
+_SESSION_UI_SESSION_ID: ContextVar = ContextVar(
+    "HERCULES_UI_SESSION_ID", default=_UNSET
+)
 # ID of the message that triggered the current turn. Used as a reply anchor
 # so background-process notifications stay inside the originating Telegram
 # private-chat topic (those lanes route only with thread id + reply anchor).
-_SESSION_MESSAGE_ID: ContextVar = ContextVar("HERCULES_SESSION_MESSAGE_ID", default=_UNSET)
+_SESSION_MESSAGE_ID: ContextVar = ContextVar(
+    "HERCULES_SESSION_MESSAGE_ID", default=_UNSET
+)
 
 _SESSION_PROFILE: ContextVar = ContextVar("HERCULES_SESSION_PROFILE", default=_UNSET)
 
@@ -112,13 +123,21 @@ _SESSION_PROFILE: ContextVar = ContextVar("HERCULES_SESSION_PROFILE", default=_U
 # and any contextvar-unaware path keep working. Stateless adapters opt OUT by
 # setting ``supports_async_delivery = False`` on the adapter class; the gateway
 # propagates that into this contextvar at session-bind time.
-_SESSION_ASYNC_DELIVERY: ContextVar = ContextVar("HERCULES_SESSION_ASYNC_DELIVERY", default=_UNSET)
+_SESSION_ASYNC_DELIVERY: ContextVar = ContextVar(
+    "HERCULES_SESSION_ASYNC_DELIVERY", default=_UNSET
+)
 
 # Cron auto-delivery vars — set per-job in run_job() so concurrent jobs
 # don't clobber each other's delivery targets.
-_CRON_AUTO_DELIVER_PLATFORM: ContextVar = ContextVar("HERCULES_CRON_AUTO_DELIVER_PLATFORM", default=_UNSET)
-_CRON_AUTO_DELIVER_CHAT_ID: ContextVar = ContextVar("HERCULES_CRON_AUTO_DELIVER_CHAT_ID", default=_UNSET)
-_CRON_AUTO_DELIVER_THREAD_ID: ContextVar = ContextVar("HERCULES_CRON_AUTO_DELIVER_THREAD_ID", default=_UNSET)
+_CRON_AUTO_DELIVER_PLATFORM: ContextVar = ContextVar(
+    "HERCULES_CRON_AUTO_DELIVER_PLATFORM", default=_UNSET
+)
+_CRON_AUTO_DELIVER_CHAT_ID: ContextVar = ContextVar(
+    "HERCULES_CRON_AUTO_DELIVER_CHAT_ID", default=_UNSET
+)
+_CRON_AUTO_DELIVER_THREAD_ID: ContextVar = ContextVar(
+    "HERCULES_CRON_AUTO_DELIVER_THREAD_ID", default=_UNSET
+)
 
 _VAR_MAP = {
     "HERCULES_SESSION_PLATFORM": _SESSION_PLATFORM,

@@ -17,7 +17,9 @@ from hercules_constants import agent_browser_runnable
 
 PROJECT_ROOT = get_project_root()
 HERCULES_HOME = get_hercules_home()
-_DHH = display_hercules_home()  # user-facing display path (e.g. ~/.hercules or ~/.hercules/profiles/coder)
+_DHH = (
+    display_hercules_home()
+)  # user-facing display path (e.g. ~/.hercules or ~/.hercules/profiles/coder)
 
 # Load environment variables from ~/.hercules/.env so API key checks work
 _env_path = get_env_path()
@@ -137,7 +139,9 @@ def _doctor_tool_availability_detail(toolset: str) -> str:
     return ""
 
 
-def _apply_doctor_tool_availability_overrides(available: list[str], unavailable: list[dict]) -> tuple[list[str], list[dict]]:
+def _apply_doctor_tool_availability_overrides(
+    available: list[str], unavailable: list[dict]
+) -> tuple[list[str], list[dict]]:
     """Adjust runtime-gated tool availability for doctor diagnostics."""
     updated_available = list(available)
     updated_unavailable = []
@@ -167,12 +171,14 @@ def _has_healthy_oauth_fallback_for_apikey_provider(provider_label: str) -> bool
     if normalized == "minimax":
         try:
             from hercules_cli.auth import get_minimax_oauth_auth_status
+
             return bool((get_minimax_oauth_auth_status() or {}).get("logged_in"))
         except Exception:
             return False
     if normalized == "xai":
         try:
             from hercules_cli.auth import get_xai_oauth_auth_status
+
             return bool((get_xai_oauth_auth_status() or {}).get("logged_in"))
         except Exception:
             return False
@@ -180,13 +186,25 @@ def _has_healthy_oauth_fallback_for_apikey_provider(provider_label: str) -> bool
 
 
 def check_ok(text: str, detail: str = ""):
-    print(f"  {color('✓', Colors.GREEN)} {text}" + (f" {color(detail, Colors.DIM)}" if detail else ""))
+    print(
+        f"  {color('✓', Colors.GREEN)} {text}"
+        + (f" {color(detail, Colors.DIM)}" if detail else "")
+    )
+
 
 def check_warn(text: str, detail: str = ""):
-    print(f"  {color('⚠', Colors.YELLOW)} {text}" + (f" {color(detail, Colors.DIM)}" if detail else ""))
+    print(
+        f"  {color('⚠', Colors.YELLOW)} {text}"
+        + (f" {color(detail, Colors.DIM)}" if detail else "")
+    )
+
 
 def check_fail(text: str, detail: str = ""):
-    print(f"  {color('✗', Colors.RED)} {text}" + (f" {color(detail, Colors.DIM)}" if detail else ""))
+    print(
+        f"  {color('✗', Colors.RED)} {text}"
+        + (f" {color(detail, Colors.DIM)}" if detail else "")
+    )
+
 
 def check_info(text: str):
     print(f"    {color('→', Colors.CYAN)} {text}")
@@ -210,7 +228,9 @@ def _enabled_cli_toolsets_for_doctor() -> set[str] | None:
         from hercules_cli.config import load_config
         from hercules_cli.tools_config import _get_platform_tools
 
-        return {str(toolset) for toolset in _get_platform_tools(load_config() or {}, "cli")}
+        return {
+            str(toolset) for toolset in _get_platform_tools(load_config() or {}, "cli")
+        }
     except Exception:
         return None
 
@@ -218,14 +238,14 @@ def _enabled_cli_toolsets_for_doctor() -> set[str] | None:
 def _missing_api_key_toolsets_for_summary(unavailable: list[dict]) -> list[dict]:
     """Filter unavailable API-key toolsets to those enabled for the CLI."""
     api_key_unavailable = [
-        item for item in unavailable
-        if item.get("missing_vars") or item.get("env_vars")
+        item for item in unavailable if item.get("missing_vars") or item.get("env_vars")
     ]
     enabled_toolsets = _enabled_cli_toolsets_for_doctor()
     if enabled_toolsets is None:
         return api_key_unavailable
     return [
-        item for item in api_key_unavailable
+        item
+        for item in api_key_unavailable
         if str(item.get("name") or "") in enabled_toolsets
     ]
 
@@ -322,7 +342,9 @@ def _check_s6_supervision(issues: list[str]) -> None:
 
     profiles = mgr.list_profile_gateways()
     if not profiles:
-        check_info("No per-profile gateways registered yet — create one with `hercules profile create <name>`")
+        check_info(
+            "No per-profile gateways registered yet — create one with `hercules profile create <name>`"
+        )
         return
 
     up_count = sum(1 for p in profiles if mgr.is_running(f"gateway-{p}"))
@@ -341,6 +363,7 @@ def check_certificates() -> None:
     try:
         from agent.ssl_guard import verify_ca_bundle_with_fallback
         from agent.errors import SSLConfigurationError
+
         verify_ca_bundle_with_fallback()
         check_ok("SSL CA certificate bundle is valid")
     except SSLConfigurationError as e:
@@ -388,7 +411,9 @@ def _check_gateway_service_linger(issues: list[str]) -> None:
     elif linger_enabled is False:
         check_warn("Systemd linger disabled", "(gateway may stop after logout)")
         check_info("Run: sudo loginctl enable-linger $USER")
-        issues.append("Enable linger for the gateway user service: sudo loginctl enable-linger $USER")
+        issues.append(
+            "Enable linger for the gateway user service: sudo loginctl enable-linger $USER"
+        )
     else:
         check_warn("Could not verify systemd linger", f"({linger_detail})")
 
@@ -404,37 +429,128 @@ def _build_apikey_providers_list() -> list:
     already present — adding plugins/model-providers/<name>/ is sufficient to get into doctor.
     """
     _static = [
-        ("Z.AI / GLM",      ("GLM_API_KEY", "ZAI_API_KEY", "Z_AI_API_KEY"), "https://api.z.ai/api/paas/v4/models", "GLM_BASE_URL", True),
-        ("Kimi / Moonshot",  ("KIMI_API_KEY",),                              "https://api.moonshot.ai/v1/models",   "KIMI_BASE_URL", True),
-        ("StepFun Step Plan", ("STEPFUN_API_KEY",),                          "https://api.stepfun.ai/step_plan/v1/models", "STEPFUN_BASE_URL", True),
-        ("Kimi / Moonshot (China)", ("KIMI_CN_API_KEY",),                    "https://api.moonshot.cn/v1/models",   None, True),
-        ("Arcee AI",         ("ARCEEAI_API_KEY",),                           "https://api.arcee.ai/api/v1/models",  "ARCEE_BASE_URL", True),
-        ("GMI Cloud",        ("GMI_API_KEY",),                               "https://api.gmi-serving.com/v1/models", "GMI_BASE_URL", True),
-        ("DeepSeek",         ("DEEPSEEK_API_KEY",),                          "https://api.deepseek.com/v1/models",  "DEEPSEEK_BASE_URL", True),
-        ("Hugging Face",     ("HF_TOKEN",),                                  "https://router.huggingface.co/v1/models", "HF_BASE_URL", True),
-        ("NVIDIA NIM",       ("NVIDIA_API_KEY",),                            "https://integrate.api.nvidia.com/v1/models", "NVIDIA_BASE_URL", True),
-        ("Alibaba/DashScope", ("DASHSCOPE_API_KEY",),                        "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models", "DASHSCOPE_BASE_URL", True),
+        (
+            "Z.AI / GLM",
+            ("GLM_API_KEY", "ZAI_API_KEY", "Z_AI_API_KEY"),
+            "https://api.z.ai/api/paas/v4/models",
+            "GLM_BASE_URL",
+            True,
+        ),
+        (
+            "Kimi / Moonshot",
+            ("KIMI_API_KEY",),
+            "https://api.moonshot.ai/v1/models",
+            "KIMI_BASE_URL",
+            True,
+        ),
+        (
+            "StepFun Step Plan",
+            ("STEPFUN_API_KEY",),
+            "https://api.stepfun.ai/step_plan/v1/models",
+            "STEPFUN_BASE_URL",
+            True,
+        ),
+        (
+            "Kimi / Moonshot (China)",
+            ("KIMI_CN_API_KEY",),
+            "https://api.moonshot.cn/v1/models",
+            None,
+            True,
+        ),
+        (
+            "Arcee AI",
+            ("ARCEEAI_API_KEY",),
+            "https://api.arcee.ai/api/v1/models",
+            "ARCEE_BASE_URL",
+            True,
+        ),
+        (
+            "GMI Cloud",
+            ("GMI_API_KEY",),
+            "https://api.gmi-serving.com/v1/models",
+            "GMI_BASE_URL",
+            True,
+        ),
+        (
+            "DeepSeek",
+            ("DEEPSEEK_API_KEY",),
+            "https://api.deepseek.com/v1/models",
+            "DEEPSEEK_BASE_URL",
+            True,
+        ),
+        (
+            "Hugging Face",
+            ("HF_TOKEN",),
+            "https://router.huggingface.co/v1/models",
+            "HF_BASE_URL",
+            True,
+        ),
+        (
+            "NVIDIA NIM",
+            ("NVIDIA_API_KEY",),
+            "https://integrate.api.nvidia.com/v1/models",
+            "NVIDIA_BASE_URL",
+            True,
+        ),
+        (
+            "Alibaba/DashScope",
+            ("DASHSCOPE_API_KEY",),
+            "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models",
+            "DASHSCOPE_BASE_URL",
+            True,
+        ),
         # MiniMax global: /v1 endpoint supports /models.
-        ("MiniMax",          ("MINIMAX_API_KEY",),                           "https://api.minimax.io/v1/models",    "MINIMAX_BASE_URL", True),
+        (
+            "MiniMax",
+            ("MINIMAX_API_KEY",),
+            "https://api.minimax.io/v1/models",
+            "MINIMAX_BASE_URL",
+            True,
+        ),
         # MiniMax CN: /v1 endpoint does NOT support /models (returns 404).
-        ("MiniMax (China)",  ("MINIMAX_CN_API_KEY",),                        "https://api.minimaxi.com/v1/models",  "MINIMAX_CN_BASE_URL", False),
-        ("Kilo Code",        ("KILOCODE_API_KEY",),                          "https://api.kilo.ai/api/gateway/models", "KILOCODE_BASE_URL", True),
-        ("OpenCode Zen",     ("OPENCODE_ZEN_API_KEY",),                      "https://opencode.ai/zen/v1/models",  "OPENCODE_ZEN_BASE_URL", True),
+        (
+            "MiniMax (China)",
+            ("MINIMAX_CN_API_KEY",),
+            "https://api.minimaxi.com/v1/models",
+            "MINIMAX_CN_BASE_URL",
+            False,
+        ),
+        (
+            "Kilo Code",
+            ("KILOCODE_API_KEY",),
+            "https://api.kilo.ai/api/gateway/models",
+            "KILOCODE_BASE_URL",
+            True,
+        ),
+        (
+            "OpenCode Zen",
+            ("OPENCODE_ZEN_API_KEY",),
+            "https://opencode.ai/zen/v1/models",
+            "OPENCODE_ZEN_BASE_URL",
+            True,
+        ),
         # OpenCode Go has no shared /models endpoint; skip the health check.
-        ("OpenCode Go",      ("OPENCODE_GO_API_KEY",),                       None,                                  "OPENCODE_GO_BASE_URL", False),
+        ("OpenCode Go", ("OPENCODE_GO_API_KEY",), None, "OPENCODE_GO_BASE_URL", False),
     ]
     _known_names = {t[0] for t in _static}
     # Also index by profile canonical name so profiles without display_name
     # don't create duplicate entries for providers already in the static list.
     _known_canonical: set[str] = set()
     _name_to_canonical = {
-        "Z.AI / GLM": "zai", "Kimi / Moonshot": "kimi-coding",
-        "StepFun Step Plan": "stepfun", "Kimi / Moonshot (China)": "kimi-coding-cn",
-        "Arcee AI": "arcee", "GMI Cloud": "gmi", "DeepSeek": "deepseek",
-        "Hugging Face": "huggingface", "NVIDIA NIM": "nvidia",
-        "Alibaba/DashScope": "alibaba", "MiniMax": "minimax",
+        "Z.AI / GLM": "zai",
+        "Kimi / Moonshot": "kimi-coding",
+        "StepFun Step Plan": "stepfun",
+        "Kimi / Moonshot (China)": "kimi-coding-cn",
+        "Arcee AI": "arcee",
+        "GMI Cloud": "gmi",
+        "DeepSeek": "deepseek",
+        "Hugging Face": "huggingface",
+        "NVIDIA NIM": "nvidia",
+        "Alibaba/DashScope": "alibaba",
+        "MiniMax": "minimax",
         "MiniMax (China)": "minimax-cn",
-        "Kilo Code": "kilocode", "OpenCode Zen": "opencode-zen",
+        "Kilo Code": "kilocode",
+        "OpenCode Zen": "opencode-zen",
         "OpenCode Go": "opencode-go",
     }
     for _label, _canonical in _name_to_canonical.items():
@@ -448,19 +564,26 @@ def _build_apikey_providers_list() -> list:
     try:
         from providers import list_providers
         from providers.base import ProviderProfile as _PP
+
         try:
             from hercules_cli.providers import normalize_provider as _normalize_provider
         except Exception:  # pragma: no cover - normalization is best-effort
+
             def _normalize_provider(_name: str) -> str:
                 return (_name or "").strip().lower()
+
         for _pp in list_providers():
-            if not isinstance(_pp, _PP) or _pp.auth_type != "api_key" or not _pp.env_vars:
+            if (
+                not isinstance(_pp, _PP)
+                or _pp.auth_type != "api_key"
+                or not _pp.env_vars
+            ):
                 continue
             _label = _pp.display_name or _pp.name
             if _label in _known_names or _pp.name in _known_canonical:
                 continue
             _candidates = {_normalize_provider(_pp.name)}
-            for _alias in (_pp.aliases or ()):
+            for _alias in _pp.aliases or ():
                 _candidates.add(_normalize_provider(_alias))
             if _candidates & _dedicated_canonical:
                 continue
@@ -468,18 +591,24 @@ def _build_apikey_providers_list() -> list:
             # loop sends the first found value as Authorization: Bearer, so a URL
             # string must never be picked.
             _key_vars = tuple(
-                v for v in _pp.env_vars
+                v
+                for v in _pp.env_vars
                 if not v.endswith("_BASE_URL") and not v.endswith("_URL")
             )
             _base_var = next(
-                (v for v in _pp.env_vars if v.endswith("_BASE_URL") or v.endswith("_URL")),
+                (
+                    v
+                    for v in _pp.env_vars
+                    if v.endswith("_BASE_URL") or v.endswith("_URL")
+                ),
                 None,
             )
             if not _key_vars:
                 continue
             _models_url = (
                 (_pp.models_url or (_pp.base_url.rstrip("/") + "/models"))
-                if _pp.base_url else None
+                if _pp.base_url
+                else None
             )
             _hc = getattr(_pp, "supports_health_check", True)
             _static.append((_label, _key_vars, _models_url, _base_var, _hc))
@@ -498,6 +627,7 @@ def managed_scope_check() -> None:
     """
     try:
         from hercules_cli import managed_scope
+
         managed_dir = managed_scope.get_managed_dir()
     except Exception:  # diagnostics must never crash
         return
@@ -515,8 +645,8 @@ def managed_scope_check() -> None:
 
 def run_doctor(args):
     """Run diagnostic checks."""
-    should_fix = getattr(args, 'fix', False)
-    ack_target = getattr(args, 'ack', None)
+    should_fix = getattr(args, "fix", False)
+    ack_target = getattr(args, "ack", None)
 
     # Doctor runs from the interactive CLI, so CLI-gated tool availability
     # checks (like cronjob management) should see the same context as `hercules`.
@@ -530,26 +660,33 @@ def run_doctor(args):
             ADVISORIES,
             ack_advisory,
         )
+
         valid_ids = {a.id for a in ADVISORIES}
         if ack_target not in valid_ids:
-            print(color(
-                f"Unknown advisory ID: {ack_target!r}. Known IDs: "
-                f"{', '.join(sorted(valid_ids)) or '(none)'}",
-                Colors.RED,
-            ))
+            print(
+                color(
+                    f"Unknown advisory ID: {ack_target!r}. Known IDs: "
+                    f"{', '.join(sorted(valid_ids)) or '(none)'}",
+                    Colors.RED,
+                )
+            )
             sys.exit(2)
         if ack_advisory(ack_target):
-            print(color(
-                f"  ✓ Acknowledged advisory {ack_target}. "
-                f"It will no longer trigger startup banners.",
-                Colors.GREEN,
-            ))
+            print(
+                color(
+                    f"  ✓ Acknowledged advisory {ack_target}. "
+                    f"It will no longer trigger startup banners.",
+                    Colors.GREEN,
+                )
+            )
         else:
-            print(color(
-                f"  ✗ Failed to persist ack for {ack_target}. "
-                f"Check ~/.hercules/config.yaml is writable.",
-                Colors.RED,
-            ))
+            print(
+                color(
+                    f"  ✗ Failed to persist ack for {ack_target}. "
+                    f"Check ~/.hercules/config.yaml is writable.",
+                    Colors.RED,
+                )
+            )
             sys.exit(1)
         return
 
@@ -558,9 +695,21 @@ def run_doctor(args):
     fixed_count = 0
 
     print()
-    print(color("┌─────────────────────────────────────────────────────────┐", Colors.CYAN))
-    print(color("│                 🩺 Hercules Doctor                        │", Colors.CYAN))
-    print(color("└─────────────────────────────────────────────────────────┘", Colors.CYAN))
+    print(
+        color(
+            "┌─────────────────────────────────────────────────────────┐", Colors.CYAN
+        )
+    )
+    print(
+        color(
+            "│                 🩺 Hercules Doctor                        │", Colors.CYAN
+        )
+    )
+    print(
+        color(
+            "└─────────────────────────────────────────────────────────┘", Colors.CYAN
+        )
+    )
 
     _section("Security Advisories")
     try:
@@ -570,6 +719,7 @@ def run_doctor(args):
             full_remediation_text,
             get_acked_ids,
         )
+
         all_hits = detect_compromised()
         fresh_hits = filter_unacked(all_hits)
         if fresh_hits:
@@ -623,7 +773,10 @@ def run_doctor(args):
                 if not issues_found:
                     continue
                 suspicious += 1
-                check_warn(f"MCP server '{name}' has suspicious stdio command", "; ".join(issues_found))
+                check_warn(
+                    f"MCP server '{name}' has suspicious stdio command",
+                    "; ".join(issues_found),
+                )
                 manual_issues.append(
                     f"Review/remove mcp_servers.{name} in config.yaml; rotate any credentials that may have been exposed."
                 )
@@ -631,16 +784,21 @@ def run_doctor(args):
             check_ok("No suspicious MCP stdio commands")
     except Exception as e:
         check_warn(f"MCP security check failed: {e}")
-    
+
     _section("Python Environment")
     py_version = sys.version_info
     if py_version >= (3, 11):
         check_ok(f"Python {py_version.major}.{py_version.minor}.{py_version.micro}")
     elif py_version >= (3, 10):
         check_ok(f"Python {py_version.major}.{py_version.minor}.{py_version.micro}")
-        check_warn("Python 3.11+ recommended for RL Training tools (tinker requires >= 3.11)")
+        check_warn(
+            "Python 3.11+ recommended for RL Training tools (tinker requires >= 3.11)"
+        )
     elif py_version >= (3, 8):
-        check_warn(f"Python {py_version.major}.{py_version.minor}.{py_version.micro}", "(3.10+ recommended)")
+        check_warn(
+            f"Python {py_version.major}.{py_version.minor}.{py_version.micro}",
+            "(3.10+ recommended)",
+        )
     else:
         _fail_and_issue(
             f"Python {py_version.major}.{py_version.minor}.{py_version.micro}",
@@ -648,7 +806,7 @@ def run_doctor(args):
             "Upgrade Python to 3.10+",
             issues,
         )
-    
+
     # Check if in virtual environment
     in_venv = sys.prefix != sys.base_prefix
     if in_venv:
@@ -671,35 +829,40 @@ def run_doctor(args):
         ("yaml", "PyYAML"),
         ("httpx", "HTTPX"),
     ]
-    
+
     optional_packages = [
         ("croniter", "Croniter (cron expressions)"),
         ("telegram", "python-telegram-bot"),
         ("discord", "discord.py"),
     ]
-    
+
     for module, name in required_packages:
         try:
             __import__(module)
             check_ok(name)
         except ImportError:
-            _fail_and_issue(name, "(missing)", f"Install {name}: {_python_install_cmd()} {module}", issues)
-    
+            _fail_and_issue(
+                name,
+                "(missing)",
+                f"Install {name}: {_python_install_cmd()} {module}",
+                issues,
+            )
+
     for module, name in optional_packages:
         try:
             __import__(module)
             check_ok(name, "(optional)")
         except ImportError:
             check_warn(name, "(optional, not installed)")
-    
+
     _section("Configuration Files")
     # Managed scope (administrator-pinned config/env), when present.
     managed_scope_check()
     # Check ~/.hercules/.env (primary location for user config)
-    env_path = HERCULES_HOME / '.env'
+    env_path = HERCULES_HOME / ".env"
     if env_path.exists():
         check_ok(f"{_DHH}/.env file exists")
-        
+
         # Check for common issues. Pin encoding to UTF-8 because .env files are
         # written as UTF-8 everywhere in the codebase, while Path.read_text()
         # defaults to the system locale — which crashes on non-UTF-8 Windows
@@ -712,7 +875,7 @@ def run_doctor(args):
             issues.append("Run 'hercules setup' to configure API keys")
     else:
         # Also check project root as fallback
-        fallback_env = PROJECT_ROOT / '.env'
+        fallback_env = PROJECT_ROOT / ".env"
         if fallback_env.exists():
             check_ok(".env file exists (in project directory)")
         else:
@@ -733,20 +896,23 @@ def run_doctor(args):
             else:
                 check_info("Run 'hercules setup' to create one")
                 issues.append("Run 'hercules setup' to create .env")
-    
+
     # Check ~/.hercules/config.yaml (primary) or project cli-config.yaml (fallback)
-    config_path = HERCULES_HOME / 'config.yaml'
+    config_path = HERCULES_HOME / "config.yaml"
     if config_path.exists():
         check_ok(f"{_DHH}/config.yaml exists")
 
         # Validate model.provider and model.default values
         try:
             import yaml as _yaml
+
             cfg = _yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
             model_section = cfg.get("model") or {}
             provider_raw = (model_section.get("provider") or "").strip()
             provider = provider_raw.lower()
-            default_model = (model_section.get("default") or model_section.get("model") or "").strip()
+            default_model = (
+                model_section.get("default") or model_section.get("model") or ""
+            ).strip()
 
             known_providers: set = set()
             try:
@@ -754,12 +920,19 @@ def run_doctor(args):
                     PROVIDER_REGISTRY,
                     resolve_provider as _resolve_auth_provider,
                 )
-                known_providers = set(PROVIDER_REGISTRY.keys()) | {"openrouter", "custom", "auto"}
+
+                known_providers = set(PROVIDER_REGISTRY.keys()) | {
+                    "openrouter",
+                    "custom",
+                    "auto",
+                }
             except Exception:
                 _resolve_auth_provider = None
                 pass
             try:
-                from hercules_cli.config import get_compatible_custom_providers as _compatible_custom_providers
+                from hercules_cli.config import (
+                    get_compatible_custom_providers as _compatible_custom_providers,
+                )
                 from hercules_cli.providers import (
                     normalize_provider as _normalize_catalog_provider,
                     resolve_provider_full as _resolve_provider_full,
@@ -778,7 +951,11 @@ def run_doctor(args):
 
             user_providers = cfg.get("providers")
             if isinstance(user_providers, dict):
-                known_providers.update(str(name).strip().lower() for name in user_providers if str(name).strip())
+                known_providers.update(
+                    str(name).strip().lower()
+                    for name in user_providers
+                    if str(name).strip()
+                )
             for entry in custom_providers:
                 if not isinstance(entry, dict):
                     continue
@@ -791,7 +968,9 @@ def run_doctor(args):
             if _normalize_catalog_provider is not None:
                 for known_provider in known_providers:
                     try:
-                        valid_provider_ids.add(_normalize_catalog_provider(known_provider))
+                        valid_provider_ids.add(
+                            _normalize_catalog_provider(known_provider)
+                        )
                     except Exception:
                         continue
 
@@ -813,7 +992,9 @@ def run_doctor(args):
                 and _resolve_provider_full is not None
                 and provider not in {"auto", "custom"}
             ):
-                provider_def = _resolve_provider_full(provider, user_providers, custom_providers)
+                provider_def = _resolve_provider_full(
+                    provider, user_providers, custom_providers
+                )
                 catalog_provider = provider_def.id if provider_def is not None else None
                 if catalog_provider is not None:
                     provider_ids_to_accept.add(catalog_provider)
@@ -823,7 +1004,11 @@ def run_doctor(args):
                     known_providers
                     and not (provider_ids_to_accept & valid_provider_ids)
                 ):
-                    known_list = ", ".join(sorted(known_providers)) if known_providers else "(unavailable)"
+                    known_list = (
+                        ", ".join(sorted(known_providers))
+                        if known_providers
+                        else "(unavailable)"
+                    )
                     _fail_and_issue(
                         f"model.provider '{provider_raw}' is not a recognised provider",
                         f"(known: {known_list})",
@@ -918,18 +1103,19 @@ def run_doctor(args):
         except Exception as e:
             check_warn("Could not validate model/provider config", f"({e})")
     else:
-        fallback_config = PROJECT_ROOT / 'cli-config.yaml'
+        fallback_config = PROJECT_ROOT / "cli-config.yaml"
         if fallback_config.exists():
             check_ok("cli-config.yaml exists (in project directory)")
         else:
             if should_fix:
                 config_path.parent.mkdir(parents=True, exist_ok=True)
-                example_config = PROJECT_ROOT / 'cli-config.yaml.example'
+                example_config = PROJECT_ROOT / "cli-config.yaml.example"
                 if example_config.exists():
                     shutil.copy2(str(example_config), str(config_path))
                     check_ok(f"Created {_DHH}/config.yaml from cli-config.yaml.example")
                 else:
                     from hercules_cli.config import DEFAULT_CONFIG, save_config
+
                     save_config(DEFAULT_CONFIG)
                     check_ok(f"Created {_DHH}/config.yaml from defaults")
                 fixed_count += 1
@@ -937,15 +1123,16 @@ def run_doctor(args):
                 check_warn("config.yaml not found", "(using defaults)")
 
     # Check config version and stale keys
-    config_path = HERCULES_HOME / 'config.yaml'
+    config_path = HERCULES_HOME / "config.yaml"
     if config_path.exists():
         try:
             from hercules_cli.config import check_config_version, migrate_config
+
             current_ver, latest_ver = check_config_version()
             if current_ver < latest_ver:
                 check_warn(
                     f"Config version outdated (v{current_ver} → v{latest_ver})",
-                    "(new settings available)"
+                    "(new settings available)",
                 )
                 if should_fix:
                     try:
@@ -956,7 +1143,9 @@ def run_doctor(args):
                         check_warn(f"Auto-migration failed: {mig_err}")
                         issues.append("Run 'hercules setup' to migrate config")
                 else:
-                    issues.append("Run 'hercules doctor --fix' or 'hercules setup' to migrate config")
+                    issues.append(
+                        "Run 'hercules doctor --fix' or 'hercules setup' to migrate config"
+                    )
             else:
                 check_ok(f"Config version up to date (v{current_ver})")
         except Exception:
@@ -965,13 +1154,18 @@ def run_doctor(args):
         # Detect stale root-level model keys (known bug source — PR #4329)
         try:
             import yaml
+
             with open(config_path, encoding="utf-8") as f:
                 raw_config = yaml.safe_load(f) or {}
-            stale_root_keys = [k for k in ("provider", "base_url") if k in raw_config and isinstance(raw_config[k], str)]
+            stale_root_keys = [
+                k
+                for k in ("provider", "base_url")
+                if k in raw_config and isinstance(raw_config[k], str)
+            ]
             if stale_root_keys:
                 check_warn(
                     f"Stale root-level config keys: {', '.join(stale_root_keys)}",
-                    "(should be under 'model:' section)"
+                    "(should be under 'model:' section)",
                 )
                 if should_fix:
                     # Coerce scalar/None ``model:`` into a dict before mutation —
@@ -992,11 +1186,14 @@ def run_doctor(args):
                         else:
                             raw_config.pop(k)
                     from hercules_cli.config import atomic_config_write
+
                     atomic_config_write(config_path, raw_config)
                     check_ok("Migrated stale root-level keys into model section")
                     fixed_count += 1
                 else:
-                    issues.append("Stale root-level provider/base_url in config.yaml — run 'hercules doctor --fix'")
+                    issues.append(
+                        "Stale root-level provider/base_url in config.yaml — run 'hercules doctor --fix'"
+                    )
         except Exception:
             pass
 
@@ -1013,13 +1210,12 @@ def run_doctor(args):
         try:
             import yaml
             from hercules_cli.config import load_env, remove_env_value
+
             with open(config_path, encoding="utf-8") as f:
                 raw_config = yaml.safe_load(f) or {}
             agent_cfg = raw_config.get("agent")
             cfg_max_turns = (
-                agent_cfg.get("max_turns")
-                if isinstance(agent_cfg, dict)
-                else None
+                agent_cfg.get("max_turns") if isinstance(agent_cfg, dict) else None
             )
             # Legacy root-level key counts too.
             if cfg_max_turns is None:
@@ -1060,6 +1256,7 @@ def run_doctor(args):
         # Validate config structure (catches malformed custom_providers, etc.)
         try:
             from hercules_cli.config import validate_config_structure
+
             config_issues = validate_config_structure()
             if config_issues:
                 _section("Config Structure")
@@ -1139,6 +1336,7 @@ def run_doctor(args):
     # disrupt the already-printed Codex/Gemini/MiniMax rows above.
     try:
         from hercules_cli.auth import get_xai_oauth_auth_status
+
         xai_oauth_status = get_xai_oauth_auth_status() or {}
         if xai_oauth_status.get("logged_in"):
             check_ok("xAI OAuth", "(logged in)")
@@ -1159,7 +1357,7 @@ def run_doctor(args):
         fixed_count += 1
     else:
         check_warn(f"{_DHH} not found", "(will be created on first use)")
-    
+
     # Check expected subdirectories
     expected_subdirs = ["cron", "sessions", "logs", "skills", "memories"]
     for subdir_name in expected_subdirs:
@@ -1171,20 +1369,31 @@ def run_doctor(args):
             check_ok(f"Created {_DHH}/{subdir_name}/")
             fixed_count += 1
         else:
-            check_warn(f"{_DHH}/{subdir_name}/ not found", "(will be created on first use)")
-    
+            check_warn(
+                f"{_DHH}/{subdir_name}/ not found", "(will be created on first use)"
+            )
+
     # Check for SOUL.md persona file
     soul_path = hercules_home / "SOUL.md"
     if soul_path.exists():
         content = soul_path.read_text(encoding="utf-8").strip()
         # Check if it's just the template comments (no real content)
-        lines = [l for l in content.splitlines() if l.strip() and not l.strip().startswith(("<!--", "-->", "#"))]
+        lines = [
+            l
+            for l in content.splitlines()
+            if l.strip() and not l.strip().startswith(("<!--", "-->", "#"))
+        ]
         if lines:
             check_ok(f"{_DHH}/SOUL.md exists (persona configured)")
         else:
-            check_info(f"{_DHH}/SOUL.md exists but is empty — edit it to customize personality")
+            check_info(
+                f"{_DHH}/SOUL.md exists but is empty — edit it to customize personality"
+            )
     else:
-        check_warn(f"{_DHH}/SOUL.md not found", "(create it to give Hercules a custom personality)")
+        check_warn(
+            f"{_DHH}/SOUL.md not found",
+            "(create it to give Hercules a custom personality)",
+        )
         if should_fix:
             soul_path.parent.mkdir(parents=True, exist_ok=True)
             soul_path.write_text(
@@ -1195,7 +1404,7 @@ def run_doctor(args):
             )
             check_ok(f"Created {_DHH}/SOUL.md with basic template")
             fixed_count += 1
-    
+
     # Check memory directory
     memories_dir = hercules_home / "memories"
     if memories_dir.exists():
@@ -1206,24 +1415,29 @@ def run_doctor(args):
             size = len(memory_file.read_text(encoding="utf-8").strip())
             check_ok(f"MEMORY.md exists ({size} chars)")
         else:
-            check_info("MEMORY.md not created yet (will be created when the agent first writes a memory)")
+            check_info(
+                "MEMORY.md not created yet (will be created when the agent first writes a memory)"
+            )
         if user_file.exists():
             size = len(user_file.read_text(encoding="utf-8").strip())
             check_ok(f"USER.md exists ({size} chars)")
         else:
-            check_info("USER.md not created yet (will be created when the agent first writes a memory)")
+            check_info(
+                "USER.md not created yet (will be created when the agent first writes a memory)"
+            )
     else:
         check_warn(f"{_DHH}/memories/ not found", "(will be created on first use)")
         if should_fix:
             memories_dir.mkdir(parents=True, exist_ok=True)
             check_ok(f"Created {_DHH}/memories/")
             fixed_count += 1
-    
+
     # Check SQLite session store
     state_db_path = hercules_home / "state.db"
     if state_db_path.exists():
         try:
             import sqlite3
+
             conn = sqlite3.connect(str(state_db_path))
             cursor = conn.execute("SELECT COUNT(*) FROM sessions")
             count = cursor.fetchone()[0]
@@ -1248,7 +1462,8 @@ def run_doctor(args):
                     if report.get("repaired"):
                         backup_name = (
                             Path(report["backup_path"]).name
-                            if report.get("backup_path") else "n/a"
+                            if report.get("backup_path")
+                            else "n/a"
                         )
                         check_ok(
                             "Repaired state.db FTS write health",
@@ -1294,7 +1509,8 @@ def run_doctor(args):
                             count = "?"
                         backup_name = (
                             Path(report["backup_path"]).name
-                            if report.get("backup_path") else "n/a"
+                            if report.get("backup_path")
+                            else "n/a"
                         )
                         check_ok(
                             f"Repaired state.db schema ({count} sessions recovered)",
@@ -1318,7 +1534,9 @@ def run_doctor(args):
             else:
                 check_warn(f"{_DHH}/state.db exists but has issues: {e}")
     else:
-        check_info(f"{_DHH}/state.db not created yet (will be created on first session)")
+        check_info(
+            f"{_DHH}/state.db not created yet (will be created on first session)"
+        )
 
     # Check WAL file size (unbounded growth indicates missed checkpoints)
     wal_path = hercules_home / "state.db-wal"
@@ -1327,21 +1545,28 @@ def run_doctor(args):
             wal_size = wal_path.stat().st_size
             if wal_size > 50 * 1024 * 1024:  # 50 MB
                 check_warn(
-                    f"WAL file is large ({wal_size // (1024*1024)} MB)",
-                    "(may indicate missed checkpoints)"
+                    f"WAL file is large ({wal_size // (1024 * 1024)} MB)",
+                    "(may indicate missed checkpoints)",
                 )
                 if should_fix:
                     import sqlite3
+
                     conn = sqlite3.connect(str(state_db_path))
                     conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
                     conn.close()
                     new_size = wal_path.stat().st_size if wal_path.exists() else 0
-                    check_ok(f"WAL checkpoint performed ({wal_size // 1024}K → {new_size // 1024}K)")
+                    check_ok(
+                        f"WAL checkpoint performed ({wal_size // 1024}K → {new_size // 1024}K)"
+                    )
                     fixed_count += 1
                 else:
-                    issues.append("Large WAL file — run 'hercules doctor --fix' to checkpoint")
+                    issues.append(
+                        "Large WAL file — run 'hercules doctor --fix' to checkpoint"
+                    )
             elif wal_size > 10 * 1024 * 1024:  # 10 MB
-                check_info(f"WAL file is {wal_size // (1024*1024)} MB (normal for active sessions)")
+                check_info(
+                    f"WAL file is {wal_size // (1024 * 1024)} MB (normal for active sessions)"
+                )
         except Exception:
             pass
 
@@ -1360,7 +1585,9 @@ def run_doctor(args):
 
         # Determine the expected command link directory (mirrors install.sh logic)
         _prefix = os.environ.get("PREFIX", "")
-        _is_termux_env = bool(os.environ.get("TERMUX_VERSION")) or "com.termux/files/usr" in _prefix
+        _is_termux_env = (
+            bool(os.environ.get("TERMUX_VERSION")) or "com.termux/files/usr" in _prefix
+        )
         if _is_termux_env and _prefix:
             _cmd_link_dir = Path(_prefix) / "bin"
             _cmd_link_display = "$PREFIX/bin"
@@ -1372,7 +1599,7 @@ def run_doctor(args):
         if _venv_bin is None:
             check_warn(
                 "Venv entry point not found",
-                "(hercules not in venv/bin/ or .venv/bin/ — reinstall with pip install -e '.[all]')"
+                "(hercules not in venv/bin/ or .venv/bin/ — reinstall with pip install -e '.[all]')",
             )
             manual_issues.append(
                 f"Reinstall entry point: cd {PROJECT_ROOT} && source venv/bin/activate && pip install -e '.[all]'"
@@ -1389,27 +1616,33 @@ def run_doctor(args):
                 else:
                     check_warn(
                         f"{_cmd_link_display}/hercules points to wrong target",
-                        f"(→ {_target}, expected → {_expected})"
+                        f"(→ {_target}, expected → {_expected})",
                     )
                     if should_fix:
                         _cmd_link.unlink()
                         _cmd_link.symlink_to(_venv_bin)
-                        check_ok(f"Fixed symlink: {_cmd_link_display}/hercules → {_venv_bin}")
+                        check_ok(
+                            f"Fixed symlink: {_cmd_link_display}/hercules → {_venv_bin}"
+                        )
                         fixed_count += 1
                     else:
-                        issues.append(f"Broken symlink at {_cmd_link_display}/hercules — run 'hercules doctor --fix'")
+                        issues.append(
+                            f"Broken symlink at {_cmd_link_display}/hercules — run 'hercules doctor --fix'"
+                        )
             elif _cmd_link.exists():
                 # It's a regular file, not a symlink — possibly a wrapper script
                 check_ok(f"{_cmd_link_display}/hercules exists (non-symlink)")
             else:
                 check_fail(
                     f"{_cmd_link_display}/hercules not found",
-                    "(hercules command may not work outside the venv)"
+                    "(hercules command may not work outside the venv)",
                 )
                 if should_fix:
                     _cmd_link_dir.mkdir(parents=True, exist_ok=True)
                     _cmd_link.symlink_to(_venv_bin)
-                    check_ok(f"Created symlink: {_cmd_link_display}/hercules → {_venv_bin}")
+                    check_ok(
+                        f"Created symlink: {_cmd_link_display}/hercules → {_venv_bin}"
+                    )
                     fixed_count += 1
 
                     # Check if the link dir is on PATH
@@ -1417,11 +1650,13 @@ def run_doctor(args):
                     if str(_cmd_link_dir) not in _path_dirs:
                         check_warn(
                             f"{_cmd_link_display} is not on your PATH",
-                            "(add it to your shell config: export PATH=\"$HOME/.local/bin:$PATH\")"
+                            '(add it to your shell config: export PATH="$HOME/.local/bin:$PATH")',
                         )
                         manual_issues.append(f"Add {_cmd_link_display} to your PATH")
                 else:
-                    issues.append(f"Missing {_cmd_link_display}/hercules symlink — run 'hercules doctor --fix'")
+                    issues.append(
+                        f"Missing {_cmd_link_display}/hercules symlink — run 'hercules doctor --fix'"
+                    )
 
     _section("External Tools")
     # Git
@@ -1429,18 +1664,21 @@ def run_doctor(args):
         check_ok("git")
     else:
         check_warn("git not found", "(optional)")
-    
+
     # ripgrep (optional, for faster file search)
     if _safe_which("rg"):
         check_ok("ripgrep (rg)", "(faster file search)")
     else:
         check_warn("ripgrep (rg) not found", "(file search uses grep fallback)")
-        check_info(f"Install for faster search: {_system_package_install_cmd('ripgrep')}")
-    
+        check_info(
+            f"Install for faster search: {_system_package_install_cmd('ripgrep')}"
+        )
+
     # Docker (optional)
     terminal_env = os.getenv("TERMINAL_ENV", "local")
     try:
         from hercules_constants import is_container as _is_container
+
         running_in_container = _is_container()
     except Exception:
         running_in_container = False
@@ -1463,13 +1701,17 @@ def run_doctor(args):
         if _safe_which("docker"):
             # Check if docker daemon is running
             try:
-                result = subprocess.run(["docker", "info"], capture_output=True, timeout=10)
+                result = subprocess.run(
+                    ["docker", "info"], capture_output=True, timeout=10
+                )
             except subprocess.TimeoutExpired:
                 result = None
             if result is not None and result.returncode == 0:
                 check_ok("docker", "(daemon running)")
             else:
-                _fail_and_issue("docker daemon not running", "", "Start Docker daemon", issues)
+                _fail_and_issue(
+                    "docker daemon not running", "", "Start Docker daemon", issues
+                )
         else:
             _fail_and_issue(
                 "docker not found",
@@ -1480,12 +1722,14 @@ def run_doctor(args):
     elif _safe_which("docker"):
         check_ok("docker", "(optional)")
     elif _is_termux():
-        check_info("Docker backend is not available inside Termux (expected on Android)")
+        check_info(
+            "Docker backend is not available inside Termux (expected on Android)"
+        )
     elif running_in_container:
         pass  # already explained above
     else:
         check_warn("docker not found", "(optional)")
-    
+
     # SSH (if using ssh backend)
     if terminal_env == "ssh":
         ssh_host = os.getenv("TERMINAL_SSH_HOST")
@@ -1502,18 +1746,18 @@ def run_doctor(args):
             cmd += [target, "echo ok"]
             # Try to connect
             try:
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=15
-                )
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
             except subprocess.TimeoutExpired:
                 result = None
             if result is not None and result.returncode == 0:
                 check_ok(f"SSH connection to {ssh_host}")
             else:
-                _fail_and_issue(f"SSH connection to {ssh_host}", "", f"Check SSH configuration for {ssh_host}", issues)
+                _fail_and_issue(
+                    f"SSH connection to {ssh_host}",
+                    "",
+                    f"Check SSH configuration for {ssh_host}",
+                    issues,
+                )
         else:
             _fail_and_issue(
                 "TERMINAL_SSH_HOST not set",
@@ -1521,7 +1765,7 @@ def run_doctor(args):
                 "Set TERMINAL_SSH_HOST in .env",
                 issues,
             )
-    
+
     # Daytona (if using daytona backend)
     if terminal_env == "daytona":
         daytona_key = os.getenv("DAYTONA_API_KEY")
@@ -1536,6 +1780,7 @@ def run_doctor(args):
             )
         try:
             from daytona import Daytona  # noqa: F401 — SDK presence check
+
             check_ok("daytona SDK", "(installed)")
         except ImportError:
             _fail_and_issue(
@@ -1567,8 +1812,12 @@ def run_doctor(args):
                 f"(broken symlink at {_which_ab}? run: npm install)",
             )
         elif _is_termux():
-            check_info("agent-browser is not installed (expected in the tested Termux path)")
-            check_info("Install it manually later with: npm install -g agent-browser && agent-browser install")
+            check_info(
+                "agent-browser is not installed (expected in the tested Termux path)"
+            )
+            check_info(
+                "Install it manually later with: npm install -g agent-browser && agent-browser install"
+            )
             check_info("Termux browser setup:")
             for step in _termux_browser_setup_steps(node_installed=True):
                 check_info(step)
@@ -1625,14 +1874,16 @@ def run_doctor(args):
                                 "npx playwright install --with-deps chromium"
                             )
     elif _is_termux():
-        check_info("Node.js not found (browser tools are optional in the tested Termux path)")
+        check_info(
+            "Node.js not found (browser tools are optional in the tested Termux path)"
+        )
         check_info("Install Node.js on Termux with: pkg install nodejs")
         check_info("Termux browser setup:")
         for step in _termux_browser_setup_steps(node_installed=False):
             check_info(step)
     else:
         check_warn("Node.js not found", "(optional, needed for browser tools)")
-    
+
     # npm audit for all Node.js packages
     _npm_bin = _safe_which("npm")
     if _npm_bin:
@@ -1647,6 +1898,7 @@ def run_doctor(args):
         # node_modules. See #49561.
         try:
             from gateway.platforms.whatsapp_common import resolve_whatsapp_bridge_dir
+
             _whatsapp_bridge_dir = resolve_whatsapp_bridge_dir()
         except Exception:
             _whatsapp_bridge_dir = PROJECT_ROOT / "scripts" / "whatsapp-bridge"
@@ -1669,10 +1921,17 @@ def run_doctor(args):
                 audit_result = subprocess.run(
                     [_npm_bin, "audit", "--json", *audit_extra],
                     cwd=str(npm_dir),
-                    capture_output=True, text=True, timeout=30,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
                 )
                 import json as _json
-                audit_data = _json.loads(audit_result.stdout) if audit_result.stdout.strip() else {}
+
+                audit_data = (
+                    _json.loads(audit_result.stdout)
+                    if audit_result.stdout.strip()
+                    else {}
+                )
                 vuln_count = audit_data.get("metadata", {}).get("vulnerabilities", {})
                 critical = vuln_count.get("critical", 0)
                 high = vuln_count.get("high", 0)
@@ -1696,18 +1955,13 @@ def run_doctor(args):
                     check_ok(f"{label} deps", "(no known vulnerabilities)")
                 elif critical > 0 or high > 0:
                     if fix_cmd:
-                        vuln_detail = (
-                            f"{critical} critical, {high} high, {moderate} moderate — run: {fix_cmd}"
-                        )
+                        vuln_detail = f"{critical} critical, {high} high, {moderate} moderate — run: {fix_cmd}"
                     else:
                         vuln_detail = (
                             f"{critical} critical, {high} high, {moderate} moderate — "
                             "build-tool advisory; clears via lockfile bump"
                         )
-                    check_warn(
-                        f"{label} deps",
-                        f"({vuln_detail})"
-                    )
+                    check_warn(f"{label} deps", f"({vuln_detail})")
                     if audit_extra and audit_extra[0] == "--workspace":
                         # The web/ui-tui workspace advisories are in build-time
                         # tooling (esbuild/vite, etc.), not runtime code that ships
@@ -1762,12 +2016,18 @@ def run_doctor(args):
         if not key:
             return _ConnectivityResult(
                 "OpenRouter API",
-                [(color("⚠", Colors.YELLOW), "OpenRouter API",
-                  color("(not configured)", Colors.DIM))],
+                [
+                    (
+                        color("⚠", Colors.YELLOW),
+                        "OpenRouter API",
+                        color("(not configured)", Colors.DIM),
+                    )
+                ],
                 [],
             )
         try:
             import httpx
+
             r = httpx.get(
                 OPENROUTER_MODELS_URL,
                 headers={"Authorization": f"Bearer {key}"},
@@ -1782,44 +2042,74 @@ def run_doctor(args):
             if r.status_code == 401:
                 return _ConnectivityResult(
                     "OpenRouter API",
-                    [(color("✗", Colors.RED), "OpenRouter API",
-                      color("(invalid API key)", Colors.DIM))],
+                    [
+                        (
+                            color("✗", Colors.RED),
+                            "OpenRouter API",
+                            color("(invalid API key)", Colors.DIM),
+                        )
+                    ],
                     ["Check OPENROUTER_API_KEY in .env"],
                 )
             if r.status_code == 402:
                 return _ConnectivityResult(
                     "OpenRouter API",
-                    [(color("✗", Colors.RED), "OpenRouter API",
-                      color("(out of credits — payment required)", Colors.DIM))],
-                    ["OpenRouter account has insufficient credits. "
-                     "Fix: run 'hercules config set model.provider <provider>' "
-                     "to switch providers, or fund your OpenRouter account "
-                     "at https://openrouter.ai/settings/credits"],
+                    [
+                        (
+                            color("✗", Colors.RED),
+                            "OpenRouter API",
+                            color("(out of credits — payment required)", Colors.DIM),
+                        )
+                    ],
+                    [
+                        "OpenRouter account has insufficient credits. "
+                        "Fix: run 'hercules config set model.provider <provider>' "
+                        "to switch providers, or fund your OpenRouter account "
+                        "at https://openrouter.ai/settings/credits"
+                    ],
                 )
             if r.status_code == 429:
                 return _ConnectivityResult(
                     "OpenRouter API",
-                    [(color("✗", Colors.RED), "OpenRouter API",
-                      color("(rate limited)", Colors.DIM))],
-                    ["OpenRouter rate limit hit — consider switching to "
-                     "a different provider or waiting"],
+                    [
+                        (
+                            color("✗", Colors.RED),
+                            "OpenRouter API",
+                            color("(rate limited)", Colors.DIM),
+                        )
+                    ],
+                    [
+                        "OpenRouter rate limit hit — consider switching to "
+                        "a different provider or waiting"
+                    ],
                 )
             return _ConnectivityResult(
                 "OpenRouter API",
-                [(color("✗", Colors.RED), "OpenRouter API",
-                  color(f"(HTTP {r.status_code})", Colors.DIM))],
+                [
+                    (
+                        color("✗", Colors.RED),
+                        "OpenRouter API",
+                        color(f"(HTTP {r.status_code})", Colors.DIM),
+                    )
+                ],
                 [],
             )
         except Exception as e:
             return _ConnectivityResult(
                 "OpenRouter API",
-                [(color("✗", Colors.RED), "OpenRouter API",
-                  color(f"({e})", Colors.DIM))],
+                [
+                    (
+                        color("✗", Colors.RED),
+                        "OpenRouter API",
+                        color(f"({e})", Colors.DIM),
+                    )
+                ],
                 ["Check network connectivity"],
             )
 
     def _probe_anthropic() -> _ConnectivityResult:
         from hercules_cli.auth import get_anthropic_key
+
         key = get_anthropic_key()
         if not key:
             return _ConnectivityResult("Anthropic API", [], [])
@@ -1831,6 +2121,7 @@ def run_doctor(args):
                 _OAUTH_ONLY_BETAS,
                 _CONTEXT_1M_BETA,
             )
+
             headers = {"anthropic-version": "2023-06-01"}
             is_oauth = _is_oauth_token(key)
             if is_oauth:
@@ -1840,7 +2131,8 @@ def run_doctor(args):
                 headers["x-api-key"] = key
             r = httpx.get(
                 "https://api.anthropic.com/v1/models",
-                headers=headers, timeout=10,
+                headers=headers,
+                timeout=10,
             )
             # Reactive recovery: OAuth subscriptions without 1M context reject the
             # request with 400 "long context beta is not yet available for this
@@ -1858,7 +2150,8 @@ def run_doctor(args):
                 )
                 r = httpx.get(
                     "https://api.anthropic.com/v1/models",
-                    headers=headers, timeout=10,
+                    headers=headers,
+                    timeout=10,
                 )
             if r.status_code == 200:
                 return _ConnectivityResult(
@@ -1869,26 +2162,42 @@ def run_doctor(args):
             if r.status_code == 401:
                 return _ConnectivityResult(
                     "Anthropic API",
-                    [(color("✗", Colors.RED), "Anthropic API",
-                      color("(invalid API key)", Colors.DIM))],
+                    [
+                        (
+                            color("✗", Colors.RED),
+                            "Anthropic API",
+                            color("(invalid API key)", Colors.DIM),
+                        )
+                    ],
                     [],
                 )
             return _ConnectivityResult(
                 "Anthropic API",
-                [(color("⚠", Colors.YELLOW), "Anthropic API",
-                  color("(couldn't verify)", Colors.DIM))],
+                [
+                    (
+                        color("⚠", Colors.YELLOW),
+                        "Anthropic API",
+                        color("(couldn't verify)", Colors.DIM),
+                    )
+                ],
                 [],
             )
         except Exception as e:
             return _ConnectivityResult(
                 "Anthropic API",
-                [(color("⚠", Colors.YELLOW), "Anthropic API",
-                  color(f"({e})", Colors.DIM))],
+                [
+                    (
+                        color("⚠", Colors.YELLOW),
+                        "Anthropic API",
+                        color(f"({e})", Colors.DIM),
+                    )
+                ],
                 [],
             )
 
-    def _probe_apikey_provider(pname, env_vars, default_url, base_env,
-                               supports_health_check) -> _ConnectivityResult:
+    def _probe_apikey_provider(
+        pname, env_vars, default_url, base_env, supports_health_check
+    ) -> _ConnectivityResult:
         key = ""
         for ev in env_vars:
             key = os.getenv(ev, "")
@@ -1900,12 +2209,18 @@ def run_doctor(args):
         if not supports_health_check:
             return _ConnectivityResult(
                 pname,
-                [(color("✓", Colors.GREEN), label,
-                  color("(key configured)", Colors.DIM))],
+                [
+                    (
+                        color("✓", Colors.GREEN),
+                        label,
+                        color("(key configured)", Colors.DIM),
+                    )
+                ],
                 [],
             )
         try:
             import httpx
+
             base = os.getenv(base_env, "") if base_env else ""
             # Auto-detect Kimi Code keys (sk-kimi-) → api.kimi.com/coding/v1
             # (OpenAI-compat surface, which exposes /models for health check).
@@ -1916,8 +2231,11 @@ def run_doctor(args):
             # /v1 surface for health checks.
             if base and base.rstrip("/").endswith("/anthropic"):
                 from agent.auxiliary_client import _to_openai_base_url
+
                 base = _to_openai_base_url(base)
-            if base_url_host_matches(base, "api.kimi.com") and base.rstrip("/").endswith("/coding"):
+            if base_url_host_matches(base, "api.kimi.com") and base.rstrip(
+                "/"
+            ).endswith("/coding"):
                 base = base.rstrip("/") + "/v1"
             url = (base.rstrip("/") + "/models") if base else default_url
             headers = {
@@ -1936,14 +2254,11 @@ def run_doctor(args):
                 headers.pop("Authorization", None)
                 headers["x-goog-api-key"] = key
             r = httpx.get(url, headers=headers, timeout=10)
-            if (
-                pname == "Alibaba/DashScope"
-                and not base
-                and r.status_code == 401
-            ):
+            if pname == "Alibaba/DashScope" and not base and r.status_code == 401:
                 r = httpx.get(
                     "https://dashscope.aliyuncs.com/compatible-mode/v1/models",
-                    headers=headers, timeout=10,
+                    headers=headers,
+                    timeout=10,
                 )
             if r.status_code == 200:
                 return _ConnectivityResult(
@@ -1954,21 +2269,30 @@ def run_doctor(args):
             if r.status_code == 401:
                 return _ConnectivityResult(
                     pname,
-                    [(color("✗", Colors.RED), label,
-                      color("(invalid API key)", Colors.DIM))],
+                    [
+                        (
+                            color("✗", Colors.RED),
+                            label,
+                            color("(invalid API key)", Colors.DIM),
+                        )
+                    ],
                     [f"Check {env_vars[0]} in .env"],
                 )
             return _ConnectivityResult(
                 pname,
-                [(color("⚠", Colors.YELLOW), label,
-                  color(f"(HTTP {r.status_code})", Colors.DIM))],
+                [
+                    (
+                        color("⚠", Colors.YELLOW),
+                        label,
+                        color(f"(HTTP {r.status_code})", Colors.DIM),
+                    )
+                ],
                 [],
             )
         except Exception as e:
             return _ConnectivityResult(
                 pname,
-                [(color("⚠", Colors.YELLOW), label,
-                  color(f"({e})", Colors.DIM))],
+                [(color("⚠", Colors.YELLOW), label, color(f"({e})", Colors.DIM))],
                 [],
             )
 
@@ -1989,6 +2313,7 @@ def run_doctor(args):
         try:
             import boto3
             from botocore.config import Config as _BotoConfig
+
             # Trim retries on the actual Bedrock API call so a transient
             # failure doesn't pad the doctor run by 30+ seconds.
             cfg = _BotoConfig(
@@ -2001,26 +2326,45 @@ def run_doctor(args):
             n = len(resp.get("modelSummaries", []))
             return _ConnectivityResult(
                 "AWS Bedrock",
-                [(color("✓", Colors.GREEN), label,
-                  color(f"({auth_var}, {region}, {n} models)", Colors.DIM))],
+                [
+                    (
+                        color("✓", Colors.GREEN),
+                        label,
+                        color(f"({auth_var}, {region}, {n} models)", Colors.DIM),
+                    )
+                ],
                 [],
             )
         except ImportError:
             return _ConnectivityResult(
                 "AWS Bedrock",
-                [(color("⚠", Colors.YELLOW), label,
-                  color(f"(boto3 not installed — {sys.executable} -m pip install boto3)",
-                        Colors.DIM))],
+                [
+                    (
+                        color("⚠", Colors.YELLOW),
+                        label,
+                        color(
+                            f"(boto3 not installed — {sys.executable} -m pip install boto3)",
+                            Colors.DIM,
+                        ),
+                    )
+                ],
                 [f"Install boto3 for Bedrock: {sys.executable} -m pip install boto3"],
             )
         except Exception as e:
             err_name = type(e).__name__
             return _ConnectivityResult(
                 "AWS Bedrock",
-                [(color("⚠", Colors.YELLOW), label,
-                  color(f"({err_name}: {e})", Colors.DIM))],
-                [f"AWS Bedrock: {err_name} — check IAM permissions for "
-                 f"bedrock:ListFoundationModels"],
+                [
+                    (
+                        color("⚠", Colors.YELLOW),
+                        label,
+                        color(f"({err_name}: {e})", Colors.DIM),
+                    )
+                ],
+                [
+                    f"AWS Bedrock: {err_name} — check IAM permissions for "
+                    f"bedrock:ListFoundationModels"
+                ],
             )
 
     def _probe_azure_entra() -> _ConnectivityResult:
@@ -2037,6 +2381,7 @@ def run_doctor(args):
         label = "Azure Foundry (Entra ID)".ljust(28)
         try:
             from hercules_cli.config import load_config
+
             cfg = load_config()
             model_cfg = cfg.get("model") if isinstance(cfg, dict) else {}
             if not isinstance(model_cfg, dict):
@@ -2058,26 +2403,35 @@ def run_doctor(args):
         except Exception as exc:
             return _ConnectivityResult(
                 "Azure Foundry (Entra ID)",
-                [(color("⚠", Colors.YELLOW), label,
-                  color(f"(adapter import failed: {exc})", Colors.DIM))],
+                [
+                    (
+                        color("⚠", Colors.YELLOW),
+                        label,
+                        color(f"(adapter import failed: {exc})", Colors.DIM),
+                    )
+                ],
                 [f"Azure Foundry adapter import failed: {exc}"],
             )
 
         if not has_azure_identity_installed():
             return _ConnectivityResult(
                 "Azure Foundry (Entra ID)",
-                [(color("⚠", Colors.YELLOW), label,
-                  color("(azure-identity not installed)", Colors.DIM))],
-                [f"Install azure-identity: {sys.executable} -m pip install azure-identity"],
+                [
+                    (
+                        color("⚠", Colors.YELLOW),
+                        label,
+                        color("(azure-identity not installed)", Colors.DIM),
+                    )
+                ],
+                [
+                    f"Install azure-identity: {sys.executable} -m pip install azure-identity"
+                ],
             )
 
         entra_cfg = model_cfg.get("entra") or {}
         if not isinstance(entra_cfg, dict):
             entra_cfg = {}
-        scope = (
-            str(entra_cfg.get("scope") or "").strip()
-            or SCOPE_AI_AZURE_DEFAULT
-        )
+        scope = str(entra_cfg.get("scope") or "").strip() or SCOPE_AI_AZURE_DEFAULT
         config = EntraIdentityConfig(
             scope=scope,
         )
@@ -2087,8 +2441,13 @@ def run_doctor(args):
             tag = ", ".join(env_sources) if env_sources else "default credential chain"
             return _ConnectivityResult(
                 "Azure Foundry (Entra ID)",
-                [(color("✓", Colors.GREEN), label,
-                  color(f"({tag}, scope={scope})", Colors.DIM))],
+                [
+                    (
+                        color("✓", Colors.GREEN),
+                        label,
+                        color(f"({tag}, scope={scope})", Colors.DIM),
+                    )
+                ],
                 [],
             )
         err = info.get("error") or "credential chain exhausted"
@@ -2098,8 +2457,7 @@ def run_doctor(args):
         )
         return _ConnectivityResult(
             "Azure Foundry (Entra ID)",
-            [(color("⚠", Colors.YELLOW), label,
-              color(f"({err})", Colors.DIM))],
+            [(color("⚠", Colors.YELLOW), label, color(f"({err})", Colors.DIM))],
             [f"Azure Foundry Entra: {err}. {hint}"],
         )
 
@@ -2115,17 +2473,23 @@ def run_doctor(args):
         # Capture loop vars by binding default args — without this, all closures
         # would share the final iteration's values and every probe would hit
         # the last provider's URL.
-        _probes.append((_pname, lambda p=_pname, e=_env_vars, u=_default_url,
-                                       b=_base_env, s=_supports:
-                                _probe_apikey_provider(p, e, u, b, s)))
+        _probes.append((
+            _pname,
+            lambda p=_pname, e=_env_vars, u=_default_url, b=_base_env, s=_supports: (
+                _probe_apikey_provider(p, e, u, b, s)
+            ),
+        ))
 
     _probes.append(("AWS Bedrock", _probe_bedrock))
     _probes.append(("Azure Foundry (Entra ID)", _probe_azure_entra))
 
     # Print a single status line so users see something happening, then
     # fan out. ``\r`` clears it once the first real result line lands.
-    print(f"  {color(f'Running {len(_probes)} connectivity checks in parallel…', Colors.DIM)}",
-          end="", flush=True)
+    print(
+        f"  {color(f'Running {len(_probes)} connectivity checks in parallel…', Colors.DIM)}",
+        end="",
+        flush=True,
+    )
 
     # Disable boto3's EC2 instance-metadata-service probe for the duration
     # of the parallel block. boto's default credential chain tries
@@ -2142,8 +2506,9 @@ def run_doctor(args):
         # 8 workers is plenty — each probe is a single HTTP call plus a TLS
         # handshake. More than that wastes thread-startup cost and risks
         # noisy output if anything ever printed from inside a worker.
-        with _futures.ThreadPoolExecutor(max_workers=8,
-                                         thread_name_prefix="doctor-probe") as _ex:
+        with _futures.ThreadPoolExecutor(
+            max_workers=8, thread_name_prefix="doctor-probe"
+        ) as _ex:
             _futures_in_order = [_ex.submit(_fn) for _, _fn in _probes]
             _results = [_f.result() for _f in _futures_in_order]
     finally:
@@ -2171,14 +2536,16 @@ def run_doctor(args):
         # Add project root to path for imports
         sys.path.insert(0, str(PROJECT_ROOT))
         from model_tools import check_tool_availability, TOOLSET_REQUIREMENTS
-        
+
         available, unavailable = check_tool_availability()
-        available, unavailable = _apply_doctor_tool_availability_overrides(available, unavailable)
-        
+        available, unavailable = _apply_doctor_tool_availability_overrides(
+            available, unavailable
+        )
+
         for tid in available:
             info = TOOLSET_REQUIREMENTS.get(tid, {})
             check_ok(info.get("name", tid), _doctor_tool_availability_detail(tid))
-        
+
         for item in unavailable:
             env_vars = item.get("missing_vars") or item.get("env_vars") or []
             if env_vars:
@@ -2192,10 +2559,12 @@ def run_doctor(args):
         # still show warnings above, but should not pollute the final summary.
         api_disabled = _missing_api_key_toolsets_for_summary(unavailable)
         if api_disabled:
-            issues.append("Run 'hercules setup' to configure missing API keys for full tool access")
+            issues.append(
+                "Run 'hercules setup' to configure missing API keys for full tool access"
+            )
     except Exception as e:
         check_warn("Could not check tool availability", f"({e})")
-    
+
     _section("Skills Hub")
     hub_dir = HERCULES_HOME / "skills" / ".hub"
     if hub_dir.exists():
@@ -2204,17 +2573,24 @@ def run_doctor(args):
         if lock_file.exists():
             try:
                 import json
+
                 lock_data = json.loads(lock_file.read_text())
                 count = len(lock_data.get("installed", {}))
                 check_ok(f"Lock file OK ({count} hub-installed skill(s))")
             except Exception:
                 check_warn("Lock file", "(corrupted or unreadable)")
         quarantine = hub_dir / "quarantine"
-        q_count = sum(1 for d in quarantine.iterdir() if d.is_dir()) if quarantine.exists() else 0
+        q_count = (
+            sum(1 for d in quarantine.iterdir() if d.is_dir())
+            if quarantine.exists()
+            else 0
+        )
         if q_count > 0:
             check_warn(f"{q_count} skill(s) in quarantine", "(pending review)")
     else:
-        check_warn("Skills Hub directory not initialized", "(run: hercules skills list)")
+        check_warn(
+            "Skills Hub directory not initialized", "(run: hercules skills list)"
+        )
 
     from hercules_cli.config import get_env_value
 
@@ -2223,7 +2599,8 @@ def run_doctor(args):
         try:
             result = subprocess.run(
                 ["gh", "auth", "status", "--json", "authenticated"],
-                capture_output=True, timeout=10,
+                capture_output=True,
+                timeout=10,
             )
             return result.returncode == 0
         except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -2233,20 +2610,28 @@ def run_doctor(args):
     if github_token:
         check_ok("GitHub token configured (authenticated API access)")
     elif _gh_authenticated():
-        check_ok("GitHub authenticated via gh CLI", "(full API access — no GITHUB_TOKEN needed)")
+        check_ok(
+            "GitHub authenticated via gh CLI",
+            "(full API access — no GITHUB_TOKEN needed)",
+        )
     else:
-        check_warn("No GITHUB_TOKEN", f"(60 req/hr rate limit — set in {_DHH}/.env for better rates)")
+        check_warn(
+            "No GITHUB_TOKEN",
+            f"(60 req/hr rate limit — set in {_DHH}/.env for better rates)",
+        )
 
     _section("Memory Provider")
     _active_memory_provider = ""
     try:
         import yaml as _yaml
+
         _mem_cfg_path = HERCULES_HOME / "config.yaml"
         if _mem_cfg_path.exists():
             with open(_mem_cfg_path, encoding="utf-8") as _f:
                 _raw_cfg = _yaml.safe_load(_f) or {}
             try:
                 from hercules_cli import managed_scope
+
                 _raw_cfg = managed_scope.apply_managed_overlay(_raw_cfg)
             except Exception:
                 pass
@@ -2255,10 +2640,16 @@ def run_doctor(args):
         pass
 
     if not _active_memory_provider:
-        check_ok("Built-in memory active", "(no external provider configured — this is fine)")
+        check_ok(
+            "Built-in memory active", "(no external provider configured — this is fine)"
+        )
     elif _active_memory_provider == "honcho":
         try:
-            from plugins.memory.honcho.client import HonchoClientConfig, resolve_config_path
+            from plugins.memory.honcho.client import (
+                HonchoClientConfig,
+                resolve_config_path,
+            )
+
             hcfg = HonchoClientConfig.from_global_config()
             _honcho_cfg_path = resolve_config_path()
 
@@ -2273,7 +2664,9 @@ def run_doctor(args):
                 else:
                     check_warn("Honcho config not found", "run: hercules memory setup")
             elif not hcfg.enabled:
-                check_info(f"Honcho disabled (set enabled: true in {_honcho_cfg_path} to activate)")
+                check_info(
+                    f"Honcho disabled (set enabled: true in {_honcho_cfg_path} to activate)"
+                )
             elif not (hcfg.api_key or hcfg.base_url):
                 _fail_and_issue(
                     "Honcho API key or base URL not set",
@@ -2282,7 +2675,11 @@ def run_doctor(args):
                     issues,
                 )
             else:
-                from plugins.memory.honcho.client import get_honcho_client, reset_honcho_client
+                from plugins.memory.honcho.client import (
+                    get_honcho_client,
+                    reset_honcho_client,
+                )
+
                 reset_honcho_client()
                 try:
                     get_honcho_client(hcfg)
@@ -2291,7 +2688,12 @@ def run_doctor(args):
                         f"workspace={hcfg.workspace_id} mode={hcfg.recall_mode} freq={hcfg.write_frequency}",
                     )
                 except Exception as _e:
-                    _fail_and_issue("Honcho connection failed", str(_e), f"Honcho unreachable: {_e}", issues)
+                    _fail_and_issue(
+                        "Honcho connection failed",
+                        str(_e),
+                        f"Honcho unreachable: {_e}",
+                        issues,
+                    )
         except ImportError:
             _fail_and_issue(
                 "honcho-ai not installed",
@@ -2304,11 +2706,14 @@ def run_doctor(args):
     elif _active_memory_provider == "mem0":
         try:
             from plugins.memory.mem0 import _load_config as _load_mem0_config
+
             mem0_cfg = _load_mem0_config()
             mem0_key = mem0_cfg.get("api_key", "")
             if mem0_key:
                 check_ok("Mem0 API key configured")
-                check_info(f"user_id={mem0_cfg.get('user_id', '?')}  agent_id={mem0_cfg.get('agent_id', '?')}")
+                check_info(
+                    f"user_id={mem0_cfg.get('user_id', '?')}  agent_id={mem0_cfg.get('agent_id', '?')}"
+                )
             else:
                 _fail_and_issue(
                     "Mem0 API key not set",
@@ -2329,18 +2734,29 @@ def run_doctor(args):
         # Generic check for other memory providers (openviking, hindsight, etc.)
         try:
             from plugins.memory import load_memory_provider
+
             _provider = load_memory_provider(_active_memory_provider)
             if _provider and _provider.is_available():
                 check_ok(f"{_active_memory_provider} provider active")
             elif _provider:
-                check_warn(f"{_active_memory_provider} configured but not available", "run: hercules memory status")
+                check_warn(
+                    f"{_active_memory_provider} configured but not available",
+                    "run: hercules memory status",
+                )
             else:
-                check_warn(f"{_active_memory_provider} plugin not found", "run: hercules memory setup")
+                check_warn(
+                    f"{_active_memory_provider} plugin not found",
+                    "run: hercules memory setup",
+                )
         except Exception as _e:
             check_warn(f"{_active_memory_provider} check failed", str(_e))
 
     try:
-        from hercules_cli.profiles import list_profiles, _get_wrapper_dir, profile_exists
+        from hercules_cli.profiles import (
+            list_profiles,
+            _get_wrapper_dir,
+            profile_exists,
+        )
         import re as _re
 
         named_profiles = [p for p in list_profiles() if not p.is_default]
@@ -2374,7 +2790,9 @@ def run_doctor(args):
                         if "hercules -p" in content:
                             _m = _re.search(r"hercules -p (\S+)", content)
                             if _m and not profile_exists(_m.group(1)):
-                                check_warn(f"Orphan alias: {wrapper.name} → profile '{_m.group(1)}' no longer exists")
+                                check_warn(
+                                    f"Orphan alias: {wrapper.name} → profile '{_m.group(1)}' no longer exists"
+                                )
                     except Exception:
                         pass
     except ImportError:
@@ -2386,9 +2804,17 @@ def run_doctor(args):
     remaining_issues = issues + manual_issues
     if should_fix and fixed_count > 0:
         print(color("─" * 60, Colors.GREEN))
-        print(color(f"  Fixed {fixed_count} issue(s).", Colors.GREEN, Colors.BOLD), end="")
+        print(
+            color(f"  Fixed {fixed_count} issue(s).", Colors.GREEN, Colors.BOLD), end=""
+        )
         if remaining_issues:
-            print(color(f" {len(remaining_issues)} issue(s) require manual intervention.", Colors.YELLOW, Colors.BOLD))
+            print(
+                color(
+                    f" {len(remaining_issues)} issue(s) require manual intervention.",
+                    Colors.YELLOW,
+                    Colors.BOLD,
+                )
+            )
         else:
             print()
         print()
@@ -2398,15 +2824,26 @@ def run_doctor(args):
             print()
     elif remaining_issues:
         print(color("─" * 60, Colors.YELLOW))
-        print(color(f"  Found {len(remaining_issues)} issue(s) to address:", Colors.YELLOW, Colors.BOLD))
+        print(
+            color(
+                f"  Found {len(remaining_issues)} issue(s) to address:",
+                Colors.YELLOW,
+                Colors.BOLD,
+            )
+        )
         print()
         for i, issue in enumerate(remaining_issues, 1):
             print(f"  {i}. {issue}")
         print()
         if not should_fix:
-            print(color("  Tip: run 'hercules doctor --fix' to auto-fix what's possible.", Colors.DIM))
+            print(
+                color(
+                    "  Tip: run 'hercules doctor --fix' to auto-fix what's possible.",
+                    Colors.DIM,
+                )
+            )
     else:
         print(color("─" * 60, Colors.GREEN))
         print(color("  All checks passed! 🎉", Colors.GREEN, Colors.BOLD))
-    
+
     print()

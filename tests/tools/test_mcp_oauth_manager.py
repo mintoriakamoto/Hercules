@@ -4,6 +4,7 @@ The manager consolidates the eight scattered MCP-OAuth call sites into a
 single object with disk-mtime watch, dedup'd 401 handling, and a provider
 cache. See `tools/mcp_oauth_manager.py` for design rationale.
 """
+
 import json
 import os
 import time
@@ -26,6 +27,7 @@ def _set_interactive_stdin(monkeypatch, *, is_tty: bool = True) -> None:
 def test_manager_is_singleton():
     """get_manager() returns the same instance across calls."""
     from tools.mcp_oauth_manager import get_manager, reset_manager_for_tests
+
     reset_manager_for_tests()
     m1 = get_manager()
     m2 = get_manager()
@@ -65,10 +67,12 @@ def test_manager_remove_evicts_cache(tmp_path, monkeypatch):
     # Pre-seed tokens on disk
     token_dir = tmp_path / "mcp-tokens"
     token_dir.mkdir(parents=True)
-    (token_dir / "srv.json").write_text(json.dumps({
-        "access_token": "TOK",
-        "token_type": "Bearer",
-    }))
+    (token_dir / "srv.json").write_text(
+        json.dumps({
+            "access_token": "TOK",
+            "token_type": "Bearer",
+        })
+    )
 
     mgr = MCPOAuthManager()
     p1 = mgr.get_or_build_provider("srv", "https://example.com/mcp", None)
@@ -107,10 +111,12 @@ async def test_disk_watch_invalidates_on_mtime_change(tmp_path, monkeypatch):
     token_dir = tmp_path / "mcp-tokens"
     token_dir.mkdir(parents=True)
     tokens_file = token_dir / "srv.json"
-    tokens_file.write_text(json.dumps({
-        "access_token": "OLD",
-        "token_type": "Bearer",
-    }))
+    tokens_file.write_text(
+        json.dumps({
+            "access_token": "OLD",
+            "token_type": "Bearer",
+        })
+    )
 
     mgr = MCPOAuthManager()
     provider = mgr.get_or_build_provider("srv", "https://example.com/mcp", None)
@@ -194,7 +200,9 @@ async def test_handle_401_tracks_inflight_task_to_prevent_gc(tmp_path, monkeypat
 
 
 @pytest.mark.asyncio
-async def test_handle_401_dedup_survives_even_if_task_reference_dropped(tmp_path, monkeypatch):
+async def test_handle_401_dedup_survives_even_if_task_reference_dropped(
+    tmp_path, monkeypatch
+):
     """Concurrent 401s share one handler task and all callers resolve.
 
     Regression guard: if the manager ever stops holding a strong reference
@@ -240,8 +248,11 @@ async def test_handle_401_dedup_survives_even_if_task_reference_dropped(tmp_path
 def test_manager_builds_hercules_provider_subclass(tmp_path, monkeypatch):
     """get_or_build_provider returns HerculesMCPOAuthProvider, not plain OAuthClientProvider."""
     from tools.mcp_oauth_manager import (
-        MCPOAuthManager, _HERCULES_PROVIDER_CLS, reset_manager_for_tests,
+        MCPOAuthManager,
+        _HERCULES_PROVIDER_CLS,
+        reset_manager_for_tests,
     )
+
     reset_manager_for_tests()
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
     _set_interactive_stdin(monkeypatch)
@@ -293,6 +304,7 @@ def _fake_response(status, url, body):
 
 def _provider_with_token_endpoint(tmp_path, oauth_config, token_endpoint, monkeypatch):
     from tools.mcp_oauth_manager import MCPOAuthManager, reset_manager_for_tests
+
     reset_manager_for_tests()
     # Provider construction fails fast in a non-interactive environment with no
     # cached tokens (mcp_oauth_manager.py guard). The hermetic test env has no
@@ -368,7 +380,10 @@ def test_preregistered_client_is_never_poisoned(tmp_path, monkeypatch):
     """A config-supplied client_id is never auto-deleted (re-reg can't help)."""
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
     provider = _provider_with_token_endpoint(
-        tmp_path, {"client_id": "from-config"}, "https://idp.example.com/oauth/token", monkeypatch
+        tmp_path,
+        {"client_id": "from-config"},
+        "https://idp.example.com/oauth/token",
+        monkeypatch,
     )
     d = tmp_path / "mcp-tokens"
     # _maybe_preregister_client wrote client.json from config during build.
@@ -393,7 +408,9 @@ def test_invalid_client_metadata_does_not_trip(tmp_path, monkeypatch):
         tmp_path, {}, "https://idp.example.com/oauth/token", monkeypatch
     )
     resp = _fake_response(
-        400, "https://idp.example.com/oauth/token", b'{"error":"invalid_client_metadata"}'
+        400,
+        "https://idp.example.com/oauth/token",
+        b'{"error":"invalid_client_metadata"}',
     )
 
     asyncio.run(provider._maybe_flag_poisoned_client(resp))
@@ -435,6 +452,7 @@ def test_bridge_forwards_requests_and_poisons_on_token_endpoint_400(
         forwarded.append(("in", response))
 
     from mcp.client.auth.oauth2 import OAuthClientProvider
+
     monkeypatch.setattr(OAuthClientProvider, "async_auth_flow", fake_base_flow)
 
     provider = _provider_with_token_endpoint(tmp_path, {}, token_ep, monkeypatch)

@@ -20,6 +20,7 @@ This module provides a fail-closed, context-local secret scope:
 
 Design rationale lives in ``docs/design/multiplexing-gateway.md`` (Workstream A).
 """
+
 from __future__ import annotations
 
 import os
@@ -96,20 +97,37 @@ def current_secret_scope() -> Optional[Mapping[str, str]]:
 # list tight: when in doubt a value is a profile secret, not a global.
 _GLOBAL_ENV_EXACT = frozenset({
     # Hercules runtime / deployment
-    "HERCULES_HOME", "HERCULES_PROFILE", "HERCULES_GATEWAY_LOCK_DIR",
-    "HERCULES_MAX_ITERATIONS", "HERCULES_MAX_TOKENS", "HERCULES_API_TIMEOUT",
-    "HERCULES_REDACT_SECRETS", "HERCULES_NOUS_TIMEOUT_SECONDS",
+    "HERCULES_HOME",
+    "HERCULES_PROFILE",
+    "HERCULES_GATEWAY_LOCK_DIR",
+    "HERCULES_MAX_ITERATIONS",
+    "HERCULES_MAX_TOKENS",
+    "HERCULES_API_TIMEOUT",
+    "HERCULES_REDACT_SECRETS",
+    "HERCULES_NOUS_TIMEOUT_SECONDS",
     "_HERCULES_GATEWAY",
     # OS / interpreter
-    "PATH", "HOME", "USER", "LANG", "LC_ALL", "TZ", "PWD", "SHELL", "TMPDIR",
-    "VIRTUAL_ENV", "PYTHONPATH", "SSL_CERT_FILE",
+    "PATH",
+    "HOME",
+    "USER",
+    "LANG",
+    "LC_ALL",
+    "TZ",
+    "PWD",
+    "SHELL",
+    "TMPDIR",
+    "VIRTUAL_ENV",
+    "PYTHONPATH",
+    "SSL_CERT_FILE",
     # Kanban paths (per-board, not per-profile-secret)
-    "HERCULES_KANBAN_DB", "HERCULES_KANBAN_WORKSPACES_ROOT", "HERCULES_KANBAN_BOARD",
+    "HERCULES_KANBAN_DB",
+    "HERCULES_KANBAN_WORKSPACES_ROOT",
+    "HERCULES_KANBAN_BOARD",
 })
 _GLOBAL_ENV_PREFIXES = (
     "HERCULES_KANBAN_",
-    "HERCULES_TELEGRAM_",   # tuning knobs (batch delays, fallback toggles) — NOT the token
-    "TERMINAL_",          # terminal/sandbox backend settings
+    "HERCULES_TELEGRAM_",  # tuning knobs (batch delays, fallback toggles) — NOT the token
+    "TERMINAL_",  # terminal/sandbox backend settings
 )
 
 
@@ -179,7 +197,7 @@ def load_env_file(env_path: Path) -> Dict[str, str]:
         if not line or line.startswith("#"):
             continue
         if line.startswith("export "):
-            line = line[len("export "):].lstrip()
+            line = line[len("export ") :].lstrip()
         if "=" not in line:
             continue
         key, _, value = line.partition("=")
@@ -202,4 +220,3 @@ def build_profile_secret_scope(hercules_home: Path) -> Dict[str, str]:
     from ``os.environ`` directly, so the scope holds only profile secrets.
     """
     return load_env_file(Path(hercules_home) / ".env")
-

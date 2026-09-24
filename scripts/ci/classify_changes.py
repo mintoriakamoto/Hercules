@@ -37,7 +37,7 @@ import sys
 
 _FRONTEND = ("ui-tui/", "web/", "apps/")  # TS typecheck-matrix packages
 _ROOT_NPM = {"package.json", "package-lock.json"}  # shifts every package's tree
-_DOCKER_META = ("docker/", ".hadolint.yml", "Dockerfile") # docker setup
+_DOCKER_META = ("docker/", ".hadolint.yml", "Dockerfile")  # docker setup
 _SITE = ("website/", "skills/", "optional-skills/")  # docs site + skill pages
 # Prose/frontend trees that can't touch Python. skills/ is excluded on purpose.
 _PY_SKIP = ("docs/", "website/") + _FRONTEND
@@ -50,14 +50,22 @@ _SCAN_FILES = {"setup.cfg", "pyproject.toml"}
 _MCP_CATALOG_PATHS = ("optional-mcps/",)
 _MCP_CATALOG_FILES = {"hercules_cli/mcp_catalog.py"}
 
+
 def _is_docs(p: str) -> bool:
     if p.startswith(("skills/", "optional-skills/")):
         return False
-    return p.endswith((".md", ".mdx")) or p.startswith("docs/") or p.startswith("LICENSE")
+    return (
+        p.endswith((".md", ".mdx")) or p.startswith("docs/") or p.startswith("LICENSE")
+    )
 
 
 def _py_irrelevant(p: str) -> bool:
-    return _is_docs(p) or p in _ROOT_NPM or p.startswith(_PY_SKIP) or p.startswith(_DOCKER_META)
+    return (
+        _is_docs(p)
+        or p in _ROOT_NPM
+        or p.startswith(_PY_SKIP)
+        or p.startswith(_DOCKER_META)
+    )
 
 
 def _is_scan(p: str) -> bool:
@@ -73,7 +81,7 @@ def classify(files: list[str]) -> dict[str, bool]:
     files = [f.strip() for f in files if f.strip()]
     ret = {
         "python": any(not _py_irrelevant(f) for f in files),
-        "docker_meta":  any(f.startswith(_DOCKER_META) for f in files),
+        "docker_meta": any(f.startswith(_DOCKER_META) for f in files),
         # Every shell script, wherever it lives. install_hercules.sh sits at the
         # repo root and was covered by no lane at all, which is how an
         # unterminated here-document reached main: nothing ever parsed it.
@@ -95,7 +103,6 @@ def classify(files: list[str]) -> dict[str, bool]:
 
         # explicitly skip mcp catalog here. it's not needed unless those files are modified.
     return ret
-
 
 
 def main() -> int:

@@ -62,6 +62,7 @@ class TestRegisterTTSProvider:
         from hercules_cli.plugins import PluginManager
 
         from agent import tts_registry
+
         tts_registry._reset_for_tests()
 
         hercules_home = Path(os.environ["HERCULES_HOME"])
@@ -95,6 +96,7 @@ class TestRegisterTTSProvider:
         from hercules_cli.plugins import PluginManager
 
         from agent import tts_registry
+
         tts_registry._reset_for_tests()
 
         hercules_home = Path(os.environ["HERCULES_HOME"])
@@ -125,6 +127,7 @@ class TestRegisterTTSProvider:
         from hercules_cli.plugins import PluginManager
 
         from agent import tts_registry
+
         tts_registry._reset_for_tests()
 
         hercules_home = Path(os.environ["HERCULES_HOME"])

@@ -9,6 +9,7 @@ Exit codes:
     1  plugin missing / import broken
     2  plugin ok, llama-server not reachable (expected if GPU box is off)
 """
+
 from __future__ import annotations
 
 import sys

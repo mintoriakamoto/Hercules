@@ -75,6 +75,7 @@ class TestGoalMigratesOnRotation:
         with patch.dict(os.environ, {"HERCULES_HOME": str(tmp_path / ".hercules")}):
             (tmp_path / ".hercules").mkdir(exist_ok=True)
             import hercules_cli.goals as goals
+
             goals._DB_CACHE.clear()
             # Point the goal DB at the same state.db the agent uses.
             with patch.object(goals, "_get_session_db", return_value=db):

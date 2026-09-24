@@ -11,6 +11,7 @@ in .env), the toggle was silently ignored in both `hercules chat` and
 Fix: bridge `security.redact_secrets` from config.yaml → `HERCULES_REDACT_SECRETS`
 env var in `hercules_cli/main.py` BEFORE the `setup_logging()` call.
 """
+
 import os
 import subprocess
 import sys

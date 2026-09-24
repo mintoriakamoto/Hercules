@@ -44,11 +44,9 @@ from utils import base_url_hostname, is_truthy_value
 
 
 # Tools that children must never have access to
-DELEGATE_BLOCKED_TOOLS = frozenset(
-    [
-        # All restrictions disabled - children have full tool access
-    ]
-)
+DELEGATE_BLOCKED_TOOLS = frozenset([
+    # All restrictions disabled - children have full tool access
+])
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +75,8 @@ def _subagent_auto_deny(command: str, description: str, **kwargs) -> str:
     logger.warning(
         "Subagent auto-denied dangerous command: %s (%s). "
         "Set delegation.subagent_auto_approve: true to allow.",
-        command, description,
+        command,
+        description,
     )
     return "deny"
 
@@ -90,7 +89,8 @@ def _subagent_auto_approve(command: str, description: str, **kwargs) -> str:
     """
     logger.warning(
         "Subagent auto-approved dangerous command: %s (%s)",
-        command, description,
+        command,
+        description,
     )
     return "once"
 
@@ -125,13 +125,19 @@ def _create_delegation_executor(max_workers: int):
     if _EXECUTOR_MODE == "process":
         try:
             from tools.process_delegation import ProcessDelegationExecutor
-            logger.debug(f"Using process-based delegation executor (max_workers={max_workers})")
+
+            logger.debug(
+                f"Using process-based delegation executor (max_workers={max_workers})"
+            )
             return ProcessDelegationExecutor(max_workers=max_workers)
         except Exception as e:
-            logger.warning(f"Failed to initialize process executor: {e}; falling back to threads")
+            logger.warning(
+                f"Failed to initialize process executor: {e}; falling back to threads"
+            )
             return DaemonThreadPoolExecutor(max_workers=max_workers)
     else:
         return DaemonThreadPoolExecutor(max_workers=max_workers)
+
 
 # NOTE: nested delegation is granted by role='orchestrator' (which re-adds the
 # "delegation" toolset in _build_child_agent), NOT by the model naming toolsets
@@ -724,7 +730,7 @@ def _get_max_spawn_depth() -> int:
         ival = int(val)
     except (TypeError, ValueError):
         logger.warning(
-            "delegation.max_spawn_depth=%r is not a valid integer; " "using default %d",
+            "delegation.max_spawn_depth=%r is not a valid integer; using default %d",
             val,
             MAX_DEPTH,
         )
@@ -1118,7 +1124,11 @@ def _build_child_progress_callback(
         return kw
 
     def _relay(
-        event_type: str, tool_name: Optional[str] = None, preview: Optional[str] = None, args: Optional[Any] = None, **kwargs
+        event_type: str,
+        tool_name: Optional[str] = None,
+        preview: Optional[str] = None,
+        args: Optional[Any] = None,
+        **kwargs,
     ):
         if not parent_cb:
             return
@@ -1130,7 +1140,11 @@ def _build_child_progress_callback(
             logger.debug("Parent callback failed: %s", e)
 
     def _callback(
-        event_type, tool_name: Optional[str] = None, preview: Optional[str] = None, args: Optional[Any] = None, **kwargs
+        event_type,
+        tool_name: Optional[str] = None,
+        preview: Optional[str] = None,
+        args: Optional[Any] = None,
+        **kwargs,
     ):
         # Lifecycle events emitted by the orchestrator itself — handled
         # before enum normalisation since they are not part of DelegateEvent.
@@ -1256,7 +1270,9 @@ def _normalized_runtime_url(value: Any) -> str:
     return str(value or "").strip().rstrip("/")
 
 
-def _inherit_parent_base_url(parent_agent, fallback_base_url: Optional[str]) -> Optional[str]:
+def _inherit_parent_base_url(
+    parent_agent, fallback_base_url: Optional[str]
+) -> Optional[str]:
     """Return the base URL the parent is actually calling, not a stale attribute.
 
     ``parent_agent.base_url`` can still carry a leftover OpenRouter URL from an
@@ -1450,7 +1466,9 @@ def _build_child_agent(
         effective_model = model
     else:
         try:
-            routed_model, decision = route_task_to_model(goal or "", available_tools=len(child_toolsets))
+            routed_model, decision = route_task_to_model(
+                goal or "", available_tools=len(child_toolsets)
+            )
             effective_model = routed_model
             logger.debug(
                 "Delegated task routing: %s → %s (tier=%s, confidence=%.2f, savings=%.1f%%)",
@@ -1564,10 +1582,12 @@ def _build_child_agent(
     child_provider_require_parameters = getattr(
         parent_agent, "provider_require_parameters", False
     )
-    child_provider_data_collection = getattr(
-        parent_agent, "provider_data_collection", None
-    ) or ""
-    child_openrouter_min_coding_score = getattr(parent_agent, "openrouter_min_coding_score", None)
+    child_provider_data_collection = (
+        getattr(parent_agent, "provider_data_collection", None) or ""
+    )
+    child_openrouter_min_coding_score = getattr(
+        parent_agent, "openrouter_min_coding_score", None
+    )
     if override_provider:
         child_providers_allowed = None
         child_providers_ignored = None
@@ -1597,7 +1617,6 @@ def _build_child_agent(
         acp_command=effective_acp_command,
         acp_args=effective_acp_args,
         max_iterations=max_iterations,
-
         reasoning_config=child_reasoning,
         prefill_messages=getattr(parent_agent, "prefill_messages", None),
         fallback_model=parent_fallback,
@@ -1682,6 +1701,7 @@ def _build_child_agent(
 
     try:
         from hercules_cli.plugins import invoke_hook as _invoke_hook
+
         _invoke_hook(
             "subagent_start",
             parent_session_id=getattr(parent_agent, "session_id", None),
@@ -1736,6 +1756,7 @@ def _dump_subagent_timeout_diagnostic(
         dump_path = logs_dir / f"subagent-timeout-{subagent_id}-{ts}.log"
 
         lines: List[str] = []
+
         def _w(line: str = "") -> None:
             lines.append(line)
 
@@ -1758,9 +1779,17 @@ def _dump_subagent_timeout_diagnostic(
 
         _w("## Child config")
         for attr in (
-            "model", "provider", "api_mode", "base_url", "max_iterations",
-            "quiet_mode", "skip_memory", "skip_context_files", "platform",
-            "_delegate_role", "_delegate_depth",
+            "model",
+            "provider",
+            "api_mode",
+            "base_url",
+            "max_iterations",
+            "quiet_mode",
+            "skip_memory",
+            "skip_context_files",
+            "platform",
+            "_delegate_role",
+            "_delegate_depth",
         ):
             try:
                 val = getattr(child, attr, None)
@@ -1786,11 +1815,17 @@ def _dump_subagent_timeout_diagnostic(
 
         _w("## Prompt / schema sizes")
         try:
-            sys_prompt = getattr(child, "ephemeral_system_prompt", None) \
-                or getattr(child, "system_prompt", None) \
+            sys_prompt = (
+                getattr(child, "ephemeral_system_prompt", None)
+                or getattr(child, "system_prompt", None)
                 or ""
-            _w(f"  system_prompt_bytes: {len(sys_prompt.encode('utf-8')) if isinstance(sys_prompt, str) else 'n/a'}")
-            _w(f"  system_prompt_chars: {len(sys_prompt) if isinstance(sys_prompt, str) else 'n/a'}")
+            )
+            _w(
+                f"  system_prompt_bytes: {len(sys_prompt.encode('utf-8')) if isinstance(sys_prompt, str) else 'n/a'}"
+            )
+            _w(
+                f"  system_prompt_chars: {len(sys_prompt) if isinstance(sys_prompt, str) else 'n/a'}"
+            )
         except Exception as exc:
             _w(f"  system_prompt: <error: {exc}>")
         try:
@@ -1892,7 +1927,7 @@ def _trim_summary_with_footer(
     # Snap the tail cut forward to the next newline for the same reason.
     nl = tail.find("\n")
     if 0 <= nl < tail_budget * 0.5:
-        tail = tail[nl + 1:]
+        tail = tail[nl + 1 :]
 
     spill_path = _spill_summary_to_file(task_index, summary)
 
@@ -1918,7 +1953,12 @@ def _trim_summary_with_footer(
         )
     footer_lines.append("─" * 37)
 
-    model_text = head + "\n\n[... middle omitted — see footer ...]\n\n" + tail + "\n".join(footer_lines)
+    model_text = (
+        head
+        + "\n\n[... middle omitted — see footer ...]\n\n"
+        + tail
+        + "\n".join(footer_lines)
+    )
     return model_text, spill_path
 
 
@@ -1977,7 +2017,9 @@ def _apply_summary_budget(results: List[Dict[str, Any]], parent_agent) -> None:
     compression/429 death spiral.
     """
     summaries = [
-        r for r in results if isinstance(r, dict) and isinstance(r.get("summary"), str) and r["summary"]
+        r
+        for r in results
+        if isinstance(r, dict) and isinstance(r.get("summary"), str) and r["summary"]
     ]
     if not summaries:
         return
@@ -2146,23 +2188,21 @@ def _run_single_child(
         _raw_depth = getattr(child, "_delegate_depth", 1)
         _tui_depth = max(0, _raw_depth - 1) if isinstance(_raw_depth, int) else 0
         _parent_sid = getattr(child, "_parent_subagent_id", None)
-        _register_subagent(
-            {
-                "subagent_id": _subagent_id,
-                "parent_id": _parent_sid if isinstance(_parent_sid, str) else None,
-                "depth": _tui_depth,
-                "goal": goal,
-                "model": (
-                    getattr(child, "model", None)
-                    if isinstance(getattr(child, "model", None), str)
-                    else None
-                ),
-                "started_at": time.time(),
-                "status": "running",
-                "tool_count": 0,
-                "agent": child,
-            }
-        )
+        _register_subagent({
+            "subagent_id": _subagent_id,
+            "parent_id": _parent_sid if isinstance(_parent_sid, str) else None,
+            "depth": _tui_depth,
+            "goal": goal,
+            "model": (
+                getattr(child, "model", None)
+                if isinstance(getattr(child, "model", None), str)
+                else None
+            ),
+            "started_at": time.time(),
+            "status": "running",
+            "tool_count": 0,
+            "agent": child,
+        })
 
     try:
         _heartbeat_thread.start()
@@ -2462,9 +2502,9 @@ def _run_single_child(
                     parent_task_id, wall_start, parent_reads_snapshot
                 )
                 if sibling_writes:
-                    mod_paths = sorted(
-                        {p for paths in sibling_writes.values() for p in paths}
-                    )
+                    mod_paths = sorted({
+                        p for paths in sibling_writes.values() for p in paths
+                    })
                     if mod_paths:
                         reminder = (
                             "\n\n[NOTE: subagent modified files the parent "
@@ -2500,14 +2540,12 @@ def _run_single_child(
             )  # all writes since wall_start
         except Exception:
             _files_written_map = {}
-        _files_written = sorted(
-            {
-                p
-                for tid, paths in _files_written_map.items()
-                if tid == child_task_id
-                for p in paths
-            }
-        )[:40]
+        _files_written = sorted({
+            p
+            for tid, paths in _files_written_map.items()
+            if tid == child_task_id
+            for p in paths
+        })[:40]
 
         _output_tail = _extract_output_tail(result, max_entries=8, max_chars=600)
 
@@ -2742,7 +2780,8 @@ def _run_verification_wave(
     """
     verifier_creds = verifier_creds or creds
     to_verify = [
-        e for e in results
+        e
+        for e in results
         if e.get("status") == "completed" and (e.get("summary") or "").strip()
     ]
     if not to_verify:
@@ -2822,9 +2861,7 @@ def _run_verification_wave(
                 # fixer with the real claim (not the verdict-appended blob).
                 # Popped before the results are serialised to the parent.
                 entry["_verify_base_summary"] = entry["summary"]
-                entry["summary"] = (
-                    f"{entry['summary']}\n\n{_VERIFY_TRAILER}\n{verdict}"
-                )
+                entry["summary"] = f"{entry['summary']}\n\n{_VERIFY_TRAILER}\n{verdict}"
                 try:
                     entry["_child_cost_usd"] = float(
                         entry.get("_child_cost_usd", 0.0) or 0.0
@@ -2868,16 +2905,20 @@ def _run_children_pairs(
                 try:
                     out[id(entry)] = future.result()
                 except Exception as exc:
-                    out[id(entry)] = {"status": "error", "summary": None, "error": str(exc)}
+                    out[id(entry)] = {
+                        "status": "error",
+                        "summary": None,
+                        "error": str(exc),
+                    }
     return out
 
 
 def _fold_child_cost(entry: Dict[str, Any], result: Dict[str, Any]) -> None:
     """Add a helper child's spend into the primary entry's cost rollup."""
     try:
-        entry["_child_cost_usd"] = float(entry.get("_child_cost_usd", 0.0) or 0.0) + float(
-            result.get("_child_cost_usd", 0.0) or 0.0
-        )
+        entry["_child_cost_usd"] = float(
+            entry.get("_child_cost_usd", 0.0) or 0.0
+        ) + float(result.get("_child_cost_usd", 0.0) or 0.0)
     except (TypeError, ValueError):
         pass
 
@@ -2976,13 +3017,11 @@ def _run_repair_rounds(
                 reverify_targets.append(e)
                 made_progress = True
             else:
-                e.setdefault("repairs", []).append(
-                    {
-                        "round": round_num,
-                        "outcome": "repair_failed",
-                        "detail": r.get("error") or r.get("status"),
-                    }
-                )
+                e.setdefault("repairs", []).append({
+                    "round": round_num,
+                    "outcome": "repair_failed",
+                    "detail": r.get("error") or r.get("status"),
+                })
         if not made_progress:
             return
 
@@ -3044,13 +3083,11 @@ def _run_repair_rounds(
                 "verdict": new_verdict.splitlines()[0],
                 "detail": new_verdict,
             }
-            e.setdefault("repairs", []).append(
-                {
-                    "round": round_num,
-                    "outcome": "reverified",
-                    "verdict": new_verdict.splitlines()[0],
-                }
-            )
+            e.setdefault("repairs", []).append({
+                "round": round_num,
+                "outcome": "reverified",
+                "verdict": new_verdict.splitlines()[0],
+            })
 
     # After the final round, whatever verdict stands, stands.
 
@@ -3147,7 +3184,9 @@ def _run_dag_batch(
         blocks = []
         for j in sorted(d):
             jr = results_by_index.get(j) or {}
-            jsum = (jr.get("summary") or "").strip() or "(prerequisite produced no output)"
+            jsum = (
+                jr.get("summary") or ""
+            ).strip() or "(prerequisite produced no output)"
             jlabel = task_labels[j] if j < len(task_labels) else f"Task {j}"
             blocks.append(f"### Prerequisite result — {jlabel}\n{jsum}")
         return (
@@ -3209,7 +3248,9 @@ def _run_dag_batch(
                         "api_calls": 0,
                         "duration_seconds": 0,
                         "_child_role": getattr(
-                            child_by_index.get(i, (None, None))[1], "_delegate_role", None
+                            child_by_index.get(i, (None, None))[1],
+                            "_delegate_role",
+                            None,
                         ),
                     }
                 results_by_index[i] = entry
@@ -3219,21 +3260,19 @@ def _run_dag_batch(
     results = list(results_by_index.values())
     for i, _t, child in children:
         if i not in done:
-            results.append(
-                {
-                    "task_index": i,
-                    "status": "interrupted" if interrupted else "skipped",
-                    "summary": None,
-                    "error": (
-                        "Parent agent interrupted before this task ran"
-                        if interrupted
-                        else "Task did not run (a prerequisite did not resolve)"
-                    ),
-                    "api_calls": 0,
-                    "duration_seconds": 0,
-                    "_child_role": getattr(child, "_delegate_role", None),
-                }
-            )
+            results.append({
+                "task_index": i,
+                "status": "interrupted" if interrupted else "skipped",
+                "summary": None,
+                "error": (
+                    "Parent agent interrupted before this task ran"
+                    if interrupted
+                    else "Task did not run (a prerequisite did not resolve)"
+                ),
+                "api_calls": 0,
+                "duration_seconds": 0,
+                "_child_role": getattr(child, "_delegate_role", None),
+            })
     return results
 
 
@@ -3306,7 +3345,9 @@ def delegate_task(
     # child runs on the daemon executor and re-enters the conversation via
     # the completion queue on its own, carrying its own handle. There's no
     # combined "wait for all" — fan-out is exactly N background subagents.
-    background = is_truthy_value(background, default=False) if background is not None else False
+    background = (
+        is_truthy_value(background, default=False) if background is not None else False
+    )
     verify = is_truthy_value(verify, default=False) if verify is not None else False
 
     # Depth limit — configurable via delegation.max_spawn_depth,
@@ -3314,17 +3355,15 @@ def delegate_task(
     depth = getattr(parent_agent, "_delegate_depth", 0)
     max_spawn = _get_max_spawn_depth()
     if depth >= max_spawn:
-        return json.dumps(
-            {
-                "error": (
-                    f"Delegation depth limit reached (depth={depth}, "
-                    f"max_spawn_depth={max_spawn}). Raise "
-                    f"delegation.max_spawn_depth in config.yaml if deeper "
-                    f"nesting is required (no hard ceiling, but each level "
-                    f"multiplies API cost)."
-                )
-            }
-        )
+        return json.dumps({
+            "error": (
+                f"Delegation depth limit reached (depth={depth}, "
+                f"max_spawn_depth={max_spawn}). Raise "
+                f"delegation.max_spawn_depth in config.yaml if deeper "
+                f"nesting is required (no hard ceiling, but each level "
+                f"multiplies API cost)."
+            )
+        })
 
     # Load config
     cfg = _load_config()
@@ -3338,7 +3377,8 @@ def delegate_task(
         logger.debug(
             "delegate_task: ignoring caller-supplied max_iterations=%s; "
             "using delegation.max_iterations=%s from config",
-            max_iterations, default_max_iter,
+            max_iterations,
+            default_max_iter,
         )
     effective_max_iter = default_max_iter
 
@@ -3386,9 +3426,7 @@ def delegate_task(
     # Validate each task has a goal
     for i, task in enumerate(task_list):
         if not isinstance(task, dict):
-            return tool_error(
-                f"Task {i} must be an object, got {type(task).__name__}."
-            )
+            return tool_error(f"Task {i} must be an object, got {type(task).__name__}.")
         if not task.get("goal", "").strip():
             return tool_error(f"Task {i} is missing a 'goal'.")
 
@@ -3585,7 +3623,9 @@ def delegate_task(
                                         "api_calls": 0,
                                         "duration_seconds": 0,
                                         "_child_role": getattr(
-                                            _child_by_index.get(idx), "_delegate_role", None
+                                            _child_by_index.get(idx),
+                                            "_delegate_role",
+                                            None,
                                         ),
                                     }
                             else:
@@ -3631,18 +3671,24 @@ def delegate_task(
                         # Print per-task completion line above the spinner
                         idx = entry["task_index"]
                         label = (
-                            task_labels[idx] if idx < len(task_labels) else f"Task {idx}"
+                            task_labels[idx]
+                            if idx < len(task_labels)
+                            else f"Task {idx}"
                         )
                         dur = entry.get("duration_seconds", 0)
                         status = entry.get("status", "?")
                         icon = "✓" if status == "completed" else "✗"
                         remaining = n_tasks - completed_count
-                        completion_line = f"{icon} [{idx+1}/{n_tasks}] {label}  ({dur}s)"
+                        completion_line = (
+                            f"{icon} [{idx + 1}/{n_tasks}] {label}  ({dur}s)"
+                        )
                         if spinner_ref:
                             try:
                                 spinner_ref.print_above(completion_line)
                             except Exception:
-                                _emit_parent_console(parent_agent, f"  {completion_line}")
+                                _emit_parent_console(
+                                    parent_agent, f"  {completion_line}"
+                                )
                         else:
                             _emit_parent_console(parent_agent, f"  {completion_line}")
 
@@ -3846,7 +3892,8 @@ def delegate_task(
                 _child_index = entry.get("task_index", -1)
                 _child_agent = (
                     children[_child_index][2]
-                    if isinstance(_child_index, int) and 0 <= _child_index < len(children)
+                    if isinstance(_child_index, int)
+                    and 0 <= _child_index < len(children)
                     else None
                 )
                 _invoke_hook(
@@ -3871,15 +3918,25 @@ def delegate_task(
         # fixtures, etc.).
         if _children_cost_total > 0.0:
             try:
-                current = float(getattr(parent_agent, "session_estimated_cost_usd", 0.0) or 0.0)
+                current = float(
+                    getattr(parent_agent, "session_estimated_cost_usd", 0.0) or 0.0
+                )
                 parent_agent.session_estimated_cost_usd = current + _children_cost_total
                 # Upgrade the cost_source so the UI doesn't label a partially-real
                 # total as "none" when the parent itself hadn't billed any calls
                 # yet (rare but possible when the parent's only action this turn
                 # was delegate_task).
-                if getattr(parent_agent, "session_cost_source", "none") in {None, "", "none"}:
+                if getattr(parent_agent, "session_cost_source", "none") in {
+                    None,
+                    "",
+                    "none",
+                }:
                     parent_agent.session_cost_source = "subagent"
-                if getattr(parent_agent, "session_cost_status", "unknown") in {None, "", "unknown"}:
+                if getattr(parent_agent, "session_cost_status", "unknown") in {
+                    None,
+                    "",
+                    "unknown",
+                }:
                     parent_agent.session_cost_status = "estimated"
             except Exception:
                 logger.debug("Subagent cost rollup failed", exc_info=True)
@@ -3912,6 +3969,7 @@ def delegate_task(
         # pool-at-capacity inline fallback below.
         try:
             from gateway.session_context import async_delivery_supported
+
             _async_ok = async_delivery_supported()
         except Exception:
             _async_ok = True
@@ -4005,8 +4063,8 @@ def delegate_task(
                 "keep working; its full result re-enters the conversation as a "
                 "new message when it finishes. Do not wait or poll — just "
                 "continue."
-                if n == 1 else
-                f"{n} subagents are running in parallel in the background. You "
+                if n == 1
+                else f"{n} subagents are running in parallel in the background. You "
                 f"and the user can keep working; they wait on each other and "
                 f"their consolidated results re-enter the conversation as a "
                 f"single message once ALL of them finish. Do not wait or poll "
@@ -4174,7 +4232,9 @@ def _resolve_delegation_credentials(cfg: dict, parent_agent) -> dict:
         # lets providers that store their key in a non-OPENAI_API_KEY env var
         # (e.g. MINIMAX_API_KEY, DASHSCOPE_API_KEY) work without requiring
         # callers to duplicate the key under delegation.api_key.
-        api_key = configured_api_key  # None → inherited from parent in _build_child_agent
+        api_key = (
+            configured_api_key  # None → inherited from parent in _build_child_agent
+        )
 
         # Use the shared URL-based api_mode detector (same path the main agent's
         # runtime resolver uses) so Anthropic-compatible direct endpoints with a
@@ -4202,7 +4262,11 @@ def _resolve_delegation_credentials(cfg: dict, parent_agent) -> dict:
 
         # Explicit delegation.api_mode in config always wins. Lets users force
         # a transport for non-standard endpoints the URL heuristic can't detect.
-        if configured_api_mode in {"chat_completions", "codex_responses", "anthropic_messages"}:
+        if configured_api_mode in {
+            "chat_completions",
+            "codex_responses",
+            "anthropic_messages",
+        }:
             api_mode = configured_api_mode
 
         return {
@@ -4229,7 +4293,9 @@ def _resolve_delegation_credentials(cfg: dict, parent_agent) -> dict:
     try:
         from hercules_cli.runtime_provider import resolve_runtime_provider
 
-        runtime = resolve_runtime_provider(requested=configured_provider, target_model=configured_model)
+        runtime = resolve_runtime_provider(
+            requested=configured_provider, target_model=configured_model
+        )
     except Exception as exc:
         raise ValueError(
             f"Cannot resolve delegation provider '{configured_provider}': {exc}. "
@@ -4247,7 +4313,9 @@ def _resolve_delegation_credentials(cfg: dict, parent_agent) -> dict:
 
     return {
         "model": configured_model or runtime.get("model") or None,
-        "provider": configured_provider if runtime.get("provider") == _RUNTIME_PROVIDER_CUSTOM else runtime.get("provider"),
+        "provider": configured_provider
+        if runtime.get("provider") == _RUNTIME_PROVIDER_CUSTOM
+        else runtime.get("provider"),
         "base_url": runtime.get("base_url"),
         "api_key": api_key,
         "api_mode": runtime.get("api_mode"),
@@ -4261,7 +4329,9 @@ def _resolve_delegation_credentials(cfg: dict, parent_agent) -> dict:
 _VERIFIER_CRED_KEYS = ("model", "provider", "base_url", "api_key", "api_mode")
 
 
-def _resolve_verifier_credentials(cfg: dict, parent_agent, producer_creds: dict) -> dict:
+def _resolve_verifier_credentials(
+    cfg: dict, parent_agent, producer_creds: dict
+) -> dict:
     """Resolve credentials for adversarial *verifier* children.
 
     A verifier that runs on the same model as the worker it is checking shares
@@ -4424,11 +4494,11 @@ def _build_top_level_description() -> str:
         "stays parent-only.\n"
         "- If the user is writing in a non-English language, or asked for "
         "output in a specific language / tone / style, say so in 'context' "
-        "(e.g. \"respond in Chinese\", \"return output in Japanese\"). "
+        '(e.g. "respond in Chinese", "return output in Japanese"). '
         "Otherwise subagents default to English and their summaries will "
         "contaminate your final reply with the wrong language.\n"
         "- Subagent summaries are SELF-REPORTS, not verified facts. A subagent "
-        "that claims \"uploaded successfully\" or \"file written\" may be wrong. "
+        'that claims "uploaded successfully" or "file written" may be wrong. '
         "For operations with external side-effects (HTTP POST/PUT, remote "
         "writes, file creation at shared paths, publishing), require the "
         "subagent to return a verifiable handle (URL, ID, absolute path, HTTP "
@@ -4513,8 +4583,12 @@ def _build_dynamic_schema_overrides() -> dict:
     overrides_params["properties"] = {
         k: dict(v) for k, v in DELEGATE_TASK_SCHEMA["parameters"]["properties"].items()
     }
-    overrides_params["properties"]["tasks"]["description"] = _build_tasks_param_description()
-    overrides_params["properties"]["role"]["description"] = _build_role_param_description()
+    overrides_params["properties"]["tasks"]["description"] = (
+        _build_tasks_param_description()
+    )
+    overrides_params["properties"]["role"]["description"] = (
+        _build_role_param_description()
+    )
 
     return {
         "description": _build_top_level_description(),
@@ -4635,9 +4709,7 @@ DELEGATE_TASK_SCHEMA = {
             },
             "proof_expect_exit": {
                 "type": "integer",
-                "description": (
-                    "Exit code the proof command must return (default 0)."
-                ),
+                "description": ("Exit code the proof command must return (default 0)."),
             },
             "verify": {
                 "type": "boolean",

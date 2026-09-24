@@ -139,7 +139,9 @@ class TestClaimantIsNeverTheOracle:
 
 
 class TestForgedVerdicts:
-    def test_verdict_contradicting_its_own_observation_is_rejected(self, miner, checker):
+    def test_verdict_contradicting_its_own_observation_is_rejected(
+        self, miner, checker
+    ):
         record = _claim(miner)
         lying = SignedRecord.create(
             checker,
@@ -148,7 +150,6 @@ class TestForgedVerdicts:
                 "claim_hash": record.hash,
                 "observed": Observation(exit_code=1).to_body(),  # it failed
                 "verdict": 1.0,  # but claims success
-
             },
             ts=2000,
         )
@@ -166,7 +167,9 @@ class TestTally:
         """The proof is deterministic: one honest failing replay settles it."""
         record = _claim(miner)
         records = [
-            verification(Identity.generate(), claim=record, observed=Observation(0), ts=2000)
+            verification(
+                Identity.generate(), claim=record, observed=Observation(0), ts=2000
+            )
             for _ in range(5)
         ]
         records.append(

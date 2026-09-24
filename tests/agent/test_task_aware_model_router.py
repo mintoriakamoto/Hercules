@@ -34,10 +34,16 @@ class TestTaskAwareModelRouter:
     def test_complex_task_routes_to_capable(self):
         """Test that complex reasoning tasks route to capable models."""
         router = TaskAwareModelRouter()
-        decision = router.analyze_task("Design a secure authentication system with trade-off analysis")
+        decision = router.analyze_task(
+            "Design a secure authentication system with trade-off analysis"
+        )
 
         # Can be CAPABLE or EXTENDED depending on complexity analysis
-        assert decision.recommended_tier in (ModelTier.CAPABLE, ModelTier.BALANCED, ModelTier.EXTENDED)
+        assert decision.recommended_tier in (
+            ModelTier.CAPABLE,
+            ModelTier.BALANCED,
+            ModelTier.EXTENDED,
+        )
         assert decision.recommended_model is not None
 
     def test_security_task_routes_appropriately(self):
@@ -128,9 +134,9 @@ class TestTaskAwareModelRouter:
 
         assert isinstance(model, str)
         assert model in [
-            m for tier_models in (
-                get_model_router().model_tier_mapping.values()
-            ) for m in tier_models
+            m
+            for tier_models in (get_model_router().model_tier_mapping.values())
+            for m in tier_models
         ]
         assert decision.recommended_model == model or decision.recommended_model is None
 
@@ -152,7 +158,10 @@ class TestTaskAwareModelRouter:
         decision = router.analyze_task("Optimize database queries for performance")
 
         assert len(decision.reasoning) > 0
-        assert "complex" in decision.reasoning.lower() or "rule" in decision.reasoning.lower()
+        assert (
+            "complex" in decision.reasoning.lower()
+            or "rule" in decision.reasoning.lower()
+        )
 
 
 class TestModelTierMapping:
@@ -236,8 +245,12 @@ class TestTaskCategorization:
         """Test categorization of security tasks."""
         router = TaskAwareModelRouter()
 
-        assert router._categorize_task("test for vulnerabilities") == TaskCategory.SECURITY
-        assert router._categorize_task("perform penetration test") == TaskCategory.SECURITY
+        assert (
+            router._categorize_task("test for vulnerabilities") == TaskCategory.SECURITY
+        )
+        assert (
+            router._categorize_task("perform penetration test") == TaskCategory.SECURITY
+        )
         assert router._categorize_task("exploit this service") == TaskCategory.SECURITY
 
     def test_uncategorized_tasks(self):

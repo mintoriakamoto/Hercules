@@ -67,7 +67,9 @@ class TestResolve:
 
     def test_base_url_env_override(self, kimi_creds, monkeypatch):
         kimi_creds({"access_token": "kc-x"})
-        monkeypatch.setenv("KIMI_OAUTH_BASE_URL", "https://staging.kimi.example/coding/")
+        monkeypatch.setenv(
+            "KIMI_OAUTH_BASE_URL", "https://staging.kimi.example/coding/"
+        )
         creds = a.resolve_kimi_oauth_runtime_credentials(refresh_if_expiring=False)
         # trailing slash stripped
         assert creds["base_url"] == "https://staging.kimi.example/coding"
@@ -103,7 +105,10 @@ class TestStatus:
 
 class TestExpiry:
     def test_far_future_not_expiring(self):
-        assert a._kimi_access_token_is_expiring(int(time.time() * 1000) + 3_600_000) is False
+        assert (
+            a._kimi_access_token_is_expiring(int(time.time() * 1000) + 3_600_000)
+            is False
+        )
 
     def test_past_is_expiring(self):
         assert a._kimi_access_token_is_expiring(int(time.time() * 1000) - 1000) is True
@@ -121,6 +126,7 @@ class TestExpiry:
 # ---------------------------------------------------------------------------
 # Real in-app login: Device Authorization Grant (RFC 8628)
 # ---------------------------------------------------------------------------
+
 
 class _FakeResp:
     def __init__(self, status=200, payload=None):
@@ -162,17 +168,29 @@ def isolated_home(tmp_path, monkeypatch):
 
 
 class TestDeviceCodeLogin:
-    def test_login_persists_tokens_and_reports_logged_in(self, isolated_home, monkeypatch):
-        device = _FakeResp(200, {
-            "device_code": "dev-1", "user_code": "ABCD-1234",
-            "verification_uri": "https://kimi.com/device",
-            "verification_uri_complete": "https://kimi.com/device?code=ABCD-1234",
-            "expires_in": 900, "interval": 1,
-        })
-        token = _FakeResp(200, {
-            "access_token": "kc-live", "refresh_token": "kc-r",
-            "expires_in": 3600, "token_type": "Bearer",
-        })
+    def test_login_persists_tokens_and_reports_logged_in(
+        self, isolated_home, monkeypatch
+    ):
+        device = _FakeResp(
+            200,
+            {
+                "device_code": "dev-1",
+                "user_code": "ABCD-1234",
+                "verification_uri": "https://kimi.com/device",
+                "verification_uri_complete": "https://kimi.com/device?code=ABCD-1234",
+                "expires_in": 900,
+                "interval": 1,
+            },
+        )
+        token = _FakeResp(
+            200,
+            {
+                "access_token": "kc-live",
+                "refresh_token": "kc-r",
+                "expires_in": 3600,
+                "token_type": "Bearer",
+            },
+        )
         client = _FakeClient([device, token])
         monkeypatch.setattr(a.httpx, "Client", lambda *args, **kw: client)
 
@@ -188,11 +206,19 @@ class TestDeviceCodeLogin:
     def test_device_endpoint_fallback_on_404(self, isolated_home, monkeypatch):
         # First candidate 404s; the flow falls through to the next endpoint.
         r404 = _FakeResp(404, {"error": "not_found"})
-        device = _FakeResp(200, {
-            "device_code": "d", "user_code": "U",
-            "verification_uri": "https://k/", "expires_in": 900, "interval": 1,
-        })
-        token = _FakeResp(200, {"access_token": "kc", "refresh_token": "r", "expires_in": 3600})
+        device = _FakeResp(
+            200,
+            {
+                "device_code": "d",
+                "user_code": "U",
+                "verification_uri": "https://k/",
+                "expires_in": 900,
+                "interval": 1,
+            },
+        )
+        token = _FakeResp(
+            200, {"access_token": "kc", "refresh_token": "r", "expires_in": 3600}
+        )
         client = _FakeClient([r404, device, token])
         monkeypatch.setattr(a.httpx, "Client", lambda *args, **kw: client)
 
@@ -201,8 +227,13 @@ class TestDeviceCodeLogin:
         # The successful device request used the 2nd candidate path.
         assert client.calls[1][0].endswith("/api/oauth/device/code")
 
-    def test_all_endpoints_404_raises_actionable_error(self, isolated_home, monkeypatch):
-        client = _FakeClient([_FakeResp(404, {"error": "nf"}), _FakeResp(404, {"error": "nf"})])
+    def test_all_endpoints_404_raises_actionable_error(
+        self, isolated_home, monkeypatch
+    ):
+        client = _FakeClient([
+            _FakeResp(404, {"error": "nf"}),
+            _FakeResp(404, {"error": "nf"}),
+        ])
         monkeypatch.setattr(a.httpx, "Client", lambda *args, **kw: client)
         with pytest.raises(a.AuthError) as ei:
             a.kimi_oauth_device_code_login(open_browser=False)
@@ -213,7 +244,9 @@ class TestDeviceCodeLogin:
         cli = isolated_home / "kimi-code.json"
         cli.write_text(json.dumps({"access_token": "from-cli"}), encoding="utf-8")
         monkeypatch.setenv("HERCULES_KIMI_OAUTH_CREDS_FILE", str(cli))
-        a._save_kimi_oauth_tokens({"access_token": "from-store"}, base_url="https://api.kimi.com/coding")
+        a._save_kimi_oauth_tokens(
+            {"access_token": "from-store"}, base_url="https://api.kimi.com/coding"
+        )
 
         creds = a.resolve_kimi_oauth_runtime_credentials(refresh_if_expiring=False)
         assert creds["api_key"] == "from-store"
@@ -238,12 +271,17 @@ class TestRuntimeApiMode:
         from hercules_cli.runtime_provider import _resolve_runtime_from_pool_entry
 
         entry = SimpleNamespace(
-            runtime_base_url="", base_url="", runtime_api_key="eyJfake.jwt.token",
-            access_token="eyJfake.jwt.token", source="pool",
+            runtime_base_url="",
+            base_url="",
+            runtime_api_key="eyJfake.jwt.token",
+            access_token="eyJfake.jwt.token",
+            source="pool",
         )
         resolved = _resolve_runtime_from_pool_entry(
-            provider="kimi-oauth", entry=entry,
-            requested_provider="kimi-oauth", model_cfg={},
+            provider="kimi-oauth",
+            entry=entry,
+            requested_provider="kimi-oauth",
+            model_cfg={},
         )
         assert resolved["api_mode"] == "anthropic_messages"
         assert resolved["base_url"] == "https://api.kimi.com/coding"
@@ -252,6 +290,7 @@ class TestRuntimeApiMode:
         # moonshot-v1-* only exists on platform.moonshot.ai, not /coding —
         # offering it produced resource_not_found 404s after login.
         from hercules_cli.models import _PROVIDER_MODELS
+
         catalog = _PROVIDER_MODELS.get("kimi-coding") or []
         assert catalog, "kimi-coding catalog missing"
         assert not any(m.startswith("moonshot-v1") for m in catalog)
@@ -282,4 +321,5 @@ class TestRuntimeApiMode:
 
     def test_overlay_transport_is_anthropic_messages(self):
         from hercules_cli.providers import HERCULES_OVERLAYS
+
         assert HERCULES_OVERLAYS["kimi-oauth"].transport == "anthropic_messages"

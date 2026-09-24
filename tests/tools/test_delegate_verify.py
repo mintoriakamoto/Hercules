@@ -156,7 +156,10 @@ class TestVerificationWave(unittest.TestCase):
 
     @patch("tools.delegate_tool._run_single_child")
     def test_verifier_goal_embeds_task_and_claim(self, mock_run, mock_build):
-        mock_run.side_effect = [_primary(summary="Fixed the bug in api.py"), _verifier()]
+        mock_run.side_effect = [
+            _primary(summary="Fixed the bug in api.py"),
+            _verifier(),
+        ]
         parent = _make_mock_parent()
         delegate_task(goal="fix the bug", verify=True, parent_agent=parent)
         # Second _build_child_agent call is the verifier.

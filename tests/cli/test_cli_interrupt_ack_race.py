@@ -61,14 +61,16 @@ def _make_cli():
         "prompt_toolkit.formatted_text": MagicMock(),
         "prompt_toolkit.auto_suggest": MagicMock(),
     }
-    with patch.dict(sys.modules, prompt_toolkit_stubs), patch.dict(
-        "os.environ", clean_env, clear=False
+    with (
+        patch.dict(sys.modules, prompt_toolkit_stubs),
+        patch.dict("os.environ", clean_env, clear=False),
     ):
         import cli as _cli_mod
 
         _cli_mod = importlib.reload(_cli_mod)
-        with patch.object(_cli_mod, "get_tool_definitions", return_value=[]), patch.dict(
-            _cli_mod.__dict__, {"CLI_CONFIG": _clean_config}
+        with (
+            patch.object(_cli_mod, "get_tool_definitions", return_value=[]),
+            patch.dict(_cli_mod.__dict__, {"CLI_CONFIG": _clean_config}),
         ):
             return _cli_mod.HerculesCLI()
 
@@ -128,12 +130,20 @@ def test_unacknowledged_interrupt_message_is_requeued_not_dropped():
     cli._pending_input = queue.Queue()
     cli._interrupt_queue.put("urgent new message")
 
-    with patch.object(cli, "_ensure_runtime_credentials", return_value=True), \
-         patch.object(cli, "_resolve_turn_agent_config", return_value={
-             "signature": cli._active_agent_route_signature,
-             "model": None, "runtime": None, "request_overrides": None,
-         }), \
-         patch.object(cli, "_init_agent", return_value=True):
+    with (
+        patch.object(cli, "_ensure_runtime_credentials", return_value=True),
+        patch.object(
+            cli,
+            "_resolve_turn_agent_config",
+            return_value={
+                "signature": cli._active_agent_route_signature,
+                "model": None,
+                "runtime": None,
+                "request_overrides": None,
+            },
+        ),
+        patch.object(cli, "_init_agent", return_value=True),
+    ):
         cli.chat("original")
 
     # The interrupt fired against the agent...
@@ -179,12 +189,20 @@ def test_acknowledged_interrupt_still_requeues_message():
     cli._pending_input = queue.Queue()
     cli._interrupt_queue.put("redirect please")
 
-    with patch.object(cli, "_ensure_runtime_credentials", return_value=True), \
-         patch.object(cli, "_resolve_turn_agent_config", return_value={
-             "signature": cli._active_agent_route_signature,
-             "model": None, "runtime": None, "request_overrides": None,
-         }), \
-         patch.object(cli, "_init_agent", return_value=True):
+    with (
+        patch.object(cli, "_ensure_runtime_credentials", return_value=True),
+        patch.object(
+            cli,
+            "_resolve_turn_agent_config",
+            return_value={
+                "signature": cli._active_agent_route_signature,
+                "model": None,
+                "runtime": None,
+                "request_overrides": None,
+            },
+        ),
+        patch.object(cli, "_init_agent", return_value=True),
+    ):
         cli.chat("original")
 
     queued = []

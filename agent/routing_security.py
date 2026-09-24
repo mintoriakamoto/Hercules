@@ -79,14 +79,18 @@ class RoutingSecurityValidator:
 
         # Check length (prevent resource exhaustion)
         if len(description) > 100000:  # 100K characters
-            logger.warning("Task description exceeds max length: %d bytes", len(description))
+            logger.warning(
+                "Task description exceeds max length: %d bytes", len(description)
+            )
             return False
 
         # Check for potential injection patterns
         description_lower = description.lower()
         for pattern in RoutingSecurityValidator._INJECTION_PATTERNS:
             if re.search(pattern, description_lower, re.IGNORECASE):
-                logger.warning("Potential injection pattern detected in task: %s", pattern)
+                logger.warning(
+                    "Potential injection pattern detected in task: %s", pattern
+                )
                 return False
 
         return True
@@ -110,7 +114,11 @@ class RoutingSecurityValidator:
             logger.warning("Invalid cost multiplier type: %s", type(multiplier))
             return False
 
-        if not (RoutingSecurityValidator._MIN_COST_MULTIPLIER <= multiplier <= RoutingSecurityValidator._MAX_COST_MULTIPLIER):
+        if not (
+            RoutingSecurityValidator._MIN_COST_MULTIPLIER
+            <= multiplier
+            <= RoutingSecurityValidator._MAX_COST_MULTIPLIER
+        ):
             logger.warning(
                 "Cost multiplier out of bounds: %.2f (valid range: %.2f-%.2f)",
                 multiplier,
@@ -135,7 +143,11 @@ class RoutingSecurityValidator:
             logger.warning("Invalid confidence type: %s", type(confidence))
             return False
 
-        if not (RoutingSecurityValidator._MIN_CONFIDENCE <= confidence <= RoutingSecurityValidator._MAX_CONFIDENCE):
+        if not (
+            RoutingSecurityValidator._MIN_CONFIDENCE
+            <= confidence
+            <= RoutingSecurityValidator._MAX_CONFIDENCE
+        ):
             logger.warning(
                 "Confidence score out of bounds: %.2f (valid range: %.2f-%.2f)",
                 confidence,
@@ -160,7 +172,11 @@ class RoutingSecurityValidator:
             logger.warning("Invalid cost savings type: %s", type(savings))
             return False
 
-        if not (RoutingSecurityValidator._MIN_COST_SAVINGS <= savings <= RoutingSecurityValidator._MAX_COST_SAVINGS):
+        if not (
+            RoutingSecurityValidator._MIN_COST_SAVINGS
+            <= savings
+            <= RoutingSecurityValidator._MAX_COST_SAVINGS
+        ):
             logger.warning(
                 "Cost savings out of bounds: %.1f%% (valid range: %.1f-%.1f%%)",
                 savings,
@@ -190,7 +206,9 @@ class RoutingSecurityValidator:
         """
         valid_tiers = {t.value for t in ModelTier}
         if tier_name not in valid_tiers:
-            logger.warning("Unknown tier name: %s (valid: %s)", tier_name, ", ".join(valid_tiers))
+            logger.warning(
+                "Unknown tier name: %s (valid: %s)", tier_name, ", ".join(valid_tiers)
+            )
             return False
         return True
 

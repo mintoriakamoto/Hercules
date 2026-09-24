@@ -103,8 +103,10 @@ def apply_windows_utf8_bootstrap() -> bool:
 
 def harden_import_path(src_root: str | None = None) -> None:
     """Stop a package in the current directory from shadowing Hercules modules."""
-    root = src_root or os.environ.get("HERCULES_PYTHON_SRC_ROOT") or os.path.dirname(
-        os.path.abspath(__file__)
+    root = (
+        src_root
+        or os.environ.get("HERCULES_PYTHON_SRC_ROOT")
+        or os.path.dirname(os.path.abspath(__file__))
     )
 
     sys.path[:] = [p for p in sys.path if p not in ("", ".")]
@@ -120,6 +122,7 @@ def activate_durable_lazy_target() -> None:
         return
     try:
         from tools import lazy_deps
+
         lazy_deps.activate_durable_lazy_target()
     except Exception:
         pass
@@ -127,6 +130,7 @@ def activate_durable_lazy_target() -> None:
 
 apply_windows_utf8_bootstrap()
 activate_durable_lazy_target()
+
 
 def apply_open_guardrails() -> None:
     """Apply approval/guardrail removal after the rest of the tree can import.
@@ -141,6 +145,7 @@ def apply_open_guardrails() -> None:
     """
     try:
         from tools.ungate import apply as _ungate
+
         _ungate()
     except Exception:
         pass

@@ -30,6 +30,7 @@ _SUBSCRIPTIONS_FILE_MODE = 0o600
 
 def _hercules_home() -> Path:
     from hercules_constants import get_hercules_home
+
     return get_hercules_home()
 
 
@@ -84,6 +85,7 @@ def _get_webhook_config() -> dict:
     """Load webhook platform config. Returns {} if not configured."""
     try:
         from hercules_cli.config import load_config
+
         cfg = load_config()
         return cfg_get(cfg, "platforms", "webhook", default={})
     except Exception:
@@ -160,8 +162,10 @@ def webhook_command(args):
 
 def _cmd_subscribe(args):
     name = args.name.strip().lower().replace(" ", "-")
-    if not re.match(r'^[a-z0-9][a-z0-9_-]*$', name):
-        print(f"Error: Invalid name '{name}'. Use lowercase alphanumeric with hyphens/underscores.")
+    if not re.match(r"^[a-z0-9][a-z0-9_-]*$", name):
+        print(
+            f"Error: Invalid name '{name}'. Use lowercase alphanumeric with hyphens/underscores."
+        )
         return
 
     subs = _load_subscriptions()
@@ -213,7 +217,9 @@ def _cmd_subscribe(args):
     if route.get("deliver_only"):
         print("  Mode: direct delivery (no agent, zero LLM cost)")
     if route.get("prompt"):
-        prompt_preview = route["prompt"][:80] + ("..." if len(route["prompt"]) > 80 else "")
+        prompt_preview = route["prompt"][:80] + (
+            "..." if len(route["prompt"]) > 80 else ""
+        )
         label = "Message" if route.get("deliver_only") else "Prompt"
         print(f"  {label}: {prompt_preview}")
     if route.get("script"):
@@ -277,17 +283,23 @@ def _cmd_test(args):
     base_url = _get_webhook_base_url()
     url = f"{base_url}/webhooks/{name}"
 
-    payload = args.payload or '{"test": true, "event_type": "test", "message": "Hello from hercules webhook test"}'
+    payload = (
+        args.payload
+        or '{"test": true, "event_type": "test", "message": "Hello from hercules webhook test"}'
+    )
 
     import hmac
     import hashlib
-    sig = "sha256=" + hmac.new(
-        secret.encode(), payload.encode(), hashlib.sha256
-    ).hexdigest()
+
+    sig = (
+        "sha256="
+        + hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    )
 
     print(f"  Sending test POST to {url}")
     try:
         import urllib.request
+
         req = urllib.request.Request(
             url,
             data=payload.encode(),

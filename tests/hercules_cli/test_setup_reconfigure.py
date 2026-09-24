@@ -116,6 +116,7 @@ class TestExistingInstallDefault:
                 tools="hercules_cli.setup.setup_tools",
             )
             from hercules_cli.setup import run_setup_wizard
+
             run_setup_wizard(args)
 
         # No menu shown.
@@ -145,6 +146,7 @@ class TestExistingInstallDefault:
                 tools="hercules_cli.setup.setup_tools",
             )
             from hercules_cli.setup import run_setup_wizard
+
             run_setup_wizard(args)
 
         m["prompt_choice"].assert_not_called()
@@ -172,6 +174,7 @@ class TestQuickFlag:
                 tools="hercules_cli.setup.setup_tools",
             )
             from hercules_cli.setup import run_setup_wizard
+
             run_setup_wizard(args)
 
         m["quick"].assert_called_once()
@@ -202,6 +205,7 @@ class TestFreshInstall:
                 summary="hercules_cli.setup._print_setup_summary",
             )
             from hercules_cli.setup import run_setup_wizard
+
             run_setup_wizard(args)
 
         # First-time mode prompt shown exactly once (Full setup vs Blank Slate).
@@ -218,9 +222,7 @@ class TestFreshInstall:
         self._run_and_assert_first_time_full_setup(_make_setup_args())
 
     def test_reconfigure_on_fresh_install_falls_through(self, fresh_install):
-        self._run_and_assert_first_time_full_setup(
-            _make_setup_args(reconfigure=True)
-        )
+        self._run_and_assert_first_time_full_setup(_make_setup_args(reconfigure=True))
 
     def test_quick_on_fresh_install_falls_through(self, fresh_install):
         self._run_and_assert_first_time_full_setup(_make_setup_args(quick=True))

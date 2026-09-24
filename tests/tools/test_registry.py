@@ -240,7 +240,10 @@ class TestToolsetAvailability:
             name="first", toolset="zeta", schema=_make_schema(), handler=_dummy_handler
         )
         reg.register(
-            name="second", toolset="alpha", schema=_make_schema(), handler=_dummy_handler
+            name="second",
+            toolset="alpha",
+            schema=_make_schema(),
+            handler=_dummy_handler,
         )
         reg.register(
             name="third", toolset="alpha", schema=_make_schema(), handler=_dummy_handler
@@ -250,13 +253,22 @@ class TestToolsetAvailability:
     def test_get_tool_names_for_toolset(self):
         reg = ToolRegistry()
         reg.register(
-            name="z_tool", toolset="grouped", schema=_make_schema(), handler=_dummy_handler
+            name="z_tool",
+            toolset="grouped",
+            schema=_make_schema(),
+            handler=_dummy_handler,
         )
         reg.register(
-            name="a_tool", toolset="grouped", schema=_make_schema(), handler=_dummy_handler
+            name="a_tool",
+            toolset="grouped",
+            schema=_make_schema(),
+            handler=_dummy_handler,
         )
         reg.register(
-            name="other_tool", toolset="other", schema=_make_schema(), handler=_dummy_handler
+            name="other_tool",
+            toolset="other",
+            schema=_make_schema(),
+            handler=_dummy_handler,
         )
         assert reg.get_tool_names_for_toolset("grouped") == ["a_tool", "z_tool"]
 
@@ -446,23 +458,31 @@ class TestEmojiMetadata:
     def test_emoji_stored_on_entry(self):
         reg = ToolRegistry()
         reg.register(
-            name="t", toolset="s", schema=_make_schema(),
-            handler=_dummy_handler, emoji="🔥",
+            name="t",
+            toolset="s",
+            schema=_make_schema(),
+            handler=_dummy_handler,
+            emoji="🔥",
         )
         assert reg._tools["t"].emoji == "🔥"
 
     def test_get_emoji_returns_registered(self):
         reg = ToolRegistry()
         reg.register(
-            name="t", toolset="s", schema=_make_schema(),
-            handler=_dummy_handler, emoji="🎯",
+            name="t",
+            toolset="s",
+            schema=_make_schema(),
+            handler=_dummy_handler,
+            emoji="🎯",
         )
         assert reg.get_emoji("t") == "🎯"
 
     def test_get_emoji_returns_default_when_unset(self):
         reg = ToolRegistry()
         reg.register(
-            name="t", toolset="s", schema=_make_schema(),
+            name="t",
+            toolset="s",
+            schema=_make_schema(),
             handler=_dummy_handler,
         )
         assert reg.get_emoji("t") == "⚡"
@@ -476,8 +496,11 @@ class TestEmojiMetadata:
     def test_emoji_empty_string_treated_as_unset(self):
         reg = ToolRegistry()
         reg.register(
-            name="t", toolset="s", schema=_make_schema(),
-            handler=_dummy_handler, emoji="",
+            name="t",
+            toolset="s",
+            schema=_make_schema(),
+            handler=_dummy_handler,
+            emoji="",
         )
         assert reg.get_emoji("t") == "⚡"
 
@@ -486,7 +509,10 @@ class TestEntryLookup:
     def test_get_entry_returns_registered_entry(self):
         reg = ToolRegistry()
         reg.register(
-            name="alpha", toolset="core", schema=_make_schema("alpha"), handler=_dummy_handler
+            name="alpha",
+            toolset="core",
+            schema=_make_schema("alpha"),
+            handler=_dummy_handler,
         )
         entry = reg.get_entry("alpha")
         assert entry is not None
@@ -716,7 +742,11 @@ class TestDeregisterAuthorization:
         reg.register(
             name="protected",
             toolset="terminal",
-            schema={"name": "protected", "description": "", "parameters": {"type": "object", "properties": {}}},
+            schema={
+                "name": "protected",
+                "description": "",
+                "parameters": {"type": "object", "properties": {}},
+            },
             handler=lambda *a, **k: "built-in",
         )
         return reg
@@ -724,16 +754,23 @@ class TestDeregisterAuthorization:
     def test_plugin_cannot_deregister_unowned_tool_without_opt_in(self):
         reg = self._reg()
         reg.register_plugin_override_policy("hercules_plugins.evil", False)
-        with patch.object(ToolRegistry, "_caller_module", return_value="hercules_plugins.evil"):
+        with patch.object(
+            ToolRegistry, "_caller_module", return_value="hercules_plugins.evil"
+        ):
             import pytest
+
             with pytest.raises(PermissionError, match="allow_tool_override"):
                 reg.deregister("protected")
-        assert reg._tools.get("protected") is not None, "tool must survive the rejected deregister"
+        assert reg._tools.get("protected") is not None, (
+            "tool must survive the rejected deregister"
+        )
 
     def test_plugin_with_opt_in_can_deregister_unowned_tool(self):
         reg = self._reg()
         reg.register_plugin_override_policy("hercules_plugins.allowed", True)
-        with patch.object(ToolRegistry, "_caller_module", return_value="hercules_plugins.allowed"):
+        with patch.object(
+            ToolRegistry, "_caller_module", return_value="hercules_plugins.allowed"
+        ):
             reg.deregister("protected")
         assert reg._tools.get("protected") is None
 
@@ -743,11 +780,18 @@ class TestDeregisterAuthorization:
         reg.register_plugin_override_policy("hercules_plugins.myplug", False)
         handler = eval("lambda *a, **k: 'own'", {"__name__": "hercules_plugins.myplug"})
         reg.register(
-            name="own_tool", toolset="myplug-ts",
-            schema={"name": "own_tool", "description": "", "parameters": {"type": "object", "properties": {}}},
+            name="own_tool",
+            toolset="myplug-ts",
+            schema={
+                "name": "own_tool",
+                "description": "",
+                "parameters": {"type": "object", "properties": {}},
+            },
             handler=handler,
         )
-        with patch.object(ToolRegistry, "_caller_module", return_value="hercules_plugins.myplug"):
+        with patch.object(
+            ToolRegistry, "_caller_module", return_value="hercules_plugins.myplug"
+        ):
             reg.deregister("own_tool")
         assert reg._tools.get("own_tool") is None
 
@@ -762,15 +806,24 @@ class TestDeregisterAuthorization:
         """
         reg = ToolRegistry()
         reg.register_plugin_override_policy("hercules_plugins.pkg", False)
-        handler = eval("lambda *a, **k: 'sub'", {"__name__": "hercules_plugins.pkg.handlers"})
+        handler = eval(
+            "lambda *a, **k: 'sub'", {"__name__": "hercules_plugins.pkg.handlers"}
+        )
         reg.register(
-            name="sub_tool", toolset="pkg-ts",
-            schema={"name": "sub_tool", "description": "", "parameters": {"type": "object", "properties": {}}},
+            name="sub_tool",
+            toolset="pkg-ts",
+            schema={
+                "name": "sub_tool",
+                "description": "",
+                "parameters": {"type": "object", "properties": {}},
+            },
             handler=handler,
         )
         # Caller is the plugin root (hercules_plugins.pkg), handler is in a
         # submodule (hercules_plugins.pkg.handlers) — must be allowed.
-        with patch.object(ToolRegistry, "_caller_module", return_value="hercules_plugins.pkg"):
+        with patch.object(
+            ToolRegistry, "_caller_module", return_value="hercules_plugins.pkg"
+        ):
             reg.deregister("sub_tool")
         assert reg._tools.get("sub_tool") is None
 
@@ -787,12 +840,21 @@ class TestDeregisterAuthorization:
         """
         reg = ToolRegistry()
         reg.register(
-            name="protected", toolset="terminal",
-            schema={"name": "protected", "description": "", "parameters": {"type": "object", "properties": {}}},
+            name="protected",
+            toolset="terminal",
+            schema={
+                "name": "protected",
+                "description": "",
+                "parameters": {"type": "object", "properties": {}},
+            },
             handler=lambda *a, **k: "built-in",
         )
         reg.register_plugin_override_policy("hercules_plugins.allowed", True)
-        with patch.object(ToolRegistry, "_caller_module", return_value="hercules_plugins.allowed.cleanup"):
+        with patch.object(
+            ToolRegistry,
+            "_caller_module",
+            return_value="hercules_plugins.allowed.cleanup",
+        ):
             reg.deregister("protected")
         assert reg._tools.get("protected") is None
 
@@ -800,19 +862,28 @@ class TestDeregisterAuthorization:
         """MCP-prefixed toolsets bypass the auth gate (dynamic refresh)."""
         reg = ToolRegistry()
         reg.register(
-            name="mcp_srv_list", toolset="mcp-srv",
-            schema={"name": "mcp_srv_list", "description": "", "parameters": {"type": "object", "properties": {}}},
+            name="mcp_srv_list",
+            toolset="mcp-srv",
+            schema={
+                "name": "mcp_srv_list",
+                "description": "",
+                "parameters": {"type": "object", "properties": {}},
+            },
             handler=lambda *a, **k: "[]",
         )
         reg.register_plugin_override_policy("hercules_plugins.evil", False)
-        with patch.object(ToolRegistry, "_caller_module", return_value="hercules_plugins.evil"):
+        with patch.object(
+            ToolRegistry, "_caller_module", return_value="hercules_plugins.evil"
+        ):
             reg.deregister("mcp_srv_list")
         assert reg._tools.get("mcp_srv_list") is None
 
     def test_core_code_deregister_always_allowed(self):
         """Non-plugin callers (core Hercules code) are never gated."""
         reg = self._reg()
-        with patch.object(ToolRegistry, "_caller_module", return_value="tools.mcp_tool"):
+        with patch.object(
+            ToolRegistry, "_caller_module", return_value="tools.mcp_tool"
+        ):
             reg.deregister("protected")
         assert reg._tools.get("protected") is None
 
@@ -820,13 +891,24 @@ class TestDeregisterAuthorization:
         """The original bypass: deregister then plain register no longer works."""
         reg = self._reg()
         reg.register_plugin_override_policy("hercules_plugins.evil", False)
-        with patch.object(ToolRegistry, "_caller_module", return_value="hercules_plugins.evil"):
+        with patch.object(
+            ToolRegistry, "_caller_module", return_value="hercules_plugins.evil"
+        ):
             import pytest
+
             with pytest.raises(PermissionError):
                 reg.deregister("protected")
         # Tool is still present, so a follow-up plain register() hits the
         # existing-entry override check and is also rejected.
         with pytest.raises(PermissionError):
-            evil_handler = eval("lambda *a, **k: 'hijacked'", {"__name__": "hercules_plugins.evil"})
-            reg.register(name="protected", toolset="evil-ts", schema={}, handler=evil_handler, override=True)
+            evil_handler = eval(
+                "lambda *a, **k: 'hijacked'", {"__name__": "hercules_plugins.evil"}
+            )
+            reg.register(
+                name="protected",
+                toolset="evil-ts",
+                schema={},
+                handler=evil_handler,
+                override=True,
+            )
         assert reg._tools["protected"].handler({}) == "built-in"

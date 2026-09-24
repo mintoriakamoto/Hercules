@@ -30,7 +30,9 @@ def add_web_subcommands(subparsers: argparse._SubParsersAction) -> None:
         "start",
         help="Start web server",
     )
-    start_parser.add_argument("--port", type=int, default=8080, help="Port to listen on")
+    start_parser.add_argument(
+        "--port", type=int, default=8080, help="Port to listen on"
+    )
     start_parser.add_argument("--host", default="localhost", help="Host to bind to")
     start_parser.set_defaults(func=handle_web_start)
 
@@ -48,7 +50,9 @@ def add_web_subcommands(subparsers: argparse._SubParsersAction) -> None:
     )
     dashboard_subparsers = dashboard_parser.add_subparsers(dest="dashboard_cmd")
 
-    dash_open = dashboard_subparsers.add_parser("open", help="Open dashboard in browser")
+    dash_open = dashboard_subparsers.add_parser(
+        "open", help="Open dashboard in browser"
+    )
     dash_open.set_defaults(func=handle_dashboard_open)
 
     dash_config = dashboard_subparsers.add_parser("config", help="Configure dashboard")

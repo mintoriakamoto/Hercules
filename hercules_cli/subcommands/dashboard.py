@@ -24,11 +24,12 @@ def _add_server_runtime_args(parser) -> None:
     browser-opening behavior and help framing differ.
     """
     parser.add_argument(
-        "--port", type=int, default=9119, help="Port (default 9119, 0 for auto-assign by OS)"
+        "--port",
+        type=int,
+        default=9119,
+        help="Port (default 9119, 0 for auto-assign by OS)",
     )
-    parser.add_argument(
-        "--host", default="127.0.0.1", help="Host (default 127.0.0.1)"
-    )
+    parser.add_argument("--host", default="127.0.0.1", help="Host (default 127.0.0.1)")
     parser.add_argument(
         "--insecure",
         action="store_true",
@@ -84,9 +85,7 @@ def _add_server_runtime_args(parser) -> None:
     )
 
 
-def build_dashboard_parser(
-    subparsers, *, cmd_dashboard: Callable
-) -> None:
+def build_dashboard_parser(subparsers, *, cmd_dashboard: Callable) -> None:
     """Attach the ``dashboard`` and ``serve`` subcommands.
 
     Both share the same backend (``cmd_dashboard`` → ``start_server``).
@@ -146,12 +145,9 @@ def build_dashboard_parser(
     # Accepted but redundant: `serve` is always headless (see set_defaults
     # below). Kept so callers that pass the legacy `--no-open` flag (e.g. the
     # desktop backend spawn) don't trip "unrecognized arguments".
-    serve_parser.add_argument(
-        "--no-open", action="store_true", help=argparse.SUPPRESS
-    )
+    serve_parser.add_argument("--no-open", action="store_true", help=argparse.SUPPRESS)
     # `headless_backend` marks the lean path: desktop/remote clients speak pure
     # JSON-RPC/WS, so `serve` skips the web UI build AND never serves the SPA
     # (cmd_dashboard exports HERCULES_SERVE_HEADLESS=1). `dashboard` leaves it
     # unset and serves the browser UI as before.
     serve_parser.set_defaults(func=cmd_dashboard, no_open=True, headless_backend=True)
-

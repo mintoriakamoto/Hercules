@@ -16,18 +16,18 @@ class TestEndpointLocality:
     @pytest.mark.parametrize(
         "url",
         [
-            "http://localhost:11434/v1",       # Ollama
-            "http://127.0.0.1:8000/v1",        # vLLM
-            "http://0.0.0.0:8080/v1",          # llama-server bound to all ifaces
-            "http://[::1]:5000/v1",            # TabbyAPI over IPv6 loopback
-            "http://192.168.1.50:8000/v1",     # LAN
-            "http://10.0.0.5:11434/v1",        # LAN
-            "http://172.16.3.9:8080/v1",       # LAN
+            "http://localhost:11434/v1",  # Ollama
+            "http://127.0.0.1:8000/v1",  # vLLM
+            "http://0.0.0.0:8080/v1",  # llama-server bound to all ifaces
+            "http://[::1]:5000/v1",  # TabbyAPI over IPv6 loopback
+            "http://192.168.1.50:8000/v1",  # LAN
+            "http://10.0.0.5:11434/v1",  # LAN
+            "http://172.16.3.9:8080/v1",  # LAN
             "http://100.101.102.103:8000/v1",  # Tailscale CGNAT
-            "http://gpu-box:8000/v1",          # bare single-label hostname
-            "http://ollama.local:11434/v1",    # mDNS
+            "http://gpu-box:8000/v1",  # bare single-label hostname
+            "http://ollama.local:11434/v1",  # mDNS
             "http://server.internal:8000/v1",  # internal DNS
-            "moa://local",                     # virtual aggregator scheme
+            "moa://local",  # virtual aggregator scheme
         ],
     )
     def test_local_endpoints_pass(self, url):
@@ -40,9 +40,9 @@ class TestEndpointLocality:
             "https://api.anthropic.com",
             "https://openrouter.ai/api/v1",
             "https://generativelanguage.googleapis.com",
-            "https://ollama.com/v1",           # Ollama CLOUD — not local
+            "https://ollama.com/v1",  # Ollama CLOUD — not local
             "https://api.groq.com/openai/v1",
-            "",                                 # no endpoint is not provably local
+            "",  # no endpoint is not provably local
         ],
     )
     def test_cloud_endpoints_fail(self, url):
@@ -53,10 +53,19 @@ class TestConfigTruthy:
     @pytest.mark.parametrize(
         "value,expected",
         [
-            (True, True), (False, False),
-            (1, True), (0, False),
-            ("true", True), ("True", True), ("1", True), ("yes", True), ("on", True),
-            ("false", False), ("no", False), ("", False), ("off", False),
+            (True, True),
+            (False, False),
+            (1, True),
+            (0, False),
+            ("true", True),
+            ("True", True),
+            ("1", True),
+            ("yes", True),
+            ("on", True),
+            ("false", False),
+            ("no", False),
+            ("", False),
+            ("off", False),
             (None, False),
         ],
     )
@@ -66,10 +75,18 @@ class TestConfigTruthy:
 
 class TestEnforcement:
     def _cloud(self):
-        return {"provider": "openai-api", "base_url": "https://api.openai.com/v1", "api_key": "sk-x"}
+        return {
+            "provider": "openai-api",
+            "base_url": "https://api.openai.com/v1",
+            "api_key": "sk-x",
+        }
 
     def _local(self):
-        return {"provider": "custom", "base_url": "http://localhost:11434/v1", "api_key": "x"}
+        return {
+            "provider": "custom",
+            "base_url": "http://localhost:11434/v1",
+            "api_key": "x",
+        }
 
     def test_disabled_lets_cloud_through(self, monkeypatch):
         monkeypatch.setattr(rp, "local_only_mode_enabled", lambda: False)
@@ -94,7 +111,11 @@ class TestEnforcement:
     def test_custom_provider_pointed_at_cloud_is_blocked(self, monkeypatch):
         """The core case: a local-sounding provider must not smuggle a cloud URL."""
         monkeypatch.setattr(rp, "local_only_mode_enabled", lambda: True)
-        runtime = {"provider": "custom", "base_url": "https://api.anthropic.com", "api_key": "x"}
+        runtime = {
+            "provider": "custom",
+            "base_url": "https://api.anthropic.com",
+            "api_key": "x",
+        }
         with pytest.raises(rp.LocalOnlyModeError):
             rp._enforce_local_only(runtime)
 
@@ -109,8 +130,13 @@ class TestChokepointIntegration:
     def test_gate_applied_to_impl_result(self, monkeypatch):
         monkeypatch.setattr(rp, "local_only_mode_enabled", lambda: True)
         monkeypatch.setattr(
-            rp, "_resolve_runtime_provider_impl",
-            lambda **kw: {"provider": "openrouter", "base_url": "https://openrouter.ai/api/v1", "api_key": "k"},
+            rp,
+            "_resolve_runtime_provider_impl",
+            lambda **kw: {
+                "provider": "openrouter",
+                "base_url": "https://openrouter.ai/api/v1",
+                "api_key": "k",
+            },
         )
         with pytest.raises(rp.LocalOnlyModeError):
             rp.resolve_runtime_provider(requested="openrouter")
@@ -118,8 +144,13 @@ class TestChokepointIntegration:
     def test_local_impl_result_passes_through(self, monkeypatch):
         monkeypatch.setattr(rp, "local_only_mode_enabled", lambda: True)
         monkeypatch.setattr(
-            rp, "_resolve_runtime_provider_impl",
-            lambda **kw: {"provider": "ollama", "base_url": "http://localhost:11434/v1", "api_key": "x"},
+            rp,
+            "_resolve_runtime_provider_impl",
+            lambda **kw: {
+                "provider": "ollama",
+                "base_url": "http://localhost:11434/v1",
+                "api_key": "x",
+            },
         )
         out = rp.resolve_runtime_provider(requested="ollama")
         assert out["provider"] == "ollama"
@@ -127,7 +158,9 @@ class TestChokepointIntegration:
 
 class TestConfigReading:
     def test_reads_providers_local_only(self, monkeypatch):
-        monkeypatch.setattr(rp, "load_config", lambda: {"providers": {"local_only": True}})
+        monkeypatch.setattr(
+            rp, "load_config", lambda: {"providers": {"local_only": True}}
+        )
         assert rp.local_only_mode_enabled() is True
 
     def test_defaults_false(self, monkeypatch):
@@ -137,5 +170,6 @@ class TestConfigReading:
     def test_fails_safe_to_false_on_error(self, monkeypatch):
         def _boom():
             raise RuntimeError("config unreadable")
+
         monkeypatch.setattr(rp, "load_config", _boom)
         assert rp.local_only_mode_enabled() is False

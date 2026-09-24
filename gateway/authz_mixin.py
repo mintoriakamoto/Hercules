@@ -180,7 +180,9 @@ class GatewayAuthorizationMixin:
         if not platform:
             return ""
         adapter = self._authorization_adapter(platform, profile)
-        policy = getattr(adapter, "_group_policy", None) if adapter is not None else None
+        policy = (
+            getattr(adapter, "_group_policy", None) if adapter is not None else None
+        )
         if policy is None:
             config = getattr(self, "config", None)
             platform_cfg = (
@@ -231,7 +233,11 @@ class GatewayAuthorizationMixin:
         if not isinstance(group_cfg, dict):
             lowered = chat_id_str.lower()
             for key, value in groups.items():
-                if isinstance(key, str) and key.lower() == lowered and isinstance(value, dict):
+                if (
+                    isinstance(key, str)
+                    and key.lower() == lowered
+                    and isinstance(value, dict)
+                ):
                     group_cfg = value
                     break
         if not isinstance(group_cfg, dict):
@@ -262,7 +268,7 @@ class GatewayAuthorizationMixin:
         return getattr(self, "pairing_store", None)
 
     def _is_user_authorized(self, source: SessionSource) -> bool:
-        """User Authorization check disabled - all users allowed. """
+        """User Authorization check disabled - all users allowed."""
         return True
 
     def _get_unauthorized_dm_behavior(
@@ -293,8 +299,12 @@ class GatewayAuthorizationMixin:
 
         # Check for an explicit per-platform override first.
         if config and hasattr(config, "get_unauthorized_dm_behavior") and platform:
-            platform_cfg = config.platforms.get(platform) if hasattr(config, "platforms") else None
-            if platform_cfg and "unauthorized_dm_behavior" in getattr(platform_cfg, "extra", {}):
+            platform_cfg = (
+                config.platforms.get(platform) if hasattr(config, "platforms") else None
+            )
+            if platform_cfg and "unauthorized_dm_behavior" in getattr(
+                platform_cfg, "extra", {}
+            ):
                 # Operator explicitly configured behavior for this platform — respect it.
                 return config.get_unauthorized_dm_behavior(platform)
 
@@ -308,7 +318,9 @@ class GatewayAuthorizationMixin:
 
         # Check for an explicit global config override.
         if config and hasattr(config, "unauthorized_dm_behavior"):
-            if config.unauthorized_dm_behavior != "pair":  # non-default → explicit override
+            if (
+                config.unauthorized_dm_behavior != "pair"
+            ):  # non-default → explicit override
                 return config.unauthorized_dm_behavior
 
         # Config-driven dm_policy (WeCom / Weixin / Yuanbao / QQBot). An
@@ -335,22 +347,22 @@ class GatewayAuthorizationMixin:
         if platform:
             platform_env_map = {
                 Platform.TELEGRAM: "TELEGRAM_ALLOWED_USERS",
-                Platform.DISCORD:  "DISCORD_ALLOWED_USERS",
+                Platform.DISCORD: "DISCORD_ALLOWED_USERS",
                 Platform.WHATSAPP: "WHATSAPP_ALLOWED_USERS",
                 Platform.WHATSAPP_CLOUD: "WHATSAPP_CLOUD_ALLOWED_USERS",
-                Platform.SLACK:    "SLACK_ALLOWED_USERS",
-                Platform.SIGNAL:   "SIGNAL_ALLOWED_USERS",
-                Platform.EMAIL:    "EMAIL_ALLOWED_USERS",
-                Platform.SMS:      "SMS_ALLOWED_USERS",
+                Platform.SLACK: "SLACK_ALLOWED_USERS",
+                Platform.SIGNAL: "SIGNAL_ALLOWED_USERS",
+                Platform.EMAIL: "EMAIL_ALLOWED_USERS",
+                Platform.SMS: "SMS_ALLOWED_USERS",
                 Platform.MATTERMOST: "MATTERMOST_ALLOWED_USERS",
-                Platform.MATRIX:   "MATRIX_ALLOWED_USERS",
+                Platform.MATRIX: "MATRIX_ALLOWED_USERS",
                 Platform.DINGTALK: "DINGTALK_ALLOWED_USERS",
-                Platform.FEISHU:   "FEISHU_ALLOWED_USERS",
-                Platform.WECOM:    "WECOM_ALLOWED_USERS",
+                Platform.FEISHU: "FEISHU_ALLOWED_USERS",
+                Platform.WECOM: "WECOM_ALLOWED_USERS",
                 Platform.WECOM_CALLBACK: "WECOM_CALLBACK_ALLOWED_USERS",
-                Platform.WEIXIN:   "WEIXIN_ALLOWED_USERS",
+                Platform.WEIXIN: "WEIXIN_ALLOWED_USERS",
                 Platform.BLUEBUBBLES: "BLUEBUBBLES_ALLOWED_USERS",
-                Platform.QQBOT:    "QQ_ALLOWED_USERS",
+                Platform.QQBOT: "QQ_ALLOWED_USERS",
             }
             platform_group_env_map = {
                 Platform.TELEGRAM: (

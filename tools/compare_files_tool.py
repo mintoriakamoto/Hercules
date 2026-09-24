@@ -87,8 +87,12 @@ def compare_files_tool(
     diff_lines = list(diff_gen)
 
     # Count changes
-    additions = sum(1 for line in diff_lines if line.startswith("+") and not line.startswith("+++"))
-    deletions = sum(1 for line in diff_lines if line.startswith("-") and not line.startswith("---"))
+    additions = sum(
+        1 for line in diff_lines if line.startswith("+") and not line.startswith("+++")
+    )
+    deletions = sum(
+        1 for line in diff_lines if line.startswith("-") and not line.startswith("---")
+    )
     changes = max(additions, deletions)
 
     summary = f"Differences: {additions} additions, {deletions} deletions, {changes} changed lines"
@@ -149,7 +153,11 @@ def count_file_lines_tool(
     if count_comments:
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith("#") or stripped.startswith("//") or stripped.startswith("--"):
+            if (
+                stripped.startswith("#")
+                or stripped.startswith("//")
+                or stripped.startswith("--")
+            ):
                 comments += 1
 
     code = total - empty - comments

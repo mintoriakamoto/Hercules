@@ -4,6 +4,7 @@ Covers render_notice_line — the pure helper that turns a notice into the
 single plaintext line pushed standalone over a messaging platform (no status
 bar, unlike the TUI). Behavior contracts, not data snapshots.
 """
+
 from gateway.run import render_notice_line
 
 
@@ -32,16 +33,23 @@ class TestRenderNoticeLine:
 
     def test_returns_text_verbatim_with_its_baked_glyph(self):
         assert (
-            render_notice_line(AgentNotice(text="⚠ Credits 90% used · $20.00 cap", level="warn"))
+            render_notice_line(
+                AgentNotice(text="⚠ Credits 90% used · $20.00 cap", level="warn")
+            )
             == "⚠ Credits 90% used · $20.00 cap"
         )
         assert (
-            render_notice_line(AgentNotice(text="• Grant spent · $5.00 top-up left", level="info"))
+            render_notice_line(
+                AgentNotice(text="• Grant spent · $5.00 top-up left", level="info")
+            )
             == "• Grant spent · $5.00 top-up left"
         )
         assert (
             render_notice_line(
-                AgentNotice(text="✕ Credit access paused · run /credits to top up", level="error")
+                AgentNotice(
+                    text="✕ Credit access paused · run /credits to top up",
+                    level="error",
+                )
             )
             == "✕ Credit access paused · run /credits to top up"
         )
@@ -54,7 +62,10 @@ class TestRenderNoticeLine:
         assert "⚠ ⚠" not in line
 
     def test_text_is_stripped(self):
-        assert render_notice_line(AgentNotice(text="  ⚠ padded  ", level="warn")) == "⚠ padded"
+        assert (
+            render_notice_line(AgentNotice(text="  ⚠ padded  ", level="warn"))
+            == "⚠ padded"
+        )
 
     def test_empty_text_returns_empty_string(self):
         # Empty/whitespace → "" → the callback suppresses the push. Fail-soft.
@@ -148,8 +159,9 @@ class TestDeliverNoticeLine:
     @pytest.mark.asyncio
     async def test_no_adapter_is_a_noop(self):
         source = _make_source()
-        runner = object.__new__(__import__("gateway.run", fromlist=["GatewayRunner"]).GatewayRunner)
+        runner = object.__new__(
+            __import__("gateway.run", fromlist=["GatewayRunner"]).GatewayRunner
+        )
         runner.adapters = {}
         # Must not raise when the platform has no registered adapter.
         await runner._deliver_platform_notice(source, "• anything")
-

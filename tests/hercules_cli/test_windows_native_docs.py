@@ -6,5 +6,8 @@ def test_windows_native_install_path_docs_match_installer() -> None:
     install = Path("scripts/install.ps1").read_text()
 
     assert "%LOCALAPPDATA%\\hercules\\hercules-agent\\venv\\Scripts" in doc
-    assert "Get-Command hercules        # should print C:\\Users\\<you>\\AppData\\Local\\hercules\\hercules-agent\\venv\\Scripts\\hercules.exe" in doc
+    assert (
+        "Get-Command hercules        # should print C:\\Users\\<you>\\AppData\\Local\\hercules\\hercules-agent\\venv\\Scripts\\hercules.exe"
+        in doc
+    )
     assert '$herculesBin = "$InstallDir\\venv\\Scripts"' in install

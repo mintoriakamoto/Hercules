@@ -48,16 +48,18 @@ class _RuntimeRetryableAdapter(BasePlatformAdapter):
 
 
 @pytest.mark.asyncio
-async def test_runner_requests_clean_exit_for_nonretryable_startup_conflict(monkeypatch, tmp_path):
+async def test_runner_requests_clean_exit_for_nonretryable_startup_conflict(
+    monkeypatch, tmp_path
+):
     config = GatewayConfig(
-        platforms={
-            Platform.TELEGRAM: PlatformConfig(enabled=True, token="token")
-        },
+        platforms={Platform.TELEGRAM: PlatformConfig(enabled=True, token="token")},
         sessions_dir=tmp_path / "sessions",
     )
     runner = GatewayRunner(config)
 
-    monkeypatch.setattr(runner, "_create_adapter", lambda platform, platform_config: _FatalAdapter())
+    monkeypatch.setattr(
+        runner, "_create_adapter", lambda platform, platform_config: _FatalAdapter()
+    )
 
     ok = await runner.start()
 
@@ -67,7 +69,9 @@ async def test_runner_requests_clean_exit_for_nonretryable_startup_conflict(monk
 
 
 @pytest.mark.asyncio
-async def test_runner_queues_retryable_runtime_fatal_for_reconnection(monkeypatch, tmp_path):
+async def test_runner_queues_retryable_runtime_fatal_for_reconnection(
+    monkeypatch, tmp_path
+):
     """Retryable runtime fatal errors queue the platform for reconnection
     AND keep the gateway alive — the background reconnect watcher recovers
     the platform when the underlying issue clears.  (Previously this
@@ -75,9 +79,7 @@ async def test_runner_queues_retryable_runtime_fatal_for_reconnection(monkeypatc
     transient failures into infinite restart loops.)
     """
     config = GatewayConfig(
-        platforms={
-            Platform.WHATSAPP: PlatformConfig(enabled=True, token="token")
-        },
+        platforms={Platform.WHATSAPP: PlatformConfig(enabled=True, token="token")},
         sessions_dir=tmp_path / "sessions",
     )
     runner = GatewayRunner(config)
@@ -102,7 +104,9 @@ async def test_runner_queues_retryable_runtime_fatal_for_reconnection(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_concurrent_fatal_notifications_disconnect_same_adapter_once(monkeypatch, tmp_path):
+async def test_concurrent_fatal_notifications_disconnect_same_adapter_once(
+    monkeypatch, tmp_path
+):
     """
     Two fatal-error notifications for the same still-installed adapter (e.g.
     from two concurrent recovery paths racing on the same underlying outage)
@@ -116,9 +120,7 @@ async def test_concurrent_fatal_notifications_disconnect_same_adapter_once(monke
     crash when the adapter's own teardown code re-reads self._app afterwards.
     """
     config = GatewayConfig(
-        platforms={
-            Platform.WHATSAPP: PlatformConfig(enabled=True, token="token")
-        },
+        platforms={Platform.WHATSAPP: PlatformConfig(enabled=True, token="token")},
         sessions_dir=tmp_path / "sessions",
     )
     runner = GatewayRunner(config)
@@ -156,7 +158,9 @@ async def test_concurrent_fatal_notifications_disconnect_same_adapter_once(monke
 
 
 @pytest.mark.asyncio
-async def test_stale_fatal_notification_from_superseded_adapter_is_ignored(monkeypatch, tmp_path):
+async def test_stale_fatal_notification_from_superseded_adapter_is_ignored(
+    monkeypatch, tmp_path
+):
     """
     A delayed fatal-error notification from an adapter instance that has
     since been replaced by a different, already-installed adapter (e.g. a
@@ -166,9 +170,7 @@ async def test_stale_fatal_notification_from_superseded_adapter_is_ignored(monke
     platform for reconnection, and must not shut the gateway down.
     """
     config = GatewayConfig(
-        platforms={
-            Platform.WHATSAPP: PlatformConfig(enabled=True, token="token")
-        },
+        platforms={Platform.WHATSAPP: PlatformConfig(enabled=True, token="token")},
         sessions_dir=tmp_path / "sessions",
     )
     runner = GatewayRunner(config)

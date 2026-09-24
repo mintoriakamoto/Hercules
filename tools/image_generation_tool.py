@@ -52,6 +52,7 @@ def _load_fal_client() -> Any:
     if fal_client is not None:
         return fal_client
     from tools.fal_common import import_fal_client
+
     fal_client = import_fal_client()
     return fal_client
 
@@ -111,16 +112,24 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "enable_safety_checker": False,
         },
         "supports": {
-            "prompt", "image_size", "num_inference_steps", "seed",
-            "output_format", "enable_safety_checker",
+            "prompt",
+            "image_size",
+            "num_inference_steps",
+            "seed",
+            "output_format",
+            "enable_safety_checker",
         },
         "upscale": False,
         # Image-to-image / editing: FLUX.2 [klein] 9B edit endpoint takes
         # `image_urls` (list). Natural-language edits, multi-ref.
         "edit_endpoint": "fal-ai/flux-2/klein/9b/edit",
         "edit_supports": {
-            "prompt", "image_urls", "num_inference_steps", "seed",
-            "output_format", "enable_safety_checker",
+            "prompt",
+            "image_urls",
+            "num_inference_steps",
+            "seed",
+            "output_format",
+            "enable_safety_checker",
         },
         "max_reference_images": 9,
     },
@@ -145,17 +154,31 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "sync_mode": True,
         },
         "supports": {
-            "prompt", "image_size", "num_inference_steps", "guidance_scale",
-            "num_images", "output_format", "enable_safety_checker",
-            "safety_tolerance", "sync_mode", "seed",
+            "prompt",
+            "image_size",
+            "num_inference_steps",
+            "guidance_scale",
+            "num_images",
+            "output_format",
+            "enable_safety_checker",
+            "safety_tolerance",
+            "sync_mode",
+            "seed",
         },
-        "upscale": True,   # Backward-compat: current default behavior.
+        "upscale": True,  # Backward-compat: current default behavior.
         # Edit endpoint accepts up to 9 reference images.
         "edit_endpoint": "fal-ai/flux-2-pro/edit",
         "edit_supports": {
-            "prompt", "image_urls", "num_inference_steps", "guidance_scale",
-            "num_images", "output_format", "enable_safety_checker",
-            "safety_tolerance", "sync_mode", "seed",
+            "prompt",
+            "image_urls",
+            "num_inference_steps",
+            "guidance_scale",
+            "num_images",
+            "output_format",
+            "enable_safety_checker",
+            "safety_tolerance",
+            "sync_mode",
+            "seed",
         },
         "max_reference_images": 9,
     },
@@ -178,8 +201,13 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "enable_prompt_expansion": False,  # avoid the extra per-request charge
         },
         "supports": {
-            "prompt", "image_size", "num_inference_steps", "num_images",
-            "seed", "output_format", "enable_safety_checker",
+            "prompt",
+            "image_size",
+            "num_inference_steps",
+            "num_images",
+            "seed",
+            "output_format",
+            "enable_safety_checker",
             "enable_prompt_expansion",
         },
         "upscale": False,
@@ -204,18 +232,33 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "resolution": "1K",
         },
         "supports": {
-            "prompt", "aspect_ratio", "num_images", "output_format",
-            "safety_tolerance", "seed", "sync_mode", "resolution",
-            "enable_web_search", "limit_generations",
+            "prompt",
+            "aspect_ratio",
+            "num_images",
+            "output_format",
+            "safety_tolerance",
+            "seed",
+            "sync_mode",
+            "resolution",
+            "enable_web_search",
+            "limit_generations",
         },
         "upscale": False,
         # Nano Banana Pro edit (Gemini 3 Pro Image): natural-language edits
         # with up to 2 reference images via `image_urls`.
         "edit_endpoint": "fal-ai/nano-banana-pro/edit",
         "edit_supports": {
-            "prompt", "image_urls", "aspect_ratio", "num_images",
-            "output_format", "safety_tolerance", "seed", "sync_mode",
-            "resolution", "enable_web_search", "limit_generations",
+            "prompt",
+            "image_urls",
+            "aspect_ratio",
+            "num_images",
+            "output_format",
+            "safety_tolerance",
+            "seed",
+            "sync_mode",
+            "resolution",
+            "enable_web_search",
+            "limit_generations",
         },
         "max_reference_images": 2,
     },
@@ -238,15 +281,25 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "output_format": "png",
         },
         "supports": {
-            "prompt", "image_size", "quality", "num_images", "output_format",
-            "background", "sync_mode",
+            "prompt",
+            "image_size",
+            "quality",
+            "num_images",
+            "output_format",
+            "background",
+            "sync_mode",
         },
         "upscale": False,
         # Edit endpoint: high-fidelity edits preserving composition/lighting.
         "edit_endpoint": "fal-ai/gpt-image-1.5/edit",
         "edit_supports": {
-            "prompt", "image_urls", "image_size", "quality", "num_images",
-            "output_format", "sync_mode",
+            "prompt",
+            "image_urls",
+            "image_size",
+            "quality",
+            "num_images",
+            "output_format",
+            "sync_mode",
         },
         "max_reference_images": 16,
     },
@@ -262,9 +315,9 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
         # three aspect ratios.
         "size_style": "image_size_preset",
         "sizes": {
-            "landscape": "landscape_4_3",   # 1024x768
-            "square": "square_hd",            # 1024x1024
-            "portrait": "portrait_4_3",       # 768x1024
+            "landscape": "landscape_4_3",  # 1024x768
+            "square": "square_hd",  # 1024x1024
+            "portrait": "portrait_4_3",  # 768x1024
         },
         "defaults": {
             # Same quality pinning as gpt-image-1.5: medium keeps Nous
@@ -275,7 +328,11 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "output_format": "png",
         },
         "supports": {
-            "prompt", "image_size", "quality", "num_images", "output_format",
+            "prompt",
+            "image_size",
+            "quality",
+            "num_images",
+            "output_format",
             "sync_mode",
             # openai_api_key (BYOK) intentionally omitted — all users go
             # through the shared FAL billing path.
@@ -286,8 +343,13 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
         # send `image_size` on edit so the model auto-infers from input.
         "edit_endpoint": "openai/gpt-image-2/edit",
         "edit_supports": {
-            "prompt", "image_urls", "quality", "num_images", "output_format",
-            "sync_mode", "mask_image_url",
+            "prompt",
+            "image_urls",
+            "quality",
+            "num_images",
+            "output_format",
+            "sync_mode",
+            "mask_image_url",
         },
         "max_reference_images": 16,
     },
@@ -308,15 +370,23 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "style": "AUTO",
         },
         "supports": {
-            "prompt", "image_size", "rendering_speed", "expand_prompt",
-            "style", "seed",
+            "prompt",
+            "image_size",
+            "rendering_speed",
+            "expand_prompt",
+            "style",
+            "seed",
         },
         "upscale": False,
         # Ideogram V3 edit endpoint takes `image_urls` (list).
         "edit_endpoint": "fal-ai/ideogram/v3/edit",
         "edit_supports": {
-            "prompt", "image_urls", "rendering_speed", "expand_prompt",
-            "style", "seed",
+            "prompt",
+            "image_urls",
+            "rendering_speed",
+            "expand_prompt",
+            "style",
+            "seed",
         },
         "max_reference_images": 1,
     },
@@ -336,8 +406,11 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "enable_safety_checker": False,
         },
         "supports": {
-            "prompt", "image_size", "enable_safety_checker",
-            "colors", "background_color",
+            "prompt",
+            "image_size",
+            "enable_safety_checker",
+            "colors",
+            "background_color",
         },
         "upscale": False,
     },
@@ -360,16 +433,30 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "acceleration": "regular",
         },
         "supports": {
-            "prompt", "image_size", "num_inference_steps", "guidance_scale",
-            "num_images", "output_format", "acceleration", "seed", "sync_mode",
+            "prompt",
+            "image_size",
+            "num_inference_steps",
+            "guidance_scale",
+            "num_images",
+            "output_format",
+            "acceleration",
+            "seed",
+            "sync_mode",
         },
         "upscale": False,
         # Qwen edit uses the Qwen Image 2.0 Pro editing endpoint, which takes
         # `image_urls` (list) + natural-language edit instructions.
         "edit_endpoint": "fal-ai/qwen-image-2/pro/edit",
         "edit_supports": {
-            "prompt", "image_urls", "num_inference_steps", "guidance_scale",
-            "num_images", "output_format", "acceleration", "seed", "sync_mode",
+            "prompt",
+            "image_urls",
+            "num_inference_steps",
+            "guidance_scale",
+            "num_images",
+            "output_format",
+            "acceleration",
+            "seed",
+            "sync_mode",
         },
         "max_reference_images": 3,
     },
@@ -391,7 +478,10 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "creativity": "medium",
         },
         "supports": {
-            "prompt", "aspect_ratio", "creativity", "seed",
+            "prompt",
+            "aspect_ratio",
+            "creativity",
+            "seed",
             "image_style_references",
         },
         "upscale": False,
@@ -411,7 +501,10 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             "creativity": "medium",
         },
         "supports": {
-            "prompt", "aspect_ratio", "creativity", "seed",
+            "prompt",
+            "aspect_ratio",
+            "creativity",
+            "seed",
             "image_style_references",
         },
         "upscale": False,
@@ -465,7 +558,10 @@ def _get_managed_fal_client(managed_gateway):
         managed_gateway.nous_user_token,
     )
     with _managed_fal_client_lock:
-        if _managed_fal_client is not None and _managed_fal_client_config == client_config:
+        if (
+            _managed_fal_client is not None
+            and _managed_fal_client_config == client_config
+        ):
             return _managed_fal_client
 
         # Resolve fal_client on the legacy module — preserves the test
@@ -505,12 +601,9 @@ def _submit_fal_request(model: str, arguments: Dict[str, Any]):
         if status is not None and 400 <= status < 500:
             gateway_message = ""
             if status in {401, 402, 403}:
-                gateway_message = (
-                    "\n\n"
-                    + nous_tool_gateway_unavailable_message(
-                        "managed FAL image generation",
-                        force_fresh=True,
-                    )
+                gateway_message = "\n\n" + nous_tool_gateway_unavailable_message(
+                    "managed FAL image generation",
+                    force_fresh=True,
                 )
             raise ValueError(
                 f"Nous Subscription gateway rejected model '{model}' "
@@ -535,6 +628,7 @@ def _resolve_fal_model() -> tuple:
     model_id = ""
     try:
         from hercules_cli.config import load_config
+
         cfg = load_config()
         img_cfg = cfg.get("image_gen") if isinstance(cfg, dict) else None
         if isinstance(img_cfg, dict):
@@ -554,7 +648,8 @@ def _resolve_fal_model() -> tuple:
     if model_id not in FAL_MODELS:
         logger.warning(
             "Unknown FAL model '%s' in config; falling back to %s",
-            model_id, DEFAULT_MODEL,
+            model_id,
+            DEFAULT_MODEL,
         )
         return DEFAULT_MODEL, FAL_MODELS[DEFAULT_MODEL]
 
@@ -604,10 +699,7 @@ def _build_fal_payload(
     # ``prompt`` is required by every FAL text-to-image endpoint; keep it even
     # if a model's ``supports`` whitelist omits it, so a missing whitelist entry
     # can't silently strip the prompt and send an empty request.
-    return {
-        k: v for k, v in payload.items()
-        if k in supports or k == "prompt"
-    }
+    return {k: v for k, v in payload.items() if k in supports or k == "prompt"}
 
 
 def _build_fal_edit_payload(
@@ -643,7 +735,10 @@ def _build_fal_edit_payload(
     # Only express output size when the edit endpoint advertises the key.
     # gpt-image-2 edit auto-infers size from the input, so `image_size` is
     # intentionally absent from its edit_supports whitelist.
-    if size_style in {"image_size_preset", "gpt_literal"} and "image_size" in edit_supports:
+    if (
+        size_style in {"image_size_preset", "gpt_literal"}
+        and "image_size" in edit_supports
+    ):
         payload["image_size"] = sizes[aspect]
     elif size_style == "aspect_ratio" and "aspect_ratio" in edit_supports:
         payload["aspect_ratio"] = sizes[aspect]
@@ -661,10 +756,7 @@ def _build_fal_edit_payload(
     # missing whitelist entry can't silently drop the prompt or the source
     # images and send a broken edit request.
     _required = {"prompt", "image_urls"}
-    return {
-        k: v for k, v in payload.items()
-        if k in edit_supports or k in _required
-    }
+    return {k: v for k, v in payload.items() if k in edit_supports or k in _required}
 
 
 # ---------------------------------------------------------------------------
@@ -760,7 +852,11 @@ def _agent_cache_base_for_env(env: Any) -> str | None:
             return f"{str(remote_home).rstrip('/')}/.hercules"
 
         env_name = env.__class__.__name__
-        if env_name in {"DockerEnvironment", "SingularityEnvironment", "ModalEnvironment"}:
+        if env_name in {
+            "DockerEnvironment",
+            "SingularityEnvironment",
+            "ModalEnvironment",
+        }:
             return "/root/.hercules"
 
     # If no environment has been created yet, only backends with deterministic
@@ -918,7 +1014,8 @@ def image_generate_tool(
         if aspect_lc not in VALID_ASPECT_RATIOS:
             logger.warning(
                 "Invalid aspect_ratio '%s', defaulting to '%s'",
-                aspect_ratio, DEFAULT_ASPECT_RATIO,
+                aspect_ratio,
+                DEFAULT_ASPECT_RATIO,
             )
             aspect_lc = DEFAULT_ASPECT_RATIO
 
@@ -935,25 +1032,39 @@ def image_generate_tool(
         if use_edit:
             # Clamp reference count to the model's declared cap.
             max_refs = int(meta.get("max_reference_images") or 1)
-            clamped_sources = source_images[:max_refs] if max_refs > 0 else source_images
+            clamped_sources = (
+                source_images[:max_refs] if max_refs > 0 else source_images
+            )
             arguments = _build_fal_edit_payload(
-                model_id, prompt, clamped_sources, aspect_lc,
-                seed=seed, overrides=overrides,
+                model_id,
+                prompt,
+                clamped_sources,
+                aspect_lc,
+                seed=seed,
+                overrides=overrides,
             )
             endpoint = edit_endpoint
             logger.info(
                 "Editing image with %s (%s) — %d source image(s), prompt: %s",
-                meta.get("display", model_id), endpoint, len(clamped_sources),
+                meta.get("display", model_id),
+                endpoint,
+                len(clamped_sources),
                 prompt[:80],
             )
         else:
             arguments = _build_fal_payload(
-                model_id, prompt, aspect_lc, seed=seed, overrides=overrides,
+                model_id,
+                prompt,
+                aspect_lc,
+                seed=seed,
+                overrides=overrides,
             )
             endpoint = model_id
             logger.info(
                 "Generating image with %s (%s) — prompt: %s",
-                meta.get("display", model_id), model_id, prompt[:80],
+                meta.get("display", model_id),
+                model_id,
+                prompt[:80],
             )
 
         handler = _submit_fal_request(endpoint, arguments=arguments)
@@ -998,7 +1109,10 @@ def image_generate_tool(
         upscaled_count = sum(1 for img in formatted_images if img.get("upscaled"))
         logger.info(
             "Generated %s image(s) in %.1fs (%s upscaled) via %s [%s]",
-            len(formatted_images), generation_time, upscaled_count, endpoint,
+            len(formatted_images),
+            generation_time,
+            upscaled_count,
+            endpoint,
             modality,
         )
 
@@ -1140,6 +1254,7 @@ if __name__ == "__main__":
 
     try:
         import fal_client
+
         print("✅ fal_client library available")
     except ImportError as exc:
         print("❌ fal_client library not found — pip install fal-client")
@@ -1235,6 +1350,7 @@ def _read_configured_image_model():
     """Return the value of ``image_gen.model`` from config.yaml, or None."""
     try:
         from hercules_cli.config import load_config
+
         cfg = load_config()
         section = cfg.get("image_gen") if isinstance(cfg, dict) else None
         if isinstance(section, dict):
@@ -1259,6 +1375,7 @@ def _read_configured_image_provider():
     """
     try:
         from hercules_cli.config import load_config
+
         cfg = load_config()
         section = cfg.get("image_gen") if isinstance(cfg, dict) else None
         if isinstance(section, dict):
@@ -1355,7 +1472,8 @@ def _dispatch_to_plugin_provider(
             logger.warning(
                 "image_gen provider '%s' rejected image-to-image kwargs "
                 "(signature too narrow): %s",
-                getattr(provider, "name", "?"), exc,
+                getattr(provider, "name", "?"),
+                exc,
             )
             return json.dumps({
                 "success": False,
@@ -1371,7 +1489,8 @@ def _dispatch_to_plugin_provider(
             })
         logger.warning(
             "Image gen provider '%s' raised TypeError: %s",
-            getattr(provider, "name", "?"), exc,
+            getattr(provider, "name", "?"),
+            exc,
         )
         return json.dumps({
             "success": False,
@@ -1382,7 +1501,8 @@ def _dispatch_to_plugin_provider(
     except Exception as exc:
         logger.warning(
             "Image gen provider '%s' raised: %s",
-            getattr(provider, "name", "?"), exc,
+            getattr(provider, "name", "?"),
+            exc,
         )
         return json.dumps({
             "success": False,
@@ -1522,7 +1642,8 @@ def _handle_image_generate(args, **kw):
     # not the in-tree FAL path). When ``image_gen.provider == "krea"`` this
     # already reaches the Krea plugin's managed gateway path.
     dispatched = _dispatch_to_plugin_provider(
-        prompt, aspect_ratio,
+        prompt,
+        aspect_ratio,
         image_url=image_url,
         reference_image_urls=reference_image_urls,
     )
@@ -1535,7 +1656,8 @@ def _handle_image_generate(args, **kw):
     # FAL path below. Runs after plugin dispatch (which returns None when no
     # provider is set) so the BYO/direct FAL path stays untouched.
     krea_routed = _maybe_route_managed_krea(
-        prompt, aspect_ratio,
+        prompt,
+        aspect_ratio,
         image_url=image_url,
         reference_image_urls=reference_image_urls,
     )
@@ -1593,7 +1715,9 @@ def _active_image_capabilities() -> Dict[str, Any]:
                 except Exception:
                     caps = {}
                 info["provider"] = provider.display_name
-                info["model"] = _read_configured_image_model() or (provider.default_model() or "")
+                info["model"] = _read_configured_image_model() or (
+                    provider.default_model() or ""
+                )
                 if caps.get("modalities"):
                     info["modalities"] = list(caps["modalities"])
                 if caps.get("max_reference_images"):
@@ -1673,7 +1797,7 @@ registry.register(
     handler=_handle_image_generate,
     check_fn=check_image_generation_requirements,
     requires_env=[],
-    is_async=False,   # sync fal_client API to avoid "Event loop is closed" in gateway
+    is_async=False,  # sync fal_client API to avoid "Event loop is closed" in gateway
     emoji="🎨",
     dynamic_schema_overrides=_build_dynamic_image_schema,
 )

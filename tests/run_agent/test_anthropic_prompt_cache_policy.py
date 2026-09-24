@@ -129,7 +129,9 @@ class TestThirdPartyAnthropicGateway:
         )
         should, native = agent._anthropic_prompt_cache_policy()
         assert should is True, "Third-party Anthropic gateway with Claude must cache"
-        assert native is True, "Third-party Anthropic gateway uses native cache_control layout"
+        assert native is True, (
+            "Third-party Anthropic gateway uses native cache_control layout"
+        )
 
     def test_third_party_anthropic_non_claude_unknown_provider_does_not_cache(self):
         # A provider exposing e.g. GLM via anthropic_messages transport from
@@ -299,6 +301,7 @@ class TestQwenAlibabaFamily:
         )
         assert agent._anthropic_prompt_cache_policy() == (False, False)
 
+
 class TestExplicitOverrides:
     """Policy accepts keyword overrides for switch_model / fallback activation."""
 
@@ -336,4 +339,3 @@ class TestExplicitOverrides:
 # ─────────────────────────────────────────────────────────────────────
 # Long-lived prefix cache policy (cross-session 1h tier)
 # ─────────────────────────────────────────────────────────────────────
-

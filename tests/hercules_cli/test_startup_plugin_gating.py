@@ -91,8 +91,8 @@ def _live_subcommand_names() -> set[str]:
         (["hercules", "-m", "gpt5", "--provider", "openai", "chat"], "chat"),
         (["hercules", "-z", "hello world"], None),
         (["hercules", "-z", "hello", "chat"], "chat"),
-        (["hercules", "--model=gpt5", "chat"], "chat"),     # inline form
-        (["hercules", "--", "chat"], "chat"),               # -- terminator
+        (["hercules", "--model=gpt5", "chat"], "chat"),  # inline form
+        (["hercules", "--", "chat"], "chat"),  # -- terminator
         (["hercules", "-w", "--"], None),
         # Unknown positional after skipped flags → plugin-cmd candidate.
         (["hercules", "some-plugin-cmd"], "some-plugin-cmd"),
@@ -110,17 +110,17 @@ def test_first_positional_argv(argv, expected):
 @pytest.mark.parametrize(
     "argv",
     [
-        ["hercules"],                          # bare → chat
-        ["hercules", "--help"],                # top-level help
+        ["hercules"],  # bare → chat
+        ["hercules", "--help"],  # top-level help
         ["hercules", "-h"],
-        ["hercules", "version"],               # known built-in
+        ["hercules", "version"],  # known built-in
         ["hercules", "logs"],
         ["hercules", "gateway", "run"],
         ["hercules", "--tui"],
         ["hercules", "-w", "--tui"],
         ["hercules", "chat", "hi"],
-        ["hercules", "help"],                  # accepted built-in-ish
-        ["hercules", "-m", "gpt5", "chat"],    # flag-value-skipping
+        ["hercules", "help"],  # accepted built-in-ish
+        ["hercules", "-m", "gpt5", "chat"],  # flag-value-skipping
     ],
 )
 def test_discovery_skipped_for_builtins(argv):
@@ -131,8 +131,8 @@ def test_discovery_skipped_for_builtins(argv):
 @pytest.mark.parametrize(
     "argv",
     [
-        ["hercules", "meet", "join"],          # potential google_meet plugin
-        ["hercules", "honcho", "status"],      # potential memory plugin
+        ["hercules", "meet", "join"],  # potential google_meet plugin
+        ["hercules", "honcho", "status"],  # potential memory plugin
         ["hercules", "unknown-subcmd"],
     ],
 )

@@ -3,6 +3,7 @@
 All per-subject data lives under PDD_DATA_DIR (default: $HERCULES_HOME/unbroker),
 which is the same trust boundary Hercules uses for .env and OAuth tokens.
 """
+
 from __future__ import annotations
 
 import os

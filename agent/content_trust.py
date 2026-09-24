@@ -31,14 +31,14 @@ class ContentSource(Enum):
     """Source of content requiring approval."""
 
     # Internal
-    AGENT_COMMAND = "agent.command"      # Command from model/agent
-    CONFIG_FILE = "config.file"          # From configuration
+    AGENT_COMMAND = "agent.command"  # Command from model/agent
+    CONFIG_FILE = "config.file"  # From configuration
 
     # External
-    WEB_FETCH = "web.fetch"              # HTTP fetch result
-    WEB_BROWSER = "web.browser"          # Browser content
-    USER_UPLOAD = "user.upload"          # User-uploaded file
-    CLI_STDIN = "cli.stdin"              # User input from terminal
+    WEB_FETCH = "web.fetch"  # HTTP fetch result
+    WEB_BROWSER = "web.browser"  # Browser content
+    USER_UPLOAD = "user.upload"  # User-uploaded file
+    CLI_STDIN = "cli.stdin"  # User input from terminal
 
     def requires_approval(self) -> bool:
         """Check if content from this source needs approval."""
@@ -86,6 +86,7 @@ class ContentApproval:
 
 class ApprovalDenied(Exception):
     """Raised when content approval is denied."""
+
     def __init__(self, reason: str, content_source: ContentSource):
         self.reason = reason
         self.content_source = content_source
@@ -118,7 +119,7 @@ class ContentApprovalManager:
     def _load_approvals(self, path: Path) -> None:
         """Load approval history from log file."""
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             for key, approvals in data.items():
                 self.approvals[key] = [
@@ -133,7 +134,10 @@ class ContentApprovalManager:
                     )
                     for a in approvals
                 ]
-            logger.info("Loaded %d approval records", sum(len(v) for v in self.approvals.values()))
+            logger.info(
+                "Loaded %d approval records",
+                sum(len(v) for v in self.approvals.values()),
+            )
         except Exception as e:
             logger.error("Failed to load approvals from %s: %s", path, e)
 
@@ -178,7 +182,7 @@ class ContentApprovalManager:
             if not prev.user_approved and prev.is_still_valid_for(content):
                 raise ApprovalDenied(
                     f"Content previously denied (hash: {content_hash[:8]})",
-                    content_source
+                    content_source,
                 )
 
         # Create new approval record (pending user review)
@@ -270,7 +274,7 @@ class ContentApprovalManager:
                 key: [a.to_dict() for a in approvals]
                 for key, approvals in self.approvals.items()
             }
-            with open(self.approval_log_path, 'w', encoding='utf-8') as f:
+            with open(self.approval_log_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
             logger.debug("Saved approvals to %s", self.approval_log_path)
         except Exception as e:

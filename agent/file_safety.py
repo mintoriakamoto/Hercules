@@ -11,6 +11,7 @@ def _hercules_home_path() -> Path:
     """Resolve the active HERCULES_HOME (profile-aware) without circular imports."""
     try:
         from hercules_constants import get_hercules_home  # local import to avoid cycles
+
         return get_hercules_home()
     except Exception:
         return Path(os.path.expanduser("~/.hercules"))
@@ -19,7 +20,10 @@ def _hercules_home_path() -> Path:
 def _hercules_root_path() -> Path:
     """Resolve the Hercules root dir (always the parent of any profile, never per-profile)."""
     try:
-        from hercules_constants import get_default_hercules_root  # local import to avoid cycles
+        from hercules_constants import (
+            get_default_hercules_root,
+        )  # local import to avoid cycles
+
         return get_default_hercules_root()
     except Exception:
         return Path(os.path.expanduser("~/.hercules"))
@@ -236,9 +240,7 @@ def classify_cross_profile_target(path: str) -> Optional[dict]:
         target_profile = "default"
         area = parts[0]
     elif (
-        parts[0] == "profiles"
-        and len(parts) >= 3
-        and parts[2] in PROFILE_SCOPED_AREAS
+        parts[0] == "profiles" and len(parts) >= 3 and parts[2] in PROFILE_SCOPED_AREAS
     ):
         # ``<root>/profiles/<name>/<area>/...`` → named profile.
         target_profile = parts[1]
@@ -357,7 +359,9 @@ def classify_sandbox_mirror_target(path: str) -> Optional[dict]:
         return None
 
     mirror_root = str(Path(*parts[: inner_idx + 1]))
-    inner_path = str(Path(*parts[inner_idx + 1 :])) if inner_idx + 1 < len(parts) else ""
+    inner_path = (
+        str(Path(*parts[inner_idx + 1 :])) if inner_idx + 1 < len(parts) else ""
+    )
 
     return {
         "target_path": str(target),

@@ -25,6 +25,7 @@ def db_path(tmp_path):
 
 def _embedder(vec_map):
     """Embedder whose vectors we control exactly, for precise similarity tests."""
+
     def fn(texts):
         return [list(vec_map.get(t, [0.01, 0.01, 0.01, 0.01])) for t in texts]
 
@@ -41,7 +42,9 @@ class _FakeReconciler:
         self._target_first = target_first
 
     def reconcile(self, new_content, candidates):
-        target = candidates[0]["fact_id"] if (self._target_first and candidates) else None
+        target = (
+            candidates[0]["fact_id"] if (self._target_first and candidates) else None
+        )
         return {"action": self._action, "target_fact_id": target}
 
 
@@ -49,11 +52,16 @@ class _FakeReconciler:
 # Typed memory
 # ---------------------------------------------------------------------------
 
+
 def test_profile_facts_listed_separately(db_path):
     store = MemoryStore(db_path=db_path)
     try:
-        store.add_fact("user prefers dark mode", category="user_pref", fact_type="profile")
-        store.add_fact("we fixed the login bug today", category="project", fact_type="episodic")
+        store.add_fact(
+            "user prefers dark mode", category="user_pref", fact_type="profile"
+        )
+        store.add_fact(
+            "we fixed the login bug today", category="project", fact_type="episodic"
+        )
         profile = store.list_profile_facts()
         contents = [p["content"] for p in profile]
         assert "user prefers dark mode" in contents
@@ -65,6 +73,7 @@ def test_profile_facts_listed_separately(db_path):
 # ---------------------------------------------------------------------------
 # Supersede
 # ---------------------------------------------------------------------------
+
 
 def test_superseded_fact_excluded_from_retrieval(db_path):
     store = MemoryStore(db_path=db_path)
@@ -88,6 +97,7 @@ def test_superseded_fact_excluded_from_retrieval(db_path):
 # ---------------------------------------------------------------------------
 # Curated add: dedup / update / new
 # ---------------------------------------------------------------------------
+
 
 def test_curated_add_detects_duplicate(db_path):
     # Two contents map to the same vector → cosine 1.0 → near-dup short-circuit.
@@ -164,6 +174,7 @@ def test_curated_add_without_embedder_is_plain_insert(db_path):
 # MemoryLLM
 # ---------------------------------------------------------------------------
 
+
 def test_extract_json_handles_fences_and_prose():
     assert _extract_json('```json\n[{"a": 1}]\n```') == [{"a": 1}]
     assert _extract_json('Sure! Here: {"x": 2} done') == {"x": 2}
@@ -207,5 +218,10 @@ def test_llm_reconcile_empty_candidates_is_new():
 
 
 def test_llm_expand_query_returns_single_line():
-    llm = MemoryLLM(chat_fn=lambda s, u: "The user's production deploys to Fly.io.\nextra")
-    assert llm.expand_query("where do we deploy") == "The user's production deploys to Fly.io."
+    llm = MemoryLLM(
+        chat_fn=lambda s, u: "The user's production deploys to Fly.io.\nextra"
+    )
+    assert (
+        llm.expand_query("where do we deploy")
+        == "The user's production deploys to Fly.io."
+    )

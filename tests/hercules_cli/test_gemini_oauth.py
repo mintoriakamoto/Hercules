@@ -38,7 +38,9 @@ class TestResolve:
         assert creds["base_url"].startswith("https://cloudcode-pa.googleapis.com")
 
     def test_missing_file_actionable_error(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERCULES_GEMINI_OAUTH_CREDS_FILE", str(tmp_path / "absent.json"))
+        monkeypatch.setenv(
+            "HERCULES_GEMINI_OAUTH_CREDS_FILE", str(tmp_path / "absent.json")
+        )
         with pytest.raises(a.AuthError) as exc:
             a.resolve_gemini_oauth_runtime_credentials()
         assert exc.value.code == "gemini_auth_missing"
@@ -51,14 +53,18 @@ class TestResolve:
 
 class TestStatus:
     def test_logged_in(self, gemini_creds):
-        gemini_creds({"access_token": "ya29.live",
-                      "expiry_date": int(time.time() * 1000) + 3_600_000})
+        gemini_creds({
+            "access_token": "ya29.live",
+            "expiry_date": int(time.time() * 1000) + 3_600_000,
+        })
         st = a.get_gemini_oauth_auth_status()
         assert st["logged_in"] is True
         assert st["source"] == "gemini-cli"
 
     def test_logged_out_no_file(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("HERCULES_GEMINI_OAUTH_CREDS_FILE", str(tmp_path / "absent.json"))
+        monkeypatch.setenv(
+            "HERCULES_GEMINI_OAUTH_CREDS_FILE", str(tmp_path / "absent.json")
+        )
         st = a.get_gemini_oauth_auth_status()
         assert st["logged_in"] is False
         assert "error" in st
@@ -66,16 +72,23 @@ class TestStatus:
 
 class TestExpiry:
     def test_far_future_not_expiring(self):
-        assert a._gemini_access_token_is_expiring(int(time.time() * 1000) + 3_600_000) is False
+        assert (
+            a._gemini_access_token_is_expiring(int(time.time() * 1000) + 3_600_000)
+            is False
+        )
 
     def test_past_expiring(self):
-        assert a._gemini_access_token_is_expiring(int(time.time() * 1000) - 1000) is True
+        assert (
+            a._gemini_access_token_is_expiring(int(time.time() * 1000) - 1000) is True
+        )
 
     def test_unknown_not_expiring(self):
         assert a._gemini_access_token_is_expiring(None) is False
 
     def test_expiry_ms_from_expiry_date(self):
-        assert a._gemini_expiry_ms({"expiry_date": 1_700_000_000_000}) == 1_700_000_000_000
+        assert (
+            a._gemini_expiry_ms({"expiry_date": 1_700_000_000_000}) == 1_700_000_000_000
+        )
 
     def test_expiry_ms_from_seconds_expires_in(self):
         got = a._gemini_expiry_ms({"expires_in": 3600})
@@ -85,6 +98,7 @@ class TestExpiry:
 # ---------------------------------------------------------------------------
 # Built-in "Login with Google" (no gemini-cli required)
 # ---------------------------------------------------------------------------
+
 
 class _FakeResp:
     def __init__(self, status=200, payload=None):
@@ -118,7 +132,9 @@ class TestGoogleLogin:
         assert ei.value.code == "gemini_client_secret_missing"
         assert "GEMINI_OAUTH_CLIENT_SECRET" in str(ei.value)
 
-    def test_auto_fetch_published_secret_enables_login(self, isolated_home, monkeypatch):
+    def test_auto_fetch_published_secret_enables_login(
+        self, isolated_home, monkeypatch
+    ):
         # No env secret → the login fetches Google's published constant from
         # the public gemini-cli source and uses + persists it.
         fetched = "GOCSPX-" + "a" * 24
@@ -126,18 +142,25 @@ class TestGoogleLogin:
 
         def fake_get(url, timeout=None, follow_redirects=None):
             assert "raw.githubusercontent.com/google-gemini/gemini-cli" in url
-            return _FakeResp(200, None) if False else type(
-                "R", (), {"status_code": 200, "text": oauth2_ts}
-            )()
+            return (
+                _FakeResp(200, None)
+                if False
+                else type("R", (), {"status_code": 200, "text": oauth2_ts})()
+            )
 
         exchanged = {}
 
         def fake_post(url, headers=None, data=None, timeout=None):
             exchanged.update(data or {})
-            return _FakeResp(200, {
-                "access_token": "ya29.fetched", "refresh_token": "1//r",
-                "expires_in": 3600, "token_type": "Bearer",
-            })
+            return _FakeResp(
+                200,
+                {
+                    "access_token": "ya29.fetched",
+                    "refresh_token": "1//r",
+                    "expires_in": 3600,
+                    "token_type": "Bearer",
+                },
+            )
 
         monkeypatch.setattr(a.httpx, "get", fake_get)
         monkeypatch.setattr(a.httpx, "post", fake_post)
@@ -152,10 +175,18 @@ class TestGoogleLogin:
     def test_fetch_rejects_malformed_secret(self, isolated_home, monkeypatch):
         # A page not containing a GOCSPX-shaped constant must yield "" — never
         # forward arbitrary strings to Google's token endpoint.
-        monkeypatch.setattr(a.httpx, "get", lambda *ar, **kw: type(
-            "R", (), {"status_code": 200,
-                      "text": "export const OAUTH_CLIENT_SECRET = 'evil value';"}
-        )())
+        monkeypatch.setattr(
+            a.httpx,
+            "get",
+            lambda *ar, **kw: type(
+                "R",
+                (),
+                {
+                    "status_code": 200,
+                    "text": "export const OAUTH_CLIENT_SECRET = 'evil value';",
+                },
+            )(),
+        )
         assert a._fetch_published_gemini_client_secret() == ""
 
     def test_paste_flow_persists_tokens_and_reports_logged_in(
@@ -165,14 +196,17 @@ class TestGoogleLogin:
 
         def fake_post(url, headers=None, data=None, timeout=None):
             exchanged.update(data or {})
-            return _FakeResp(200, {
-                "access_token": "ya29.live",
-                "refresh_token": "1//r",
-                "id_token": "eyJ.id",
-                "expires_in": 3600,
-                "token_type": "Bearer",
-                "scope": "cloud-platform",
-            })
+            return _FakeResp(
+                200,
+                {
+                    "access_token": "ya29.live",
+                    "refresh_token": "1//r",
+                    "id_token": "eyJ.id",
+                    "expires_in": 3600,
+                    "token_type": "Bearer",
+                    "scope": "cloud-platform",
+                },
+            )
 
         monkeypatch.setenv("GEMINI_OAUTH_CLIENT_SECRET", "test-secret")
         monkeypatch.setattr(a.httpx, "post", fake_post)
@@ -196,13 +230,18 @@ class TestGoogleLogin:
         cli = isolated_home / "oauth_creds.json"
         cli.write_text(json.dumps({"access_token": "from-cli"}), encoding="utf-8")
         monkeypatch.setenv("HERCULES_GEMINI_OAUTH_CREDS_FILE", str(cli))
-        a._save_gemini_oauth_tokens({"access_token": "from-store", "refresh_token": "r"})
+        a._save_gemini_oauth_tokens({
+            "access_token": "from-store",
+            "refresh_token": "r",
+        })
 
         creds = a.resolve_gemini_oauth_runtime_credentials(refresh_if_expiring=False)
         assert creds["api_key"] == "from-store"
         assert creds["source"] == "google-login"
 
-    def test_owned_login_refresh_persists_rotated_grant(self, isolated_home, monkeypatch):
+    def test_owned_login_refresh_persists_rotated_grant(
+        self, isolated_home, monkeypatch
+    ):
         a._save_gemini_oauth_tokens({
             "access_token": "old",
             "refresh_token": "1//r",
@@ -234,7 +273,9 @@ class TestGoogleLogin:
             a,
             "_gemini_google_loopback_login",
             lambda authorize_url_for, timeout_seconds: {
-                "code": "c", "state": "WRONG", "redirect_uri": "http://127.0.0.1:1/oauth2callback",
+                "code": "c",
+                "state": "WRONG",
+                "redirect_uri": "http://127.0.0.1:1/oauth2callback",
             },
         )
         with pytest.raises(a.AuthError) as ei:

@@ -28,8 +28,8 @@ class CheckSeverity(Enum):
     """Severity level of a failed check."""
 
     CRITICAL = "critical"  # Must be fixed before deployment
-    WARNING = "warning"    # Should be reviewed/fixed
-    INFO = "info"          # Informational only
+    WARNING = "warning"  # Should be reviewed/fixed
+    INFO = "info"  # Informational only
 
 
 @dataclass
@@ -147,6 +147,7 @@ class ProductionValidator:
         """Verify error handling modules are available."""
         try:
             from agent import error_classifier
+
             self.check(
                 "error_classifier_available",
                 True,
@@ -163,6 +164,7 @@ class ProductionValidator:
 
         try:
             from agent import input_validation
+
             self.check(
                 "input_validation_available",
                 True,
@@ -214,8 +216,16 @@ class ProductionValidator:
         Returns:
             True if all critical checks passed, False otherwise.
         """
-        critical_failures = [r for r in self.results if not r.passed and r.severity == CheckSeverity.CRITICAL]
-        warnings = [r for r in self.results if not r.passed and r.severity == CheckSeverity.WARNING]
+        critical_failures = [
+            r
+            for r in self.results
+            if not r.passed and r.severity == CheckSeverity.CRITICAL
+        ]
+        warnings = [
+            r
+            for r in self.results
+            if not r.passed and r.severity == CheckSeverity.WARNING
+        ]
         passed = [r for r in self.results if r.passed]
 
         print("\n" + "=" * 70)
@@ -246,10 +256,14 @@ class ProductionValidator:
         print("\n" + "=" * 70)
 
         if critical_failures:
-            print(f"STATUS: FAILED - {len(critical_failures)} critical issues must be resolved")
+            print(
+                f"STATUS: FAILED - {len(critical_failures)} critical issues must be resolved"
+            )
             return False
         elif warnings:
-            print(f"STATUS: PASSED WITH WARNINGS - {len(warnings)} issues should be reviewed")
+            print(
+                f"STATUS: PASSED WITH WARNINGS - {len(warnings)} issues should be reviewed"
+            )
             return True
         else:
             print("STATUS: READY FOR PRODUCTION")

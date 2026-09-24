@@ -167,61 +167,50 @@ def _check_hercules_model_warning(model_name: str) -> str:
 # Resolved dynamically against the live models.dev catalog.
 # ---------------------------------------------------------------------------
 
+
 class ModelIdentity(NamedTuple):
     """Vendor slug and family prefix used for catalog resolution."""
+
     vendor: str
     family: str
 
 
 MODEL_ALIASES: dict[str, ModelIdentity] = {
     # Anthropic
-    "sonnet":    ModelIdentity("anthropic", "claude-sonnet"),
-    "opus":      ModelIdentity("anthropic", "claude-opus"),
-    "haiku":     ModelIdentity("anthropic", "claude-haiku"),
-    "claude":    ModelIdentity("anthropic", "claude"),
-
+    "sonnet": ModelIdentity("anthropic", "claude-sonnet"),
+    "opus": ModelIdentity("anthropic", "claude-opus"),
+    "haiku": ModelIdentity("anthropic", "claude-haiku"),
+    "claude": ModelIdentity("anthropic", "claude"),
     # OpenAI
-    "gpt5":      ModelIdentity("openai", "gpt-5"),
-    "gpt":       ModelIdentity("openai", "gpt"),
-    "codex":     ModelIdentity("openai", "codex"),
-    "o3":        ModelIdentity("openai", "o3"),
-    "o4":        ModelIdentity("openai", "o4"),
-
+    "gpt5": ModelIdentity("openai", "gpt-5"),
+    "gpt": ModelIdentity("openai", "gpt"),
+    "codex": ModelIdentity("openai", "codex"),
+    "o3": ModelIdentity("openai", "o3"),
+    "o4": ModelIdentity("openai", "o4"),
     # Google
-    "gemini":    ModelIdentity("google", "gemini"),
-
+    "gemini": ModelIdentity("google", "gemini"),
     # DeepSeek
-    "deepseek":  ModelIdentity("deepseek", "deepseek-chat"),
-
+    "deepseek": ModelIdentity("deepseek", "deepseek-chat"),
     # X.AI
-    "grok":      ModelIdentity("x-ai", "grok"),
-
+    "grok": ModelIdentity("x-ai", "grok"),
     # Meta
-    "llama":     ModelIdentity("meta-llama", "llama"),
-
+    "llama": ModelIdentity("meta-llama", "llama"),
     # Qwen / Alibaba
-    "qwen":      ModelIdentity("qwen", "qwen"),
-
+    "qwen": ModelIdentity("qwen", "qwen"),
     # MiniMax
-    "minimax":   ModelIdentity("minimax", "minimax"),
-
+    "minimax": ModelIdentity("minimax", "minimax"),
     # Nvidia
-    "nemotron":  ModelIdentity("nvidia", "nemotron"),
-
+    "nemotron": ModelIdentity("nvidia", "nemotron"),
     # Moonshot / Kimi
-    "kimi":      ModelIdentity("moonshotai", "kimi"),
-
+    "kimi": ModelIdentity("moonshotai", "kimi"),
     # Z.AI / GLM
-    "glm":       ModelIdentity("z-ai", "glm"),
-
+    "glm": ModelIdentity("z-ai", "glm"),
     # Step Plan (StepFun)
-    "step":      ModelIdentity("stepfun", "step"),
-
+    "step": ModelIdentity("stepfun", "step"),
     # Xiaomi
-    "mimo":      ModelIdentity("xiaomi", "mimo"),
-
+    "mimo": ModelIdentity("xiaomi", "mimo"),
     # Arcee
-    "trinity":   ModelIdentity("arcee-ai", "trinity"),
+    "trinity": ModelIdentity("arcee-ai", "trinity"),
 }
 
 
@@ -233,8 +222,10 @@ MODEL_ALIASES: dict[str, ModelIdentity] = {
 # These can also be loaded from config.yaml ``model_aliases:`` section.
 # ---------------------------------------------------------------------------
 
+
 class DirectAlias(NamedTuple):
     """Exact model mapping that bypasses catalog resolution."""
+
     model: str
     provider: str
     base_url: str
@@ -270,6 +261,7 @@ def _load_direct_aliases() -> dict[str, DirectAlias]:
     merged = dict(_BUILTIN_DIRECT_ALIASES)
     try:
         from hercules_cli.config import load_config
+
         cfg = load_config()
 
         # --- model_aliases (dict-based format) ---
@@ -283,7 +275,9 @@ def _load_direct_aliases() -> dict[str, DirectAlias]:
                 base_url = entry.get("base_url", "")
                 if model:
                     merged[name.strip().lower()] = DirectAlias(
-                        model=model, provider=provider, base_url=base_url,
+                        model=model,
+                        provider=provider,
+                        base_url=base_url,
                     )
 
         # --- model.aliases (string-based format, from config set) ---
@@ -330,6 +324,7 @@ def _ensure_direct_aliases() -> None:
 # Result dataclasses
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ModelSwitchResult:
     """Result of a model switch attempt."""
@@ -348,9 +343,12 @@ class ModelSwitchResult:
     capabilities: Optional[ModelCapabilities] = None
     model_info: Optional[ModelInfo] = None
     is_global: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Flag parsing
 # ---------------------------------------------------------------------------
+
 
 def parse_model_flags(raw_args: str) -> tuple[str, str, bool, bool, bool]:
     """Parse --provider, --global, --session, and --refresh flags from /model command args.
@@ -380,7 +378,12 @@ def parse_model_flags(raw_args: str) -> tuple[str, str, bool, bool, bool]:
     # Normalize Unicode dashes (Telegram/iOS auto-converts -- to em/en dash)
     # A single Unicode dash before a flag keyword becomes "--"
     import re as _re
-    raw_args = _re.sub(r'[\u2012\u2013\u2014\u2015](provider|global|session|refresh)', r'--\1', raw_args)
+
+    raw_args = _re.sub(
+        r"[\u2012\u2013\u2014\u2015](provider|global|session|refresh)",
+        r"--\1",
+        raw_args,
+    )
 
     # Extract --global
     if "--global" in raw_args:
@@ -447,6 +450,7 @@ def resolve_persist_behavior(is_global: bool, is_session: bool) -> bool:
 # Alias resolution
 # ---------------------------------------------------------------------------
 
+
 def _model_sort_key(model_id: str, prefix: str) -> tuple:
     """Sort key for model version preference.
 
@@ -463,7 +467,7 @@ def _model_sort_key(model_id: str, prefix: str) -> tuple:
         mimo-v2-flash   → (-2.0, 1, 'flash')
     """
     # Strip the prefix (and optional "/" separator for aggregator slugs)
-    rest = model_id[len(prefix):]
+    rest = model_id[len(prefix) :]
     if rest.startswith("/"):
         rest = rest[1:]
     rest = rest.lstrip("-").strip()
@@ -602,6 +606,7 @@ def resolve_alias(
     catalog = list_provider_models(current_provider)
     try:
         from hercules_cli.models import _PROVIDER_MODELS
+
         static = _PROVIDER_MODELS.get(current_provider, [])
         if static:
             seen = {m.lower() for m in catalog}
@@ -616,16 +621,10 @@ def resolve_alias(
 
     if aggregator:
         prefix = f"{vendor}/{family}".lower()
-        matches = [
-            mid for mid in catalog
-            if mid.lower().startswith(prefix)
-        ]
+        matches = [mid for mid in catalog if mid.lower().startswith(prefix)]
     else:
         family_lower = family.lower()
-        matches = [
-            mid for mid in catalog
-            if mid.lower().startswith(family_lower)
-        ]
+        matches = [mid for mid in catalog if mid.lower().startswith(family_lower)]
 
     if not matches:
         return None
@@ -703,6 +702,7 @@ def resolve_display_context_length(
     """
     try:
         from agent.model_metadata import get_model_context_length
+
         ctx = get_model_context_length(
             model,
             base_url=base_url or "",
@@ -793,6 +793,7 @@ def _configured_provider_matches(
 # Core model-switching pipeline
 # ---------------------------------------------------------------------------
 
+
 def switch_model(
     raw_input: str,
     current_provider: str,
@@ -875,6 +876,7 @@ def switch_model(
             # Check for common config issues that cause provider resolution failures
             try:
                 from hercules_cli.config import validate_config_structure
+
                 _cfg_issues = validate_config_structure()
                 if _cfg_issues:
                     _switch_err += "\n\nRun 'hercules doctor' — config issues detected:"
@@ -894,7 +896,9 @@ def switch_model(
                 from hercules_cli.config import load_config
                 from hercules_cli.moa_config import normalize_moa_config
 
-                new_model = normalize_moa_config(load_config().get("moa") or {})["default_preset"]
+                new_model = normalize_moa_config(load_config().get("moa") or {})[
+                    "default_preset"
+                ]
             except Exception:
                 new_model = "default"
 
@@ -906,6 +910,7 @@ def switch_model(
         # header"). Point them at the real direct provider instead.
         from hercules_cli.models import _AGGREGATOR_PROVIDERS as _AGG_PROVIDERS
         from hercules_cli.providers import ALIASES as _PROVIDER_ALIAS_TABLE
+
         _explicit_norm = explicit_provider.strip().lower()
         _alias_target = _PROVIDER_ALIAS_TABLE.get(_explicit_norm)
         if (
@@ -921,12 +926,12 @@ def switch_model(
             )
             if target_provider not in _authed:
                 _suggestions = [
-                    s for s in _authed
+                    s
+                    for s in _authed
                     if s.startswith(_explicit_norm) and s != _explicit_norm
                 ]
                 _hint = (
-                    f" Did you mean: {', '.join(_suggestions)}?"
-                    if _suggestions else ""
+                    f" Did you mean: {', '.join(_suggestions)}?" if _suggestions else ""
                 )
                 return ModelSwitchResult(
                     success=False,
@@ -944,6 +949,7 @@ def switch_model(
         if not new_model:
             if pdef.base_url:
                 from hercules_cli.runtime_provider import _auto_detect_local_model
+
                 detected = _auto_detect_local_model(pdef.base_url)
                 if detected:
                     new_model = detected
@@ -981,7 +987,10 @@ def switch_model(
     else:
         try:
             from hercules_cli.config import load_config
-            from hercules_cli.moa_config import exact_moa_preset_name, normalize_moa_config
+            from hercules_cli.moa_config import (
+                exact_moa_preset_name,
+                normalize_moa_config,
+            )
 
             _moa_cfg = normalize_moa_config(load_config().get("moa") or {})
             _moa_match = exact_moa_preset_name(_moa_cfg, raw_input)
@@ -1004,7 +1013,9 @@ def switch_model(
             target_provider, new_model, resolved_alias = alias_result
             logger.debug(
                 "Alias '%s' resolved to %s on %s",
-                resolved_alias, new_model, target_provider,
+                resolved_alias,
+                new_model,
+                target_provider,
             )
         else:
             # --- Step b: Alias exists but not on current provider -> fallback ---
@@ -1020,7 +1031,9 @@ def switch_model(
                     target_provider, new_model, resolved_alias = fallback_result
                     logger.debug(
                         "Alias '%s' resolved via fallback to %s on %s",
-                        resolved_alias, new_model, target_provider,
+                        resolved_alias,
+                        new_model,
+                        target_provider,
                     )
                 else:
                     identity = MODEL_ALIASES[key]
@@ -1039,15 +1052,20 @@ def switch_model(
                 # is already in vendor/model format and the colon is a variant
                 # tag (:free, :extended, :fast) that must be preserved.
                 colon_pos = raw_input.find(":")
-                if colon_pos > 0 and "/" not in raw_input and is_aggregator(current_provider):
+                if (
+                    colon_pos > 0
+                    and "/" not in raw_input
+                    and is_aggregator(current_provider)
+                ):
                     left = raw_input[:colon_pos].strip().lower()
-                    right = raw_input[colon_pos + 1:].strip()
+                    right = raw_input[colon_pos + 1 :].strip()
                     if left and right:
                         # Colons become slashes for aggregator slugs
                         new_model = f"{left}/{right}"
                         logger.debug(
                             "Converted vendor:model '%s' to aggregator slug '%s'",
-                            raw_input, new_model,
+                            raw_input,
+                            new_model,
                         )
 
         # --- Step d: Aggregator catalog search ---
@@ -1115,7 +1133,8 @@ def switch_model(
                     config_routed = True
                     logger.debug(
                         "Configured-provider detection routed '%s' to %s",
-                        new_model, target_provider,
+                        new_model,
+                        target_provider,
                     )
                     # User-config providers (providers.<slug>) are resolved in
                     # the credential block via resolve_user_provider(), which is
@@ -1124,7 +1143,10 @@ def switch_model(
                     # config rather than a from-scratch runtime re-resolve that
                     # doesn't know user-config slugs.  custom:* slugs resolve via
                     # resolve_runtime_provider() directly and need no hint.
-                    if isinstance(user_providers, dict) and target_provider in user_providers:
+                    if (
+                        isinstance(user_providers, dict)
+                        and target_provider in user_providers
+                    ):
                         explicit_provider = target_provider
 
         # --- Step e: detect_provider_for_model() as last resort ---
@@ -1170,6 +1192,7 @@ def switch_model(
 
     if provider_changed or explicit_provider:
         import os
+
         # User-config providers (providers.<name> in config.yaml) carry their
         # own base_url + transport + key reference. resolve_runtime_provider()
         # resolves by provider NAME and doesn't know user-config slugs (e.g. a
@@ -1178,12 +1201,16 @@ def switch_model(
         _user_pdef = None
         if explicit_provider and user_providers:
             from hercules_cli.providers import resolve_user_provider as _ruser
+
             _user_pdef = _ruser(explicit_provider.strip().lower(), user_providers)
             if _user_pdef is None:
                 _user_pdef = _ruser(target_provider, user_providers)
         if _user_pdef is not None and _user_pdef.base_url:
-            _ucfg = (user_providers or {}).get(explicit_provider.strip().lower()) \
-                or (user_providers or {}).get(target_provider) or {}
+            _ucfg = (
+                (user_providers or {}).get(explicit_provider.strip().lower())
+                or (user_providers or {}).get(target_provider)
+                or {}
+            )
             _ukey = str(_ucfg.get("api_key", "") or "").strip()
             if _ukey.startswith("${") and _ukey.endswith("}"):
                 _ukey = os.environ.get(_ukey[2:-1], "").strip()
@@ -1307,7 +1334,12 @@ def switch_model(
                         override = True
                         break
         if override:
-            validation = {"accepted": True, "persist": True, "recognized": False, "message": validation.get("message", "")}
+            validation = {
+                "accepted": True,
+                "persist": True,
+                "recognized": False,
+                "message": validation.get("message", ""),
+            }
         else:
             msg = validation.get("message", "Invalid model")
             return ModelSwitchResult(
@@ -1348,6 +1380,7 @@ def switch_model(
     # kimi) the same way.
     if target_provider in {"opencode-zen", "opencode-go"} and isinstance(base_url, str):
         from hercules_cli.models import normalize_opencode_base_url
+
         base_url = normalize_opencode_base_url(target_provider, api_mode, base_url)
 
     # --- Get capabilities (legacy) ---
@@ -1394,7 +1427,9 @@ import threading as _threading
 _picker_prewarm_done = _threading.Event()
 
 
-def _credential_pool_is_usable(provider: str, *, raw_pool_present: bool = False) -> bool:
+def _credential_pool_is_usable(
+    provider: str, *, raw_pool_present: bool = False
+) -> bool:
     """Return whether *provider* has a credential that can be selected now.
 
     ``auth.json`` historically allowed opaque token-style pool values that do
@@ -1525,8 +1560,11 @@ def list_authenticated_providers(
     )
     from hercules_cli.auth import PROVIDER_REGISTRY
     from hercules_cli.models import (
-        OPENROUTER_MODELS, _PROVIDER_MODELS,
-        _MODELS_DEV_PREFERRED, _merge_with_models_dev, cached_provider_model_ids,
+        OPENROUTER_MODELS,
+        _PROVIDER_MODELS,
+        _MODELS_DEV_PREFERRED,
+        _merge_with_models_dev,
+        cached_provider_model_ids,
         clear_provider_models_cache,
     )
 
@@ -1541,15 +1579,18 @@ def list_authenticated_providers(
         except Exception:
             pass
 
-
     results: List[dict] = []
     seen_slugs: set = set()  # lowercase-normalized to catch case variants (#9545)
-    seen_mdev_ids: set = set()  # prevent duplicate entries for aliases (e.g. kimi-coding + kimi-coding-cn)
+    seen_mdev_ids: set = (
+        set()
+    )  # prevent duplicate entries for aliases (e.g. kimi-coding + kimi-coding-cn)
     _current_provider_norm = str(current_provider or "").strip().lower()
     _current_base_url_norm = str(current_base_url or "").strip().rstrip("/").lower()
 
     def _can_probe_custom_provider(*, row_is_current: bool) -> bool:
-        return bool(probe_custom_providers or (probe_current_custom_provider and row_is_current))
+        return bool(
+            probe_custom_providers or (probe_current_custom_provider and row_is_current)
+        )
 
     # Effective base URLs of every built-in row we emit (normalized lower+rstrip).
     # Section 4 uses this to hide ``custom_providers`` entries that point at the
@@ -1618,6 +1659,7 @@ def list_authenticated_providers(
             return False
         try:
             from agent.bedrock_adapter import has_aws_credentials
+
             return bool(has_aws_credentials())
         except Exception:
             return False
@@ -1630,6 +1672,7 @@ def list_authenticated_providers(
     # Ollama Cloud uses dynamic discovery (no static curated list)
     if "ollama-cloud" not in curated:
         from hercules_cli.models import fetch_ollama_cloud_models
+
         curated["ollama-cloud"] = fetch_ollama_cloud_models()
     # LM Studio has no static catalog — probe its native /api/v1/models
     # endpoint live so the picker reflects whatever the user has loaded.
@@ -1638,10 +1681,13 @@ def list_authenticated_providers(
     # On auth rejection or unreachable server, fall back to the caller-supplied
     # current model so the picker still shows something when offline / mis-keyed.
     if "lmstudio" not in curated and (
-        os.environ.get("LM_API_KEY") or os.environ.get("LM_BASE_URL") or current_provider.strip().lower() == "lmstudio"
+        os.environ.get("LM_API_KEY")
+        or os.environ.get("LM_BASE_URL")
+        or current_provider.strip().lower() == "lmstudio"
     ):
         from hercules_cli.models import fetch_lmstudio_models
         from hercules_cli.auth import AuthError
+
         is_current_lmstudio = current_provider.strip().lower() == "lmstudio"
         lm_base = (
             os.environ.get("LM_BASE_URL")
@@ -1652,7 +1698,7 @@ def list_authenticated_providers(
             live = fetch_lmstudio_models(
                 api_key=os.environ.get("LM_API_KEY", ""),
                 base_url=lm_base,
-                timeout=1.5, # Smaller timeout for picker
+                timeout=1.5,  # Smaller timeout for picker
             )
         except AuthError:
             live = []
@@ -1663,6 +1709,7 @@ def list_authenticated_providers(
     # --- 1. Check Hercules-mapped providers ---
     from hercules_cli.models import _AGGREGATOR_PROVIDERS as _AGG_PROVIDERS
     from hercules_cli.providers import ALIASES as _PROVIDER_ALIAS_TABLE
+
     for hercules_id, mdev_id in PROVIDER_TO_MODELS_DEV.items():
         # Skip vendor names that are merely aliases routing through an
         # aggregator (e.g. bare "openai" → "openrouter"). These are NOT
@@ -1700,6 +1747,7 @@ def list_authenticated_providers(
         # Gate on runtime capability rather than registry membership: special
         # providers and plugin aliases can be routable without a registry row.
         from hercules_cli.auth import is_runtime_provider_routable
+
         if not is_runtime_provider_routable(hercules_id):
             continue
         if pconfig and pconfig.api_key_env_vars:
@@ -1714,6 +1762,7 @@ def list_authenticated_providers(
         if not has_creds:
             try:
                 from hercules_cli.auth import _load_auth_store
+
                 store = _load_auth_store()
                 raw_pool_present = bool(
                     store and store.get("credential_pool", {}).get(hercules_id)
@@ -1807,9 +1856,12 @@ def list_authenticated_providers(
         if not has_creds:
             try:
                 from hercules_cli.auth import _load_auth_store
+
                 store = _load_auth_store()
                 providers_store = store.get("providers", {})
-                if store and (pid in providers_store or hercules_slug in providers_store):
+                if store and (
+                    pid in providers_store or hercules_slug in providers_store
+                ):
                     has_creds = True
             except Exception as exc:
                 logger.debug("Auth store check failed for %s: %s", pid, exc)
@@ -1822,7 +1874,9 @@ def list_authenticated_providers(
                 if _credential_pool_is_usable(hercules_slug):
                     has_creds = True
             except Exception as exc:
-                logger.debug("Credential pool check failed for %s: %s", hercules_slug, exc)
+                logger.debug(
+                    "Credential pool check failed for %s: %s", hercules_slug, exc
+                )
         # Fallback: check external credential files directly.
         # The credential pool gates anthropic behind
         # is_provider_explicitly_configured() to prevent auxiliary tasks
@@ -1836,10 +1890,12 @@ def list_authenticated_providers(
                     read_claude_code_credentials,
                     read_hercules_oauth_credentials,
                 )
+
                 hercules_creds = read_hercules_oauth_credentials()
                 cc_creds = read_claude_code_credentials()
-                if (hercules_creds and hercules_creds.get("accessToken")) or \
-                   (cc_creds and cc_creds.get("accessToken")):
+                if (hercules_creds and hercules_creds.get("accessToken")) or (
+                    cc_creds and cc_creds.get("accessToken")
+                ):
                     has_creds = True
             except Exception as exc:
                 logger.debug("Anthropic external creds check failed: %s", exc)
@@ -1860,7 +1916,11 @@ def list_authenticated_providers(
         elif overlay.auth_type == "aws_sdk":
             try:
                 _ids = cached_provider_model_ids(hercules_slug)
-                model_ids = _ids if _ids else (curated.get(hercules_slug, []) or curated.get(pid, []))
+                model_ids = (
+                    _ids
+                    if _ids
+                    else (curated.get(hercules_slug, []) or curated.get(pid, []))
+                )
             except Exception:
                 model_ids = curated.get(hercules_slug, []) or curated.get(pid, [])
         else:
@@ -1908,11 +1968,14 @@ def list_authenticated_providers(
         _cp_config = _auth_registry.get(_cp.slug)
         _cp_has_creds = False
         if _cp_config and _cp_config.api_key_env_vars:
-            _cp_has_creds = any(os.environ.get(ev) for ev in _cp_config.api_key_env_vars)
+            _cp_has_creds = any(
+                os.environ.get(ev) for ev in _cp_config.api_key_env_vars
+            )
         # Also check auth store and credential pool
         if not _cp_has_creds:
             try:
                 from hercules_cli.auth import _load_auth_store
+
                 _cp_store = _load_auth_store()
                 _cp_providers_store = _cp_store.get("providers", {})
                 if _cp_store and _cp.slug in _cp_providers_store:
@@ -1929,7 +1992,11 @@ def list_authenticated_providers(
         # Special case: aws_sdk auth (bedrock) — no API key env vars,
         # credentials come from the boto3 credential chain (env vars,
         # ~/.aws/credentials, instance roles, etc.)
-        if not _cp_has_creds and _cp_config and getattr(_cp_config, "auth_type", "") == "aws_sdk":
+        if (
+            not _cp_has_creds
+            and _cp_config
+            and getattr(_cp_config, "auth_type", "") == "aws_sdk"
+        ):
             _cp_has_creds = _has_aws_sdk_creds_for_listing(_cp.slug)
 
         if not _cp_has_creds:
@@ -1949,7 +2016,9 @@ def list_authenticated_providers(
             if not _cp_model_ids:
                 _cp_model_ids = curated.get(_cp.slug, [])
         _cp_total = len(_cp_model_ids)
-        _cp_top = _cp_model_ids[:max_models] if max_models is not None else _cp_model_ids
+        _cp_top = (
+            _cp_model_ids[:max_models] if max_models is not None else _cp_model_ids
+        )
 
         results.append({
             "slug": _cp.slug,
@@ -2042,12 +2111,16 @@ def list_authenticated_providers(
                     and _ep_url_norm == _current_base_url_norm
                 )
             )
-            should_probe = _can_probe_custom_provider(row_is_current=_ep_is_current) and bool(api_url) and discover and (
-                bool(api_key) or not has_explicit_models
+            should_probe = (
+                _can_probe_custom_provider(row_is_current=_ep_is_current)
+                and bool(api_url)
+                and discover
+                and (bool(api_key) or not has_explicit_models)
             )
             if should_probe:
                 try:
                     from hercules_cli.models import fetch_api_models
+
                     live_models = fetch_api_models(
                         api_key,
                         api_url,
@@ -2091,11 +2164,10 @@ def list_authenticated_providers(
         and "custom" not in seen_slugs
         and not any(
             isinstance(_cp, dict)
-            and str(
-                _cp.get("base_url", "")
-                or _cp.get("url", "")
-                or _cp.get("api", "")
-            ).strip().rstrip("/").lower()
+            and str(_cp.get("base_url", "") or _cp.get("url", "") or _cp.get("api", ""))
+            .strip()
+            .rstrip("/")
+            .lower()
             == str(current_base_url).strip().rstrip("/").lower()
             for _cp in (custom_providers or [])
         )
@@ -2105,7 +2177,9 @@ def list_authenticated_providers(
             try:
                 from hercules_cli.models import fetch_api_models
 
-                _live_models = fetch_api_models("", str(current_base_url).strip().rstrip("/"))
+                _live_models = fetch_api_models(
+                    "", str(current_base_url).strip().rstrip("/")
+                )
                 if _live_models:
                     _models = _live_models
             except Exception:
@@ -2146,11 +2220,15 @@ def list_authenticated_providers(
 
             raw_name = (entry.get("name") or "").strip()
             api_url = (
-                entry.get("base_url", "")
-                or entry.get("url", "")
-                or entry.get("api", "")
-                or ""
-            ).strip().rstrip("/")
+                (
+                    entry.get("base_url", "")
+                    or entry.get("url", "")
+                    or entry.get("api", "")
+                    or ""
+                )
+                .strip()
+                .rstrip("/")
+            )
             if not raw_name or not api_url:
                 continue
             inline_api_key = (entry.get("api_key") or "").strip()
@@ -2158,11 +2236,11 @@ def list_authenticated_providers(
             api_key = inline_api_key or (
                 os.environ.get(key_env, "").strip() if key_env else ""
             )
-            api_mode = str(
-                entry.get("api_mode")
-                or entry.get("transport")
-                or ""
-            ).strip().lower()
+            api_mode = (
+                str(entry.get("api_mode") or entry.get("transport") or "")
+                .strip()
+                .lower()
+            )
             credential_identity = (
                 inline_api_key
                 if inline_api_key
@@ -2240,7 +2318,8 @@ def list_authenticated_providers(
             1
             for _grp in groups.values()
             if _current_base_url_norm
-            and str(_grp["api_url"]).strip().rstrip("/").lower() == _current_base_url_norm
+            and str(_grp["api_url"]).strip().rstrip("/").lower()
+            == _current_base_url_norm
         )
         for grp in groups.values():
             api_url = grp["api_url"]
@@ -2249,7 +2328,10 @@ def list_authenticated_providers(
             # If the slug is already claimed by a built-in / overlay /
             # user-provider row (sections 1-3), skip this custom group
             # to avoid shadowing a real provider.
-            if slug.lower() in seen_slugs and slug.lower() not in _section4_emitted_slugs:
+            if (
+                slug.lower() in seen_slugs
+                and slug.lower() not in _section4_emitted_slugs
+            ):
                 continue
             # If a prior section-4 group already used this slug (two custom
             # endpoints with the same cleaned name — e.g. two OpenAI-
@@ -2372,7 +2454,9 @@ def list_authenticated_providers(
     return results
 
 
-def _prepend_moa_picker_provider(providers: List[dict], current_provider: str = "") -> List[dict]:
+def _prepend_moa_picker_provider(
+    providers: List[dict], current_provider: str = ""
+) -> List[dict]:
     """Add the virtual MoA provider row used by interactive model pickers.
 
     ``list_authenticated_providers()`` only returns real/auth-backed providers.
@@ -2387,7 +2471,9 @@ def _prepend_moa_picker_provider(providers: List[dict], current_provider: str = 
         moa_row = _moa_provider_row(current_provider)
         if moa_row is None:
             return providers
-        return [moa_row] + [p for p in providers if str(p.get("slug", "")).lower() != "moa"]
+        return [moa_row] + [
+            p for p in providers if str(p.get("slug", "")).lower() != "moa"
+        ]
     except Exception:
         return providers
 
@@ -2431,7 +2517,9 @@ def list_picker_providers(
         current_model=current_model,
     )
     if include_moa:
-        providers = _prepend_moa_picker_provider(providers, current_provider=current_provider)
+        providers = _prepend_moa_picker_provider(
+            providers, current_provider=current_provider
+        )
 
     filtered: List[dict] = []
     for provider in providers:

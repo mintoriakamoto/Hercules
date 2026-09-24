@@ -26,7 +26,7 @@ import importlib.util
 # Try to get the legacy module (commands.py) that's being shadowed by this package
 spec = importlib.util.spec_from_file_location(
     "hercules_cli._legacy_commands",
-    __file__.replace('/commands/__init__.py', '/commands.py')
+    __file__.replace("/commands/__init__.py", "/commands.py"),
 )
 _legacy_commands = importlib.util.module_from_spec(spec)
 # Register in sys.modules BEFORE executing so dataclass decorators work
@@ -108,6 +108,4 @@ def __getattr__(name: str):
     try:
         return getattr(_legacy_commands, name)
     except AttributeError:
-        raise AttributeError(
-            f"module {__name__!r} has no attribute {name!r}"
-        ) from None
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None

@@ -499,7 +499,11 @@ class TestResumePendingSystemNote:
         entry = self._pending_entry(reason="restart_timeout")
         result = _simulate_note_injection(
             history=[
-                {"role": "assistant", "content": "in progress", "timestamp": time.time()},
+                {
+                    "role": "assistant",
+                    "content": "in progress",
+                    "timestamp": time.time(),
+                },
             ],
             user_message="what happened?",
             resume_entry=entry,
@@ -514,7 +518,11 @@ class TestResumePendingSystemNote:
         entry = self._pending_entry(reason="shutdown_timeout")
         result = _simulate_note_injection(
             history=[
-                {"role": "assistant", "content": "in progress", "timestamp": time.time()},
+                {
+                    "role": "assistant",
+                    "content": "in progress",
+                    "timestamp": time.time(),
+                },
             ],
             user_message="ping",
             resume_entry=entry,
@@ -526,8 +534,16 @@ class TestResumePendingSystemNote:
         even when the transcript's last role is NOT ``tool``."""
         entry = self._pending_entry()
         history = [
-            {"role": "user", "content": "run a long thing", "timestamp": time.time() - 10},
-            {"role": "assistant", "content": "ok, starting...", "timestamp": time.time()},
+            {
+                "role": "user",
+                "content": "run a long thing",
+                "timestamp": time.time() - 10,
+            },
+            {
+                "role": "assistant",
+                "content": "ok, starting...",
+                "timestamp": time.time(),
+            },
         ]
         result = _simulate_note_injection(history, "ping", resume_entry=entry)
         assert "[System note:" in result
@@ -539,11 +555,20 @@ class TestResumePendingSystemNote:
         no duplicate notes."""
         entry = self._pending_entry()
         history = [
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
-            ], "timestamp": time.time() - 1},
-            {"role": "tool", "tool_call_id": "c1", "content": "result",
-             "timestamp": time.time()},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
+                ],
+                "timestamp": time.time() - 1,
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "c1",
+                "content": "result",
+                "timestamp": time.time(),
+            },
         ]
         result = _simulate_note_injection(history, "ping", resume_entry=entry)
         assert result.count("[System note:") == 1
@@ -554,11 +579,20 @@ class TestResumePendingSystemNote:
     def test_no_resume_pending_preserves_tool_tail_note(self):
         """Regression: the old PR #9934 tool-tail behaviour is unchanged."""
         history = [
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
-            ], "timestamp": time.time() - 1},
-            {"role": "tool", "tool_call_id": "c1", "content": "result",
-             "timestamp": time.time()},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
+                ],
+                "timestamp": time.time() - 1,
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "c1",
+                "content": "result",
+                "timestamp": time.time(),
+            },
         ]
         result = _simulate_note_injection(history, "ping", resume_entry=None)
         assert "[System note:" in result
@@ -576,8 +610,11 @@ class TestResumePendingSystemNote:
         entry.last_resume_marked_at = datetime.now() - timedelta(hours=1)
 
         history = [
-            {"role": "assistant", "content": "old in progress",
-             "timestamp": time.time() - 3600},
+            {
+                "role": "assistant",
+                "content": "old in progress",
+                "timestamp": time.time() - 3600,
+            },
         ]
         result = _simulate_note_injection(
             history=history,
@@ -601,8 +638,11 @@ class TestResumePendingSystemNote:
         entry.last_resume_marked_at = datetime.now()  # interrupted just now
 
         history = [
-            {"role": "assistant", "content": "older context",
-             "timestamp": time.time() - 3600},  # transcript clock stale
+            {
+                "role": "assistant",
+                "content": "older context",
+                "timestamp": time.time() - 3600,
+            },  # transcript clock stale
         ]
         result = _simulate_note_injection(
             history=history,
@@ -654,9 +694,14 @@ class TestResumePendingSystemNote:
 
     def test_fresh_tool_tail_preserves_auto_continue_note(self):
         history = [
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
-            ], "timestamp": time.time() - 1},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
+                ],
+                "timestamp": time.time() - 1,
+            },
             {
                 "role": "tool",
                 "tool_call_id": "c1",
@@ -676,9 +721,14 @@ class TestResumePendingSystemNote:
         keeps the test stable regardless of the production default.
         """
         history = [
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
-            ], "timestamp": time.time() - 3601},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
+                ],
+                "timestamp": time.time() - 3601,
+            },
             {
                 "role": "tool",
                 "tool_call_id": "c1",
@@ -713,9 +763,14 @@ class TestResumePendingSystemNote:
           3. No auto-continue note is injected.
         """
         history = [
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
-            ], "timestamp": time.time() - 7201},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
+                ],
+                "timestamp": time.time() - 7201,
+            },
             {
                 "role": "tool",
                 "tool_call_id": "c1",
@@ -744,9 +799,14 @@ class TestResumePendingSystemNote:
     def test_freshness_gate_disabled_via_zero_window(self):
         """window_secs=0 restores pre-fix behaviour (always inject)."""
         history = [
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
-            ], "timestamp": time.time() - 86400},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
+                ],
+                "timestamp": time.time() - 86400,
+            },
             {
                 "role": "tool",
                 "tool_call_id": "c1",
@@ -755,7 +815,10 @@ class TestResumePendingSystemNote:
             },
         ]
         result = _simulate_note_injection(
-            history, "ping", resume_entry=None, window_secs=0,
+            history,
+            "ping",
+            resume_entry=None,
+            window_secs=0,
         )
         assert "[System note:" in result
         assert "pending tool outputs" in result
@@ -765,9 +828,13 @@ class TestResumePendingSystemNote:
         """Transcripts predating timestamp persistence must keep the old
         behaviour — freshness unknown → treat as fresh."""
         history = [
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
-            ]},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {"id": "c1", "function": {"name": "x", "arguments": "{}"}},
+                ],
+            },
             {"role": "tool", "tool_call_id": "c1", "content": "result"},
         ]
         result = _simulate_note_injection(history, "ping", resume_entry=None)
@@ -791,7 +858,11 @@ class TestResumePendingSystemNote:
         entry = self._pending_entry(reason="restart_timeout")
         result = _simulate_note_injection(
             history=[
-                {"role": "assistant", "content": "in progress", "timestamp": time.time()},
+                {
+                    "role": "assistant",
+                    "content": "in progress",
+                    "timestamp": time.time(),
+                },
             ],
             user_message="restarted!",
             resume_entry=entry,
@@ -809,7 +880,11 @@ class TestResumePendingSystemNote:
         entry = self._pending_entry(reason="restart_timeout")
         result = _simulate_note_injection(
             history=[
-                {"role": "assistant", "content": "in progress", "timestamp": time.time()},
+                {
+                    "role": "assistant",
+                    "content": "in progress",
+                    "timestamp": time.time(),
+                },
             ],
             user_message="",
             resume_entry=entry,
@@ -833,7 +908,9 @@ class TestResumePendingSystemNote:
 class TestFreshnessHelpers:
     def test_coerce_datetime(self):
         now = datetime.now()
-        assert _coerce_gateway_timestamp(now) == pytest.approx(now.timestamp(), abs=1e-3)
+        assert _coerce_gateway_timestamp(now) == pytest.approx(
+            now.timestamp(), abs=1e-3
+        )
 
     def test_coerce_epoch_seconds(self):
         assert _coerce_gateway_timestamp(1_700_000_000) == 1_700_000_000.0
@@ -872,26 +949,51 @@ class TestFreshnessHelpers:
     def test_is_fresh_window_bounds(self):
         now = 1_700_000_000.0
         # 1h window, 30min old → fresh
-        assert _is_fresh_gateway_interruption(
-            now - 1800, now=now, window_secs=3600,
-        ) is True
+        assert (
+            _is_fresh_gateway_interruption(
+                now - 1800,
+                now=now,
+                window_secs=3600,
+            )
+            is True
+        )
         # 1h window, 2h old → stale
-        assert _is_fresh_gateway_interruption(
-            now - 7200, now=now, window_secs=3600,
-        ) is False
+        assert (
+            _is_fresh_gateway_interruption(
+                now - 7200,
+                now=now,
+                window_secs=3600,
+            )
+            is False
+        )
         # 1h window, exactly at boundary → fresh (<=)
-        assert _is_fresh_gateway_interruption(
-            now - 3600, now=now, window_secs=3600,
-        ) is True
+        assert (
+            _is_fresh_gateway_interruption(
+                now - 3600,
+                now=now,
+                window_secs=3600,
+            )
+            is True
+        )
 
     def test_is_fresh_zero_window_always_fresh(self):
         """Opt-out: window_secs=0 disables the gate entirely."""
-        assert _is_fresh_gateway_interruption(
-            0.0, now=1_700_000_000.0, window_secs=0,
-        ) is True
-        assert _is_fresh_gateway_interruption(
-            -1.0, now=1_700_000_000.0, window_secs=-5,
-        ) is True
+        assert (
+            _is_fresh_gateway_interruption(
+                0.0,
+                now=1_700_000_000.0,
+                window_secs=0,
+            )
+            is True
+        )
+        assert (
+            _is_fresh_gateway_interruption(
+                -1.0,
+                now=1_700_000_000.0,
+                window_secs=-5,
+            )
+            is True
+        )
 
     def test_last_transcript_timestamp_skips_meta(self):
         history = [
@@ -960,8 +1062,9 @@ async def test_drain_timeout_marks_resume_pending():
     session_store.mark_resume_pending = MagicMock(return_value=True)
     runner.session_store = session_store
 
-    with patch("gateway.status.remove_pid_file"), patch(
-        "gateway.status.write_runtime_status"
+    with (
+        patch("gateway.status.remove_pid_file"),
+        patch("gateway.status.write_runtime_status"),
     ):
         await runner.stop()
 
@@ -987,8 +1090,9 @@ async def test_drain_timeout_uses_restart_reason_when_restarting():
     session_store.mark_resume_pending = MagicMock(return_value=True)
     runner.session_store = session_store
 
-    with patch("gateway.status.remove_pid_file"), patch(
-        "gateway.status.write_runtime_status"
+    with (
+        patch("gateway.status.remove_pid_file"),
+        patch("gateway.status.write_runtime_status"),
     ):
         await runner.stop(restart=True, detached_restart=False, service_restart=True)
 
@@ -1022,8 +1126,9 @@ async def test_drain_timeout_skips_pending_sentinel_sessions():
     session_store.mark_resume_pending = MagicMock(return_value=True)
     runner.session_store = session_store
 
-    with patch("gateway.status.remove_pid_file"), patch(
-        "gateway.status.write_runtime_status"
+    with (
+        patch("gateway.status.remove_pid_file"),
+        patch("gateway.status.write_runtime_status"),
     ):
         await runner.stop()
 
@@ -1617,7 +1722,9 @@ async def test_restart_home_channel_notification_ignores_false_send_result():
         chat_id="home-42",
         name="Ops Home",
     )
-    adapter.send = AsyncMock(return_value=SendResult(success=False, error="network down"))
+    adapter.send = AsyncMock(
+        return_value=SendResult(success=False, error="network down")
+    )
 
     await runner._notify_active_sessions_of_shutdown()
 

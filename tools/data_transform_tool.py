@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 
-def json_to_csv_tool(json_file: str, output_file: Optional[str] = None) -> Dict[str, Any]:
+def json_to_csv_tool(
+    json_file: str, output_file: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Convert JSON array to CSV.
 
@@ -97,7 +99,9 @@ def json_to_csv_tool(json_file: str, output_file: Optional[str] = None) -> Dict[
         return {"error": f"Conversion failed: {e}", "success": False}
 
 
-def csv_to_json_tool(csv_file: str, output_file: Optional[str] = None) -> Dict[str, Any]:
+def csv_to_json_tool(
+    csv_file: str, output_file: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Convert CSV to JSON array.
 
@@ -159,7 +163,9 @@ def csv_to_json_tool(csv_file: str, output_file: Optional[str] = None) -> Dict[s
         return {"error": f"Conversion failed: {e}", "success": False}
 
 
-def json_format_tool(json_file: str, indent: int = 2, sort_keys: bool = False) -> Dict[str, Any]:
+def json_format_tool(
+    json_file: str, indent: int = 2, sort_keys: bool = False
+) -> Dict[str, Any]:
     """
     Format and validate JSON file.
 
@@ -275,7 +281,9 @@ def json_query_tool(json_file: str, key_path: str) -> Dict[str, Any]:
 
         return {
             "found": True,
-            "value": current if not isinstance(current, (dict, list)) else str(current)[:500],
+            "value": current
+            if not isinstance(current, (dict, list))
+            else str(current)[:500],
             "type": type(current).__name__,
             "key_path": key_path,
         }

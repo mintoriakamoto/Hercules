@@ -112,25 +112,35 @@ def make_startup_runner(tmp_path):
     runner._session_expiry_watcher = no_op_watcher
     runner._platform_reconnect_watcher = no_op_watcher
     runner._run_process_watcher = no_op_watcher
-    runner._safe_adapter_disconnect = gateway_run.GatewayRunner._safe_adapter_disconnect.__get__(
-        runner, gateway_run.GatewayRunner
+    runner._safe_adapter_disconnect = (
+        gateway_run.GatewayRunner._safe_adapter_disconnect.__get__(
+            runner, gateway_run.GatewayRunner
+        )
     )
     runner.request_restart = gateway_run.GatewayRunner.request_restart.__get__(
         runner, gateway_run.GatewayRunner
     )
-    runner.stop = gateway_run.GatewayRunner.stop.__get__(runner, gateway_run.GatewayRunner)
+    runner.stop = gateway_run.GatewayRunner.stop.__get__(
+        runner, gateway_run.GatewayRunner
+    )
     return runner
 
 
 def patch_startup_side_effects(monkeypatch, tmp_path):
     monkeypatch.setattr(gateway_run, "_hercules_home", tmp_path)
     monkeypatch.setattr("hercules_cli.plugins.discover_plugins", lambda: None)
-    monkeypatch.setattr("agent.shell_hooks.register_from_config", lambda *args, **kwargs: None)
-    monkeypatch.setattr("tools.process_registry.process_registry.recover_from_checkpoint", lambda: 0)
+    monkeypatch.setattr(
+        "agent.shell_hooks.register_from_config", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        "tools.process_registry.process_registry.recover_from_checkpoint", lambda: 0
+    )
 
 
 @pytest.mark.asyncio
-async def test_startup_aborts_when_restart_requested_before_start(tmp_path, monkeypatch):
+async def test_startup_aborts_when_restart_requested_before_start(
+    tmp_path, monkeypatch
+):
     patch_startup_side_effects(monkeypatch, tmp_path)
     runner = make_startup_runner(tmp_path)
     runner.request_restart(detached=False, via_service=True)
@@ -149,7 +159,9 @@ async def test_startup_aborts_when_restart_requested_before_start(tmp_path, monk
 
 
 @pytest.mark.asyncio
-async def test_startup_aborts_when_restart_begins_during_platform_connect(tmp_path, monkeypatch):
+async def test_startup_aborts_when_restart_begins_during_platform_connect(
+    tmp_path, monkeypatch
+):
     patch_startup_side_effects(monkeypatch, tmp_path)
 
     runner = make_startup_runner(tmp_path)
@@ -225,7 +237,9 @@ async def test_startup_aborts_after_registered_adapter_restart(tmp_path, monkeyp
         if (platform, platform_state) == (Platform.TELEGRAM.value, "connected"):
             runner.request_restart(detached=False, via_service=True)
 
-    runner._update_platform_runtime_status = MagicMock(side_effect=update_platform_runtime_status)
+    runner._update_platform_runtime_status = MagicMock(
+        side_effect=update_platform_runtime_status
+    )
 
     result = await asyncio.wait_for(runner.start(), timeout=2)
 
@@ -247,7 +261,9 @@ async def test_startup_aborts_after_registered_adapter_restart(tmp_path, monkeyp
 
 
 @pytest.mark.asyncio
-async def test_start_gateway_does_not_start_cron_after_aborted_startup(tmp_path, monkeypatch):
+async def test_start_gateway_does_not_start_cron_after_aborted_startup(
+    tmp_path, monkeypatch
+):
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
     cron_started = False
 
@@ -277,13 +293,17 @@ async def test_start_gateway_does_not_start_cron_after_aborted_startup(tmp_path,
     monkeypatch.setattr("gateway.status.remove_pid_file", lambda: None)
     monkeypatch.setattr("gateway.status.release_gateway_runtime_lock", lambda: None)
     monkeypatch.setattr("tools.skills_sync.sync_skills", lambda quiet=True: None)
-    monkeypatch.setattr("hercules_logging.setup_logging", lambda hercules_home, mode: None)
+    monkeypatch.setattr(
+        "hercules_logging.setup_logging", lambda hercules_home, mode: None
+    )
     monkeypatch.setattr("gateway.run.GatewayRunner", AbortedStartupRunner)
     monkeypatch.setattr("gateway.run._start_cron_ticker", fail_if_cron_starts)
     monkeypatch.setattr("tools.mcp_tool.shutdown_mcp_servers", lambda: None)
 
     with pytest.raises(SystemExit) as exc:
-        await gateway_run.start_gateway(config=GatewayConfig(), replace=False, verbosity=None)
+        await gateway_run.start_gateway(
+            config=GatewayConfig(), replace=False, verbosity=None
+        )
 
     assert exc.value.code == GATEWAY_SERVICE_RESTART_EXIT_CODE
     assert cron_started is False

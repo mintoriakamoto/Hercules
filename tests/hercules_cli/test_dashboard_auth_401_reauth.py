@@ -78,8 +78,11 @@ class TestRefreshTokenCookieDeprecation:
         def _set():
             r = Response("ok")
             set_session_cookies(
-                r, access_token="AT", refresh_token=refresh_token,
-                access_token_expires_in=3600, use_https=True,
+                r,
+                access_token="AT",
+                refresh_token=refresh_token,
+                access_token_expires_in=3600,
+                use_https=True,
             )
             return r
 
@@ -118,10 +121,7 @@ class TestRefreshTokenCookieDeprecation:
         client = TestClient(app)
         r = client.get("/clear")
         cookies = r.headers.get_list("set-cookie")
-        assert any(
-            SESSION_RT_COOKIE in c and "Max-Age=0" in c
-            for c in cookies
-        )
+        assert any(SESSION_RT_COOKIE in c and "Max-Age=0" in c for c in cookies)
 
 
 # ---------------------------------------------------------------------------
@@ -224,9 +224,11 @@ class TestTransparentRefreshOnAccessTokenEviction:
         clear_providers()
         provider = StubAuthProvider(default_ttl=900)
         register_provider(provider)
-        valid_rt = _sign(
-            {"sub": "stub-user-1", "kind": "refresh", "exp": int(_t.time()) + 30 * 86400}
-        )
+        valid_rt = _sign({
+            "sub": "stub-user-1",
+            "kind": "refresh",
+            "exp": int(_t.time()) + 30 * 86400,
+        })
         return provider, valid_rt
 
     def test_at_evicted_rt_present_refreshes_transparently(self, gated_app):
@@ -273,6 +275,7 @@ class TestTransparentRefreshOnAccessTokenEviction:
         # A syntactically-real but expired RT (signed with exp<=now).
         import time as _t
         from tests.hercules_cli.conftest_dashboard_auth import _sign
+
         dead_rt = _sign({"sub": "u", "kind": "refresh", "exp": int(_t.time()) - 1})
         gated_app.cookies.set(SESSION_RT_COOKIE, dead_rt)
         r = gated_app.get("/api/sessions")
@@ -288,9 +291,7 @@ class TestHtmlRedirectNext:
         # preserved as next= so the post-login landing returns there.
         r = gated_app.get("/sessions", follow_redirects=False)
         assert r.status_code == 302
-        assert r.headers["location"] == (
-            "/auth/login?provider=stub&next=%2Fsessions"
-        )
+        assert r.headers["location"] == ("/auth/login?provider=stub&next=%2Fsessions")
 
     def test_root_path_auto_sso(self, gated_app):
         r = gated_app.get("/", follow_redirects=False)
@@ -360,8 +361,7 @@ class TestAutoSsoRedirect:
         # silent attempt rather than being stuck on /login forever.
         set_cookie = r.headers.get_list("set-cookie")
         assert any(
-            self.SSO_ATTEMPT_COOKIE in c and "Max-Age=0" in c
-            for c in set_cookie
+            self.SSO_ATTEMPT_COOKIE in c and "Max-Age=0" in c for c in set_cookie
         )
 
     def test_no_infinite_loop_following_redirects(self, gated_app):
@@ -474,10 +474,7 @@ class TestNextSameOriginValidation:
                 self.url = type("URL", (), {"path": path, "query": query})()
 
         assert _safe_next_target(FakeRequest("/api/analytics/models")) == ""
-        assert (
-            _safe_next_target(FakeRequest("/api/analytics/models", "days=30"))
-            == ""
-        )
+        assert _safe_next_target(FakeRequest("/api/analytics/models", "days=30")) == ""
         assert _safe_next_target(FakeRequest("/api/sessions")) == ""
         assert _safe_next_target(FakeRequest("/api/config")) == ""
         assert _safe_next_target(FakeRequest("/api/status")) == ""
@@ -529,7 +526,10 @@ class TestAuthCallbackNext:
     """
 
     def _drive_oauth_via_login(
-        self, gated_app, *, next_path: str = "",
+        self,
+        gated_app,
+        *,
+        next_path: str = "",
         expect_next_in_button: bool = True,
     ):
         """Walk /login → /auth/login → IDP-bounce → /auth/callback like
@@ -562,9 +562,7 @@ class TestAuthCallbackNext:
         # next= values, the validator drops them at the /login boundary
         # and the button href must NOT carry the rogue value.
         if next_path and expect_next_in_button:
-            assert "next=" in href, (
-                f"login button dropped next= (href={href!r})"
-            )
+            assert "next=" in href, f"login button dropped next= (href={href!r})"
         if next_path and not expect_next_in_button:
             assert "next=" not in href, (
                 f"login button leaked rejected next= "
@@ -592,9 +590,7 @@ class TestAuthCallbackNext:
         assert r.headers["location"] == "/sessions"
 
     def test_callback_with_query_string_in_next(self, gated_app):
-        r = self._drive_oauth_via_login(
-            gated_app, next_path="/sessions?page=2"
-        )
+        r = self._drive_oauth_via_login(gated_app, next_path="/sessions?page=2")
         assert r.status_code == 302
         assert r.headers["location"] == "/sessions?page=2"
 
@@ -605,7 +601,8 @@ class TestAuthCallbackNext:
         # (and therefore the cookie), so the callback never sees it and
         # the user lands at "/".
         r = self._drive_oauth_via_login(
-            gated_app, next_path="//evil.com/steal",
+            gated_app,
+            next_path="//evil.com/steal",
             expect_next_in_button=False,
         )
         assert r.status_code == 302
@@ -613,7 +610,8 @@ class TestAuthCallbackNext:
 
     def test_callback_rejects_login_loop(self, gated_app):
         r = self._drive_oauth_via_login(
-            gated_app, next_path="/login",
+            gated_app,
+            next_path="/login",
             expect_next_in_button=False,
         )
         assert r.status_code == 302
@@ -627,9 +625,7 @@ class TestAuthCallbackNext:
         # Drive a clean login with no next=.
         r_login = gated_app.get("/login", follow_redirects=False)
         assert r_login.status_code == 200
-        r_to_idp = gated_app.get(
-            "/auth/login?provider=stub", follow_redirects=False
-        )
+        r_to_idp = gated_app.get("/auth/login?provider=stub", follow_redirects=False)
         state = r_to_idp.headers["location"].split("state=")[1]
         # Attacker appends next=/internal-admin to the callback URL.
         r = gated_app.get(
@@ -685,21 +681,23 @@ class TestValidatePostLoginTarget:
 
     def test_accepts_same_origin_paths(self):
         from hercules_cli.dashboard_auth.routes import _validate_post_login_target
+
         assert _validate_post_login_target("/sessions") == "/sessions"
         # URL-encoded form (as the cookie carries it) round-trips through
         # the validator's unquote step.
         assert (
-            _validate_post_login_target("%2Fsessions%3Fpage%3D2")
-            == "/sessions?page=2"
+            _validate_post_login_target("%2Fsessions%3Fpage%3D2") == "/sessions?page=2"
         )
 
     def test_rejects_protocol_relative(self):
         from hercules_cli.dashboard_auth.routes import _validate_post_login_target
+
         assert _validate_post_login_target("//evil.com") == ""
         assert _validate_post_login_target("%2F%2Fevil.com") == ""
 
     def test_rejects_login_loop(self):
         from hercules_cli.dashboard_auth.routes import _validate_post_login_target
+
         assert _validate_post_login_target("/login") == ""
         assert _validate_post_login_target("/auth/login") == ""
         assert _validate_post_login_target("/api/auth/me") == ""
@@ -709,6 +707,7 @@ class TestValidatePostLoginTarget:
         boundary. Pin both the exact match and the trailing-slash forms
         plus a few realistic SPA-API endpoints."""
         from hercules_cli.dashboard_auth.routes import _validate_post_login_target
+
         assert _validate_post_login_target("/api") == ""
         assert _validate_post_login_target("/api/analytics/models") == ""
         assert _validate_post_login_target("/api/analytics/models?days=30") == ""
@@ -716,13 +715,12 @@ class TestValidatePostLoginTarget:
         assert _validate_post_login_target("/api/config") == ""
         # URL-encoded form — what the cookie actually carries.
         assert (
-            _validate_post_login_target(
-                "%2Fapi%2Fanalytics%2Fmodels%3Fdays%3D30"
-            ) == ""
+            _validate_post_login_target("%2Fapi%2Fanalytics%2Fmodels%3Fdays%3D30") == ""
         )
 
     def test_does_not_reject_api_prefix_lookalikes(self):
         from hercules_cli.dashboard_auth.routes import _validate_post_login_target
+
         # SPA route lookalikes — must NOT be dropped.
         assert _validate_post_login_target("/apidocs") == "/apidocs"
         assert _validate_post_login_target("/api-keys") == "/api-keys"
@@ -747,12 +745,14 @@ class TestRenderLoginHtmlNext:
 
     def test_no_next_emits_plain_button(self):
         from hercules_cli.dashboard_auth.login_page import render_login_html
+
         html_out = render_login_html()
         assert 'href="/auth/login?provider=stub"' in html_out
         assert "next=" not in html_out
 
     def test_next_threaded_url_encoded(self):
         from hercules_cli.dashboard_auth.login_page import render_login_html
+
         html_out = render_login_html(next_path="/sessions?page=2")
         # next= is URL-encoded — quote(safe='') turns "/" into "%2F",
         # "?" into "%3F", "=" into "%3D". The encoded value never
@@ -766,6 +766,7 @@ class TestRenderLoginHtmlNext:
         we still HTML-escape the rendered value so a regression in the
         caller can't trivially produce an HTML-injection sink."""
         from hercules_cli.dashboard_auth.login_page import render_login_html
+
         # `"` in a path is already URL-encoded by quote() to %22, so it
         # never reaches the HTML escaper as a raw quote. This test pins
         # both layers: quote() does its job AND escape() does its.
@@ -788,9 +789,7 @@ class TestAuthLoginPkceCookieNext:
     """
 
     def test_no_next_query_omits_next_segment(self, gated_app):
-        r = gated_app.get(
-            "/auth/login?provider=stub", follow_redirects=False
-        )
+        r = gated_app.get("/auth/login?provider=stub", follow_redirects=False)
         assert r.status_code == 302
         cookies = r.headers.get_list("set-cookie")
         pkce = next(c for c in cookies if "hercules_session_pkce" in c)

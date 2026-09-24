@@ -22,6 +22,7 @@ def _make_pconfig(provider_id="deepseek", env_vars=None):
     in PROVIDER_REGISTRY (needed for _seed_from_env's generic path).
     """
     from hercules_cli.auth import ProviderConfig
+
     return ProviderConfig(
         id=provider_id,
         name=provider_id.title(),
@@ -43,9 +44,14 @@ def isolated_hercules_home(tmp_path, monkeypatch):
 
     # Clear all known API key env vars so get_env_value falls through to .env
     for key in [
-        "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY",
-        "ZAI_API_KEY", "DEEPSEEK_API_KEY", "ANTHROPIC_TOKEN",
-        "CLAUDE_CODE_OAUTH_TOKEN", "OPENAI_BASE_URL",
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "OPENROUTER_API_KEY",
+        "ZAI_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "ANTHROPIC_TOKEN",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+        "OPENAI_BASE_URL",
     ]:
         monkeypatch.delenv(key, raising=False)
 
@@ -72,6 +78,7 @@ class TestCredentialPoolSeedsFromDotEnv:
         assert "DEEPSEEK_API_KEY" not in os.environ
 
         from agent.credential_pool import _seed_from_env
+
         entries = []
         changed, active_sources = _seed_from_env("deepseek", entries)
 
@@ -81,7 +88,9 @@ class TestCredentialPoolSeedsFromDotEnv:
             e.access_token == "sk-dotenv-only-12345"
             and e.source == "env:DEEPSEEK_API_KEY"
             for e in entries
-        ), f"Expected seeded entry with dotenv key, got: {[(e.source, e.access_token) for e in entries]}"
+        ), (
+            f"Expected seeded entry with dotenv key, got: {[(e.source, e.access_token) for e in entries]}"
+        )
 
     def test_openrouter_key_from_dotenv_only(self, isolated_hercules_home):
         """OpenRouter path has its own branch — verify it also reads .env."""
@@ -89,25 +98,27 @@ class TestCredentialPoolSeedsFromDotEnv:
         assert "OPENROUTER_API_KEY" not in os.environ
 
         from agent.credential_pool import _seed_from_env
+
         entries = []
         changed, active_sources = _seed_from_env("openrouter", entries)
 
         assert changed is True
         assert "env:OPENROUTER_API_KEY" in active_sources
-        assert any(
-            e.access_token == "sk-or-dotenv-abc" for e in entries
-        )
+        assert any(e.access_token == "sk-or-dotenv-abc" for e in entries)
 
     def test_empty_dotenv_no_entries(self, isolated_hercules_home):
         """No .env file, no env vars → no entries seeded (and no crash)."""
         from agent.credential_pool import _seed_from_env
+
         entries = []
         changed, active_sources = _seed_from_env("deepseek", entries)
         assert changed is False
         assert active_sources == set()
         assert entries == []
 
-    def test_dotenv_wins_over_stale_os_environ(self, isolated_hercules_home, monkeypatch):
+    def test_dotenv_wins_over_stale_os_environ(
+        self, isolated_hercules_home, monkeypatch
+    ):
         """Regression for #20591: a fresh key rotated into ~/.hercules/.env must
         win over a stale value inherited from os.environ (parent shell export
         from Codex CLI, test runner, login profile, etc.). Without this, key
@@ -117,6 +128,7 @@ class TestCredentialPoolSeedsFromDotEnv:
         monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-env-stale-xyz")
 
         from agent.credential_pool import _seed_from_env
+
         entries = []
         changed, _ = _seed_from_env("deepseek", entries)
 
@@ -131,10 +143,13 @@ class TestAuthResolvesFromDotEnv:
 
     def test_key_from_dotenv_only(self, isolated_hercules_home):
         """Key in .env but not os.environ → _resolve returns it with the env var source."""
-        _write_env_file(isolated_hercules_home, DEEPSEEK_API_KEY="sk-dotenv-resolve-789")
+        _write_env_file(
+            isolated_hercules_home, DEEPSEEK_API_KEY="sk-dotenv-resolve-789"
+        )
         assert "DEEPSEEK_API_KEY" not in os.environ
 
         from hercules_cli.auth import _resolve_api_key_provider_secret
+
         key, source = _resolve_api_key_provider_secret(
             provider_id="deepseek",
             pconfig=_make_pconfig(),
@@ -151,10 +166,13 @@ class TestAuthResolvesFromDotEnv:
         live request path keeps returning the stale shell export, producing
         persistent 401s after rotation.
         """
-        _write_env_file(isolated_hercules_home, DEEPSEEK_API_KEY="dotenv-fresh-deepseek")
+        _write_env_file(
+            isolated_hercules_home, DEEPSEEK_API_KEY="dotenv-fresh-deepseek"
+        )
         monkeypatch.setenv("DEEPSEEK_API_KEY", "stale-shell-deepseek")
 
         from hercules_cli.auth import _resolve_api_key_provider_secret
+
         key, source = _resolve_api_key_provider_secret(
             provider_id="deepseek",
             pconfig=_make_pconfig(),
@@ -171,10 +189,13 @@ class TestAuthResolvesFromDotEnv:
         identical os.environ-first rotation bug that the api-key resolution
         path did, just for Anthropic.
         """
-        _write_env_file(isolated_hercules_home, ANTHROPIC_API_KEY="dotenv-fresh-anthropic")
+        _write_env_file(
+            isolated_hercules_home, ANTHROPIC_API_KEY="dotenv-fresh-anthropic"
+        )
         monkeypatch.setenv("ANTHROPIC_API_KEY", "stale-shell-anthropic")
 
         from hercules_cli.auth import get_anthropic_key
+
         assert get_anthropic_key() == "dotenv-fresh-anthropic"
 
 
@@ -192,6 +213,7 @@ class TestAuthCredentialPoolFallback:
         mock_pool.peek.return_value = mock_entry
 
         from hercules_cli.auth import _resolve_api_key_provider_secret
+
         with patch("agent.credential_pool.load_pool", return_value=mock_pool):
             key, source = _resolve_api_key_provider_secret(
                 provider_id="deepseek",
@@ -206,6 +228,7 @@ class TestAuthCredentialPoolFallback:
         mock_pool.has_credentials.return_value = False
 
         from hercules_cli.auth import _resolve_api_key_provider_secret
+
         with patch("agent.credential_pool.load_pool", return_value=mock_pool):
             key, source = _resolve_api_key_provider_secret(
                 provider_id="deepseek",
@@ -213,7 +236,9 @@ class TestAuthCredentialPoolFallback:
             )
         assert key == ""
 
-    def test_env_var_takes_priority_over_pool(self, isolated_hercules_home, monkeypatch):
+    def test_env_var_takes_priority_over_pool(
+        self, isolated_hercules_home, monkeypatch
+    ):
         """os.environ key wins — credential pool is NEVER consulted."""
         monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-env-key-first-abc123")
 
@@ -221,6 +246,7 @@ class TestAuthCredentialPoolFallback:
         mock_pool.has_credentials.return_value = True
 
         from hercules_cli.auth import _resolve_api_key_provider_secret
+
         with patch("agent.credential_pool.load_pool", return_value=mock_pool) as mp:
             key, source = _resolve_api_key_provider_secret(
                 provider_id="deepseek",
@@ -233,13 +259,16 @@ class TestAuthCredentialPoolFallback:
 
     def test_dotenv_takes_priority_over_pool(self, isolated_hercules_home):
         """Key in .env beats credential pool — pool only fires when both env sources are empty."""
-        _write_env_file(isolated_hercules_home, DEEPSEEK_API_KEY="sk-dotenv-priority-xyz")
+        _write_env_file(
+            isolated_hercules_home, DEEPSEEK_API_KEY="sk-dotenv-priority-xyz"
+        )
         assert "DEEPSEEK_API_KEY" not in os.environ
 
         mock_pool = MagicMock()
         mock_pool.has_credentials.return_value = True
 
         from hercules_cli.auth import _resolve_api_key_provider_secret
+
         with patch("agent.credential_pool.load_pool", return_value=mock_pool) as mp:
             key, source = _resolve_api_key_provider_secret(
                 provider_id="deepseek",
@@ -266,6 +295,7 @@ class TestAnthropicEnvAuthTypeClassification:
 
     def _seed(self, env_var, token):
         from agent.credential_pool import _seed_from_env
+
         entries = []
         _seed_from_env("anthropic", entries)
         # The seeded entry whose label is the env var we wrote.
@@ -276,7 +306,10 @@ class TestAnthropicEnvAuthTypeClassification:
     def test_oauth_token_classified_as_oauth(self, isolated_hercules_home):
         """sk-ant-oat- token from CLAUDE_CODE_OAUTH_TOKEN → AUTH_TYPE_OAUTH."""
         from agent.credential_pool import AUTH_TYPE_OAUTH
-        _write_env_file(isolated_hercules_home, CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat-fake-12345")
+
+        _write_env_file(
+            isolated_hercules_home, CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat-fake-12345"
+        )
         entry = self._seed("CLAUDE_CODE_OAUTH_TOKEN", "sk-ant-oat-fake-12345")
         assert entry.auth_type == AUTH_TYPE_OAUTH
 
@@ -286,13 +319,19 @@ class TestAnthropicEnvAuthTypeClassification:
         This is the bug the fix targets: previously this was tagged OAuth.
         """
         from agent.credential_pool import AUTH_TYPE_API_KEY
-        _write_env_file(isolated_hercules_home, ANTHROPIC_API_KEY="sk-ant-admin-fake-12345")
+
+        _write_env_file(
+            isolated_hercules_home, ANTHROPIC_API_KEY="sk-ant-admin-fake-12345"
+        )
         entry = self._seed("ANTHROPIC_API_KEY", "sk-ant-admin-fake-12345")
         assert entry.auth_type == AUTH_TYPE_API_KEY
 
     def test_standard_api_key_classified_as_api_key(self, isolated_hercules_home):
         """sk-ant-api- key → AUTH_TYPE_API_KEY (unchanged behaviour)."""
         from agent.credential_pool import AUTH_TYPE_API_KEY
-        _write_env_file(isolated_hercules_home, ANTHROPIC_API_KEY="sk-ant-api-fake-12345")
+
+        _write_env_file(
+            isolated_hercules_home, ANTHROPIC_API_KEY="sk-ant-api-fake-12345"
+        )
         entry = self._seed("ANTHROPIC_API_KEY", "sk-ant-api-fake-12345")
         assert entry.auth_type == AUTH_TYPE_API_KEY

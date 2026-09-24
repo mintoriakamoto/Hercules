@@ -34,13 +34,21 @@ class TestRoutingCostSavingsIntegration:
             model, decision = route_task_to_model(task)
 
             # Simple tasks should route to fast_cheap or balanced
-            assert decision.recommended_tier in (ModelTier.FAST_CHEAP, ModelTier.BALANCED), \
+            assert decision.recommended_tier in (
+                ModelTier.FAST_CHEAP,
+                ModelTier.BALANCED,
+            ), (
                 f"Task '{task}' routed to {decision.recommended_tier}, expected cheap tier"
+            )
 
             # Simple tasks should have cost savings
             if decision.recommended_tier == ModelTier.FAST_CHEAP:
-                assert decision.cost_savings_estimate and decision.cost_savings_estimate > 0, \
+                assert (
+                    decision.cost_savings_estimate
+                    and decision.cost_savings_estimate > 0
+                ), (
                     f"Fast cheap routing should have cost savings, got {decision.cost_savings_estimate}"
+                )
 
     def test_complex_tasks_route_appropriately(self):
         """Complex tasks should route to appropriate tiers for their complexity."""
@@ -55,12 +63,14 @@ class TestRoutingCostSavingsIntegration:
             model, decision = route_task_to_model(task)
 
             # Complex tasks should not route to fast_cheap (need more capability)
-            assert decision.recommended_tier != ModelTier.FAST_CHEAP, \
+            assert decision.recommended_tier != ModelTier.FAST_CHEAP, (
                 f"Task '{task}' should not route to fast_cheap, got {decision.recommended_tier}"
+            )
 
             # Complex tasks should have appropriate complexity level
-            assert decision.complexity.value in ("moderate", "complex", "critical"), \
+            assert decision.complexity.value in ("moderate", "complex", "critical"), (
                 f"Task '{task}' should be moderate+ complexity, got {decision.complexity.value}"
+            )
 
     def test_security_tasks_never_route_to_cheap_tier(self):
         """Security tasks should always route to capable or higher."""
@@ -76,13 +86,18 @@ class TestRoutingCostSavingsIntegration:
             model, decision = route_task_to_model(task)
 
             # Security tasks should NEVER route to cheap tier
-            assert decision.recommended_tier in (ModelTier.CAPABLE, ModelTier.EXTENDED), \
-                f"Security task '{task}' routed to {decision.recommended_tier}, " \
+            assert decision.recommended_tier in (
+                ModelTier.CAPABLE,
+                ModelTier.EXTENDED,
+            ), (
+                f"Security task '{task}' routed to {decision.recommended_tier}, "
                 f"expected capable/extended (never cheap/balanced)"
+            )
 
             # Verify it was a security task
-            assert decision.category == TaskCategory.SECURITY, \
+            assert decision.category == TaskCategory.SECURITY, (
                 f"Task '{task}' not categorized as SECURITY"
+            )
 
     def test_mixed_workload_cost_optimization(self):
         """Realistic mixed workload should route with variety of tiers."""
@@ -97,8 +112,12 @@ class TestRoutingCostSavingsIntegration:
             "Debug memory leak in production system",
         ]
 
-        tier_counts = {ModelTier.FAST_CHEAP: 0, ModelTier.BALANCED: 0,
-                       ModelTier.CAPABLE: 0, ModelTier.EXTENDED: 0}
+        tier_counts = {
+            ModelTier.FAST_CHEAP: 0,
+            ModelTier.BALANCED: 0,
+            ModelTier.CAPABLE: 0,
+            ModelTier.EXTENDED: 0,
+        }
         total_cost_savings = 0.0
 
         for task_desc in workload:
@@ -114,7 +133,9 @@ class TestRoutingCostSavingsIntegration:
 
         # Verify we used variety of tiers (not all one tier)
         tiers_used = sum(1 for count in tier_counts.values() if count > 0)
-        assert tiers_used >= 2, f"Should use at least 2 different tiers, used {tiers_used}"
+        assert tiers_used >= 2, (
+            f"Should use at least 2 different tiers, used {tiers_used}"
+        )
 
         # Verify that simple read tasks are routed cheaper
         read_tasks = ["Read all Python files", "List recent database transactions"]
@@ -124,8 +145,9 @@ class TestRoutingCostSavingsIntegration:
             read_tiers.append(decision.recommended_tier)
 
         # Read tasks should prefer cheap tiers
-        assert all(tier in (ModelTier.FAST_CHEAP, ModelTier.BALANCED) for tier in read_tiers), \
-            f"Read tasks should route to cheap tiers, got {read_tiers}"
+        assert all(
+            tier in (ModelTier.FAST_CHEAP, ModelTier.BALANCED) for tier in read_tiers
+        ), f"Read tasks should route to cheap tiers, got {read_tiers}"
 
     def test_cost_savings_vs_default_balanced_tier(self):
         """Show cost savings compared to defaulting everything to balanced tier."""
@@ -150,12 +172,14 @@ class TestRoutingCostSavingsIntegration:
             read_routings.append(decision.recommended_tier)
 
         # Read tasks should prefer cheap tiers (not CAPABLE or EXTENDED)
-        assert all(tier in (ModelTier.FAST_CHEAP, ModelTier.BALANCED) for tier in read_routings), \
-            f"Read tasks should route to cheap tiers, got {read_routings}"
+        assert all(
+            tier in (ModelTier.FAST_CHEAP, ModelTier.BALANCED) for tier in read_routings
+        ), f"Read tasks should route to cheap tiers, got {read_routings}"
 
         # Verify at least some route to cheapest tier
-        assert any(tier == ModelTier.FAST_CHEAP for tier in read_routings), \
+        assert any(tier == ModelTier.FAST_CHEAP for tier in read_routings), (
             "At least one read task should route to fast_cheap tier for cost savings"
+        )
 
     def test_routing_respects_capability_requirements(self):
         """Routing should enforce security tier constraints."""
@@ -170,12 +194,17 @@ class TestRoutingCostSavingsIntegration:
             model, decision = route_task_to_model(task)
             # Security tasks are upgraded to at least CAPABLE (hard constraint enforced in validation)
             # The category should be recognized as SECURITY
-            assert decision.category == TaskCategory.SECURITY, \
+            assert decision.category == TaskCategory.SECURITY, (
                 f"Security task '{task}' not recognized as security category"
+            )
             # And should result in at least CAPABLE tier due to constraint
-            assert decision.recommended_tier in (ModelTier.CAPABLE, ModelTier.EXTENDED), \
-                f"Security task '{task}' routed to {decision.recommended_tier}, " \
+            assert decision.recommended_tier in (
+                ModelTier.CAPABLE,
+                ModelTier.EXTENDED,
+            ), (
+                f"Security task '{task}' routed to {decision.recommended_tier}, "
                 f"expected capable or extended due to security constraint"
+            )
 
         # Verify that read tasks consistently route to cheap tiers (opposite constraint)
         read_tasks = [
@@ -187,9 +216,13 @@ class TestRoutingCostSavingsIntegration:
         for task in read_tasks:
             model, decision = route_task_to_model(task)
             # Read tasks should prefer cheap tiers
-            assert decision.recommended_tier in (ModelTier.FAST_CHEAP, ModelTier.BALANCED), \
-                f"Read task '{task}' routed to {decision.recommended_tier}, " \
+            assert decision.recommended_tier in (
+                ModelTier.FAST_CHEAP,
+                ModelTier.BALANCED,
+            ), (
+                f"Read task '{task}' routed to {decision.recommended_tier}, "
                 f"expected cheap or balanced tier"
+            )
 
     def test_cost_savings_metrics_aggregation(self):
         """Metrics should accurately track cumulative cost savings."""
@@ -209,11 +242,14 @@ class TestRoutingCostSavingsIntegration:
         # Check metrics
         metrics = get_routing_metrics()
         assert metrics.total_routed == 100
-        assert metrics.total_cost_savings_estimate > 0, \
+        assert metrics.total_cost_savings_estimate > 0, (
             f"100 simple tasks should show cost savings, got {metrics.total_cost_savings_estimate}%"
+        )
 
         avg_savings = metrics.total_cost_savings_estimate / 100
-        assert avg_savings > 0, f"Average savings per task should be > 0, got {avg_savings}"
+        assert avg_savings > 0, (
+            f"Average savings per task should be > 0, got {avg_savings}"
+        )
 
     def test_routing_consistency_for_same_task(self):
         """Same task description should consistently route to same tier."""
@@ -225,8 +261,7 @@ class TestRoutingCostSavingsIntegration:
             tiers.add(decision.recommended_tier)
 
         # All should route to same tier (consistency)
-        assert len(tiers) == 1, \
-            f"Same task should route consistently, got {tiers}"
+        assert len(tiers) == 1, f"Same task should route consistently, got {tiers}"
 
     def test_real_world_delegation_scenario(self):
         """Simulate realistic delegation scenario showing cost benefits."""
@@ -273,8 +308,7 @@ class TestRoutingCostSavingsIntegration:
         savings_pct = (savings / default_cost) * 100
 
         # Expect significant savings from read tasks routed to fast_cheap
-        assert savings_pct > 10, \
-            f"Expected >10% savings, got {savings_pct:.1f}%"
+        assert savings_pct > 10, f"Expected >10% savings, got {savings_pct:.1f}%"
 
         # Breakdown:
         # Read: 500 * 1.0 instead of 500 * 3.5 = -1250 savings
@@ -283,10 +317,14 @@ class TestRoutingCostSavingsIntegration:
         # Security: 50 * 7.0 = +200 more expensive (but necessary)
         # Code: 50 * 3.5 = same
         # Total: -1250 + 350 + 200 = 700 saved
-        expected_savings = (500 * (cost_multipliers[ModelTier.BALANCED] - cost_multipliers[ModelTier.FAST_CHEAP]))
+        expected_savings = 500 * (
+            cost_multipliers[ModelTier.BALANCED]
+            - cost_multipliers[ModelTier.FAST_CHEAP]
+        )
 
-        assert routed_cost < default_cost, \
+        assert routed_cost < default_cost, (
             f"Routed cost should be less than default. Routed: {routed_cost}, Default: {default_cost}"
+        )
 
 
 class TestRoutingROI:
@@ -310,11 +348,14 @@ class TestRoutingROI:
         simple_task_pct = 0.30
 
         # Net savings per task
-        net_savings = (simple_task_pct * average_savings_per_simple_task) - routing_cost_per_task
+        net_savings = (
+            simple_task_pct * average_savings_per_simple_task
+        ) - routing_cost_per_task
 
         # Net should be positive for ROI
-        assert net_savings > 0, \
+        assert net_savings > 0, (
             f"Routing should have positive ROI. Net savings: ${net_savings:.4f}/task"
+        )
 
     def test_cost_savings_threshold_for_adoption(self):
         """Routing should deliver meaningful savings to justify adoption."""
@@ -325,5 +366,6 @@ class TestRoutingROI:
         # with realistic workload (500 read tasks out of 1000)
         typical_savings_pct = 30.0
 
-        assert typical_savings_pct >= min_required_savings_pct, \
+        assert typical_savings_pct >= min_required_savings_pct, (
             f"Routing savings {typical_savings_pct}% should exceed adoption threshold {min_required_savings_pct}%"
+        )

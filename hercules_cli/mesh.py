@@ -192,7 +192,10 @@ def _pip_show() -> list[str]:
 
 def scan() -> dict:
     hits = _home_hits() + _which_hits() + _venv_hits()
-    hits.extend(Hit("pip-pkg", n, "freeze", "import from active interpreter") for n in _pip_show())
+    hits.extend(
+        Hit("pip-pkg", n, "freeze", "import from active interpreter")
+        for n in _pip_show()
+    )
     kinds = sorted({h.kind for h in hits})
     return {
         "home": str(HOME),

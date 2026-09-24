@@ -99,7 +99,9 @@ class TestRankFromSettledClaims:
             Identity.generate(),
         )
         low, high = _claim(cautious, stake=0.0), _claim(bold, stake=9.0)
-        board = standings([low, high], [_pass(checker, low), _pass(checker, high)], now=NOW)
+        board = standings(
+            [low, high], [_pass(checker, low), _pass(checker, high)], now=NOW
+        )
         assert board[bold.agent_id].rank > board[cautious.agent_id].rank
 
     def test_stake_amplifies_the_penalty_too(self):
@@ -109,7 +111,9 @@ class TestRankFromSettledClaims:
             Identity.generate(),
         )
         low, high = _claim(cautious, stake=0.0), _claim(bold, stake=9.0)
-        board = standings([low, high], [_fail(checker, low), _fail(checker, high)], now=NOW)
+        board = standings(
+            [low, high], [_fail(checker, low), _fail(checker, high)], now=NOW
+        )
         assert board[bold.agent_id].rank < board[cautious.agent_id].rank
 
 

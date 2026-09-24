@@ -69,7 +69,10 @@ def test_verify_on_stop_preserves_composed_report_at_budget_limit(agent, monkeyp
     monkeypatch.setenv("HERCULES_VERIFY_ON_STOP", "1")
 
     with (
-        patch("agent.verification_stop.build_verify_on_stop_nudge", return_value="verify it"),
+        patch(
+            "agent.verification_stop.build_verify_on_stop_nudge",
+            return_value="verify it",
+        ),
         patch("hercules_cli.plugins.invoke_hook", return_value=[]),
     ):
         result = agent.run_conversation("edit changed.py")
@@ -89,7 +92,10 @@ def test_pre_verify_preserves_composed_report_at_budget_limit(agent, monkeypatch
     monkeypatch.setenv("HERCULES_VERIFY_ON_STOP", "0")
 
     with (
-        patch("hercules_cli.plugins.has_hook", side_effect=lambda name: name == "pre_verify"),
+        patch(
+            "hercules_cli.plugins.has_hook",
+            side_effect=lambda name: name == "pre_verify",
+        ),
         patch(
             "hercules_cli.plugins.get_pre_verify_continue_message",
             return_value="run project tests",
@@ -108,7 +114,9 @@ def test_intermediate_ack_uses_summary_instead_of_premature_text(agent, monkeypa
     agent.valid_tool_names = ["web_search"]
     agent._intent_ack_continuation = True
     agent._looks_like_codex_intermediate_ack = MagicMock(return_value=True)
-    agent._interruptible_api_call = lambda _kwargs: _response("I'll inspect the files now")
+    agent._interruptible_api_call = lambda _kwargs: _response(
+        "I'll inspect the files now"
+    )
     agent._handle_max_iterations = MagicMock(return_value="verified summary.")
     monkeypatch.setenv("HERCULES_VERIFY_ON_STOP", "0")
 

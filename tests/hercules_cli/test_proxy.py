@@ -56,24 +56,26 @@ def _write_xai_pool_entry(
 ) -> Path:
     """Write an xai-oauth pool entry into a hermetic HERCULES_HOME."""
     auth_path = hercules_home / "auth.json"
-    auth_path.write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "credential_pool": {
-            "xai-oauth": [
-                {
-                    "id": "xai123",
-                    "label": "xai-test",
-                    "auth_type": "oauth",
-                    "priority": 0,
-                    "source": source,
-                    "access_token": access_token,
-                    "refresh_token": refresh_token,
-                    "base_url": base_url,
-                }
-            ]
-        },
-    }))
+    auth_path.write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "credential_pool": {
+                "xai-oauth": [
+                    {
+                        "id": "xai123",
+                        "label": "xai-test",
+                        "auth_type": "oauth",
+                        "priority": 0,
+                        "source": source,
+                        "access_token": access_token,
+                        "refresh_token": refresh_token,
+                        "base_url": base_url,
+                    }
+                ]
+            },
+        })
+    )
     return auth_path
 
 
@@ -88,11 +90,13 @@ def test_xai_adapter_metadata():
 
 def test_xai_adapter_not_authenticated_when_no_pool_entry(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
-    (tmp_path / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "credential_pool": {},
-    }))
+    (tmp_path / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "credential_pool": {},
+        })
+    )
     assert not XAIGrokAdapter().is_authenticated()
 
 
@@ -169,45 +173,51 @@ def test_xai_adapter_retry_rotates_pool_entry_on_429(tmp_path, monkeypatch):
 
     # Two pool entries so rotation has somewhere to go.
     auth_path = tmp_path / "auth.json"
-    auth_path.write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "credential_pool": {
-            "xai-oauth": [
-                {
-                    "id": "xai-first",
-                    "label": "xai-first",
-                    "auth_type": "oauth",
-                    "priority": 0,
-                    "source": "manual:xai_pkce",
-                    "access_token": "first-access-token",
-                    "refresh_token": "first-refresh-token",
-                    "base_url": "https://api.x.ai/v1",
-                },
-                {
-                    "id": "xai-second",
-                    "label": "xai-second",
-                    "auth_type": "oauth",
-                    "priority": 1,
-                    "source": "manual:xai_pkce",
-                    "access_token": "second-access-token",
-                    "refresh_token": "second-refresh-token",
-                    "base_url": "https://api.x.ai/v1",
-                },
-            ]
-        },
-    }))
+    auth_path.write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "credential_pool": {
+                "xai-oauth": [
+                    {
+                        "id": "xai-first",
+                        "label": "xai-first",
+                        "auth_type": "oauth",
+                        "priority": 0,
+                        "source": "manual:xai_pkce",
+                        "access_token": "first-access-token",
+                        "refresh_token": "first-refresh-token",
+                        "base_url": "https://api.x.ai/v1",
+                    },
+                    {
+                        "id": "xai-second",
+                        "label": "xai-second",
+                        "auth_type": "oauth",
+                        "priority": 1,
+                        "source": "manual:xai_pkce",
+                        "access_token": "second-access-token",
+                        "refresh_token": "second-refresh-token",
+                        "base_url": "https://api.x.ai/v1",
+                    },
+                ]
+            },
+        })
+    )
 
     # Refresh must NOT be called on the 429 path — guard against
     # the fix accidentally trying to refresh-on-rate-limit.
     def _refresh_must_not_run(*args, **kwargs):
         raise AssertionError("refresh_xai_oauth_pure must not run on 429")
 
-    monkeypatch.setattr("hercules_cli.auth.refresh_xai_oauth_pure", _refresh_must_not_run)
+    monkeypatch.setattr(
+        "hercules_cli.auth.refresh_xai_oauth_pure", _refresh_must_not_run
+    )
 
     adapter = XAIGrokAdapter()
     failed = adapter.get_credential()
-    assert failed.bearer == "first-access-token", "starting bearer should be the first entry"
+    assert failed.bearer == "first-access-token", (
+        "starting bearer should be the first entry"
+    )
 
     retry = adapter.get_retry_credential(
         failed_credential=failed,
@@ -220,7 +230,9 @@ def test_xai_adapter_retry_rotates_pool_entry_on_429(tmp_path, monkeypatch):
     )
 
 
-def test_xai_adapter_retry_returns_none_on_429_when_pool_exhausted(tmp_path, monkeypatch):
+def test_xai_adapter_retry_returns_none_on_429_when_pool_exhausted(
+    tmp_path, monkeypatch
+):
     """Single-entry pool: 429 has nowhere to rotate to → return None
     so the 429 flows back to the client unchanged (existing behavior
     preserved)."""
@@ -230,7 +242,9 @@ def test_xai_adapter_retry_returns_none_on_429_when_pool_exhausted(tmp_path, mon
     def _refresh_must_not_run(*args, **kwargs):
         raise AssertionError("refresh_xai_oauth_pure must not run on 429")
 
-    monkeypatch.setattr("hercules_cli.auth.refresh_xai_oauth_pure", _refresh_must_not_run)
+    monkeypatch.setattr(
+        "hercules_cli.auth.refresh_xai_oauth_pure", _refresh_must_not_run
+    )
 
     adapter = XAIGrokAdapter()
     failed = adapter.get_credential()
@@ -254,7 +268,9 @@ def test_xai_adapter_retry_returns_none_for_unrelated_status(tmp_path, monkeypat
     def _refresh_must_not_run(*args, **kwargs):
         raise AssertionError("refresh_xai_oauth_pure must not run on non-retry status")
 
-    monkeypatch.setattr("hercules_cli.auth.refresh_xai_oauth_pure", _refresh_must_not_run)
+    monkeypatch.setattr(
+        "hercules_cli.auth.refresh_xai_oauth_pure", _refresh_must_not_run
+    )
 
     adapter = XAIGrokAdapter()
     failed = adapter.get_credential()
@@ -263,9 +279,7 @@ def test_xai_adapter_retry_returns_none_for_unrelated_status(tmp_path, monkeypat
             failed_credential=failed,
             status_code=status,
         )
-        assert retry is None, (
-            f"status {status} must not trigger retry, got {retry!r}"
-        )
+        assert retry is None, f"status {status} must not trigger retry, got {retry!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -284,9 +298,14 @@ from hercules_cli.proxy.server import create_app  # noqa: E402
 class FakeAdapter(UpstreamAdapter):
     """A test adapter that returns a fixed credential without touching disk."""
 
-    def __init__(self, base_url: str, bearer: str = "test-bearer",
-                 allowed=None, raise_on_credential=False,
-                 retry_bearer: str | None = None):
+    def __init__(
+        self,
+        base_url: str,
+        bearer: str = "test-bearer",
+        allowed=None,
+        raise_on_credential=False,
+        retry_bearer: str | None = None,
+    ):
         self._base_url = base_url
         self._bearer = bearer
         self._allowed = frozenset(allowed or ["/chat/completions"])
@@ -296,22 +315,27 @@ class FakeAdapter(UpstreamAdapter):
         self.retry_calls = 0
 
     @property
-    def name(self): return "fake"
+    def name(self):
+        return "fake"
 
     @property
-    def display_name(self): return "Fake Provider"
+    def display_name(self):
+        return "Fake Provider"
 
     @property
-    def allowed_paths(self): return self._allowed
+    def allowed_paths(self):
+        return self._allowed
 
-    def is_authenticated(self): return True
+    def is_authenticated(self):
+        return True
 
     def get_credential(self):
         self.calls += 1
         if self._raise:
             raise RuntimeError("simulated auth failure")
         return UpstreamCredential(
-            bearer=self._bearer, base_url=self._base_url,
+            bearer=self._bearer,
+            base_url=self._base_url,
             expires_at="2099-01-01T00:00:00Z",
         )
 
@@ -351,7 +375,8 @@ def _build_fake_upstream(captured: Dict[str, Any]) -> "web.Application":
 
     async def sse(request):
         resp = web.StreamResponse(
-            status=200, headers={"Content-Type": "text/event-stream"},
+            status=200,
+            headers={"Content-Type": "text/event-stream"},
         )
         await resp.prepare(request)
         for chunk in [b"data: hello\n\n", b"data: world\n\n", b"data: [DONE]\n\n"]:
@@ -388,7 +413,9 @@ def _build_retrying_fake_upstream(captured: Dict[str, Any]) -> "web.Application"
 def test_server_forwards_chat_completions():
     async def run():
         captured: Dict[str, Any] = {"requests": []}
-        upstream_runner, upstream_base = await _start_runner(_build_fake_upstream(captured))
+        upstream_runner, upstream_base = await _start_runner(
+            _build_fake_upstream(captured)
+        )
         adapter = FakeAdapter(f"{upstream_base}/v1", bearer="real-portal-key")
         proxy_runner, proxy_base = await _start_runner(create_app(adapter))
 
@@ -396,8 +423,10 @@ def test_server_forwards_chat_completions():
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{proxy_base}/v1/chat/completions",
-                    json={"model": "Hercules-4-70B",
-                          "messages": [{"role": "user", "content": "hi"}]},
+                    json={
+                        "model": "Hercules-4-70B",
+                        "messages": [{"role": "user", "content": "hi"}],
+                    },
                     headers={"Authorization": "Bearer client-dummy-key"},
                 ) as resp:
                     assert resp.status == 200
@@ -505,7 +534,9 @@ def test_server_health_endpoint():
 def test_server_streams_sse():
     async def run():
         captured: Dict[str, Any] = {"requests": []}
-        upstream_runner, upstream_base = await _start_runner(_build_fake_upstream(captured))
+        upstream_runner, upstream_base = await _start_runner(
+            _build_fake_upstream(captured)
+        )
         adapter = FakeAdapter(f"{upstream_base}/v1", allowed=["/sse"])
         proxy_runner, proxy_base = await _start_runner(create_app(adapter))
         try:
@@ -527,9 +558,12 @@ def test_server_streams_sse():
 
 def test_server_strips_client_auth_header():
     """The client's Authorization header MUST NOT reach the upstream."""
+
     async def run():
         captured: Dict[str, Any] = {"requests": []}
-        upstream_runner, upstream_base = await _start_runner(_build_fake_upstream(captured))
+        upstream_runner, upstream_base = await _start_runner(
+            _build_fake_upstream(captured)
+        )
         adapter = FakeAdapter(f"{upstream_base}/v1", bearer="ours")
         proxy_runner, proxy_base = await _start_runner(create_app(adapter))
         try:

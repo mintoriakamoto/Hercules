@@ -19,9 +19,9 @@ def canonical_github_remote(url: Optional[str]) -> str:
         return ""
     value = url.strip()
     if value.startswith("git@github.com:"):
-        value = "github.com/" + value[len("git@github.com:"):]
+        value = "github.com/" + value[len("git@github.com:") :]
     elif value.startswith("ssh://git@github.com/"):
-        value = "github.com/" + value[len("ssh://git@github.com/"):]
+        value = "github.com/" + value[len("ssh://git@github.com/") :]
     elif "github.com" in value:
         value = value.replace("https://", "").replace("http://", "")
         value = value.split("@", 1)[-1]

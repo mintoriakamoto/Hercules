@@ -82,8 +82,12 @@ class TestRecords:
         ident = Identity.generate()
         rec = SignedRecord.create(ident, "claim", {"n": 1}, ts=100)
         forged = SignedRecord(
-            kind=rec.kind, by=rec.by, ts=rec.ts, body={"n": 999},
-            prev=rec.prev, sig=rec.sig,
+            kind=rec.kind,
+            by=rec.by,
+            ts=rec.ts,
+            body={"n": 999},
+            prev=rec.prev,
+            sig=rec.sig,
         )
         assert forged.verify() is False
 
@@ -100,8 +104,13 @@ class TestRecords:
 
     def test_validation_clamps_verdict(self):
         ident = Identity.generate()
-        assert validation(ident, claim_hash="h", verdict=5.0, ts=1).body["verdict"] == 1.0
-        assert validation(ident, claim_hash="h", verdict=-9.0, ts=1).body["verdict"] == -1.0
+        assert (
+            validation(ident, claim_hash="h", verdict=5.0, ts=1).body["verdict"] == 1.0
+        )
+        assert (
+            validation(ident, claim_hash="h", verdict=-9.0, ts=1).body["verdict"]
+            == -1.0
+        )
 
 
 class TestEvidenceLog:
@@ -204,7 +213,7 @@ class TestTrustGraph:
 
     def test_distrust_is_direct_but_not_transitive(self):
         g = TrustGraph()
-        g.add_opinion("root", "mallory", -1.0)   # root directly distrusts mallory
+        g.add_opinion("root", "mallory", -1.0)  # root directly distrusts mallory
         g.add_opinion("mallory", "victim", 1.0)  # mallory vouches for victim
         # mallory scores negative from root...
         assert g.reputation("root", "mallory") < 0.0

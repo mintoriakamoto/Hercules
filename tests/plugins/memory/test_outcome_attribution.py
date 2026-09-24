@@ -6,6 +6,7 @@ well quietly reinforces the memory it leaned on, a corrected one discounts it.
 No manual fact_feedback required. Conservative: trust-only (never helpful_count),
 small inferred deltas, capped fan-out, and a no-op on ambiguous sessions.
 """
+
 from __future__ import annotations
 
 import json
@@ -26,14 +27,23 @@ _classify = HolographicMemoryProvider._classify_session_outcome
 
 # --- the outcome classifier ------------------------------------------------
 
+
 def test_classifier_detects_positive():
-    assert _classify([{"role": "user", "content": "Thanks, that's exactly right!"}]) == "positive"
-    assert _classify([{"role": "user", "content": "perfect, that worked"}]) == "positive"
+    assert (
+        _classify([{"role": "user", "content": "Thanks, that's exactly right!"}])
+        == "positive"
+    )
+    assert (
+        _classify([{"role": "user", "content": "perfect, that worked"}]) == "positive"
+    )
 
 
 def test_classifier_detects_negative():
     assert _classify([{"role": "user", "content": "no, that's wrong"}]) == "negative"
-    assert _classify([{"role": "user", "content": "that didn't work at all"}]) == "negative"
+    assert (
+        _classify([{"role": "user", "content": "that didn't work at all"}])
+        == "negative"
+    )
 
 
 def test_classifier_only_judges_the_final_user_turn():
@@ -46,29 +56,49 @@ def test_classifier_only_judges_the_final_user_turn():
     ]
     assert _classify(msgs) is None
     # But a correction IN the final turn does fire.
-    assert _classify(msgs[:1] + [{"role": "user", "content": "no, that's wrong"}]) == "negative"
+    assert (
+        _classify(msgs[:1] + [{"role": "user", "content": "no, that's wrong"}])
+        == "negative"
+    )
 
 
 def test_classifier_ignores_benign_substrings():
     # These all read POSITIVE or NONE — never negative — despite containing
     # substrings of old (removed/ambiguous) negative markers.
-    assert _classify([{"role": "user", "content": "actually it's perfect now, thanks!"}]) == "positive"
-    assert _classify([{"role": "user", "content": "the incorrectly-named var is fixed now, thanks"}]) == "positive"
+    assert (
+        _classify([{"role": "user", "content": "actually it's perfect now, thanks!"}])
+        == "positive"
+    )
+    assert (
+        _classify([
+            {
+                "role": "user",
+                "content": "the incorrectly-named var is fixed now, thanks",
+            }
+        ])
+        == "positive"
+    )
     assert _classify([{"role": "user", "content": "no, that makes sense now"}]) is None
     # The critical guarantee: benign phrasing never reads NEGATIVE (the harmful
     # direction — a -0.03 penalty on facts a happy session relied on).
-    for benign in ("actually it's working now", "that makes sense, nice",
-                   "the incorrectly-typed name is fine now"):
+    for benign in (
+        "actually it's working now",
+        "that makes sense, nice",
+        "the incorrectly-typed name is fine now",
+    ):
         assert _classify([{"role": "user", "content": benign}]) != "negative"
 
 
 def test_classifier_ambiguous_is_none():
     assert _classify([{"role": "user", "content": "what's the weather"}]) is None
     assert _classify([]) is None
-    assert _classify([{"role": "assistant", "content": "thanks!"}]) is None  # not a user turn
+    assert (
+        _classify([{"role": "assistant", "content": "thanks!"}]) is None
+    )  # not a user turn
 
 
 # --- end-to-end attribution ------------------------------------------------
+
 
 @pytest.fixture()
 def provider(tmp_path):
@@ -81,7 +111,9 @@ def provider(tmp_path):
 
 
 def _search(provider, query, **kw):
-    return json.loads(provider._handle_fact_store({"action": "search", "query": query, **kw}))
+    return json.loads(
+        provider._handle_fact_store({"action": "search", "query": query, **kw})
+    )
 
 
 def _trust(provider, fid):
@@ -99,9 +131,13 @@ def test_positive_outcome_reinforces_recalled_facts(provider):
         "SELECT helpful_count FROM facts WHERE fact_id = ?", (fid,)
     ).fetchone()["helpful_count"]
 
-    provider.on_session_end([{"role": "user", "content": "thanks, that's exactly right"}])
+    provider.on_session_end([
+        {"role": "user", "content": "thanks, that's exactly right"}
+    ])
 
-    assert _trust(provider, fid) == pytest.approx(before + _AUTO_ATTRIBUTION_POSITIVE_DELTA)
+    assert _trust(provider, fid) == pytest.approx(
+        before + _AUTO_ATTRIBUTION_POSITIVE_DELTA
+    )
     # Trust-only: inferred signal must NOT inflate the confirmed-helpful count.
     helpful_after = provider._store._conn.execute(
         "SELECT helpful_count FROM facts WHERE fact_id = ?", (fid,)
@@ -116,7 +152,9 @@ def test_negative_outcome_discounts_recalled_facts(provider):
 
     provider.on_session_end([{"role": "user", "content": "no, that's wrong"}])
 
-    assert _trust(provider, fid) == pytest.approx(before + _AUTO_ATTRIBUTION_NEGATIVE_DELTA)
+    assert _trust(provider, fid) == pytest.approx(
+        before + _AUTO_ATTRIBUTION_NEGATIVE_DELTA
+    )
 
 
 def test_ambiguous_outcome_changes_nothing(provider):
@@ -138,15 +176,21 @@ def test_no_recall_means_no_attribution(provider):
 
 
 def test_attribution_is_capped(provider):
-    ids = [provider._store.add_fact(f"Capped-topic fact number {i} about widgets")
-           for i in range(_AUTO_ATTRIBUTION_MAX_FACTS + 5)]
+    ids = [
+        provider._store.add_fact(f"Capped-topic fact number {i} about widgets")
+        for i in range(_AUTO_ATTRIBUTION_MAX_FACTS + 5)
+    ]
     res = _search(provider, "capped-topic widgets fact", limit=50)
     assert len({r["fact_id"] for r in res["results"]}) > _AUTO_ATTRIBUTION_MAX_FACTS
 
     befores = {fid: _trust(provider, fid) for fid in ids}
-    provider.on_session_end([{"role": "user", "content": "that's exactly right, thanks"}])
+    provider.on_session_end([
+        {"role": "user", "content": "that's exactly right, thanks"}
+    ])
 
-    changed = [fid for fid in ids if _trust(provider, fid) != pytest.approx(befores[fid])]
+    changed = [
+        fid for fid in ids if _trust(provider, fid) != pytest.approx(befores[fid])
+    ]
     assert len(changed) <= _AUTO_ATTRIBUTION_MAX_FACTS
 
 
@@ -157,7 +201,9 @@ def test_recall_history_does_not_leak_across_sessions(provider):
     fid1 = provider._store.add_fact("Session-one fact about the load balancer")
     _search(provider, "session-one load balancer")
     # Session 1 ends positive → fid1 credited once.
-    provider.on_session_end([{"role": "user", "content": "perfect, that's exactly right"}])
+    provider.on_session_end([
+        {"role": "user", "content": "perfect, that's exactly right"}
+    ])
     after_s1 = _trust(provider, fid1)
 
     # Session 2 (same provider instance — no re-initialize, as on /new) recalls a
@@ -167,13 +213,16 @@ def test_recall_history_does_not_leak_across_sessions(provider):
     _search(provider, "session-two message queue")
     provider.on_session_end([{"role": "user", "content": "thanks, that worked"}])
 
-    assert _trust(provider, fid1) == pytest.approx(after_s1)          # not re-credited
-    assert _trust(provider, fid2) == pytest.approx(0.5 + _AUTO_ATTRIBUTION_POSITIVE_DELTA)
+    assert _trust(provider, fid1) == pytest.approx(after_s1)  # not re-credited
+    assert _trust(provider, fid2) == pytest.approx(
+        0.5 + _AUTO_ATTRIBUTION_POSITIVE_DELTA
+    )
 
 
 def test_disabled_via_config(tmp_path):
-    p = HolographicMemoryProvider(config={"db_path": str(tmp_path / "off.db"),
-                                          "auto_attribution": False})
+    p = HolographicMemoryProvider(
+        config={"db_path": str(tmp_path / "off.db"), "auto_attribution": False}
+    )
     p.initialize("session-off")
     try:
         fid = p._store.add_fact("A fact under disabled attribution")

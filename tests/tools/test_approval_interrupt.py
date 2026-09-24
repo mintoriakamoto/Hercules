@@ -21,6 +21,7 @@ import time
 def _clear_approval_state():
     """Reset all module-level approval state between tests."""
     from tools import approval as mod
+
     mod._gateway_queues.clear()
     mod._gateway_notify_cbs.clear()
     mod._session_approved.clear()
@@ -44,8 +45,11 @@ class TestApprovalInterrupt:
         set_interrupt(False)
         self._saved_env = {
             k: os.environ.get(k)
-            for k in ("HERCULES_GATEWAY_SESSION", "HERCULES_YOLO_MODE",
-                      "HERCULES_SESSION_KEY")
+            for k in (
+                "HERCULES_GATEWAY_SESSION",
+                "HERCULES_YOLO_MODE",
+                "HERCULES_SESSION_KEY",
+            )
         }
         os.environ.pop("HERCULES_YOLO_MODE", None)
         os.environ["HERCULES_GATEWAY_SESSION"] = "1"
@@ -113,7 +117,11 @@ class TestApprovalInterrupt:
         elapsed = time.monotonic() - start
 
         assert not t.is_alive(), "approval wait did not return after interrupt"
-        assert result_holder["result"] == {"resolved": True, "choice": "deny", "reason": None}
+        assert result_holder["result"] == {
+            "resolved": True,
+            "choice": "deny",
+            "reason": None,
+        }
         # Must be far below the 300s timeout — the interrupt, not the deadline,
         # is what released the wait.
         assert elapsed < 10, f"interrupt path too slow ({elapsed:.1f}s)"
@@ -157,4 +165,8 @@ class TestApprovalInterrupt:
         t.join(timeout=10)
         assert not t.is_alive()
         # Timed out (no resolution) because the foreign interrupt was ignored.
-        assert result_holder["result"] == {"resolved": False, "choice": None, "reason": None}
+        assert result_holder["result"] == {
+            "resolved": False,
+            "choice": None,
+            "reason": None,
+        }

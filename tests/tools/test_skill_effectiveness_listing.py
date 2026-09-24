@@ -6,6 +6,7 @@ are conditional (only skills with a real signal are annotated); a net-positive
 track record earns a `proven` flag and a top-level pointer. Ordering is never
 changed.
 """
+
 from __future__ import annotations
 
 import json
@@ -39,9 +40,17 @@ def _list_with_usage(tmp_path, monkeypatch, usage):
 
 
 def test_proven_skill_is_flagged(tmp_path, monkeypatch):
-    result = _list_with_usage(tmp_path, monkeypatch, {
-        "winner": {"use_count": 6, "helpful_count": 4, "unhelpful_count": 1},  # net +3
-    })
+    result = _list_with_usage(
+        tmp_path,
+        monkeypatch,
+        {
+            "winner": {
+                "use_count": 6,
+                "helpful_count": 4,
+                "unhelpful_count": 1,
+            },  # net +3
+        },
+    )
     winner = _skill_by_name(result, "winner")
     assert winner["proven"] is True
     assert winner["net_effectiveness"] == 3
@@ -51,9 +60,17 @@ def test_proven_skill_is_flagged(tmp_path, monkeypatch):
 
 
 def test_below_threshold_is_annotated_but_not_proven(tmp_path, monkeypatch):
-    result = _list_with_usage(tmp_path, monkeypatch, {
-        "okay": {"use_count": 3, "helpful_count": 1, "unhelpful_count": 0},  # net +1
-    })
+    result = _list_with_usage(
+        tmp_path,
+        monkeypatch,
+        {
+            "okay": {
+                "use_count": 3,
+                "helpful_count": 1,
+                "unhelpful_count": 0,
+            },  # net +1
+        },
+    )
     okay = _skill_by_name(result, "okay")
     assert okay["net_effectiveness"] == 1
     assert "proven" not in okay
@@ -61,9 +78,13 @@ def test_below_threshold_is_annotated_but_not_proven(tmp_path, monkeypatch):
 
 
 def test_used_but_unrated_skill_gets_use_count_only(tmp_path, monkeypatch):
-    result = _list_with_usage(tmp_path, monkeypatch, {
-        "busy": {"use_count": 9, "helpful_count": 0, "unhelpful_count": 0},
-    })
+    result = _list_with_usage(
+        tmp_path,
+        monkeypatch,
+        {
+            "busy": {"use_count": 9, "helpful_count": 0, "unhelpful_count": 0},
+        },
+    )
     busy = _skill_by_name(result, "busy")
     assert busy["use_count"] == 9
     assert "net_effectiveness" not in busy  # no feedback → no effectiveness field
@@ -71,9 +92,13 @@ def test_used_but_unrated_skill_gets_use_count_only(tmp_path, monkeypatch):
 
 
 def test_net_negative_skill_is_annotated_not_proven(tmp_path, monkeypatch):
-    result = _list_with_usage(tmp_path, monkeypatch, {
-        "misleader": {"use_count": 4, "helpful_count": 0, "unhelpful_count": 3},
-    })
+    result = _list_with_usage(
+        tmp_path,
+        monkeypatch,
+        {
+            "misleader": {"use_count": 4, "helpful_count": 0, "unhelpful_count": 3},
+        },
+    )
     bad = _skill_by_name(result, "misleader")
     assert bad["net_effectiveness"] == -3
     assert "proven" not in bad
@@ -93,9 +118,13 @@ def test_unused_skill_stays_minimal(tmp_path, monkeypatch):
 
 def test_record_without_signal_stays_minimal(tmp_path, monkeypatch):
     # A record exists but has zero use and zero feedback — no annotation.
-    result = _list_with_usage(tmp_path, monkeypatch, {
-        "ghost": {"use_count": 0, "helpful_count": 0, "unhelpful_count": 0},
-    })
+    result = _list_with_usage(
+        tmp_path,
+        monkeypatch,
+        {
+            "ghost": {"use_count": 0, "helpful_count": 0, "unhelpful_count": 0},
+        },
+    )
     ghost = _skill_by_name(result, "ghost")
     assert set(ghost.keys()) == {"name", "description", "category"}
 

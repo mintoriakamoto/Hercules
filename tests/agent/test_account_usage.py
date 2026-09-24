@@ -50,7 +50,9 @@ def codex_usage_payload():
     }
 
 
-def test_codex_usage_prefers_explicit_live_agent_credentials(monkeypatch, codex_usage_payload):
+def test_codex_usage_prefers_explicit_live_agent_credentials(
+    monkeypatch, codex_usage_payload
+):
     calls = []
     monkeypatch.setattr(
         account_usage.httpx,
@@ -60,7 +62,9 @@ def test_codex_usage_prefers_explicit_live_agent_credentials(monkeypatch, codex_
     monkeypatch.setattr(
         account_usage,
         "resolve_codex_runtime_credentials",
-        lambda **kwargs: (_ for _ in ()).throw(AssertionError("legacy auth should not be used")),
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("legacy auth should not be used")
+        ),
     )
 
     snapshot = account_usage.fetch_account_usage(
@@ -78,7 +82,9 @@ def test_codex_usage_prefers_explicit_live_agent_credentials(monkeypatch, codex_
     assert calls[0]["headers"]["Authorization"] == "Bearer live-agent-token"
 
 
-def test_codex_usage_falls_back_to_native_credential_pool(monkeypatch, codex_usage_payload):
+def test_codex_usage_falls_back_to_native_credential_pool(
+    monkeypatch, codex_usage_payload
+):
     calls = []
     monkeypatch.setattr(
         account_usage.httpx,
@@ -92,7 +98,9 @@ def test_codex_usage_falls_back_to_native_credential_pool(monkeypatch, codex_usa
         account_usage,
         "resolve_codex_runtime_credentials",
         lambda **kwargs: (_ for _ in ()).throw(
-            account_usage.AuthError("no singleton auth", provider="openai-codex", code="codex_auth_missing")
+            account_usage.AuthError(
+                "no singleton auth", provider="openai-codex", code="codex_auth_missing"
+            )
         ),
     )
 
@@ -118,7 +126,9 @@ def test_codex_usage_falls_back_to_native_credential_pool(monkeypatch, codex_usa
     assert "ChatGPT-Account-Id" not in calls[0]["headers"]
 
 
-def test_codex_usage_does_not_swap_to_pool_on_transient_resolver_error(monkeypatch, codex_usage_payload):
+def test_codex_usage_does_not_swap_to_pool_on_transient_resolver_error(
+    monkeypatch, codex_usage_payload
+):
     """A transient refresh/network failure (non-AuthError) must NOT silently
     downgrade to a possibly-different pool account. It fails open (no snapshot)
     instead of reporting the wrong account's usage."""
@@ -152,7 +162,9 @@ def test_codex_usage_does_not_swap_to_pool_on_transient_resolver_error(monkeypat
     assert calls == []  # HTTP usage endpoint never hit with a wrong-account token
 
 
-def test_codex_usage_account_id_read_failure_keeps_singleton_token(monkeypatch, codex_usage_payload):
+def test_codex_usage_account_id_read_failure_keeps_singleton_token(
+    monkeypatch, codex_usage_payload
+):
     """When the resolver succeeds but the separate account_id read raises, the
     working singleton token must still be used (best-effort account_id), NOT
     abandoned in favor of a header-less pool credential."""
@@ -174,7 +186,11 @@ def test_codex_usage_account_id_read_failure_keeps_singleton_token(monkeypatch, 
         account_usage,
         "_read_codex_tokens",
         lambda *a, **k: (_ for _ in ()).throw(
-            account_usage.AuthError("partial store", provider="openai-codex", code="codex_auth_invalid_shape")
+            account_usage.AuthError(
+                "partial store",
+                provider="openai-codex",
+                code="codex_auth_invalid_shape",
+            )
         ),
     )
 
@@ -183,7 +199,9 @@ def test_codex_usage_account_id_read_failure_keeps_singleton_token(monkeypatch, 
     monkeypatch.setattr(
         credential_pool,
         "load_pool",
-        lambda provider: (_ for _ in ()).throw(AssertionError("pool must not be consulted")),
+        lambda provider: (_ for _ in ()).throw(
+            AssertionError("pool must not be consulted")
+        ),
     )
 
     snapshot = account_usage.fetch_account_usage("openai-codex")
@@ -219,7 +237,9 @@ def test_codex_usage_treats_wham_used_percent_as_used_not_remaining(monkeypatch)
     monkeypatch.setattr(
         account_usage,
         "resolve_codex_runtime_credentials",
-        lambda **kwargs: (_ for _ in ()).throw(AssertionError("explicit auth should be used")),
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError("explicit auth should be used")
+        ),
     )
 
     snapshot = account_usage.fetch_account_usage(
@@ -230,7 +250,9 @@ def test_codex_usage_treats_wham_used_percent_as_used_not_remaining(monkeypatch)
 
     assert snapshot is not None
     assert [window.used_percent for window in snapshot.windows] == [85, 14]
-    rendered = "\n".join(account_usage.render_account_usage_lines(snapshot, markdown=True))
+    rendered = "\n".join(
+        account_usage.render_account_usage_lines(snapshot, markdown=True)
+    )
     assert "85% used" in rendered
     assert "14% used" in rendered
     assert "15% used" not in rendered

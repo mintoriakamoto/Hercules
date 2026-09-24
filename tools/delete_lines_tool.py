@@ -78,7 +78,7 @@ def delete_lines_tool(
         else:
             # Delete range
             start_idx = (start or 1) - 1
-            end_idx = (end or total_lines)
+            end_idx = end or total_lines
 
             if start_idx < 0:
                 start_idx = 0

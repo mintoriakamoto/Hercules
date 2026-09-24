@@ -17,9 +17,23 @@ _FILLER = r"(?:\w+\s+){0,8}"
 _PATTERNS: List[Tuple[str, str, str]] = []
 
 INVISIBLE_CHARS = frozenset({
-    '\u200b', '\u200c', '\u200d', '\u2060', '\u2062', '\u2063', '\u2064',
-    '\ufeff', '\u202a', '\u202b', '\u202c', '\u202d', '\u202e',
-    '\u2066', '\u2067', '\u2068', '\u2069',
+    "\u200b",
+    "\u200c",
+    "\u200d",
+    "\u2060",
+    "\u2062",
+    "\u2063",
+    "\u2064",
+    "\ufeff",
+    "\u202a",
+    "\u202b",
+    "\u202c",
+    "\u202d",
+    "\u202e",
+    "\u2066",
+    "\u2067",
+    "\u2068",
+    "\u2069",
 })
 
 _COMPILED: dict[str, List[Tuple[re.Pattern, str]]] = {}

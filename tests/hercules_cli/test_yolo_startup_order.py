@@ -27,9 +27,7 @@ def _run_main_and_capture_yolo_at_startup(monkeypatch, argv):
     def spy_prepare_startup(args):
         yolo_at_startup["value"] = os.environ.get("HERCULES_YOLO_MODE")
 
-    monkeypatch.setattr(
-        "hercules_cli.main._prepare_agent_startup", spy_prepare_startup
-    )
+    monkeypatch.setattr("hercules_cli.main._prepare_agent_startup", spy_prepare_startup)
     # Stub cmd_chat so main() returns cleanly without entering chat.
     monkeypatch.setattr("hercules_cli.main.cmd_chat", lambda args: None)
     monkeypatch.delenv("HERCULES_YOLO_MODE", raising=False)
@@ -45,9 +43,7 @@ def _run_main_and_capture_yolo_at_startup(monkeypatch, argv):
 def test_top_level_yolo_flag_sets_env_before_startup(monkeypatch):
     """hercules --yolo must set HERCULES_YOLO_MODE before
     _prepare_agent_startup imports tools.approval."""
-    result = _run_main_and_capture_yolo_at_startup(
-        monkeypatch, ["hercules", "--yolo"]
-    )
+    result = _run_main_and_capture_yolo_at_startup(monkeypatch, ["hercules", "--yolo"])
     assert result == "1", (
         "HERCULES_YOLO_MODE was not '1' when _prepare_agent_startup was "
         "called from main() with --yolo. This is the #60328 regression: "
@@ -69,9 +65,7 @@ def test_chat_subcommand_yolo_flag_sets_env_before_startup(monkeypatch):
 
 def test_no_yolo_flag_leaves_env_unset_at_startup(monkeypatch):
     """Without --yolo, HERCULES_YOLO_MODE must not be set at startup."""
-    result = _run_main_and_capture_yolo_at_startup(
-        monkeypatch, ["hercules"]
-    )
+    result = _run_main_and_capture_yolo_at_startup(monkeypatch, ["hercules"])
     assert result is None, (
         "HERCULES_YOLO_MODE was unexpectedly set at startup without --yolo."
     )

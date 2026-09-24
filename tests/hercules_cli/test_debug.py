@@ -10,6 +10,7 @@ import pytest
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _no_github_token_by_default(monkeypatch):
     """Default debug-share tests to the LOCAL-file path (no gist upload).
@@ -56,6 +57,7 @@ def hercules_home(tmp_path, monkeypatch):
 # Log reading
 # ---------------------------------------------------------------------------
 
+
 class TestCaptureLogSnapshot:
     """Test _capture_log_snapshot for log reading and truncation."""
 
@@ -73,6 +75,7 @@ class TestCaptureLogSnapshot:
         monkeypatch.setenv("HERCULES_HOME", str(home))
 
         from hercules_cli.debug import _capture_log_snapshot
+
         snap = _capture_log_snapshot("agent", tail_lines=10)
         assert snap.full_text is None
         assert snap.tail_text == "(file not found)"
@@ -82,11 +85,14 @@ class TestCaptureLogSnapshot:
         (hercules_home / "logs" / "agent.log").write_text("")
 
         from hercules_cli.debug import _capture_log_snapshot
+
         snap = _capture_log_snapshot("agent", tail_lines=10)
         assert snap.full_text is None
         assert snap.tail_text == "(file empty)"
 
-    def test_race_truncate_after_resolve_reports_empty(self, hercules_home, monkeypatch):
+    def test_race_truncate_after_resolve_reports_empty(
+        self, hercules_home, monkeypatch
+    ):
         """If the log is truncated between resolve and stat, say 'empty', not 'missing'."""
         log_path = hercules_home / "logs" / "agent.log"
         from hercules_cli import debug
@@ -149,6 +155,7 @@ class TestCaptureLogSnapshot:
 
     def test_unknown_log_returns_none(self, hercules_home):
         from hercules_cli.debug import _capture_log_snapshot
+
         snap = _capture_log_snapshot("nonexistent", tail_lines=10)
         assert snap.full_text is None
 
@@ -331,6 +338,7 @@ class TestCaptureLogSnapshotRedaction:
 # Debug report collection
 # ---------------------------------------------------------------------------
 
+
 class TestCollectDebugReport:
     """Test the debug report builder."""
 
@@ -407,6 +415,7 @@ class TestCollectDebugReport:
 # CLI entry point — run_debug_share
 # ---------------------------------------------------------------------------
 
+
 class TestRunDebugShare:
     """Test the run_debug_share CLI handler."""
 
@@ -419,10 +428,12 @@ class TestRunDebugShare:
         args.expire = 7
         args.local = False
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._github_token", return_value=None), \
-             patch("hercules_cli.debug._sweep_expired_pastes") as mock_sweep, \
-             patch("hercules_cli.debug._schedule_auto_delete") as mock_sched:
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch("hercules_cli.debug._github_token", return_value=None),
+            patch("hercules_cli.debug._sweep_expired_pastes") as mock_sweep,
+            patch("hercules_cli.debug._schedule_auto_delete") as mock_sched,
+        ):
             run_debug_share(args)
 
         # The local-write share flow no longer sweeps pending pastes or
@@ -448,9 +459,13 @@ class TestRunDebugShare:
         args.local = False
 
         gist_url = "https://gist.github.com/mintoriakamoto/deadbeef"
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._github_token", return_value="ghp_test"), \
-             patch("hercules_cli.debug._upload_to_github_gist", return_value=gist_url) as mock_gist:
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch("hercules_cli.debug._github_token", return_value="ghp_test"),
+            patch(
+                "hercules_cli.debug._upload_to_github_gist", return_value=gist_url
+            ) as mock_gist,
+        ):
             run_debug_share(args)
 
         mock_gist.assert_called_once()
@@ -471,8 +486,10 @@ class TestRunDebugShare:
         args.expire = 7
         args.local = False
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._github_token", return_value=None):
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch("hercules_cli.debug._github_token", return_value=None),
+        ):
             run_debug_share(args)
 
         out = capsys.readouterr().out
@@ -506,7 +523,9 @@ class TestRunDebugShare:
         args.local = False
 
         with patch("hercules_cli.dump.run_dump") as mock_dump:
-            mock_dump.side_effect = lambda a: print("--- hercules dump ---\nversion: test\n--- end dump ---")
+            mock_dump.side_effect = lambda a: print(
+                "--- hercules dump ---\nversion: test\n--- end dump ---"
+            )
             run_debug_share(args)
 
         out = capsys.readouterr().out
@@ -536,9 +555,14 @@ class TestRunDebugShare:
         desktop_text = (share_dir / "desktop.log").read_text()
         assert "--- full desktop.log ---" in desktop_text
 
-    def test_share_keeps_report_and_full_log_on_same_snapshot(self, hercules_home, capsys):
+    def test_share_keeps_report_and_full_log_on_same_snapshot(
+        self, hercules_home, capsys
+    ):
         """A mid-run rotation must not make full agent.log older than the report."""
-        from hercules_cli.debug import run_debug_share, collect_debug_report as real_collect_debug_report
+        from hercules_cli.debug import (
+            run_debug_share,
+            collect_debug_report as real_collect_debug_report,
+        )
 
         logs_dir = hercules_home / "logs"
         (logs_dir / "agent.log").write_text(
@@ -553,7 +577,9 @@ class TestRunDebugShare:
         args.expire = 7
         args.local = False
 
-        def _wrapped_collect_debug_report(*, log_lines=200, dump_text="", log_snapshots=None):
+        def _wrapped_collect_debug_report(
+            *, log_lines=200, dump_text="", log_snapshots=None
+        ):
             report = real_collect_debug_report(
                 log_lines=log_lines,
                 dump_text=dump_text,
@@ -568,8 +594,13 @@ class TestRunDebugShare:
             )
             return report
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.collect_debug_report", side_effect=_wrapped_collect_debug_report):
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch(
+                "hercules_cli.debug.collect_debug_report",
+                side_effect=_wrapped_collect_debug_report,
+            ),
+        ):
             run_debug_share(args)
 
         share_dir = next((hercules_home / "debug-shares").iterdir())
@@ -607,6 +638,7 @@ class TestRunDebugShare:
 # ---------------------------------------------------------------------------
 # Share-time redaction wiring + visible banner
 # ---------------------------------------------------------------------------
+
 
 class TestRunDebugShareRedaction:
     """End-to-end: --no-redact flag, banner injection, default behavior."""
@@ -710,6 +742,7 @@ class TestRunDebugShareRedaction:
 # run_debug router
 # ---------------------------------------------------------------------------
 
+
 class TestRunDebug:
     def test_no_subcommand_shows_usage(self, capsys):
         from hercules_cli.debug import run_debug
@@ -745,25 +778,31 @@ class TestRunDebug:
 # Delete / auto-delete
 # ---------------------------------------------------------------------------
 
+
 class TestExtractPasteId:
     def test_paste_rs_url(self):
         from hercules_cli.debug import _extract_paste_id
+
         assert _extract_paste_id("https://paste.rs/abc123") == "abc123"
 
     def test_paste_rs_trailing_slash(self):
         from hercules_cli.debug import _extract_paste_id
+
         assert _extract_paste_id("https://paste.rs/abc123/") == "abc123"
 
     def test_http_variant(self):
         from hercules_cli.debug import _extract_paste_id
+
         assert _extract_paste_id("http://paste.rs/xyz") == "xyz"
 
     def test_non_paste_rs_returns_none(self):
         from hercules_cli.debug import _extract_paste_id
+
         assert _extract_paste_id("https://dpaste.com/ABCDEF") is None
 
     def test_empty_returns_none(self):
         from hercules_cli.debug import _extract_paste_id
+
         assert _extract_paste_id("") is None
 
 
@@ -776,8 +815,9 @@ class TestDeletePaste:
         mock_resp.__enter__ = lambda s: s
         mock_resp.__exit__ = MagicMock(return_value=False)
 
-        with patch("hercules_cli.debug.urllib.request.urlopen",
-                    return_value=mock_resp) as mock_open:
+        with patch(
+            "hercules_cli.debug.urllib.request.urlopen", return_value=mock_resp
+        ) as mock_open:
             result = delete_paste("https://paste.rs/abc123")
 
         assert result is True
@@ -843,6 +883,7 @@ class TestScheduleAutoDelete:
         # And verify that calling it doesn't produce any orphaned children
         # (it should just write pending.json synchronously).
         import os as _os
+
         before = set(_os.listdir("/proc")) if _os.path.exists("/proc") else None
         _schedule_auto_delete(
             ["https://paste.rs/abc", "https://paste.rs/def"],
@@ -886,6 +927,7 @@ class TestScheduleAutoDelete:
 
         # expire_at is ~now + delay_seconds
         import time
+
         for e in entries:
             assert e["expire_at"] > time.time()
             assert e["expire_at"] <= time.time() + 15
@@ -1081,8 +1123,9 @@ class TestRunDebugDelete:
         args = MagicMock()
         args.urls = ["https://paste.rs/abc"]
 
-        with patch("hercules_cli.debug.delete_paste",
-                    side_effect=Exception("network error")):
+        with patch(
+            "hercules_cli.debug.delete_paste", side_effect=Exception("network error")
+        ):
             run_debug_delete(args)
 
         out = capsys.readouterr().out
@@ -1111,8 +1154,10 @@ class TestShareIncludesAutoDelete:
         args.expire = 7
         args.local = False
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug._github_token", return_value=None):
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch("hercules_cli.debug._github_token", return_value=None),
+        ):
             run_debug_share(args)
 
         out = capsys.readouterr().out
@@ -1207,8 +1252,9 @@ class TestBuildDebugShare:
                 raise OSError("disk full")
             return real_write_text(self, data, *a, **k)
 
-        with patch("hercules_cli.dump.run_dump"), patch.object(
-            Path, "write_text", _write_text
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch.object(Path, "write_text", _write_text),
         ):
             result = build_debug_share(log_lines=50, redact=True)
 
@@ -1222,6 +1268,7 @@ class TestBuildDebugShare:
 # ---------------------------------------------------------------------------
 # Shared bundle collection
 # ---------------------------------------------------------------------------
+
 
 class TestCollectShareBundle:
     def test_returns_report_and_logs(self, hercules_home):
@@ -1261,7 +1308,6 @@ class TestCollectShareBundle:
         assert secret in "\n".join(unredacted.values())
         # With redaction it must be scrubbed everywhere.
         assert secret not in "\n".join(redacted.values())
-
 
     def test_build_debug_share_uses_collector(self, hercules_home):
         # build_debug_share must write the same report text the collector produces
@@ -1344,8 +1390,7 @@ class TestShareConsentGate:
     def _args(self, **over):
         from types import SimpleNamespace
 
-        base = dict(lines=50, expire=7, local=False,
-                    no_redact=False, yes=False)
+        base = dict(lines=50, expire=7, local=False, no_redact=False, yes=False)
         base.update(over)
         return SimpleNamespace(**base)
 
@@ -1356,8 +1401,10 @@ class TestShareConsentGate:
         monkeypatch.setattr("sys.stdin.isatty", lambda: True)
         monkeypatch.setattr("builtins.input", lambda _: "n")
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.build_debug_share") as mock_build:
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch("hercules_cli.debug.build_debug_share") as mock_build,
+        ):
             run_debug_share(self._args())
 
         mock_build.assert_not_called()
@@ -1397,8 +1444,10 @@ class TestShareConsentGate:
 
         monkeypatch.setattr("sys.stdin.isatty", lambda: False)
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.build_debug_share") as mock_build:
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch("hercules_cli.debug.build_debug_share") as mock_build,
+        ):
             with pytest.raises(SystemExit) as exc:
                 run_debug_share(self._args())
 
@@ -1408,7 +1457,9 @@ class TestShareConsentGate:
         assert "Non-interactive mode requires --yes" in err
         assert "personal data" in err
 
-    def test_non_interactive_with_yes_succeeds(self, hercules_home, capsys, monkeypatch):
+    def test_non_interactive_with_yes_succeeds(
+        self, hercules_home, capsys, monkeypatch
+    ):
         """No TTY but --yes present → the share is written locally."""
         from hercules_cli.debug import run_debug_share
 
@@ -1428,10 +1479,11 @@ class TestShareConsentGate:
 
         monkeypatch.setattr("builtins.input", _boom)
 
-        with patch("hercules_cli.dump.run_dump"), \
-             patch("hercules_cli.debug.build_debug_share") as mock_build:
+        with (
+            patch("hercules_cli.dump.run_dump"),
+            patch("hercules_cli.debug.build_debug_share") as mock_build,
+        ):
             run_debug_share(self._args(local=True))
 
         mock_build.assert_not_called()
         assert "Aborted" not in capsys.readouterr().out
-

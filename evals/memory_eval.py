@@ -13,6 +13,7 @@ Each metric is in [0, 1]; the aggregate is their mean. Run as a script to print
 a scorecard (stamped with the git SHA); the test suite asserts per-metric floors
 so a regression in any learning subsystem fails CI.
 """
+
 from __future__ import annotations
 
 import statistics
@@ -45,6 +46,7 @@ def _top_ids(provider, query, k=3):
 # Individual metrics
 # ---------------------------------------------------------------------------
 
+
 def _score_recall(base_dir: Path) -> float:
     """Fraction of queries whose intended fact lands in the top 3."""
     p = _provider(base_dir, "recall")
@@ -74,7 +76,9 @@ def _score_trust_learning(base_dir: Path) -> float:
     """A helpfully-rated fact should outrank an unrated same-topic rival."""
     p = _provider(base_dir, "trust")
     try:
-        good = p._store.add_fact("The API gateway rate limit is 100 requests per minute")
+        good = p._store.add_fact(
+            "The API gateway rate limit is 100 requests per minute"
+        )
         p._store.add_fact("The API gateway rate limit is still under review")
         for _ in range(3):
             p._store.record_feedback(good, helpful=True)
@@ -88,12 +92,16 @@ def _score_confidence_calibration(base_dir: Path) -> float:
     """A proven fact reads high confidence; a fresh unrated one reads lower."""
     p = _provider(base_dir, "confidence")
     try:
-        proven = p._store.add_fact("The billing service reconciles invoices nightly at 0200 UTC")
+        proven = p._store.add_fact(
+            "The billing service reconciles invoices nightly at 0200 UTC"
+        )
         for _ in range(4):
             p._store.record_feedback(proven, helpful=True)
         p._store.add_fact("A freshly noted, never-rated detail about webhooks")
 
-        proven_conf = _search(p, "billing service reconciles invoices nightly")["results"]
+        proven_conf = _search(p, "billing service reconciles invoices nightly")[
+            "results"
+        ]
         fresh_conf = _search(p, "freshly noted webhooks detail")["results"]
         if not proven_conf or not fresh_conf:
             return 0.0
@@ -154,6 +162,7 @@ _METRICS: Dict[str, Callable[[Path], float]] = {
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
+
 
 def run_memory_eval(base_dir: "str | Path | None" = None) -> dict:
     """Run every metric and return {"metrics": {...}, "aggregate": float}.

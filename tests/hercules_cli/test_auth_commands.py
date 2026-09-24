@@ -19,10 +19,15 @@ def _write_auth_store(tmp_path, payload: dict) -> None:
 
 
 def _jwt_with_email(email: str) -> str:
-    header = base64.urlsafe_b64encode(b'{"alg":"RS256","typ":"JWT"}').rstrip(b"=").decode()
-    payload = base64.urlsafe_b64encode(
-        json.dumps({"email": email}).encode()
-    ).rstrip(b"=").decode()
+    header = (
+        base64.urlsafe_b64encode(b'{"alg":"RS256","typ":"JWT"}').rstrip(b"=").decode()
+    )
+    payload = (
+        base64
+        .urlsafe_b64encode(json.dumps({"email": email}).encode())
+        .rstrip(b"=")
+        .decode()
+    )
     return f"{header}.{payload}.signature"
 
 
@@ -39,16 +44,14 @@ def _codex_pool_only_store(*, exhausted: bool = False) -> dict:
         "last_refresh": "2026-06-15T10:00:00Z",
     }
     if exhausted:
-        entry.update(
-            {
-                "last_status": "exhausted",
-                "last_status_at": time.time(),
-                "last_error_code": 429,
-                "last_error_reason": "usage_limit_reached",
-                "last_error_message": "The usage limit has been reached",
-                "last_error_reset_at": time.time() + 3600,
-            }
-        )
+        entry.update({
+            "last_status": "exhausted",
+            "last_status_at": time.time(),
+            "last_error_code": 429,
+            "last_error_reason": "usage_limit_reached",
+            "last_error_message": "The usage limit has been reached",
+            "last_error_reset_at": time.time() + 3600,
+        })
     return {
         "version": 1,
         "active_provider": "openai-codex",
@@ -178,7 +181,9 @@ def test_auth_add_qwen_oauth_sets_active_provider(tmp_path, monkeypatch):
     assert entry["access_token"] == "qwen-test-token"
 
 
-def test_auth_add_minimax_oauth_starts_login_and_persists_pool_entry(tmp_path, monkeypatch):
+def test_auth_add_minimax_oauth_starts_login_and_persists_pool_entry(
+    tmp_path, monkeypatch
+):
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path / "hercules"))
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
     token = _jwt_with_email("minimax@example.com")
@@ -278,27 +283,27 @@ def test_auth_add_codex_oauth_keeps_distinct_pool_accounts(tmp_path, monkeypatch
     _write_auth_store(tmp_path, {"version": 1, "providers": {}})
     first_token = _jwt_with_email("first-codex@example.com")
     second_token = _jwt_with_email("second-codex@example.com")
-    logins = iter(
-        [
-            {
-                "tokens": {
-                    "access_token": first_token,
-                    "refresh_token": "first-refresh-token",
-                },
-                "base_url": "https://chatgpt.com/backend-api/codex",
-                "last_refresh": "2026-03-23T10:00:00Z",
+    logins = iter([
+        {
+            "tokens": {
+                "access_token": first_token,
+                "refresh_token": "first-refresh-token",
             },
-            {
-                "tokens": {
-                    "access_token": second_token,
-                    "refresh_token": "second-refresh-token",
-                },
-                "base_url": "https://chatgpt.com/backend-api/codex",
-                "last_refresh": "2026-03-23T10:05:00Z",
+            "base_url": "https://chatgpt.com/backend-api/codex",
+            "last_refresh": "2026-03-23T10:00:00Z",
+        },
+        {
+            "tokens": {
+                "access_token": second_token,
+                "refresh_token": "second-refresh-token",
             },
-        ]
+            "base_url": "https://chatgpt.com/backend-api/codex",
+            "last_refresh": "2026-03-23T10:05:00Z",
+        },
+    ])
+    monkeypatch.setattr(
+        "hercules_cli.auth._codex_device_code_login", lambda: next(logins)
     )
-    monkeypatch.setattr("hercules_cli.auth._codex_device_code_login", lambda: next(logins))
 
     from hercules_cli.auth_commands import auth_add_command
     from agent.credential_pool import load_pool
@@ -365,7 +370,11 @@ def test_codex_runtime_pool_only_rate_limit_is_not_missing_auth(tmp_path, monkey
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path / "hercules"))
     _write_auth_store(tmp_path, _codex_pool_only_store(exhausted=True))
 
-    from hercules_cli.auth import AuthError, CODEX_RATE_LIMITED_CODE, resolve_codex_runtime_credentials
+    from hercules_cli.auth import (
+        AuthError,
+        CODEX_RATE_LIMITED_CODE,
+        resolve_codex_runtime_credentials,
+    )
 
     with pytest.raises(AuthError) as exc_info:
         resolve_codex_runtime_credentials()
@@ -666,7 +675,9 @@ def test_clear_provider_auth_removes_provider_pool_entries(tmp_path, monkeypatch
     assert "openrouter" in payload.get("credential_pool", {})
 
 
-def test_logout_resets_codex_config_when_auth_state_already_cleared(tmp_path, monkeypatch, capsys):
+def test_logout_resets_codex_config_when_auth_state_already_cleared(
+    tmp_path, monkeypatch, capsys
+):
     """`hercules logout --provider openai-codex` must still clear model.provider.
 
     Users can end up with auth.json already cleared but config.yaml still set to
@@ -695,7 +706,9 @@ def test_logout_resets_codex_config_when_auth_state_already_cleared(tmp_path, mo
     assert "base_url: https://openrouter.ai/api/v1" in config_text
 
 
-def test_logout_defaults_to_configured_codex_when_no_active_provider(tmp_path, monkeypatch, capsys):
+def test_logout_defaults_to_configured_codex_when_no_active_provider(
+    tmp_path, monkeypatch, capsys
+):
     """Bare `hercules logout` should target configured Codex if auth has no active provider."""
     hercules_home = tmp_path / "hercules"
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
@@ -718,7 +731,9 @@ def test_logout_defaults_to_configured_codex_when_no_active_provider(tmp_path, m
     assert "provider: auto" in config_text
 
 
-def test_logout_clears_stale_active_codex_without_provider_credentials(tmp_path, monkeypatch, capsys):
+def test_logout_clears_stale_active_codex_without_provider_credentials(
+    tmp_path, monkeypatch, capsys
+):
     """Logout must clear active_provider even when provider credential payloads are gone."""
     hercules_home = tmp_path / "hercules"
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
@@ -790,7 +805,7 @@ def test_auth_list_does_not_call_mutating_select(monkeypatch, capsys):
     class _Entry:
         id = "cred-1"
         label = "primary"
-        auth_type="***"
+        auth_type = "***"
         source = "manual"
         last_status = None
         last_error_code = None
@@ -808,7 +823,11 @@ def test_auth_list_does_not_call_mutating_select(monkeypatch, capsys):
 
     monkeypatch.setattr(
         "hercules_cli.auth_commands.load_pool",
-        lambda provider: _Pool() if provider == "openrouter" else type("_EmptyPool", (), {"entries": lambda self: []})(),
+        lambda provider: (
+            _Pool()
+            if provider == "openrouter"
+            else type("_EmptyPool", (), {"entries": lambda self: []})()
+        ),
     )
 
     class _Args:
@@ -840,7 +859,9 @@ def test_auth_list_shows_exhausted_cooldown(monkeypatch, capsys):
         def peek(self):
             return None
 
-    monkeypatch.setattr("hercules_cli.auth_commands.load_pool", lambda provider: _Pool())
+    monkeypatch.setattr(
+        "hercules_cli.auth_commands.load_pool", lambda provider: _Pool()
+    )
     monkeypatch.setattr("hercules_cli.auth_commands.time.time", lambda: 1030.0)
 
     class _Args:
@@ -853,7 +874,9 @@ def test_auth_list_shows_exhausted_cooldown(monkeypatch, capsys):
     assert "59m 30s left" in out
 
 
-def test_auth_list_shows_auth_failure_when_exhausted_entry_is_unauthorized(monkeypatch, capsys):
+def test_auth_list_shows_auth_failure_when_exhausted_entry_is_unauthorized(
+    monkeypatch, capsys
+):
     from hercules_cli.auth_commands import auth_list_command
 
     class _Entry:
@@ -874,7 +897,9 @@ def test_auth_list_shows_auth_failure_when_exhausted_entry_is_unauthorized(monke
         def peek(self):
             return None
 
-    monkeypatch.setattr("hercules_cli.auth_commands.load_pool", lambda provider: _Pool())
+    monkeypatch.setattr(
+        "hercules_cli.auth_commands.load_pool", lambda provider: _Pool()
+    )
     monkeypatch.setattr("hercules_cli.auth_commands.time.time", lambda: 1030.0)
 
     class _Args:
@@ -910,7 +935,9 @@ def test_auth_list_prefers_explicit_reset_time(monkeypatch, capsys):
         def peek(self):
             return None
 
-    monkeypatch.setattr("hercules_cli.auth_commands.load_pool", lambda provider: _Pool())
+    monkeypatch.setattr(
+        "hercules_cli.auth_commands.load_pool", lambda provider: _Pool()
+    )
     monkeypatch.setattr(
         "hercules_cli.auth_commands.time.time",
         lambda: datetime(2026, 4, 5, 10, 30, tzinfo=timezone.utc).timestamp(),
@@ -968,6 +995,7 @@ def test_auth_remove_env_seeded_clears_env_var(tmp_path, monkeypatch):
 
     # Env var should be cleared from os.environ
     import os
+
     assert os.environ.get("OPENROUTER_API_KEY") is None
 
     # Env var should be removed from .env file
@@ -1017,6 +1045,7 @@ def test_auth_remove_env_seeded_does_not_resurrect(tmp_path, monkeypatch):
 
     # Now reload the pool — the entry should NOT come back
     from agent.credential_pool import load_pool
+
     pool = load_pool("openrouter")
     assert not pool.has_credentials()
 
@@ -1078,20 +1107,23 @@ def test_auth_remove_claude_code_suppresses_reseed(tmp_path, monkeypatch):
     auth_store = {
         "version": 1,
         "credential_pool": {
-            "anthropic": [{
-                "id": "cc1",
-                "label": "claude_code",
-                "auth_type": "oauth",
-                "priority": 0,
-                "source": "claude_code",
-                "access_token": "sk-ant-oat01-token",
-            }]
+            "anthropic": [
+                {
+                    "id": "cc1",
+                    "label": "claude_code",
+                    "auth_type": "oauth",
+                    "priority": 0,
+                    "source": "claude_code",
+                    "access_token": "sk-ant-oat01-token",
+                }
+            ]
         },
     }
     (hercules_home / "auth.json").write_text(json.dumps(auth_store))
 
     from types import SimpleNamespace
     from hercules_cli.auth_commands import auth_remove_command
+
     auth_remove_command(SimpleNamespace(provider="anthropic", target="1"))
 
     updated = json.loads((hercules_home / "auth.json").read_text())
@@ -1105,7 +1137,11 @@ def test_unsuppress_credential_source_clears_marker(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(tmp_path / "hercules"))
     _write_auth_store(tmp_path, {"version": 1})
 
-    from hercules_cli.auth import suppress_credential_source, unsuppress_credential_source, is_source_suppressed
+    from hercules_cli.auth import (
+        suppress_credential_source,
+        unsuppress_credential_source,
+        is_source_suppressed,
+    )
 
     suppress_credential_source("openai-codex", "device_code")
     assert is_source_suppressed("openai-codex", "device_code") is True
@@ -1169,15 +1205,17 @@ def test_auth_remove_codex_device_code_suppresses_reseed(tmp_path, monkeypatch):
             },
         },
         "credential_pool": {
-            "openai-codex": [{
-                "id": "cx1",
-                "label": "codex-auto",
-                "auth_type": "oauth",
-                "priority": 0,
-                "source": "device_code",
-                "access_token": "acc-1",
-                "refresh_token": "ref-1",
-            }]
+            "openai-codex": [
+                {
+                    "id": "cx1",
+                    "label": "codex-auto",
+                    "auth_type": "oauth",
+                    "priority": 0,
+                    "source": "device_code",
+                    "access_token": "acc-1",
+                    "refresh_token": "ref-1",
+                }
+            ]
         },
     }
     (hercules_home / "auth.json").write_text(json.dumps(auth_store))
@@ -1216,15 +1254,17 @@ def test_auth_remove_codex_manual_source_suppresses_reseed(tmp_path, monkeypatch
             },
         },
         "credential_pool": {
-            "openai-codex": [{
-                "id": "cx2",
-                "label": "manual-codex",
-                "auth_type": "oauth",
-                "priority": 0,
-                "source": "manual:device_code",
-                "access_token": "acc-2",
-                "refresh_token": "ref-2",
-            }]
+            "openai-codex": [
+                {
+                    "id": "cx2",
+                    "label": "manual-codex",
+                    "auth_type": "oauth",
+                    "priority": 0,
+                    "source": "manual:device_code",
+                    "access_token": "acc-2",
+                    "refresh_token": "ref-2",
+                }
+            ]
         },
     }
     (hercules_home / "auth.json").write_text(json.dumps(auth_store))
@@ -1249,11 +1289,13 @@ def test_auth_add_codex_clears_suppression_marker(tmp_path, monkeypatch):
     hercules_home.mkdir(parents=True, exist_ok=True)
 
     # Pre-existing suppression (simulating a prior `hercules auth remove`)
-    (hercules_home / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "suppressed_sources": {"openai-codex": ["device_code"]},
-    }))
+    (hercules_home / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "suppressed_sources": {"openai-codex": ["device_code"]},
+        })
+    )
 
     token = _jwt_with_email("codex@example.com")
     monkeypatch.setattr(
@@ -1294,11 +1336,13 @@ def test_seed_from_singletons_respects_codex_suppression(tmp_path, monkeypatch):
     hercules_home.mkdir(parents=True, exist_ok=True)
 
     # Suppression marker in place
-    (hercules_home / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "suppressed_sources": {"openai-codex": ["device_code"]},
-    }))
+    (hercules_home / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "suppressed_sources": {"openai-codex": ["device_code"]},
+        })
+    )
 
     # Make _import_codex_cli_tokens return tokens — these would normally trigger
     # a re-seed, but suppression must skip it.
@@ -1325,7 +1369,9 @@ def test_seed_from_singletons_respects_codex_suppression(tmp_path, monkeypatch):
     assert "openai-codex" not in after.get("providers", {})
 
 
-def test_auth_remove_env_seeded_suppresses_shell_exported_var(tmp_path, monkeypatch, capsys):
+def test_auth_remove_env_seeded_suppresses_shell_exported_var(
+    tmp_path, monkeypatch, capsys
+):
     """`hercules auth remove xai 1` must stick even when the env var is exported
     by the shell (not written into ~/.hercules/.env).  Before PR for #13371 the
     removal silently restored on next load_pool() because _seed_from_env()
@@ -1344,21 +1390,24 @@ def test_auth_remove_env_seeded_suppresses_shell_exported_var(tmp_path, monkeypa
         {
             "version": 1,
             "credential_pool": {
-                "xai": [{
-                    "id": "env-1",
-                    "label": "XAI_API_KEY",
-                    "auth_type": "api_key",
-                    "priority": 0,
-                    "source": "env:XAI_API_KEY",
-                    "access_token": "sk-xai-shell-export",
-                    "base_url": "https://api.x.ai/v1",
-                }]
+                "xai": [
+                    {
+                        "id": "env-1",
+                        "label": "XAI_API_KEY",
+                        "auth_type": "api_key",
+                        "priority": 0,
+                        "source": "env:XAI_API_KEY",
+                        "access_token": "sk-xai-shell-export",
+                        "base_url": "https://api.x.ai/v1",
+                    }
+                ]
             },
         },
     )
 
     from types import SimpleNamespace
     from hercules_cli.auth_commands import auth_remove_command
+
     auth_remove_command(SimpleNamespace(provider="xai", target="1"))
 
     # Suppression marker written
@@ -1373,11 +1422,16 @@ def test_auth_remove_env_seeded_suppresses_shell_exported_var(tmp_path, monkeypa
     # Fresh simulation: shell re-exports, reload pool
     monkeypatch.setenv("XAI_API_KEY", "sk-xai-shell-export")
     from agent.credential_pool import load_pool
+
     pool = load_pool("xai")
-    assert not pool.has_credentials(), "pool must stay empty — env:XAI_API_KEY suppressed"
+    assert not pool.has_credentials(), (
+        "pool must stay empty — env:XAI_API_KEY suppressed"
+    )
 
 
-def test_auth_remove_env_seeded_dotenv_only_no_shell_hint(tmp_path, monkeypatch, capsys):
+def test_auth_remove_env_seeded_dotenv_only_no_shell_hint(
+    tmp_path, monkeypatch, capsys
+):
     """When the env var lives only in ~/.hercules/.env (not the shell), the
     shell-hint should NOT be printed — avoid scaring the user about a
     non-existent shell export.
@@ -1397,20 +1451,23 @@ def test_auth_remove_env_seeded_dotenv_only_no_shell_hint(tmp_path, monkeypatch,
         {
             "version": 1,
             "credential_pool": {
-                "deepseek": [{
-                    "id": "env-1",
-                    "label": "DEEPSEEK_API_KEY",
-                    "auth_type": "api_key",
-                    "priority": 0,
-                    "source": "env:DEEPSEEK_API_KEY",
-                    "access_token": "sk-ds-only",
-                }]
+                "deepseek": [
+                    {
+                        "id": "env-1",
+                        "label": "DEEPSEEK_API_KEY",
+                        "auth_type": "api_key",
+                        "priority": 0,
+                        "source": "env:DEEPSEEK_API_KEY",
+                        "access_token": "sk-ds-only",
+                    }
+                ]
             },
         },
     )
 
     from types import SimpleNamespace
     from hercules_cli.auth_commands import auth_remove_command
+
     auth_remove_command(SimpleNamespace(provider="deepseek", target="1"))
 
     out = capsys.readouterr().out
@@ -1443,10 +1500,14 @@ def test_auth_add_clears_env_suppression_for_provider(tmp_path, monkeypatch):
     from hercules_cli.auth_commands import auth_add_command
 
     assert is_source_suppressed("xai", "env:XAI_API_KEY") is True
-    auth_add_command(SimpleNamespace(
-        provider="xai", auth_type="api_key",
-        api_key="sk-xai-manual", label="manual",
-    ))
+    auth_add_command(
+        SimpleNamespace(
+            provider="xai",
+            auth_type="api_key",
+            api_key="sk-xai-manual",
+            label="manual",
+        )
+    )
     assert is_source_suppressed("xai", "env:XAI_API_KEY") is False
 
 
@@ -1460,11 +1521,13 @@ def test_seed_from_env_respects_env_suppression(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
     monkeypatch.setenv("XAI_API_KEY", "sk-xai-shell-export")
 
-    (hercules_home / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "suppressed_sources": {"xai": ["env:XAI_API_KEY"]},
-    }))
+    (hercules_home / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "suppressed_sources": {"xai": ["env:XAI_API_KEY"]},
+        })
+    )
 
     from agent.credential_pool import _seed_from_env
 
@@ -1484,11 +1547,13 @@ def test_seed_from_env_respects_openrouter_suppression(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
     monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-shell-export")
 
-    (hercules_home / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "suppressed_sources": {"openrouter": ["env:OPENROUTER_API_KEY"]},
-    }))
+    (hercules_home / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "suppressed_sources": {"openrouter": ["env:OPENROUTER_API_KEY"]},
+        })
+    )
 
     from agent.credential_pool import _seed_from_env
 
@@ -1513,17 +1578,23 @@ def test_seed_from_singletons_respects_copilot_suppression(tmp_path, monkeypatch
     hercules_home.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
 
-    (hercules_home / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "suppressed_sources": {"copilot": ["gh_cli"]},
-    }))
+    (hercules_home / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "suppressed_sources": {"copilot": ["gh_cli"]},
+        })
+    )
 
     # Stub resolve_copilot_token to return a live token
     import hercules_cli.copilot_auth as ca
-    monkeypatch.setattr(ca, "resolve_copilot_token", lambda: ("ghp_fake", "gh auth token"))
+
+    monkeypatch.setattr(
+        ca, "resolve_copilot_token", lambda: ("ghp_fake", "gh auth token")
+    )
 
     from agent.credential_pool import _seed_from_singletons
+
     entries = []
     changed, active = _seed_from_singletons("copilot", entries)
     assert changed is False
@@ -1537,18 +1608,28 @@ def test_seed_from_singletons_respects_qwen_suppression(tmp_path, monkeypatch):
     hercules_home.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
 
-    (hercules_home / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "suppressed_sources": {"qwen-oauth": ["qwen-cli"]},
-    }))
+    (hercules_home / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "suppressed_sources": {"qwen-oauth": ["qwen-cli"]},
+        })
+    )
 
     import hercules_cli.auth as ha
-    monkeypatch.setattr(ha, "resolve_qwen_runtime_credentials", lambda **kw: {
-        "api_key": "tok", "source": "qwen-cli", "base_url": "https://q",
-    })
+
+    monkeypatch.setattr(
+        ha,
+        "resolve_qwen_runtime_credentials",
+        lambda **kw: {
+            "api_key": "tok",
+            "source": "qwen-cli",
+            "base_url": "https://q",
+        },
+    )
 
     from agent.credential_pool import _seed_from_singletons
+
     entries = []
     changed, active = _seed_from_singletons("qwen-oauth", entries)
     assert changed is False
@@ -1563,21 +1644,34 @@ def test_seed_from_singletons_respects_hercules_pkce_suppression(tmp_path, monke
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
 
     import yaml
-    (hercules_home / "config.yaml").write_text(yaml.dump({"model": {"provider": "anthropic", "model": "claude"}}))
-    (hercules_home / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "suppressed_sources": {"anthropic": ["hercules_pkce"]},
-    }))
+
+    (hercules_home / "config.yaml").write_text(
+        yaml.dump({"model": {"provider": "anthropic", "model": "claude"}})
+    )
+    (hercules_home / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "suppressed_sources": {"anthropic": ["hercules_pkce"]},
+        })
+    )
 
     # Stub the readers so only hercules_pkce is "available"; claude_code returns None
     import agent.anthropic_adapter as aa
-    monkeypatch.setattr(aa, "read_hercules_oauth_credentials", lambda: {
-        "accessToken": "tok", "refreshToken": "r", "expiresAt": 9999999999000,
-    })
+
+    monkeypatch.setattr(
+        aa,
+        "read_hercules_oauth_credentials",
+        lambda: {
+            "accessToken": "tok",
+            "refreshToken": "r",
+            "expiresAt": 9999999999000,
+        },
+    )
     monkeypatch.setattr(aa, "read_claude_code_credentials", lambda: None)
 
     from agent.credential_pool import _seed_from_singletons
+
     entries = []
     changed, active = _seed_from_singletons("anthropic", entries)
     # hercules_pkce suppressed, claude_code returns None → nothing should be seeded
@@ -1592,21 +1686,31 @@ def test_seed_custom_pool_respects_config_suppression(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(hercules_home))
 
     import yaml
-    (hercules_home / "config.yaml").write_text(yaml.dump({
-        "model": {},
-        "custom_providers": [
-            {"name": "my", "base_url": "https://c.example.com", "api_key": "sk-custom"},
-        ],
-    }))
+
+    (hercules_home / "config.yaml").write_text(
+        yaml.dump({
+            "model": {},
+            "custom_providers": [
+                {
+                    "name": "my",
+                    "base_url": "https://c.example.com",
+                    "api_key": "sk-custom",
+                },
+            ],
+        })
+    )
 
     from agent.credential_pool import _seed_custom_pool, get_custom_provider_pool_key
+
     pool_key = get_custom_provider_pool_key("https://c.example.com")
 
-    (hercules_home / "auth.json").write_text(json.dumps({
-        "version": 1,
-        "providers": {},
-        "suppressed_sources": {pool_key: ["config:my"]},
-    }))
+    (hercules_home / "auth.json").write_text(
+        json.dumps({
+            "version": 1,
+            "providers": {},
+            "suppressed_sources": {pool_key: ["config:my"]},
+        })
+    )
 
     entries = []
     changed, active = _seed_custom_pool(pool_key, entries)
@@ -1652,6 +1756,7 @@ def test_credential_sources_registry_has_expected_steps():
 def test_credential_sources_find_step_returns_none_for_manual():
     """Manual entries have nothing external to clean up — no step registered."""
     from agent.credential_sources import find_removal_step
+
     assert find_removal_step("openrouter", "manual") is None
     assert find_removal_step("xai", "manual") is None
 
@@ -1699,12 +1804,15 @@ def test_auth_remove_copilot_suppresses_all_variants(tmp_path, monkeypatch):
     from hercules_cli.auth import is_source_suppressed
     from hercules_cli.auth_commands import auth_remove_command
 
-    with patch(
-        "hercules_cli.copilot_auth.resolve_copilot_token",
-        return_value=("ghp_fake", "gh"),
-    ), patch(
-        "hercules_cli.copilot_auth.get_copilot_api_token",
-        return_value=("ghu_fake_api", None),
+    with (
+        patch(
+            "hercules_cli.copilot_auth.resolve_copilot_token",
+            return_value=("ghp_fake", "gh"),
+        ),
+        patch(
+            "hercules_cli.copilot_auth.get_copilot_api_token",
+            return_value=("ghu_fake_api", None),
+        ),
     ):
         auth_remove_command(SimpleNamespace(provider="copilot", target="1"))
 
@@ -1738,17 +1846,23 @@ def test_auth_add_clears_all_suppressions_including_non_env(tmp_path, monkeypatc
     from hercules_cli.auth import is_source_suppressed
     from hercules_cli.auth_commands import auth_add_command
 
-    auth_add_command(SimpleNamespace(
-        provider="copilot", auth_type="api_key",
-        api_key="ghp-manual", label="m",
-    ))
+    auth_add_command(
+        SimpleNamespace(
+            provider="copilot",
+            auth_type="api_key",
+            api_key="ghp-manual",
+            label="m",
+        )
+    )
 
     assert not is_source_suppressed("copilot", "gh_cli")
     assert not is_source_suppressed("copilot", "env:GH_TOKEN")
     assert not is_source_suppressed("copilot", "env:COPILOT_GITHUB_TOKEN")
 
 
-def test_auth_remove_codex_manual_device_code_suppresses_canonical(tmp_path, monkeypatch):
+def test_auth_remove_codex_manual_device_code_suppresses_canonical(
+    tmp_path, monkeypatch
+):
     """Removing a manual:device_code entry (from `hercules auth add openai-codex`)
     must suppress the canonical ``device_code`` key, not ``manual:device_code``.
     The re-seed gate in _seed_from_singletons checks ``device_code``.
@@ -1761,16 +1875,20 @@ def test_auth_remove_codex_manual_device_code_suppresses_canonical(tmp_path, mon
         tmp_path,
         {
             "version": 1,
-            "providers": {"openai-codex": {"tokens": {"access_token": "t", "refresh_token": "r"}}},
+            "providers": {
+                "openai-codex": {"tokens": {"access_token": "t", "refresh_token": "r"}}
+            },
             "credential_pool": {
-                "openai-codex": [{
-                    "id": "cdx",
-                    "label": "manual-codex",
-                    "auth_type": "oauth",
-                    "priority": 0,
-                    "source": "manual:device_code",
-                    "access_token": "t",
-                }]
+                "openai-codex": [
+                    {
+                        "id": "cdx",
+                        "label": "manual-codex",
+                        "auth_type": "oauth",
+                        "priority": 0,
+                        "source": "manual:device_code",
+                        "access_token": "t",
+                    }
+                ]
             },
         },
     )

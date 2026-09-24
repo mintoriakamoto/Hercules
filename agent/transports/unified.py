@@ -22,19 +22,19 @@ logger = logging.getLogger(__name__)
 
 class FallbackMode(Enum):
     """Controls transport fallback behavior during migration."""
-    TRY_LEGACY = "try_legacy"          # Try new, fallback to legacy if needed
-    FEATURE_FLAG = "feature_flag"      # Use per-provider feature flag (env var)
-    HARD_FAIL = "hard_fail"            # Raise exception, no fallback
+
+    TRY_LEGACY = "try_legacy"  # Try new, fallback to legacy if needed
+    FEATURE_FLAG = "feature_flag"  # Use per-provider feature flag (env var)
+    HARD_FAIL = "hard_fail"  # Raise exception, no fallback
 
 
 class TransportNotAvailable(Exception):
     """Raised when transport is not available and fallback is disabled."""
+
     def __init__(self, api_mode: str, reason: str = "not implemented"):
         self.api_mode = api_mode
         self.reason = reason
-        super().__init__(
-            f"Transport not available for '{api_mode}': {reason}"
-        )
+        super().__init__(f"Transport not available for '{api_mode}': {reason}")
 
 
 class TransportFactory:
@@ -78,6 +78,7 @@ class TransportFactory:
         """
         # Try to get new transport
         from agent.transports import get_transport as get_new_transport
+
         transport = get_new_transport(api_mode)
 
         if transport is not None:
@@ -110,10 +111,7 @@ class TransportFactory:
         if self.legacy_dispatcher:
             return self.legacy_dispatcher(api_mode)
 
-        raise TransportNotAvailable(
-            api_mode,
-            "no legacy dispatcher configured"
-        )
+        raise TransportNotAvailable(api_mode, "no legacy dispatcher configured")
 
     def _handle_feature_flag(self, api_mode: str) -> any:
         """Handle FEATURE_FLAG mode: check env var for provider."""
@@ -131,10 +129,7 @@ class TransportFactory:
             if self.legacy_dispatcher:
                 return self.legacy_dispatcher(api_mode)
 
-        raise TransportNotAvailable(
-            api_mode,
-            f"{env_var} not set to 'true'"
-        )
+        raise TransportNotAvailable(api_mode, f"{env_var} not set to 'true'")
 
     def _emit_metric(self, metric_name: str, api_mode: str) -> None:
         """Emit telemetry metric for tracking."""

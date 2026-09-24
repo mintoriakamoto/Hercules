@@ -56,7 +56,11 @@ class OpenCodeGoProfile(ProviderProfile):
         return self.default_max_tokens
 
     def build_api_kwargs_extras(
-        self, *, reasoning_config: dict | None = None, model: str | None = None, **context
+        self,
+        *,
+        reasoning_config: dict | None = None,
+        model: str | None = None,
+        **context,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         extra_body: dict[str, Any] = {}
         top_level: dict[str, Any] = {}
@@ -73,7 +77,9 @@ class OpenCodeGoProfile(ProviderProfile):
             effort = (reasoning_config.get("effort") or "").strip().lower()
             if not effort or effort == "none":
                 return extra_body, top_level
-            top_level["reasoning_effort"] = "max" if effort in {"xhigh", "max", "ultra"} else "high"
+            top_level["reasoning_effort"] = (
+                "max" if effort in {"xhigh", "max", "ultra"} else "high"
+            )
             return extra_body, top_level
 
         if _is_kimi_k2_model(model):
@@ -105,7 +111,10 @@ class OpenCodeGoProfile(ProviderProfile):
             return extra_body, top_level
 
         enabled = True
-        if isinstance(reasoning_config, dict) and reasoning_config.get("enabled") is False:
+        if (
+            isinstance(reasoning_config, dict)
+            and reasoning_config.get("enabled") is False
+        ):
             enabled = False
 
         if not enabled:

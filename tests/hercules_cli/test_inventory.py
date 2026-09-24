@@ -181,9 +181,15 @@ def _nous_row(model: str = "openai/gpt-5.5") -> dict:
 
 def test_build_models_payload_returns_expected_shape():
     rows = [
-        {"slug": "openrouter", "name": "OpenRouter", "models": ["m1"],
-         "total_models": 1, "is_current": True, "is_user_defined": False,
-         "source": "built-in"},
+        {
+            "slug": "openrouter",
+            "name": "OpenRouter",
+            "models": ["m1"],
+            "total_models": 1,
+            "is_current": True,
+            "is_user_defined": False,
+            "source": "built-in",
+        },
     ]
     ctx = _empty_ctx(provider="openrouter", model="m1", base_url="")
     with _list_auth_returning(rows):
@@ -203,12 +209,22 @@ def test_build_models_payload_does_not_call_provider_model_ids():
     caching). ``build_models_payload`` itself must not call the live fetcher
     directly; the test pins that boundary.
     """
-    rows = [{"slug": "nous", "name": "Nous", "models": ["hercules-4-405b"],
-             "total_models": 1, "is_current": False, "is_user_defined": False,
-             "source": "built-in"}]
+    rows = [
+        {
+            "slug": "nous",
+            "name": "Nous",
+            "models": ["hercules-4-405b"],
+            "total_models": 1,
+            "is_current": False,
+            "is_user_defined": False,
+            "source": "built-in",
+        }
+    ]
     ctx = _empty_ctx()
-    with _list_auth_returning(rows), \
-         patch("hercules_cli.models.provider_model_ids") as mock_pm:
+    with (
+        _list_auth_returning(rows),
+        patch("hercules_cli.models.provider_model_ids") as mock_pm,
+    ):
         build_models_payload(ctx)
     mock_pm.assert_not_called()
 
@@ -299,9 +315,15 @@ def test_include_unconfigured_appends_canonical_skeletons():
     list_authenticated_providers didn't emit. Skeleton rows have empty
     models and source='canonical'."""
     rows = [
-        {"slug": "openrouter", "name": "OpenRouter", "models": ["m1"],
-         "total_models": 1, "is_current": True, "is_user_defined": False,
-         "source": "built-in"},
+        {
+            "slug": "openrouter",
+            "name": "OpenRouter",
+            "models": ["m1"],
+            "total_models": 1,
+            "is_current": True,
+            "is_user_defined": False,
+            "source": "built-in",
+        },
     ]
     ctx = _empty_ctx(provider="openrouter")
     with _list_auth_returning(rows):
@@ -314,8 +336,7 @@ def test_include_unconfigured_appends_canonical_skeletons():
     for entry in CANONICAL_PROVIDERS:
         assert entry.slug in seen_slugs, f"missing {entry.slug}"
     # Skeletons have empty models and source='canonical'.
-    skeletons = [r for r in payload["providers"]
-                 if r.get("source") == "canonical"]
+    skeletons = [r for r in payload["providers"] if r.get("source") == "canonical"]
     assert all(r["models"] == [] for r in skeletons)
     assert all(r["total_models"] == 0 for r in skeletons)
 
@@ -324,9 +345,15 @@ def test_include_unconfigured_skips_already_present_slugs():
     """If list_authenticated_providers already returned a row for a
     canonical slug, include_unconfigured must NOT duplicate it."""
     rows = [
-        {"slug": "openrouter", "name": "OpenRouter", "models": ["m1"],
-         "total_models": 1, "is_current": True, "is_user_defined": False,
-         "source": "built-in"},
+        {
+            "slug": "openrouter",
+            "name": "OpenRouter",
+            "models": ["m1"],
+            "total_models": 1,
+            "is_current": True,
+            "is_user_defined": False,
+            "source": "built-in",
+        },
     ]
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
@@ -338,24 +365,60 @@ def test_include_unconfigured_skips_already_present_slugs():
 
 def test_explicit_only_filters_ambient_credentials_but_keeps_current_and_custom_rows():
     rows = [
-        {"slug": "openai-codex", "name": "OpenAI Codex", "models": ["gpt-5.4"],
-         "total_models": 1, "is_current": True, "is_user_defined": False,
-         "source": "hercules"},
-        {"slug": "gemini", "name": "Gemini", "models": ["gemini-2.5-pro"],
-         "total_models": 1, "is_current": False, "is_user_defined": False,
-         "source": "built-in"},
-        {"slug": "copilot", "name": "Copilot", "models": ["gpt-5.4"],
-         "total_models": 1, "is_current": False, "is_user_defined": False,
-         "source": "hercules"},
-        {"slug": "nous", "name": "Nous", "models": ["anthropic/claude-sonnet-5"],
-         "total_models": 1, "is_current": False, "is_user_defined": False,
-         "source": "hercules"},
-        {"slug": "custom:lab", "name": "Lab", "models": ["lab-1"],
-         "total_models": 1, "is_current": False, "is_user_defined": True,
-         "source": "user-config"},
-        {"slug": "moa", "name": "MoA", "models": ["default"],
-         "total_models": 1, "is_current": False, "is_user_defined": False,
-         "source": "virtual"},
+        {
+            "slug": "openai-codex",
+            "name": "OpenAI Codex",
+            "models": ["gpt-5.4"],
+            "total_models": 1,
+            "is_current": True,
+            "is_user_defined": False,
+            "source": "hercules",
+        },
+        {
+            "slug": "gemini",
+            "name": "Gemini",
+            "models": ["gemini-2.5-pro"],
+            "total_models": 1,
+            "is_current": False,
+            "is_user_defined": False,
+            "source": "built-in",
+        },
+        {
+            "slug": "copilot",
+            "name": "Copilot",
+            "models": ["gpt-5.4"],
+            "total_models": 1,
+            "is_current": False,
+            "is_user_defined": False,
+            "source": "hercules",
+        },
+        {
+            "slug": "nous",
+            "name": "Nous",
+            "models": ["anthropic/claude-sonnet-5"],
+            "total_models": 1,
+            "is_current": False,
+            "is_user_defined": False,
+            "source": "hercules",
+        },
+        {
+            "slug": "custom:lab",
+            "name": "Lab",
+            "models": ["lab-1"],
+            "total_models": 1,
+            "is_current": False,
+            "is_user_defined": True,
+            "source": "user-config",
+        },
+        {
+            "slug": "moa",
+            "name": "MoA",
+            "models": ["default"],
+            "total_models": 1,
+            "is_current": False,
+            "is_user_defined": False,
+            "source": "virtual",
+        },
     ]
     ctx = _empty_ctx(provider="openai-codex", model="gpt-5.4")
     with (
@@ -391,6 +454,8 @@ def test_explicit_only_keeps_unauthenticated_current_provider_visible():
     assert row["authenticated"] is False
     assert row["models"] == ["deepseek-v4-pro"]
     assert "DEEPSEEK_API_KEY" in row["warning"]
+
+
 def test_include_unconfigured_keeps_current_provider_visible_without_credentials():
     """If the saved provider is currently unauthenticated, keep a visible row
     with the saved model so GUI pickers don't silently jump to another
@@ -398,7 +463,9 @@ def test_include_unconfigured_keeps_current_provider_visible_without_credentials
     ctx = _empty_ctx(provider="deepseek", model="deepseek-v4-pro")
     with _list_auth_returning([]):
         payload = build_models_payload(
-            ctx, include_unconfigured=True, picker_hints=True,
+            ctx,
+            include_unconfigured=True,
+            picker_hints=True,
         )
 
     deepseek = next(r for r in payload["providers"] if r["slug"] == "deepseek")
@@ -424,11 +491,18 @@ def test_include_unconfigured_does_not_duplicate_configured_current_row():
 
     assert sum(row["slug"] == "deepseek" for row in payload["providers"]) == 1
 
+
 def test_explicit_only_keeps_moa_when_raw_config_has_enabled_preset():
     rows = [
-        {"slug": "moa", "name": "MoA", "models": ["review"],
-         "total_models": 1, "is_current": False, "is_user_defined": False,
-         "source": "virtual"},
+        {
+            "slug": "moa",
+            "name": "MoA",
+            "models": ["review"],
+            "total_models": 1,
+            "is_current": False,
+            "is_user_defined": False,
+            "source": "virtual",
+        },
     ]
     ctx = _empty_ctx(provider="openrouter", model="anthropic/claude-opus-4.8")
     raw_config = {
@@ -453,7 +527,9 @@ def test_explicit_only_keeps_moa_when_raw_config_has_enabled_preset():
         _list_auth_returning(rows),
         patch("hercules_cli.config.load_config", return_value=raw_config),
         patch("hercules_cli.config.read_raw_config", return_value=raw_config),
-        patch("hercules_cli.auth.is_provider_explicitly_configured", return_value=False),
+        patch(
+            "hercules_cli.auth.is_provider_explicitly_configured", return_value=False
+        ),
     ):
         payload = build_models_payload(ctx, explicit_only=True)
 
@@ -461,14 +537,22 @@ def test_explicit_only_keeps_moa_when_raw_config_has_enabled_preset():
     assert payload["providers"][0]["models"] == ["review"]
     assert payload["providers"][1]["source"] == "configured-current"
     assert payload["providers"][1]["authenticated"] is False
+
+
 # ─── picker_hints ──────────────────────────────────────────────────────
 
 
 def test_picker_hints_marks_authed_rows_authenticated():
     rows = [
-        {"slug": "openrouter", "name": "OpenRouter", "models": ["m1"],
-         "total_models": 1, "is_current": True, "is_user_defined": False,
-         "source": "built-in"},
+        {
+            "slug": "openrouter",
+            "name": "OpenRouter",
+            "models": ["m1"],
+            "total_models": 1,
+            "is_current": True,
+            "is_user_defined": False,
+            "source": "built-in",
+        },
     ]
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
@@ -483,10 +567,11 @@ def test_picker_hints_adds_warning_to_skeleton_rows():
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
         payload = build_models_payload(
-            ctx, include_unconfigured=True, picker_hints=True,
+            ctx,
+            include_unconfigured=True,
+            picker_hints=True,
         )
-    skeleton_rows = [r for r in payload["providers"]
-                     if r.get("source") == "canonical"]
+    skeleton_rows = [r for r in payload["providers"] if r.get("source") == "canonical"]
     assert skeleton_rows, "test setup: expected at least one skeleton row"
     for row in skeleton_rows:
         assert row["authenticated"] is False
@@ -494,9 +579,8 @@ def test_picker_hints_adds_warning_to_skeleton_rows():
         assert "warning" in row
         # api_key providers get "paste X to activate" / others get the
         # hercules model fallback.
-        assert (
-            row["warning"].startswith("paste ")
-            or row["warning"].startswith("run `hercules model`")
+        assert row["warning"].startswith("paste ") or row["warning"].startswith(
+            "run `hercules model`"
         )
 
 
@@ -507,12 +591,12 @@ def test_picker_hints_api_key_warning_format():
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
         payload = build_models_payload(
-            ctx, include_unconfigured=True, picker_hints=True,
+            ctx,
+            include_unconfigured=True,
+            picker_hints=True,
         )
     # anthropic uses api_key + ANTHROPIC_API_KEY.
-    anthropic = next(
-        r for r in payload["providers"] if r["slug"] == "anthropic"
-    )
+    anthropic = next(r for r in payload["providers"] if r["slug"] == "anthropic")
     assert "ANTHROPIC_API_KEY" in anthropic["warning"]
     assert anthropic["warning"].startswith("paste ")
 
@@ -532,14 +616,26 @@ def test_canonical_order_uses_slug_not_is_user_defined_flag():
     canonical_slug = CANONICAL_PROVIDERS[2].slug  # any canonical
     rows = [
         # A truly-custom row (correct: is_user_defined=True)
-        {"slug": "custom:Ollama", "name": "Ollama", "models": [],
-         "total_models": 0, "is_current": False, "is_user_defined": True,
-         "source": "user-config"},
+        {
+            "slug": "custom:Ollama",
+            "name": "Ollama",
+            "models": [],
+            "total_models": 0,
+            "is_current": False,
+            "is_user_defined": True,
+            "source": "user-config",
+        },
         # A canonical row that the substrate flagged as user-defined
         # because the user configured it via providers: dict.
-        {"slug": canonical_slug, "name": "x", "models": ["m1"],
-         "total_models": 1, "is_current": False, "is_user_defined": True,
-         "source": "built-in"},
+        {
+            "slug": canonical_slug,
+            "name": "x",
+            "models": ["m1"],
+            "total_models": 1,
+            "is_current": False,
+            "is_user_defined": True,
+            "source": "built-in",
+        },
     ]
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
@@ -564,9 +660,15 @@ def test_canonical_order_with_unconfigured_preserves_full_universe():
     from hercules_cli.models import CANONICAL_PROVIDERS
 
     rows = [
-        {"slug": "custom:Ollama", "name": "Ollama", "models": [],
-         "total_models": 0, "is_current": False, "is_user_defined": True,
-         "source": "user-config"},
+        {
+            "slug": "custom:Ollama",
+            "name": "Ollama",
+            "models": [],
+            "total_models": 0,
+            "is_current": False,
+            "is_user_defined": True,
+            "source": "user-config",
+        },
     ]
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
@@ -597,7 +699,9 @@ def test_end_to_end_with_real_context_no_credentials_leak(monkeypatch):
     with patch("hercules_cli.config.load_config", return_value=cfg):
         ctx = load_picker_context()
     payload = build_models_payload(
-        ctx, include_unconfigured=True, picker_hints=True,
+        ctx,
+        include_unconfigured=True,
+        picker_hints=True,
     )
     import json as _json
 
@@ -610,17 +714,31 @@ def test_payload_shape_compatible_with_modelpickerdialog_frontend():
     Verify every authenticated/skeleton row exposes those keys.
     """
     rows = [
-        {"slug": "openrouter", "name": "OpenRouter", "models": ["m1"],
-         "total_models": 1, "is_current": True, "is_user_defined": False,
-         "source": "built-in"},
+        {
+            "slug": "openrouter",
+            "name": "OpenRouter",
+            "models": ["m1"],
+            "total_models": 1,
+            "is_current": True,
+            "is_user_defined": False,
+            "source": "built-in",
+        },
     ]
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
         payload = build_models_payload(
-            ctx, include_unconfigured=True, picker_hints=True,
+            ctx,
+            include_unconfigured=True,
+            picker_hints=True,
         )
-    required_keys = {"name", "slug", "models", "total_models", "is_current",
-                     "authenticated"}
+    required_keys = {
+        "name",
+        "slug",
+        "models",
+        "total_models",
+        "is_current",
+        "authenticated",
+    }
     for row in payload["providers"]:
         missing = required_keys - row.keys()
         assert not missing, f"row {row['slug']} missing keys: {missing}"
@@ -658,15 +776,21 @@ def test_aggregator_dedup_removes_overlapping_models():
     aggregator rows so the picker doesn't show them under the wrong
     provider.  (#45954)"""
     rows = [
-        _user_provider_row("litellm-proxy", [
-            "nvidia/nim/minimax-m3",
-            "nvidia/nim/kimi-k2.6",
-        ]),
-        _aggregator_row("openrouter", [
-            "minimax/minimax-m3",
-            "nvidia/nim/minimax-m3",  # overlaps with litellm-proxy
-            "anthropic/claude-sonnet-4.6",
-        ]),
+        _user_provider_row(
+            "litellm-proxy",
+            [
+                "nvidia/nim/minimax-m3",
+                "nvidia/nim/kimi-k2.6",
+            ],
+        ),
+        _aggregator_row(
+            "openrouter",
+            [
+                "minimax/minimax-m3",
+                "nvidia/nim/minimax-m3",  # overlaps with litellm-proxy
+                "anthropic/claude-sonnet-4.6",
+            ],
+        ),
     ]
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
@@ -719,10 +843,13 @@ def test_aggregator_dedup_no_user_providers_unchanged():
     """When there are no user-defined providers, nothing is filtered.
     (#45954)"""
     rows = [
-        _aggregator_row("openrouter", [
-            "nvidia/nim/minimax-m3",
-            "anthropic/claude-sonnet-4.6",
-        ]),
+        _aggregator_row(
+            "openrouter",
+            [
+                "nvidia/nim/minimax-m3",
+                "anthropic/claude-sonnet-4.6",
+            ],
+        ),
     ]
     ctx = _empty_ctx()
     with _list_auth_returning(rows):
@@ -766,9 +893,7 @@ def test_aggregator_dedup_does_not_empty_user_defined_custom_provider():
     with _list_auth_returning(rows):
         payload = build_models_payload(ctx)
 
-    proxy_row = next(
-        r for r in payload["providers"] if r["slug"] == "custom:my-proxy"
-    )
+    proxy_row = next(r for r in payload["providers"] if r["slug"] == "custom:my-proxy")
     or_row = next(r for r in payload["providers"] if r["slug"] == "openrouter")
 
     # The user's own custom provider keeps all of its models.
@@ -793,13 +918,26 @@ def test_flat_namespace_reseller_keeps_first_party_models_overlapping_user_proxy
     custom provider.
     """
     rows = [
-        _user_provider_row("custom:my-proxy", [
-            "minimax-m3", "minimax-m2.7", "glm-5", "deepseek-v4-flash",
-        ]),
-        _aggregator_row("opencode-go", [
-            "kimi-k2.6", "minimax-m3", "minimax-m2.7", "glm-5",
-            "deepseek-v4-flash", "qwen3.7-max",
-        ]),
+        _user_provider_row(
+            "custom:my-proxy",
+            [
+                "minimax-m3",
+                "minimax-m2.7",
+                "glm-5",
+                "deepseek-v4-flash",
+            ],
+        ),
+        _aggregator_row(
+            "opencode-go",
+            [
+                "kimi-k2.6",
+                "minimax-m3",
+                "minimax-m2.7",
+                "glm-5",
+                "deepseek-v4-flash",
+                "qwen3.7-max",
+            ],
+        ),
         _aggregator_row("openrouter", ["minimax-m3", "anthropic/claude-sonnet-4.6"]),
     ]
     ctx = _empty_ctx()
@@ -811,8 +949,12 @@ def test_flat_namespace_reseller_keeps_first_party_models_overlapping_user_proxy
 
     # The reseller keeps ALL of its first-party models — nothing stripped.
     assert go_row["models"] == [
-        "kimi-k2.6", "minimax-m3", "minimax-m2.7", "glm-5",
-        "deepseek-v4-flash", "qwen3.7-max",
+        "kimi-k2.6",
+        "minimax-m3",
+        "minimax-m2.7",
+        "glm-5",
+        "deepseek-v4-flash",
+        "qwen3.7-max",
     ]
     assert go_row["total_models"] == 6
 
@@ -933,11 +1075,15 @@ def test_build_models_payload_forwards_refresh_flag():
         captured["refresh"] = kwargs.get("refresh")
         return []
 
-    with patch("hercules_cli.model_switch.list_authenticated_providers", side_effect=_capture):
+    with patch(
+        "hercules_cli.model_switch.list_authenticated_providers", side_effect=_capture
+    ):
         build_models_payload(_empty_ctx())
     assert captured["refresh"] is False
 
-    with patch("hercules_cli.model_switch.list_authenticated_providers", side_effect=_capture):
+    with patch(
+        "hercules_cli.model_switch.list_authenticated_providers", side_effect=_capture
+    ):
         build_models_payload(_empty_ctx(), refresh=True)
     assert captured["refresh"] is True
 

@@ -30,6 +30,7 @@ TELEGRAM_ONBOARDING_URL_ENV = "TELEGRAM_ONBOARDING_URL"
 class TelegramOnboardingNotConfigured(RuntimeError):
     """Raised when managed-bot onboarding is used without a configured URL."""
 
+
 # The Nous-hosted manager bot username (without @). The backend returns the
 # actual deep link, so this is only used by local helpers/tests.
 DEFAULT_MANAGER_BOT = "HerculesSetupBot"

@@ -64,7 +64,9 @@ def add_agent_subcommands(subparsers: argparse._SubParsersAction) -> None:
         "switch-provider",
         help="Switch to a different provider",
     )
-    provider_parser.add_argument("provider", help="Provider (anthropic, openai, bedrock)")
+    provider_parser.add_argument(
+        "provider", help="Provider (anthropic, openai, bedrock)"
+    )
     provider_parser.set_defaults(func=handle_agent_switch_provider)
 
 

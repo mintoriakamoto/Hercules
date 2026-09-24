@@ -27,6 +27,7 @@ def hercules_home(tmp_path, monkeypatch):
     monkeypatch.setenv("HERCULES_HOME", str(home))
     # Clear any cached hercules_home computation
     import hercules_constants
+
     if hasattr(hercules_constants, "_hercules_home_cache"):
         hercules_constants._hercules_home_cache = None
     return home
@@ -42,7 +43,9 @@ def _make_stub_cli(history):
     )
 
 
-def test_save_conversation_writes_under_hercules_home(hercules_home, tmp_path, monkeypatch, capsys):
+def test_save_conversation_writes_under_hercules_home(
+    hercules_home, tmp_path, monkeypatch, capsys
+):
     """Snapshot must land under ~/.hercules/sessions/saved/, not CWD."""
     # Change CWD to a different directory to prove the file does NOT go there.
     work = tmp_path / "somewhere-else"
@@ -50,7 +53,9 @@ def test_save_conversation_writes_under_hercules_home(hercules_home, tmp_path, m
     monkeypatch.chdir(work)
 
     # Import fresh to pick up the HERCULES_HOME fixture
-    for mod in [m for m in sys.modules if m.startswith("cli") or m == "hercules_constants"]:
+    for mod in [
+        m for m in sys.modules if m.startswith("cli") or m == "hercules_constants"
+    ]:
         sys.modules.pop(mod, None)
 
     import cli  # noqa: F401  (module under test)
@@ -88,7 +93,9 @@ def test_save_conversation_writes_under_hercules_home(hercules_home, tmp_path, m
 
 
 def test_save_conversation_empty_history_does_nothing(hercules_home, capsys):
-    for mod in [m for m in sys.modules if m.startswith("cli") or m == "hercules_constants"]:
+    for mod in [
+        m for m in sys.modules if m.startswith("cli") or m == "hercules_constants"
+    ]:
         sys.modules.pop(mod, None)
     import cli
 

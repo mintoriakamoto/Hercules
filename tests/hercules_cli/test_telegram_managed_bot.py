@@ -128,7 +128,9 @@ class TestCreatePairing:
         with patch(
             "hercules_cli.telegram_managed_bot.httpx.post", return_value=mock_resp
         ) as post:
-            pairing = create_pairing("https://api.example.com", bot_name="Hercules Agent")
+            pairing = create_pairing(
+                "https://api.example.com", bot_name="Hercules Agent"
+            )
 
         assert pairing == TelegramPairing(
             pairing_id="abcdefghijklmnop",
@@ -219,7 +221,9 @@ class TestPollForToken:
             "token": VALID_TOKEN,
         }
 
-        with patch("hercules_cli.telegram_managed_bot.httpx.get", return_value=mock_resp):
+        with patch(
+            "hercules_cli.telegram_managed_bot.httpx.get", return_value=mock_resp
+        ):
             with patch("hercules_cli.telegram_managed_bot.time.sleep"):
                 result = poll_for_setup_result(
                     "https://api.example.com", self.pairing(), timeout=5
@@ -241,7 +245,9 @@ class TestPollForToken:
             "token": VALID_TOKEN,
         }
 
-        with patch("hercules_cli.telegram_managed_bot.httpx.get", return_value=mock_resp):
+        with patch(
+            "hercules_cli.telegram_managed_bot.httpx.get", return_value=mock_resp
+        ):
             result = poll_for_setup_result(
                 "https://api.example.com", self.pairing(), timeout=5
             )
@@ -262,7 +268,9 @@ class TestPollForToken:
             "token": "not-a-real-token",
         }
 
-        with patch("hercules_cli.telegram_managed_bot.httpx.get", return_value=mock_resp):
+        with patch(
+            "hercules_cli.telegram_managed_bot.httpx.get", return_value=mock_resp
+        ):
             with patch("hercules_cli.telegram_managed_bot.time.sleep"):
                 with patch(
                     "hercules_cli.telegram_managed_bot.time.monotonic"
@@ -280,7 +288,9 @@ class TestPollForToken:
         mock_resp.status_code = 200
         mock_resp.json.return_value = {"status": "waiting"}
 
-        with patch("hercules_cli.telegram_managed_bot.httpx.get", return_value=mock_resp):
+        with patch(
+            "hercules_cli.telegram_managed_bot.httpx.get", return_value=mock_resp
+        ):
             with patch("hercules_cli.telegram_managed_bot.time.sleep"):
                 with patch(
                     "hercules_cli.telegram_managed_bot.time.monotonic"
@@ -323,7 +333,9 @@ class TestSetupTelegramAuto:
 
         assert callable(_setup_telegram_auto)
 
-    def test_setup_result_passes_profile_name_for_profile_home(self, monkeypatch, tmp_path):
+    def test_setup_result_passes_profile_name_for_profile_home(
+        self, monkeypatch, tmp_path
+    ):
         from hercules_cli import setup
 
         seen = {}

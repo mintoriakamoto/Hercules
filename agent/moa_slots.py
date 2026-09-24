@@ -120,7 +120,9 @@ def _local_server_is_up(base_url: str) -> bool:
         return False
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
     try:
-        with socket.create_connection((host, port), timeout=_LOCAL_PROBE_TIMEOUT_SECONDS):
+        with socket.create_connection(
+            (host, port), timeout=_LOCAL_PROBE_TIMEOUT_SECONDS
+        ):
             return True
     except OSError:
         return False
@@ -188,7 +190,9 @@ def _probe_provider(provider: str, model: str = "") -> bool:
         return provider in _LOCAL_PROVIDERS or _credentials_configured(provider)
 
     try:
-        runtime = resolve_runtime_provider(requested=provider, target_model=model or None)
+        runtime = resolve_runtime_provider(
+            requested=provider, target_model=model or None
+        )
     except LocalOnlyModeError:
         # Local-only mode is on and this slot is not local. Keeping it would
         # raise the same error mid-turn, on the advisor call.
@@ -387,6 +391,8 @@ def align_preset_slots(
         notes.append(f"aggregator {agg_note}")
 
     if notes:
-        logger.warning("MoA slots realigned to available credentials: %s", "; ".join(notes))
+        logger.warning(
+            "MoA slots realigned to available credentials: %s", "; ".join(notes)
+        )
 
     return aligned_refs, aligned_agg, notes

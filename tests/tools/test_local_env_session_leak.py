@@ -29,7 +29,11 @@ import pytest
 
 import gateway.session_context as sc
 from gateway.session_context import _VAR_MAP, clear_session_vars, set_session_vars
-from tools.environments.local import _make_run_env, _sanitize_subprocess_env, hercules_subprocess_env
+from tools.environments.local import (
+    _make_run_env,
+    _sanitize_subprocess_env,
+    hercules_subprocess_env,
+)
 
 # The full set of session vars the bridge owns.
 SESSION_VARS = list(_VAR_MAP.keys())
@@ -65,6 +69,7 @@ def _engage():
 # --------------------------------------------------------------------------- #
 # Foreground path (_make_run_env)
 # --------------------------------------------------------------------------- #
+
 
 def test_engaged_unset_contextvar_strips_foreign_session_key(monkeypatch):
     """Engaged host + UNSET ContextVar must NOT inherit a foreign global.
@@ -109,7 +114,9 @@ def test_set_session_vars_engages_and_overrides_foreign_global(monkeypatch):
     finally:
         clear_session_vars(tokens)
 
-    assert env.get("HERCULES_SESSION_KEY") == "agent:main:discord:group:MY_BUGS_ROOT:111"
+    assert (
+        env.get("HERCULES_SESSION_KEY") == "agent:main:discord:group:MY_BUGS_ROOT:111"
+    )
 
 
 def test_engaged_strips_all_session_vars_when_unset(monkeypatch):
@@ -201,6 +208,7 @@ def test_explicit_empty_thread_id_overrides_stale_value(monkeypatch):
 # Background / PTY path (_sanitize_subprocess_env via process_registry)
 # --------------------------------------------------------------------------- #
 
+
 def test_sanitize_subprocess_env_strips_foreign_session_key_when_engaged(monkeypatch):
     """The background/PTY spawn path gets the same cross-session strip.
 
@@ -239,7 +247,9 @@ def test_sanitize_subprocess_env_set_contextvar_wins_when_engaged():
     finally:
         clear_session_vars(tokens)
 
-    assert sanitized.get("HERCULES_SESSION_KEY") == "agent:main:discord:group:REAL_BG:222"
+    assert (
+        sanitized.get("HERCULES_SESSION_KEY") == "agent:main:discord:group:REAL_BG:222"
+    )
 
 
 def test_sanitize_subprocess_env_unengaged_preserves_fallback(monkeypatch):
@@ -257,6 +267,7 @@ def test_sanitize_subprocess_env_unengaged_preserves_fallback(monkeypatch):
 # --------------------------------------------------------------------------- #
 # Non-terminal spawn surface (hercules_subprocess_env) — sibling path
 # --------------------------------------------------------------------------- #
+
 
 def test_hercules_subprocess_env_strips_foreign_session_key_when_engaged(monkeypatch):
     """hercules_subprocess_env (browser/ACP/CLI/TUI-host spawns) must not leak a

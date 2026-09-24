@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 
 class ProviderMode(Enum):
     """Provider API modes supported by Hercules."""
+
     ANTHROPIC = "anthropic_messages"
     ANTHROPIC_LEGACY = "anthropic"
     OPENAI = "openai"

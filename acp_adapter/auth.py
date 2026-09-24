@@ -19,6 +19,7 @@ def detect_provider() -> Optional[str]:
     """
     try:
         from hercules_cli.runtime_provider import resolve_runtime_provider
+
         runtime = resolve_runtime_provider()
         api_key = runtime.get("api_key")
         provider = runtime.get("provider")
@@ -31,16 +32,19 @@ def detect_provider() -> Optional[str]:
     except ImportError as e:
         # Runtime provider module not available
         import logging as _logging
+
         _logging.debug("could not import runtime_provider: %s", e)
         return None
     except (AttributeError, TypeError, ValueError) as e:
         # Runtime provider data structure unexpected
         import logging as _logging
+
         _logging.debug("error resolving runtime provider: %s", e)
         return None
     except Exception as e:
         # Unexpected error
         import logging as _logging
+
         _logging.exception("unexpected error detecting provider: %s", e)
         return None
     return None

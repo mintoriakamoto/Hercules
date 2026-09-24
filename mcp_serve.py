@@ -60,19 +60,25 @@ except ImportError:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_sessions_dir() -> Path:
     """Return the sessions directory using HERCULES_HOME."""
     try:
         from hercules_constants import get_hercules_home
+
         return get_hercules_home() / "sessions"
     except ImportError:
-        return Path(os.environ.get("HERCULES_HOME", Path.home() / ".hercules")) / "sessions"
+        return (
+            Path(os.environ.get("HERCULES_HOME", Path.home() / ".hercules"))
+            / "sessions"
+        )
 
 
 def _get_session_db():
     """Get a SessionDB instance for reading message transcripts."""
     try:
         from hercules_state import SessionDB
+
         return SessionDB()
     except Exception as e:
         logger.debug("SessionDB unavailable: %s", e)
@@ -196,11 +202,13 @@ def _load_channel_directory() -> dict:
     """Load the cached channel directory for available targets."""
     try:
         from hercules_constants import get_hercules_home
+
         directory_file = get_hercules_home() / "channel_directory.json"
     except ImportError:
-        directory_file = Path(
-            os.environ.get("HERCULES_HOME", Path.home() / ".hercules")
-        ) / "channel_directory.json"
+        directory_file = (
+            Path(os.environ.get("HERCULES_HOME", Path.home() / ".hercules"))
+            / "channel_directory.json"
+        )
 
     if not directory_file.exists():
         return {}
@@ -236,7 +244,8 @@ def _extract_message_content(msg: dict) -> str:
     content = msg.get("content", "")
     if isinstance(content, list):
         text_parts = [
-            p.get("text", "") for p in content
+            p.get("text", "")
+            for p in content
             if isinstance(p, dict) and p.get("type") == "text"
         ]
         return "\n".join(text_parts)
@@ -259,21 +268,27 @@ def _extract_attachments(msg: dict) -> List[dict]:
                 continue
             ptype = part.get("type", "")
             if ptype == "image_url":
-                url = part.get("image_url", {}).get("url", "") if isinstance(part.get("image_url"), dict) else ""
+                url = (
+                    part.get("image_url", {}).get("url", "")
+                    if isinstance(part.get("image_url"), dict)
+                    else ""
+                )
                 if url:
                     attachments.append({"type": "image", "url": url})
             elif ptype == "image":
                 url = part.get("url", part.get("source", {}).get("url", ""))
                 if url:
                     attachments.append({"type": "image", "url": url})
-            elif ptype not in {"text",}:
+            elif ptype not in {
+                "text",
+            }:
                 # Unknown non-text content type
                 attachments.append({"type": ptype, "data": part})
 
     # MEDIA: tags in text content
     text = _extract_message_content(msg)
     if text:
-        media_pattern = re.compile(r'MEDIA:\s*(\S+)')
+        media_pattern = re.compile(r"MEDIA:\s*(\S+)")
         for match in media_pattern.finditer(text):
             path = match.group(1)
             attachments.append({"type": "media", "path": path})
@@ -292,6 +307,7 @@ POLL_INTERVAL = 0.2  # seconds between DB polls (200ms)
 @dataclass
 class QueueEvent:
     """An event in the bridge's in-memory queue."""
+
     cursor: int
     type: str  # "message", "approval_requested", "approval_resolved"
     session_key: str = ""
@@ -313,7 +329,9 @@ class EventBridge:
         self._new_event = threading.Event()
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self._last_poll_timestamps: Dict[str, float] = {}  # session_key -> unix timestamp
+        self._last_poll_timestamps: Dict[
+            str, float
+        ] = {}  # session_key -> unix timestamp
         # In-memory approval tracking (populated from events)
         self._pending_approvals: Dict[str, dict] = {}
         # mtime cache — skip expensive work when state.db hasn't changed
@@ -346,7 +364,8 @@ class EventBridge:
         """Return events since after_cursor, optionally filtered by session_key."""
         with self._lock:
             events = [
-                e for e in self._queue
+                e
+                for e in self._queue
                 if e.cursor > after_cursor
                 and (not session_key or e.session_key == session_key)
             ][:limit]
@@ -354,8 +373,12 @@ class EventBridge:
         next_cursor = events[-1].cursor if events else after_cursor
         return {
             "events": [
-                {"cursor": e.cursor, "type": e.type,
-                 "session_key": e.session_key, **e.data}
+                {
+                    "cursor": e.cursor,
+                    "type": e.type,
+                    "session_key": e.session_key,
+                    **e.data,
+                }
                 for e in events
             ],
             "next_cursor": next_cursor,
@@ -377,8 +400,10 @@ class EventBridge:
                         not session_key or e.session_key == session_key
                     ):
                         return {
-                            "cursor": e.cursor, "type": e.type,
-                            "session_key": e.session_key, **e.data,
+                            "cursor": e.cursor,
+                            "type": e.type,
+                            "session_key": e.session_key,
+                            **e.data,
                         }
 
             remaining = deadline - time.monotonic()
@@ -405,12 +430,14 @@ class EventBridge:
         if not approval:
             return {"error": f"Approval not found: {approval_id}"}
 
-        self._enqueue(QueueEvent(
-            cursor=0,  # Will be set by _enqueue
-            type="approval_resolved",
-            session_key=approval.get("session_key", ""),
-            data={"approval_id": approval_id, "decision": decision},
-        ))
+        self._enqueue(
+            QueueEvent(
+                cursor=0,  # Will be set by _enqueue
+                type="approval_resolved",
+                session_key=approval.get("session_key", ""),
+                data={"approval_id": approval_id, "decision": decision},
+            )
+        )
 
         return {"resolved": True, "approval_id": approval_id, "decision": decision}
 
@@ -452,9 +479,13 @@ class EventBridge:
         """
         try:
             from hercules_constants import get_hercules_home
+
             db_file = get_hercules_home() / "state.db"
         except ImportError:
-            db_file = Path(os.environ.get("HERCULES_HOME", Path.home() / ".hercules")) / "state.db"
+            db_file = (
+                Path(os.environ.get("HERCULES_HOME", Path.home() / ".hercules"))
+                / "state.db"
+            )
 
         try:
             db_mtime = db_file.stat().st_mtime if db_file.exists() else 0.0
@@ -497,6 +528,7 @@ class EventBridge:
                         # ISO string — parse to epoch
                         try:
                             from datetime import datetime
+
                             return datetime.fromisoformat(ts).timestamp()
                         except Exception:
                             return 0.0
@@ -516,17 +548,19 @@ class EventBridge:
                 content = _extract_message_content(msg)
                 if not content:
                     continue
-                self._enqueue(QueueEvent(
-                    cursor=0,
-                    type="message",
-                    session_key=session_key,
-                    data={
-                        "role": msg.get("role", ""),
-                        "content": content[:500],
-                        "timestamp": str(msg.get("timestamp", "")),
-                        "message_id": str(msg.get("id", "")),
-                    },
-                ))
+                self._enqueue(
+                    QueueEvent(
+                        cursor=0,
+                        type="message",
+                        session_key=session_key,
+                        data={
+                            "role": msg.get("role", ""),
+                            "content": content[:500],
+                            "timestamp": str(msg.get("timestamp", "")),
+                            "message_id": str(msg.get("id", "")),
+                        },
+                    )
+                )
 
             # Update last seen to the most recent message timestamp
             all_ts = [_ts_float(m.get("timestamp", 0)) for m in messages]
@@ -539,6 +573,7 @@ class EventBridge:
 # ---------------------------------------------------------------------------
 # MCP Server
 # ---------------------------------------------------------------------------
+
 
 def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
     """Create and return the Hercules MCP server with all tools registered."""
@@ -592,9 +627,11 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             chat_name = origin.get("chat_name", "")
             if search:
                 search_lower = search.lower()
-                if (search_lower not in display_name.lower()
-                        and search_lower not in chat_name.lower()
-                        and search_lower not in key.lower()):
+                if (
+                    search_lower not in display_name.lower()
+                    and search_lower not in chat_name.lower()
+                    and search_lower not in key.lower()
+                ):
                     continue
 
             conversations.append({
@@ -611,10 +648,13 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
         conversations.sort(key=lambda c: c.get("updated_at", ""), reverse=True)
         conversations = conversations[:limit]
 
-        return json.dumps({
-            "count": len(conversations),
-            "conversations": conversations,
-        }, indent=2)
+        return json.dumps(
+            {
+                "count": len(conversations),
+                "conversations": conversations,
+            },
+            indent=2,
+        )
 
     # -- conversation_get --------------------------------------------------
 
@@ -632,22 +672,25 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
             return json.dumps({"error": f"Conversation not found: {session_key}"})
 
         origin = entry.get("origin", {})
-        return json.dumps({
-            "session_key": session_key,
-            "session_id": entry.get("session_id", ""),
-            "platform": entry.get("platform") or origin.get("platform", ""),
-            "chat_type": entry.get("chat_type", origin.get("chat_type", "")),
-            "display_name": entry.get("display_name", ""),
-            "user_name": origin.get("user_name", ""),
-            "chat_name": origin.get("chat_name", ""),
-            "chat_id": origin.get("chat_id", ""),
-            "thread_id": origin.get("thread_id"),
-            "updated_at": entry.get("updated_at", ""),
-            "created_at": entry.get("created_at", ""),
-            "input_tokens": entry.get("input_tokens", 0),
-            "output_tokens": entry.get("output_tokens", 0),
-            "total_tokens": entry.get("total_tokens", 0),
-        }, indent=2)
+        return json.dumps(
+            {
+                "session_key": session_key,
+                "session_id": entry.get("session_id", ""),
+                "platform": entry.get("platform") or origin.get("platform", ""),
+                "chat_type": entry.get("chat_type", origin.get("chat_type", "")),
+                "display_name": entry.get("display_name", ""),
+                "user_name": origin.get("user_name", ""),
+                "chat_name": origin.get("chat_name", ""),
+                "chat_id": origin.get("chat_id", ""),
+                "thread_id": origin.get("thread_id"),
+                "updated_at": entry.get("updated_at", ""),
+                "created_at": entry.get("created_at", ""),
+                "input_tokens": entry.get("input_tokens", 0),
+                "output_tokens": entry.get("output_tokens", 0),
+                "total_tokens": entry.get("total_tokens", 0),
+            },
+            indent=2,
+        )
 
     # -- messages_read -----------------------------------------------------
 
@@ -699,12 +742,15 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
 
         messages = filtered[-limit:]
 
-        return json.dumps({
-            "session_key": session_key,
-            "count": len(messages),
-            "total_in_session": len(filtered),
-            "messages": messages,
-        }, indent=2)
+        return json.dumps(
+            {
+                "session_key": session_key,
+                "count": len(messages),
+                "total_in_session": len(filtered),
+                "messages": messages,
+            },
+            indent=2,
+        )
 
     # -- attachments_fetch -------------------------------------------------
 
@@ -752,11 +798,14 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
 
         attachments = _extract_attachments(target_msg)
 
-        return json.dumps({
-            "message_id": message_id,
-            "count": len(attachments),
-            "attachments": attachments,
-        }, indent=2)
+        return json.dumps(
+            {
+                "message_id": message_id,
+                "count": len(attachments),
+                "attachments": attachments,
+            },
+            indent=2,
+        )
 
     # -- events_poll -------------------------------------------------------
 
@@ -848,9 +897,12 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
 
         try:
             from tools.send_message_tool import send_message_tool
-            result_str = send_message_tool(
-                {"action": "send", "target": target, "message": message}
-            )
+
+            result_str = send_message_tool({
+                "action": "send",
+                "target": target,
+                "message": message,
+            })
             return result_str
         except ImportError:
             return json.dumps({"error": "Send message tool not available"})
@@ -922,10 +974,13 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
         from before the bridge connected are not included.
         """
         approvals = bridge.list_pending_approvals()
-        return json.dumps({
-            "count": len(approvals),
-            "approvals": approvals,
-        }, indent=2)
+        return json.dumps(
+            {
+                "count": len(approvals),
+                "approvals": approvals,
+            },
+            indent=2,
+        )
 
     # -- permissions_respond -----------------------------------------------
 
@@ -943,7 +998,7 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
         if decision not in {"allow-once", "allow-always", "deny"}:
             return json.dumps({
                 "error": f"Invalid decision: {decision}. "
-                         f"Must be allow-once, allow-always, or deny"
+                f"Must be allow-once, allow-always, or deny"
             })
 
         result = bridge.respond_to_approval(id, decision)
@@ -955,6 +1010,7 @@ def create_mcp_server(event_bridge: Optional[EventBridge] = None) -> "FastMCP":
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def run_mcp_server(verbose: bool = False) -> None:
     """Start the Hercules MCP server on stdio."""

@@ -1,4 +1,5 @@
 """Phase 3: secondary-profile adapter registry + same-token conflict detection."""
+
 import pytest
 
 from gateway.run import GatewayRunner
@@ -17,7 +18,9 @@ class TestCredentialFingerprint:
     def test_stable_and_log_safe(self):
         a = _FakeAdapter(token="secret-bot-token")
         fp1 = GatewayRunner._adapter_credential_fingerprint(a)
-        fp2 = GatewayRunner._adapter_credential_fingerprint(_FakeAdapter(token="secret-bot-token"))
+        fp2 = GatewayRunner._adapter_credential_fingerprint(
+            _FakeAdapter(token="secret-bot-token")
+        )
         assert fp1 == fp2  # stable
         assert "secret-bot-token" not in (fp1 or "")  # never the raw token
         assert len(fp1) == 16
@@ -31,6 +34,7 @@ class TestCredentialFingerprint:
         class _AltAdapter:
             def __init__(self):
                 self.bot_token = "alt-token"
+
         assert GatewayRunner._adapter_credential_fingerprint(_AltAdapter()) is not None
 
     def test_reads_platform_config_token(self):
@@ -107,9 +111,7 @@ class TestPortBindingHardError:
         reviewer_cfg.platforms = {
             Platform.WEBHOOK: PlatformConfig(enabled=True, extra={"port": 8644}),
         }
-        monkeypatch.setattr(
-            "gateway.config.load_gateway_config", lambda: reviewer_cfg
-        )
+        monkeypatch.setattr("gateway.config.load_gateway_config", lambda: reviewer_cfg)
 
         with pytest.raises(MultiplexConfigError) as ei:
             await runner._start_one_profile_adapters("reviewer", "/tmp/x", {})
@@ -129,9 +131,7 @@ class TestPortBindingHardError:
         reviewer_cfg.platforms = {
             Platform.TELEGRAM: PlatformConfig(enabled=True, token="t"),
         }
-        monkeypatch.setattr(
-            "gateway.config.load_gateway_config", lambda: reviewer_cfg
-        )
+        monkeypatch.setattr("gateway.config.load_gateway_config", lambda: reviewer_cfg)
         # _create_adapter returns None here (no real telegram token wiring), so
         # the loop simply connects nothing — the key assertion is NO raise.
         monkeypatch.setattr(runner, "_create_adapter", lambda p, c: None)
@@ -173,9 +173,7 @@ class TestPortBindingHardError:
             ): "default"
         }
 
-        monkeypatch.setattr(
-            "gateway.config.load_gateway_config", lambda: reviewer_cfg
-        )
+        monkeypatch.setattr("gateway.config.load_gateway_config", lambda: reviewer_cfg)
         monkeypatch.setattr(runner, "_create_adapter", lambda p, c: duplicate)
         monkeypatch.setattr(runner, "_adapter_disconnect_timeout_secs", lambda: 0)
 
@@ -189,7 +187,15 @@ class TestPortBindingHardError:
 
     def test_port_binding_set_covers_known_listeners(self):
         from gateway.run import _PORT_BINDING_PLATFORM_VALUES
+
         # Every adapter that binds a TCP port must be in the guard set.
-        for p in ("webhook", "api_server", "msgraph_webhook", "feishu",
-                  "wecom_callback", "bluebubbles", "sms"):
+        for p in (
+            "webhook",
+            "api_server",
+            "msgraph_webhook",
+            "feishu",
+            "wecom_callback",
+            "bluebubbles",
+            "sms",
+        ):
             assert p in _PORT_BINDING_PLATFORM_VALUES

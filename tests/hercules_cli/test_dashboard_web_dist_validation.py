@@ -18,6 +18,7 @@ import pytest
 @pytest.fixture()
 def main_mod():
     import hercules_cli.main as main
+
     return main
 
 
@@ -133,4 +134,5 @@ def test_env_dist_tilde_expanded_for_web_server(main_mod, monkeypatch, tmp_path)
     main_mod.cmd_dashboard(_args())
 
     import os
+
     assert os.environ["HERCULES_WEB_DIST"] == str(dist)

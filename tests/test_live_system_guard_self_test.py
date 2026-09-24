@@ -15,6 +15,7 @@ Every primitive that can deliver a signal to a foreign process or mutate
 the live systemd unit MUST be exercised below. Adding a new primitive to
 the guard? Add a test here too.
 """
+
 from __future__ import annotations
 
 import os
@@ -146,6 +147,7 @@ def test_os_popen_systemctl_blocked():
 
 def test_pty_spawn_systemctl_blocked():
     import pty
+
     with pytest.raises(RuntimeError, match="live-system guard"):
         pty.spawn(["systemctl", "--user", "restart", "hercules-gateway"])
 

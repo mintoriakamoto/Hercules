@@ -59,9 +59,7 @@ class DummyAgent:
 
 
 def test_codex_app_server_native_auto_mode_leaves_thread_compaction_to_codex():
-    agent = DummyAgent(
-        TurnResult(thread_id="thread-1", turn_id="compact-turn-1")
-    )
+    agent = DummyAgent(TurnResult(thread_id="thread-1", turn_id="compact-turn-1"))
     messages = [{"role": "user", "content": "hi"}]
 
     returned, prompt = compress_context(
@@ -80,9 +78,7 @@ def test_codex_app_server_native_auto_mode_leaves_thread_compaction_to_codex():
 
 
 def test_codex_app_server_manual_compression_routes_to_codex_thread():
-    agent = DummyAgent(
-        TurnResult(thread_id="thread-1", turn_id="compact-turn-1")
-    )
+    agent = DummyAgent(TurnResult(thread_id="thread-1", turn_id="compact-turn-1"))
     messages = [
         {"role": "user", "content": "hi"},
         {"role": "assistant", "content": "hello"},
@@ -165,9 +161,7 @@ def test_codex_app_server_compression_failure_preserves_bookkeeping():
 
 
 def test_codex_app_server_native_compaction_notice_emits_status_and_event():
-    agent = DummyAgent(
-        TurnResult(thread_id="thread-1", turn_id="normal-turn-1")
-    )
+    agent = DummyAgent(TurnResult(thread_id="thread-1", turn_id="normal-turn-1"))
     turn = TurnResult(
         thread_id="thread-1",
         turn_id="normal-turn-1",

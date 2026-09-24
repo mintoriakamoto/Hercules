@@ -5,6 +5,7 @@ recency, so spreading activation reflects what is *currently* useful. Edges
 whose effective strength drops below the floor are pruned. Elapsed time is
 simulated by backdating an edge's ``updated_at`` directly.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -30,7 +31,9 @@ def store(tmp_path):
 
 def _backdate_edge(store, a, b, days):
     lo, hi = sorted((a, b))
-    ts = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    ts = (datetime.now(timezone.utc) - timedelta(days=days)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
     store._conn.execute(
         "UPDATE fact_associations SET updated_at = ? WHERE fact_a = ? AND fact_b = ?",
         (ts, lo, hi),
@@ -40,12 +43,19 @@ def _backdate_edge(store, a, b, days):
 
 # --- the decay curve -------------------------------------------------------
 
+
 def test_decay_factor_curve():
     now = datetime.now(timezone.utc)
-    assert _decay_factor(now.strftime("%Y-%m-%d %H:%M:%S")) == pytest.approx(1.0, abs=1e-3)
-    half = (now - timedelta(days=_ASSOCIATION_HALF_LIFE_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
+    assert _decay_factor(now.strftime("%Y-%m-%d %H:%M:%S")) == pytest.approx(
+        1.0, abs=1e-3
+    )
+    half = (now - timedelta(days=_ASSOCIATION_HALF_LIFE_DAYS)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
     assert _decay_factor(half) == pytest.approx(0.5, abs=5e-3)
-    two = (now - timedelta(days=2 * _ASSOCIATION_HALF_LIFE_DAYS)).strftime("%Y-%m-%d %H:%M:%S")
+    two = (now - timedelta(days=2 * _ASSOCIATION_HALF_LIFE_DAYS)).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
     assert _decay_factor(two) == pytest.approx(0.25, abs=5e-3)
 
 
@@ -62,6 +72,7 @@ def test_decay_factor_defensive():
 
 
 # --- decay in retrieval + reinforcement ------------------------------------
+
 
 def test_get_associations_reports_decayed_strength(store):
     a = store.add_fact("Fact A that pairs with B")
@@ -99,12 +110,15 @@ def test_decayed_edge_below_min_strength_is_filtered(store):
 
 # --- hygiene pruning -------------------------------------------------------
 
+
 def test_prune_removes_edges_decayed_below_floor(store):
     a = store.add_fact("Stale hub fact")
     stale = store.add_fact("Stale partner fact")
     fresh = store.add_fact("Fresh partner fact")
     store.reinforce_association(a, stale, delta=0.8)
-    _backdate_edge(store, a, stale, 5 * _ASSOCIATION_HALF_LIFE_DAYS)  # 0.8/32 = 0.025 < floor
+    _backdate_edge(
+        store, a, stale, 5 * _ASSOCIATION_HALF_LIFE_DAYS
+    )  # 0.8/32 = 0.025 < floor
     store.reinforce_association(a, fresh, delta=0.8)  # fresh, well above floor
 
     assert _ASSOCIATION_PRUNE_FLOOR == 0.05

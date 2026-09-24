@@ -24,6 +24,7 @@ from hercules_constants import get_hercules_home
 
 class ImprovementType(Enum):
     """Categories of skill improvements."""
+
     PERFORMANCE = "performance"  # Optimized algorithm or approach
     GENERALIZATION = "generalization"  # Handles more edge cases
     EFFICIENCY = "efficiency"  # Reduced resource consumption
@@ -34,6 +35,7 @@ class ImprovementType(Enum):
 @dataclass
 class PerformanceMetric:
     """Single performance measurement."""
+
     timestamp: int
     success_rate: float  # 0.0-1.0
     avg_latency_ms: float
@@ -45,6 +47,7 @@ class PerformanceMetric:
 @dataclass
 class SkillImprovement:
     """Proposed or applied skill improvement."""
+
     skill_name: str
     version: str
     improvement_type: ImprovementType
@@ -61,6 +64,7 @@ class SkillImprovement:
 @dataclass
 class SkillProfile:
     """Persistent record of a skill's evolution."""
+
     skill_name: str
     category: str
     created_at: int
@@ -237,7 +241,7 @@ class SelfImprovementEngine:
         after_success = improvement.metrics_after.success_rate
 
         if before_success == 0:
-            actual_ratio = float('inf') if after_success > 0 else 1.0
+            actual_ratio = float("inf") if after_success > 0 else 1.0
         else:
             actual_ratio = after_success / before_success
 
@@ -298,7 +302,8 @@ class SelfImprovementEngine:
 
         # Find successful improvements
         successful = [
-            imp for imp in profile.improvements
+            imp
+            for imp in profile.improvements
             if imp.applied and self.validate_improvement(source_skill, imp)
         ]
 
@@ -321,7 +326,9 @@ class SelfImprovementEngine:
                         continue
 
                     # Simple heuristic: same category or domain overlap
-                    if target_domain and target_domain not in data.get("transfer_domains", []):
+                    if target_domain and target_domain not in data.get(
+                        "transfer_domains", []
+                    ):
                         continue
 
                     candidates.append(other_name)
@@ -366,7 +373,9 @@ class SelfImprovementEngine:
                             confidences.append(confidence)
 
             if improvement_ratios:
-                stats["average_improvement_ratio"] = sum(improvement_ratios) / len(improvement_ratios)
+                stats["average_improvement_ratio"] = sum(improvement_ratios) / len(
+                    improvement_ratios
+                )
 
             if confidences:
                 stats["avg_confidence"] = sum(confidences) / len(confidences)
@@ -434,7 +443,7 @@ class SelfImprovementEngine:
         try:
             with open(profiles_path, "w", encoding="utf-8") as f:
                 for name, data in profiles.items():
-                    f.write(json.dumps(data) + '\n')
+                    f.write(json.dumps(data) + "\n")
         except Exception:
             pass
 
@@ -498,7 +507,9 @@ class SelfImprovementEngine:
                 improvement = SkillImprovement(
                     skill_name=imp_data.get("skill_name", ""),
                     version=imp_data.get("version", "1.0"),
-                    improvement_type=ImprovementType(imp_data.get("improvement_type", "performance")),
+                    improvement_type=ImprovementType(
+                        imp_data.get("improvement_type", "performance")
+                    ),
                     timestamp=imp_data.get("timestamp", 0),
                     metrics_before=PerformanceMetric(
                         timestamp=0,
@@ -522,10 +533,10 @@ class SelfImprovementEngine:
     def _next_version(self, current: str) -> str:
         """Increment semantic version."""
         try:
-            parts = current.split('.')
+            parts = current.split(".")
             if len(parts) >= 1:
                 minor = int(parts[-1]) + 1
-                return '.'.join(parts[:-1]) + '.' + str(minor)
+                return ".".join(parts[:-1]) + "." + str(minor)
         except Exception:
             pass
         return current + ".1"
@@ -533,10 +544,10 @@ class SelfImprovementEngine:
     def _prev_version(self, current: str) -> str:
         """Decrement semantic version."""
         try:
-            parts = current.split('.')
+            parts = current.split(".")
             if len(parts) >= 2 and int(parts[-1]) > 0:
                 minor = int(parts[-1]) - 1
-                return '.'.join(parts[:-1]) + '.' + str(minor)
+                return ".".join(parts[:-1]) + "." + str(minor)
             elif len(parts) == 1 and current != "1.0":
                 return "1.0"
         except Exception:

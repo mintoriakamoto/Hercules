@@ -21,7 +21,8 @@ def _adapter(key: str = "sk-strong-test-key-1234") -> APIServerAdapter:
 
 def _req(authorization: str):
     return make_mocked_request(
-        "POST", "/v1/chat/completions",
+        "POST",
+        "/v1/chat/completions",
         headers={"Authorization": authorization},
     )
 

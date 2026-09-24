@@ -3,7 +3,10 @@
 from unittest.mock import patch, MagicMock
 
 from hercules_cli.models import (
-    OPENROUTER_MODELS, fetch_openrouter_models, model_ids, detect_provider_for_model,
+    OPENROUTER_MODELS,
+    fetch_openrouter_models,
+    model_ids,
+    detect_provider_for_model,
 )
 import hercules_cli.models as _models_mod
 
@@ -14,33 +17,41 @@ LIVE_OPENROUTER_MODELS = [
 ]
 
 
-
 class TestModelIds:
     def test_returns_non_empty_list(self):
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             ids = model_ids()
         assert isinstance(ids, list)
         assert len(ids) > 0
 
     def test_ids_match_fetched_catalog(self):
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             ids = model_ids()
         expected = [mid for mid, _ in LIVE_OPENROUTER_MODELS]
         assert ids == expected
 
     def test_all_ids_contain_provider_slash(self):
         """Model IDs should follow the provider/model format."""
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             for mid in model_ids():
                 assert "/" in mid, f"Model ID '{mid}' missing provider/ prefix"
 
     def test_no_duplicate_ids(self):
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             ids = model_ids()
         assert len(ids) == len(set(ids)), "Duplicate model IDs found"
-
-
-
 
 
 class TestOpenRouterModels:
@@ -65,7 +76,9 @@ class TestFetchOpenRouterModels:
                 return b'{"data":[{"id":"anthropic/claude-opus-4.8","pricing":{"prompt":"0.000015","completion":"0.000075"}},{"id":"qwen/qwen3.7-max","pricing":{"prompt":"0.000000325","completion":"0.00000195"}},{"id":"nvidia/nemotron-3-super-120b-a12b:free","pricing":{"prompt":"0","completion":"0"}}]}'
 
         monkeypatch.setattr(_models_mod, "_openrouter_catalog_cache", None)
-        with patch("hercules_cli.models._urlopen_model_catalog_request", return_value=_Resp()):
+        with patch(
+            "hercules_cli.models._urlopen_model_catalog_request", return_value=_Resp()
+        ):
             models = fetch_openrouter_models(force_refresh=True)
 
         assert models == [
@@ -74,10 +87,12 @@ class TestFetchOpenRouterModels:
             ("nvidia/nemotron-3-super-120b-a12b:free", "free"),
         ]
 
-
     def test_falls_back_to_static_snapshot_on_fetch_failure(self, monkeypatch):
         monkeypatch.setattr(_models_mod, "_openrouter_catalog_cache", None)
-        with patch("hercules_cli.models._urlopen_model_catalog_request", side_effect=OSError("boom")):
+        with patch(
+            "hercules_cli.models._urlopen_model_catalog_request",
+            side_effect=OSError("boom"),
+        ):
             models = fetch_openrouter_models(force_refresh=True)
 
         assert models == OPENROUTER_MODELS
@@ -89,6 +104,7 @@ class TestFetchOpenRouterModels:
         immediate runtime failures when the user selects it. Ported from
         Kilo-Org/kilocode#9068.
         """
+
         class _Resp:
             def __enter__(self):
                 return self
@@ -108,7 +124,7 @@ class TestFetchOpenRouterModels:
                     b'"supported_parameters":["temperature","response_format"]},'
                     b'{"id":"qwen/qwen3.7-max","pricing":{"prompt":"0.000000325","completion":"0.00000195"},'
                     b'"supported_parameters":["tools","temperature"]}'
-                    b']}'
+                    b"]}"
                 )
 
         # Include the image-only id in the curated list so it has a chance to be surfaced.
@@ -123,8 +139,14 @@ class TestFetchOpenRouterModels:
         )
         monkeypatch.setattr(_models_mod, "_openrouter_catalog_cache", None)
         with (
-            patch("hercules_cli.model_catalog.get_curated_openrouter_models", return_value=[]),
-            patch("hercules_cli.models._urlopen_model_catalog_request", return_value=_Resp()),
+            patch(
+                "hercules_cli.model_catalog.get_curated_openrouter_models",
+                return_value=[],
+            ),
+            patch(
+                "hercules_cli.models._urlopen_model_catalog_request",
+                return_value=_Resp(),
+            ),
         ):
             models = fetch_openrouter_models(force_refresh=True)
 
@@ -142,6 +164,7 @@ class TestFetchOpenRouterModels:
         as 'unknown → allow' prevents the picker from silently emptying on
         those gateways.
         """
+
         class _Resp:
             def __enter__(self):
                 return self
@@ -155,11 +178,13 @@ class TestFetchOpenRouterModels:
                     b'{"data":['
                     b'{"id":"anthropic/claude-opus-4.8","pricing":{"prompt":"0.000015","completion":"0.000075"}},'
                     b'{"id":"qwen/qwen3.7-max","pricing":{"prompt":"0.000000325","completion":"0.00000195"}}'
-                    b']}'
+                    b"]}"
                 )
 
         monkeypatch.setattr(_models_mod, "_openrouter_catalog_cache", None)
-        with patch("hercules_cli.models._urlopen_model_catalog_request", return_value=_Resp()):
+        with patch(
+            "hercules_cli.models._urlopen_model_catalog_request", return_value=_Resp()
+        ):
             models = fetch_openrouter_models(force_refresh=True)
 
         ids = [mid for mid, _ in models]
@@ -172,73 +197,118 @@ class TestOpenRouterToolSupportHelper:
 
     def test_tools_in_supported_parameters(self):
         from hercules_cli.models import _openrouter_model_supports_tools
-        assert _openrouter_model_supports_tools(
-            {"id": "x", "supported_parameters": ["temperature", "tools"]}
-        ) is True
+
+        assert (
+            _openrouter_model_supports_tools({
+                "id": "x",
+                "supported_parameters": ["temperature", "tools"],
+            })
+            is True
+        )
 
     def test_tools_missing_from_supported_parameters(self):
         from hercules_cli.models import _openrouter_model_supports_tools
-        assert _openrouter_model_supports_tools(
-            {"id": "x", "supported_parameters": ["temperature", "response_format"]}
-        ) is False
+
+        assert (
+            _openrouter_model_supports_tools({
+                "id": "x",
+                "supported_parameters": ["temperature", "response_format"],
+            })
+            is False
+        )
 
     def test_supported_parameters_absent_is_permissive(self):
         """Missing field → allow (so older / non-OR gateways still work)."""
         from hercules_cli.models import _openrouter_model_supports_tools
+
         assert _openrouter_model_supports_tools({"id": "x"}) is True
 
     def test_supported_parameters_none_is_permissive(self):
         from hercules_cli.models import _openrouter_model_supports_tools
-        assert _openrouter_model_supports_tools({"id": "x", "supported_parameters": None}) is True
+
+        assert (
+            _openrouter_model_supports_tools({"id": "x", "supported_parameters": None})
+            is True
+        )
 
     def test_supported_parameters_malformed_is_permissive(self):
         """Malformed (non-list) value → allow rather than silently drop."""
         from hercules_cli.models import _openrouter_model_supports_tools
-        assert _openrouter_model_supports_tools(
-            {"id": "x", "supported_parameters": "tools,temperature"}
-        ) is True
+
+        assert (
+            _openrouter_model_supports_tools({
+                "id": "x",
+                "supported_parameters": "tools,temperature",
+            })
+            is True
+        )
 
     def test_non_dict_item_is_permissive(self):
         from hercules_cli.models import _openrouter_model_supports_tools
+
         assert _openrouter_model_supports_tools(None) is True
         assert _openrouter_model_supports_tools("anthropic/claude-opus-4.6") is True
 
     def test_empty_supported_parameters_list_drops_model(self):
         """Explicit empty list → no tools → drop."""
         from hercules_cli.models import _openrouter_model_supports_tools
-        assert _openrouter_model_supports_tools(
-            {"id": "x", "supported_parameters": []}
-        ) is False
+
+        assert (
+            _openrouter_model_supports_tools({"id": "x", "supported_parameters": []})
+            is False
+        )
 
 
 class TestFindOpenrouterSlug:
     def test_exact_match(self):
         from hercules_cli.models import _find_openrouter_slug
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
-            assert _find_openrouter_slug("anthropic/claude-opus-4.6") == "anthropic/claude-opus-4.6"
+
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
+            assert (
+                _find_openrouter_slug("anthropic/claude-opus-4.6")
+                == "anthropic/claude-opus-4.6"
+            )
 
     def test_bare_name_match(self):
         from hercules_cli.models import _find_openrouter_slug
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             result = _find_openrouter_slug("claude-opus-4.6")
         assert result == "anthropic/claude-opus-4.6"
 
     def test_case_insensitive(self):
         from hercules_cli.models import _find_openrouter_slug
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             result = _find_openrouter_slug("Anthropic/Claude-Opus-4.6")
         assert result is not None
 
     def test_unknown_returns_none(self):
         from hercules_cli.models import _find_openrouter_slug
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             assert _find_openrouter_slug("totally-fake-model-xyz") is None
 
 
 class TestDetectProviderForModel:
     def test_anthropic_model_detected(self):
         """claude-opus-4-6 should resolve to anthropic provider."""
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             result = detect_provider_for_model("claude-opus-4-6", "openai-codex")
         assert result is not None
         assert result[0] == "anthropic"
@@ -267,8 +337,13 @@ class TestDetectProviderForModel:
 
     def test_openrouter_slug_match(self):
         """Models in the OpenRouter catalog should be found."""
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
-            result = detect_provider_for_model("anthropic/claude-opus-4.6", "openai-codex")
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
+            result = detect_provider_for_model(
+                "anthropic/claude-opus-4.6", "openai-codex"
+            )
         assert result is not None
         assert result[0] == "openrouter"
         assert result[1] == "anthropic/claude-opus-4.6"
@@ -282,7 +357,10 @@ class TestDetectProviderForModel:
         ):
             monkeypatch.delenv(env_var, raising=False)
         """Bare model names should get mapped to full OpenRouter slugs."""
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             result = detect_provider_for_model("claude-opus-4.6", "openai-codex")
         assert result is not None
         # Should find it on OpenRouter with full slug
@@ -290,12 +368,21 @@ class TestDetectProviderForModel:
 
     def test_unknown_model_returns_none(self):
         """Completely unknown model names should return None."""
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
-            assert detect_provider_for_model("nonexistent-model-xyz", "openai-codex") is None
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
+            assert (
+                detect_provider_for_model("nonexistent-model-xyz", "openai-codex")
+                is None
+            )
 
     def test_aggregator_not_suggested(self):
         """A concrete native provider (not an aggregator) is suggested as target."""
-        with patch("hercules_cli.models.fetch_openrouter_models", return_value=LIVE_OPENROUTER_MODELS):
+        with patch(
+            "hercules_cli.models.fetch_openrouter_models",
+            return_value=LIVE_OPENROUTER_MODELS,
+        ):
             result = detect_provider_for_model("claude-opus-4-6", "openai-codex")
         assert result is not None
 
@@ -330,6 +417,7 @@ class TestCodexSoftAcceptPlausibilityGate:
 
     def test_unrelated_name_rejected_on_openai_codex(self):
         from hercules_cli.models import validate_requested_model
+
         r = validate_requested_model("qwen3.5-4b", "openai-codex")
         assert r["accepted"] is False
         assert r["persist"] is False
@@ -337,6 +425,7 @@ class TestCodexSoftAcceptPlausibilityGate:
 
     def test_unrelated_name_rejected_on_xai_oauth(self):
         from hercules_cli.models import validate_requested_model
+
         r = validate_requested_model("llama-3.1-8b", "xai-oauth")
         assert r["accepted"] is False
         assert "--provider" in (r["message"] or "")
@@ -345,18 +434,21 @@ class TestCodexSoftAcceptPlausibilityGate:
         """#16172 intent preserved: a gpt-/codex-shaped unknown slug is still
         soft-accepted (entitlement-gated hidden models)."""
         from hercules_cli.models import validate_requested_model
+
         r = validate_requested_model("gpt-5.9-codex-hidden", "openai-codex")
         assert r["accepted"] is True
         assert r["recognized"] is False
 
     def test_family_shaped_hidden_slug_still_soft_accepted_xai(self):
         from hercules_cli.models import validate_requested_model
+
         r = validate_requested_model("grok-9-hidden", "xai-oauth")
         assert r["accepted"] is True
         assert r["recognized"] is False
 
     def test_real_catalog_model_unaffected(self):
         from hercules_cli.models import validate_requested_model
+
         r = validate_requested_model("gpt-5.5", "openai-codex")
         assert r["accepted"] is True
         assert r["recognized"] is True

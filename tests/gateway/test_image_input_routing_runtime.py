@@ -63,7 +63,9 @@ async def test_prepare_image_routing_uses_session_vision_model_override(monkeypa
     monkeypatch.setattr("gateway.run._load_gateway_config", lambda: cfg)
     monkeypatch.setattr("hercules_cli.config.load_config", lambda: cfg)
     monkeypatch.setattr("agent.auxiliary_client._read_main_provider", lambda: "xiaomi")
-    monkeypatch.setattr("agent.auxiliary_client._read_main_model", lambda: "mimo-v2.5-pro")
+    monkeypatch.setattr(
+        "agent.auxiliary_client._read_main_model", lambda: "mimo-v2.5-pro"
+    )
     monkeypatch.setattr(
         runner,
         "_resolve_session_agent_runtime",
@@ -94,7 +96,9 @@ async def test_prepare_image_routing_uses_session_vision_model_override(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_prepare_image_routing_falls_back_to_text_for_text_only_session_override(monkeypatch):
+async def test_prepare_image_routing_falls_back_to_text_for_text_only_session_override(
+    monkeypatch,
+):
     """A text-only session override should get vision_analyze text fallback.
 
     Regression mirror case: if config.default is a vision model but the current
@@ -109,7 +113,9 @@ async def test_prepare_image_routing_falls_back_to_text_for_text_only_session_ov
 
     monkeypatch.setattr("gateway.run._load_gateway_config", lambda: cfg)
     monkeypatch.setattr("hercules_cli.config.load_config", lambda: cfg)
-    monkeypatch.setattr("agent.auxiliary_client._read_main_provider", lambda: "openai-codex")
+    monkeypatch.setattr(
+        "agent.auxiliary_client._read_main_provider", lambda: "openai-codex"
+    )
     monkeypatch.setattr("agent.auxiliary_client._read_main_model", lambda: "gpt-5.5")
     monkeypatch.setattr(
         runner,

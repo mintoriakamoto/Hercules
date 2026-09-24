@@ -192,9 +192,7 @@ def build_models_payload(
         # has lost its credential, list_authenticated_providers() omits it;
         # keep that one row visible so the UI can show the saved selection and
         # a re-auth affordance instead of appearing to jump to another provider.
-        rows = list(rows) + _append_unconfigured_rows(
-            rows, ctx, current_only=True
-        )
+        rows = list(rows) + _append_unconfigured_rows(rows, ctx, current_only=True)
 
     # --- Deduplicate: remove models from aggregators that overlap with
     # user-defined providers.  When a local proxy (e.g. litellm-proxy)
@@ -206,7 +204,9 @@ def build_models_payload(
     # aggregator rows honest: they only show models the user can't get
     # from a more-specific provider.  (#45954)
     try:
-        from hercules_cli.providers import is_routing_aggregator as _is_routing_aggregator
+        from hercules_cli.providers import (
+            is_routing_aggregator as _is_routing_aggregator,
+        )
     except Exception:
         _is_routing_aggregator = None  # type: ignore[assignment]
 
@@ -242,7 +242,11 @@ def build_models_payload(
                     row["total_models"] = len(filtered)
 
     if include_unconfigured:
-        rows = list(rows) + [r for r in _append_unconfigured_rows(rows, ctx) if str(r.get("slug", "")).lower() != "moa"]
+        rows = list(rows) + [
+            r
+            for r in _append_unconfigured_rows(rows, ctx)
+            if str(r.get("slug", "")).lower() != "moa"
+        ]
     if picker_hints:
         _apply_picker_hints(rows)
     if canonical_order:
@@ -328,11 +332,7 @@ def _append_unconfigured_rows(
         if entry.slug.lower() == cur:
             cfg = PROVIDER_REGISTRY.get(entry.slug)
             auth_type = cfg.auth_type if cfg else "api_key"
-            key_env = (
-                cfg.api_key_env_vars[0]
-                if (cfg and cfg.api_key_env_vars)
-                else ""
-            )
+            key_env = cfg.api_key_env_vars[0] if (cfg and cfg.api_key_env_vars) else ""
             warning = (
                 f"Configured provider missing usable credentials; paste {key_env} to reactivate. "
                 "Showing the saved model only."
@@ -340,33 +340,29 @@ def _append_unconfigured_rows(
                 else "Configured provider is not authenticated; run `hercules model` to reactivate. "
                 "Showing the saved model only."
             )
-            extras.append(
-                {
-                    "slug": entry.slug,
-                    "name": _PROVIDER_LABELS.get(entry.slug, entry.label),
-                    "is_current": True,
-                    "is_user_defined": False,
-                    "models": [cur_model] if cur_model else [],
-                    "total_models": 1 if cur_model else 0,
-                    "source": "configured-current",
-                    "authenticated": False,
-                    "auth_type": auth_type,
-                    "key_env": key_env,
-                    "warning": warning,
-                }
-            )
-            continue
-        extras.append(
-            {
+            extras.append({
                 "slug": entry.slug,
                 "name": _PROVIDER_LABELS.get(entry.slug, entry.label),
-                "is_current": entry.slug.lower() == cur,
+                "is_current": True,
                 "is_user_defined": False,
-                "models": [],
-                "total_models": 0,
-                "source": "canonical",
-            }
-        )
+                "models": [cur_model] if cur_model else [],
+                "total_models": 1 if cur_model else 0,
+                "source": "configured-current",
+                "authenticated": False,
+                "auth_type": auth_type,
+                "key_env": key_env,
+                "warning": warning,
+            })
+            continue
+        extras.append({
+            "slug": entry.slug,
+            "name": _PROVIDER_LABELS.get(entry.slug, entry.label),
+            "is_current": entry.slug.lower() == cur,
+            "is_user_defined": False,
+            "models": [],
+            "total_models": 0,
+            "source": "canonical",
+        })
     return extras
 
 
@@ -473,11 +469,7 @@ def _apply_picker_hints(rows: list[dict]) -> None:
             continue
         cfg = PROVIDER_REGISTRY.get(row["slug"])
         auth_type = cfg.auth_type if cfg else "api_key"
-        key_env = (
-            cfg.api_key_env_vars[0]
-            if (cfg and cfg.api_key_env_vars)
-            else ""
-        )
+        key_env = cfg.api_key_env_vars[0] if (cfg and cfg.api_key_env_vars) else ""
         row["auth_type"] = auth_type
         row["key_env"] = key_env
         row["warning"] = (

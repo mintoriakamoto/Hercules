@@ -111,8 +111,8 @@ def test_new_without_skip_token_still_consults_modal():
         _session_db=None,
     )
     self_._split_destructive_skip = HerculesCLI._split_destructive_skip
-    self_._normalize_slash_confirm_choice = HerculesCLI._normalize_slash_confirm_choice.__get__(
-        self_, type(self_)
+    self_._normalize_slash_confirm_choice = (
+        HerculesCLI._normalize_slash_confirm_choice.__get__(self_, type(self_))
     )
     self_._confirm_destructive_slash = HerculesCLI._confirm_destructive_slash.__get__(
         self_, type(self_)

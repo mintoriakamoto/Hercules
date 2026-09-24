@@ -16,7 +16,9 @@ from hercules_state import SessionDB
 @pytest.fixture()
 def compressor():
     """Create a ContextCompressor with mocked dependencies."""
-    with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+    with patch(
+        "agent.context_compressor.get_model_context_length", return_value=100000
+    ):
         c = ContextCompressor(
             model="test/model",
             threshold_percent=0.85,
@@ -45,7 +47,6 @@ class TestShouldCompress:
         assert compressor.should_compress(prompt_tokens=50000) is False
 
 
-
 class TestUpdateFromResponse:
     def test_updates_fields(self, compressor):
         compressor.awaiting_real_usage_after_compression = True
@@ -67,7 +68,9 @@ class TestUpdateFromResponse:
 
 
 class TestPreflightDeferral:
-    def test_defers_when_recent_real_usage_fit_and_rough_growth_is_small(self, compressor):
+    def test_defers_when_recent_real_usage_fit_and_rough_growth_is_small(
+        self, compressor
+    ):
         compressor.threshold_tokens = 85_000
         compressor.last_real_prompt_tokens = 50_000
         compressor.last_rough_tokens_when_real_prompt_fit = 90_000
@@ -89,7 +92,9 @@ class TestPreflightDeferral:
 
         assert compressor.should_defer_preflight_to_real_usage(93_000) is False
 
-    def test_defers_immediately_after_compaction_with_stale_real_prompt(self, compressor):
+    def test_defers_immediately_after_compaction_with_stale_real_prompt(
+        self, compressor
+    ):
         """#36718: right after a compaction, last_real_prompt_tokens still holds
         the stale pre-compression value (above threshold). The awaiting flag
         must force deferral so preflight doesn't fire a SECOND compaction before
@@ -112,10 +117,12 @@ class TestPreflightDeferral:
         assert compressor.should_defer_preflight_to_real_usage(95_000) is False
 
 
-
 class TestCompress:
     def _make_messages(self, n):
-        return [{"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"} for i in range(n)]
+        return [
+            {"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"}
+            for i in range(n)
+        ]
 
     def test_too_few_messages_returns_unchanged(self, compressor):
         msgs = self._make_messages(4)  # protect_first=2 + protect_last=2 + 1 = 5 needed
@@ -126,8 +133,12 @@ class TestCompress:
         # Simulate "no summarizer available" explicitly. call_llm can otherwise
         # discover the developer's real auxiliary credentials from auth state.
         # The failed summary should use the deterministic fallback path.
-        msgs = [{"role": "system", "content": "System prompt"}] + self._make_messages(10)
-        with patch("agent.context_compressor.call_llm", side_effect=RuntimeError("no provider")):
+        msgs = [{"role": "system", "content": "System prompt"}] + self._make_messages(
+            10
+        )
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=RuntimeError("no provider")
+        ):
             result = compressor.compress(msgs)
         assert len(result) < len(msgs)
         # Should keep system message and last N
@@ -143,7 +154,9 @@ class TestCompress:
         The fallback should preserve locally recoverable continuity details so a
         future turn does not see only "messages were removed" after compaction.
         """
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test/model",
                 protect_first_n=1,
@@ -157,14 +170,16 @@ class TestCompress:
             {
                 "role": "assistant",
                 "content": None,
-                "tool_calls": [{
-                    "id": "call_1",
-                    "type": "function",
-                    "function": {
-                        "name": "read_file",
-                        "arguments": '{"path":"agent/context_compressor.py","offset":1}',
-                    },
-                }],
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {
+                            "name": "read_file",
+                            "arguments": '{"path":"agent/context_compressor.py","offset":1}',
+                        },
+                    }
+                ],
             },
             {
                 "role": "tool",
@@ -191,7 +206,9 @@ class TestCompress:
         assert "read_file" in combined
         assert "agent/context_compressor.py" in combined
         assert "Summary generation was unavailable" in combined
-        assert "removed to free context space but could not be summarized" not in combined
+        assert (
+            "removed to free context space but could not be summarized" not in combined
+        )
         assert c._last_summary_fallback_used is True
         assert c._last_summary_dropped_count == 3
 
@@ -204,7 +221,9 @@ class TestCompress:
         context only — never re-presented as unfulfilled in-progress/pending
         work.
         """
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test/model", quiet_mode=True)
 
         unique_ask = "PLEASE_COMPUTE_THE_ARITHMETIC_CHAIN_XYZ"
@@ -236,6 +255,7 @@ class TestCompress:
         window — high enough not to waste the small budget, below 100% so it
         actually fires."""
         from agent.context_compressor import MINIMUM_CONTEXT_LENGTH
+
         t = ContextCompressor._compute_threshold_tokens(MINIMUM_CONTEXT_LENGTH, 0.50)
         assert t < MINIMUM_CONTEXT_LENGTH
         assert t == 54400  # 85% of 64000
@@ -248,16 +268,22 @@ class TestCompress:
 
     def test_threshold_floored_for_large_ctx(self):
         from agent.context_compressor import MINIMUM_CONTEXT_LENGTH
+
         # 200K model at 50% = 100000 (above floor) — unchanged.
         assert ContextCompressor._compute_threshold_tokens(200000, 0.50) == 100000
         # 100K model at 50% = 50000 (below floor) — floored to MINIMUM.
-        assert ContextCompressor._compute_threshold_tokens(100000, 0.50) == MINIMUM_CONTEXT_LENGTH
+        assert (
+            ContextCompressor._compute_threshold_tokens(100000, 0.50)
+            == MINIMUM_CONTEXT_LENGTH
+        )
 
     def test_minimum_ctx_model_can_actually_compress(self):
         """End-to-end: a model at exactly the minimum context length must have
         should_compress() fire below its window (at the 85% trigger), not only
         at 100%."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=64000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=64000
+        ):
             c = ContextCompressor(model="small-64k", quiet_mode=True)
             c.context_length = 64000
             c.threshold_tokens = c._compute_threshold_tokens(64000, c.threshold_percent)
@@ -304,6 +330,7 @@ class TestCompress:
         ContextCompressor (regression for the delegate-test TypeError:
         '<=' not supported between MagicMock and int)."""
         from unittest.mock import MagicMock
+
         assert ContextCompressor._coerce_max_tokens(None) is None
         assert ContextCompressor._coerce_max_tokens(0) is None
         assert ContextCompressor._coerce_max_tokens(-5) is None
@@ -314,7 +341,9 @@ class TestCompress:
         # then `MagicMock <= 0`). int(MagicMock()) returns 1, so coercion
         # yields a harmless positive int rather than crashing — the threshold
         # is computed cleanly with a 1-token reservation.
-        with patch("agent.context_compressor.get_model_context_length", return_value=200000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=200000
+        ):
             c = ContextCompressor(model="m", quiet_mode=True, max_tokens=MagicMock())
         assert isinstance(c.max_tokens, int)
         assert isinstance(c.threshold_tokens, int)
@@ -344,15 +373,23 @@ class TestCompress:
     def test_compress_strips_db_persisted_from_assembled_messages(self, compressor):
         """Regression for #57491: shallow copies must not carry flush markers."""
         msgs = [
-            {"role": "user" if i % 2 == 0 else "assistant", "content": f"m{i}", "_db_persisted": True}
+            {
+                "role": "user" if i % 2 == 0 else "assistant",
+                "content": f"m{i}",
+                "_db_persisted": True,
+            }
             for i in range(10)
         ]
-        with patch("agent.context_compressor.call_llm", side_effect=RuntimeError("no provider")):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=RuntimeError("no provider")
+        ):
             result = compressor.compress(msgs)
         assert len(result) < len(msgs)
         assert all("_db_persisted" not in msg for msg in result)
 
-    def test_compress_terminal_sweep_strips_markers_even_if_a_copy_site_leaks(self, compressor):
+    def test_compress_terminal_sweep_strips_markers_even_if_a_copy_site_leaks(
+        self, compressor
+    ):
         """Regression for #57491, structural: even if a copy site fails to strip
         the marker (simulating a future refactor that adds/reintroduces a leaky
         copy), the single terminal sweep in compress() guarantees no compacted
@@ -361,12 +398,21 @@ class TestCompress:
         import agent.context_compressor as _cc
 
         msgs = [
-            {"role": "user" if i % 2 == 0 else "assistant", "content": f"m{i}", "_db_persisted": True}
+            {
+                "role": "user" if i % 2 == 0 else "assistant",
+                "content": f"m{i}",
+                "_db_persisted": True,
+            }
             for i in range(10)
         ]
         # Make the per-site helper leak the marker (dict.copy keeps it).
-        with patch.object(_cc, "_fresh_compaction_message_copy", lambda m: m.copy()), \
-             patch("agent.context_compressor.call_llm", side_effect=RuntimeError("no provider")):
+        with (
+            patch.object(_cc, "_fresh_compaction_message_copy", lambda m: m.copy()),
+            patch(
+                "agent.context_compressor.call_llm",
+                side_effect=RuntimeError("no provider"),
+            ),
+        ):
             result = compressor.compress(msgs)
         assert len(result) < len(msgs)
         assert all("_db_persisted" not in msg for msg in result), (
@@ -379,7 +425,9 @@ class TestCompress:
         messages don't get re-copied verbatim into every child session and
         fossilize (grow immortal) across a long, repeatedly-compressed
         session. The system prompt is always protected separately."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=3)
 
         msgs = [{"role": "system", "content": "sys"}] + [
@@ -400,7 +448,9 @@ class TestCompress:
     def test_protect_first_n_decays_when_previous_summary_exists(self):
         """Even if compression_count was reset, an existing handoff summary
         means the early turns are already captured — decay still applies."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=3)
         c.compression_count = 0
         c._previous_summary = "[CONTEXT SUMMARY]: earlier work"
@@ -417,7 +467,9 @@ class TestTailBudgetCodexReplayFields:
         tail-cut budget must count them too; otherwise compression preserves an
         oversized tail and immediately starts the next session near the limit.
         """
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test/model",
                 protect_first_n=1,
@@ -461,8 +513,12 @@ class TestTailBudgetCodexReplayFields:
         cut_idx = c._find_tail_cut_by_tokens(messages, head_end=1, token_budget=150)
 
         assert cut_idx == 5
-        assert messages[4]["codex_reasoning_items"][0]["encrypted_content"].startswith("enc_")
-        assert messages[4]["codex_message_items"][0]["content"][0]["text"].startswith("reply ")
+        assert messages[4]["codex_reasoning_items"][0]["encrypted_content"].startswith(
+            "enc_"
+        )
+        assert messages[4]["codex_message_items"][0]["content"][0]["text"].startswith(
+            "reply "
+        )
 
     @pytest.mark.parametrize(
         ("field_name", "field_value"),
@@ -488,7 +544,9 @@ class TestTailBudgetCodexReplayFields:
     )
     def test_tail_cut_counts_each_hidden_replay_field(self, field_name, field_value):
         """Each provider replay/reasoning field should affect tail budgeting."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test/model",
                 protect_first_n=1,
@@ -521,16 +579,22 @@ class TestGenerateSummaryNoneContent:
     def test_none_content_does_not_crash(self):
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "[CONTEXT SUMMARY]: tool calls happened"
+        mock_response.choices[
+            0
+        ].message.content = "[CONTEXT SUMMARY]: tool calls happened"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
         messages = [
             {"role": "user", "content": "do something"},
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"function": {"name": "search"}}
-            ]},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"function": {"name": "search"}}],
+            },
             {"role": "tool", "content": "result"},
             {"role": "assistant", "content": None},
             {"role": "user", "content": "thanks"},
@@ -543,8 +607,12 @@ class TestGenerateSummaryNoneContent:
 
     def test_none_content_in_system_message_compress(self):
         """System message with content=None should not crash during compress."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         msgs = [{"role": "system", "content": None}] + [
             {"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"}
@@ -562,7 +630,9 @@ class TestNonStringContent:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = {"text": "some summary"}
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
         messages = [
@@ -586,7 +656,9 @@ class TestNonStringContent:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = None
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             # summary_model == model here, so no fallback path: straight to cooldown.
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -610,7 +682,9 @@ class TestNonStringContent:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "   \n  "
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
         messages = [
@@ -631,7 +705,9 @@ class TestNonStringContent:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = ""
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="glm-5",
                 summary_model_override="glm-5.1",
@@ -643,7 +719,9 @@ class TestNonStringContent:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response) as mock_call:
+        with patch(
+            "agent.context_compressor.call_llm", return_value=mock_response
+        ) as mock_call:
             summary = c._generate_summary(messages)
         # Two calls: aux model (glm-5.1) then fallback to main (glm-5).
         assert mock_call.call_count == 2
@@ -656,7 +734,9 @@ class TestNonStringContent:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message = "plain summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
         messages = [
@@ -674,7 +754,9 @@ class TestNonStringContent:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "ok"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
         messages = [
@@ -682,7 +764,9 @@ class TestNonStringContent:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response) as mock_call:
+        with patch(
+            "agent.context_compressor.call_llm", return_value=mock_response
+        ) as mock_call:
             c._generate_summary(messages)
 
         kwargs = mock_call.call_args.kwargs
@@ -693,7 +777,9 @@ class TestNonStringContent:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "ok"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
         messages = [
@@ -701,7 +787,9 @@ class TestNonStringContent:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response) as mock_call:
+        with patch(
+            "agent.context_compressor.call_llm", return_value=mock_response
+        ) as mock_call:
             c._generate_summary(messages)
 
         prompt = mock_call.call_args.kwargs["messages"][0]["content"]
@@ -717,7 +805,9 @@ class TestNonStringContent:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "ok"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="gpt-5.4",
                 provider="openai-codex",
@@ -732,7 +822,9 @@ class TestNonStringContent:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response) as mock_call:
+        with patch(
+            "agent.context_compressor.call_llm", return_value=mock_response
+        ) as mock_call:
             c._generate_summary(messages)
 
         assert mock_call.call_args.kwargs["main_runtime"] == {
@@ -746,7 +838,9 @@ class TestNonStringContent:
 
 class TestSummaryFailureCooldown:
     def test_summary_failure_enters_cooldown_and_skips_retry(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
         messages = [
@@ -754,7 +848,9 @@ class TestSummaryFailureCooldown:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("boom")) as mock_call:
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=Exception("boom")
+        ) as mock_call:
             first = c._generate_summary(messages)
             second = c._generate_summary(messages)
 
@@ -789,24 +885,34 @@ class TestAuthFailureAborts:
         return err
 
     def test_generate_summary_flags_auth_failure(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
-        with patch("agent.context_compressor.call_llm", side_effect=self._auth_err(401)):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=self._auth_err(401)
+        ):
             result = c._generate_summary(self._msgs())
         assert result is None
         assert c._last_summary_auth_failure is True
 
     def test_403_also_flags_auth_failure(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
-        with patch("agent.context_compressor.call_llm", side_effect=self._auth_err(403)):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=self._auth_err(403)
+        ):
             c._generate_summary(self._msgs())
         assert c._last_summary_auth_failure is True
 
     def test_compress_aborts_on_auth_failure_despite_flag_false(self):
         """abort_on_summary_failure=False (the default), but a 401 must still
         abort: messages returned unchanged, _last_compress_aborted=True."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -815,7 +921,9 @@ class TestAuthFailureAborts:
                 abort_on_summary_failure=False,
             )
         msgs = self._msgs(12)
-        with patch("agent.context_compressor.call_llm", side_effect=self._auth_err(401)):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=self._auth_err(401)
+        ):
             result = c.compress(msgs, current_tokens=999999, force=True)
         # Session must NOT be compressed/rotated — same messages back.
         assert result == msgs
@@ -829,7 +937,9 @@ class TestAuthFailureAborts:
         """A generic (non-auth) failure with abort_on_summary_failure=False
         keeps the historical behavior: insert a static fallback + drop the
         middle window (does NOT abort)."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -838,7 +948,9 @@ class TestAuthFailureAborts:
                 abort_on_summary_failure=False,
             )
         msgs = self._msgs(12)
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("boom 500")):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=Exception("boom 500")
+        ):
             result = c.compress(msgs, current_tokens=999999, force=True)
         assert c._last_summary_auth_failure is False
         assert c._last_compress_aborted is False
@@ -847,7 +959,9 @@ class TestAuthFailureAborts:
     def test_generate_summary_flags_network_failure(self):
         """A connection/network error on the summary call flags
         _last_summary_network_failure (#29559)."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
         with patch(
             "agent.context_compressor.call_llm",
@@ -863,7 +977,9 @@ class TestAuthFailureAborts:
         transient connection error must ABORT — messages returned unchanged,
         _last_compress_aborted=True — NOT drop the middle window. Retrying once
         the network recovers beats discarding context for a transient blip."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -892,7 +1008,9 @@ class TestAuthFailureAborts:
         mock_ok = MagicMock()
         mock_ok.choices = [MagicMock()]
         mock_ok.choices[0].message.content = "summary via main model"
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="broken-aux-model",
@@ -931,7 +1049,9 @@ class TestSummaryFallbackToMainModel:
         err_404 = Exception("404 model_not_found: no such model")
         err_404.status_code = 404
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="broken-aux-model",
@@ -971,7 +1091,9 @@ class TestSummaryFallbackToMainModel:
         err_400 = Exception("400 Bad Request: provider rejected model")
         err_400.status_code = 400
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="broken-aux-model",
@@ -999,7 +1121,9 @@ class TestSummaryFallbackToMainModel:
         to — go straight to cooldown, don't loop retrying the same call."""
         err = Exception("500 internal error")
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="main-model",  # same as main
@@ -1024,7 +1148,9 @@ class TestSummaryFallbackToMainModel:
         err1 = Exception("400 aux model rejected")
         err2 = Exception("500 main model also exploded")
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="broken-aux-model",
@@ -1059,7 +1185,9 @@ class TestSummaryFallbackToMainModel:
             "Expecting value", "<!DOCTYPE html><html>...</html>", 0
         )
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="aux-via-broken-proxy",
@@ -1097,7 +1225,9 @@ class TestSummaryFallbackToMainModel:
         # the SDK's APIResponseValidationError looks like at str() time.
         err_wrapped = Exception("Expecting value: line 1 column 1 (char 0)")
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="aux-model",
@@ -1123,17 +1253,22 @@ class TestSummaryFallbackToMainModel:
 
         err_json = _json.JSONDecodeError("Expecting value", "<html/>", 0)
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 # No summary_model_override → already on main, no fallback path.
                 quiet_mode=True,
             )
 
-        with patch(
-            "agent.context_compressor.call_llm",
-            side_effect=err_json,
-        ), patch("agent.context_compressor.time.monotonic", return_value=1000.0):
+        with (
+            patch(
+                "agent.context_compressor.call_llm",
+                side_effect=err_json,
+            ),
+            patch("agent.context_compressor.time.monotonic", return_value=1000.0),
+        ):
             result = c._generate_summary(self._msgs())
 
         assert result is None
@@ -1168,19 +1303,24 @@ class TestStreamingClosedFallback:
 
         err = Exception("RemoteProtocolError: incomplete chunked read")
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="aux-stream-model",
                 quiet_mode=True,
             )
 
-        with patch(
-            "agent.context_compressor.call_llm",
-            side_effect=[err, mock_ok],
-        ) as mock_call, patch(
-            "agent.context_compressor._is_connection_error",
-            return_value=True,
+        with (
+            patch(
+                "agent.context_compressor.call_llm",
+                side_effect=[err, mock_ok],
+            ) as mock_call,
+            patch(
+                "agent.context_compressor._is_connection_error",
+                return_value=True,
+            ),
         ):
             result = c._generate_summary(self._msgs())
 
@@ -1198,19 +1338,24 @@ class TestStreamingClosedFallback:
 
         err = Exception("peer closed connection without sending complete message body")
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="aux-model",
                 quiet_mode=True,
             )
 
-        with patch(
-            "agent.context_compressor.call_llm",
-            side_effect=[err, mock_ok],
-        ) as mock_call, patch(
-            "agent.context_compressor._is_connection_error",
-            return_value=True,
+        with (
+            patch(
+                "agent.context_compressor.call_llm",
+                side_effect=[err, mock_ok],
+            ) as mock_call,
+            patch(
+                "agent.context_compressor._is_connection_error",
+                return_value=True,
+            ),
         ):
             result = c._generate_summary(self._msgs())
 
@@ -1222,20 +1367,26 @@ class TestStreamingClosedFallback:
         the 30s cooldown, not the default 60s — these errors are transient."""
         err = Exception("RemoteProtocolError: response ended prematurely")
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 # No summary_model_override → no fallback path.
                 quiet_mode=True,
             )
 
-        with patch(
-            "agent.context_compressor.call_llm",
-            side_effect=err,
-        ), patch(
-            "agent.context_compressor._is_connection_error",
-            return_value=True,
-        ), patch("agent.context_compressor.time.monotonic", return_value=1000.0):
+        with (
+            patch(
+                "agent.context_compressor.call_llm",
+                side_effect=err,
+            ),
+            patch(
+                "agent.context_compressor._is_connection_error",
+                return_value=True,
+            ),
+            patch("agent.context_compressor.time.monotonic", return_value=1000.0),
+        ):
             result = c._generate_summary(self._msgs())
 
         assert result is None
@@ -1247,19 +1398,25 @@ class TestStreamingClosedFallback:
         prevent hammering a broken provider."""
         err = Exception("Internal Server Error: something unexpected happened")
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 quiet_mode=True,
             )
 
-        with patch(
-            "agent.context_compressor.call_llm",
-            side_effect=err,
-        ), patch(
-            "agent.context_compressor._is_connection_error",
-            return_value=False,
-        ), patch("agent.context_compressor.time.monotonic", return_value=1000.0):
+        with (
+            patch(
+                "agent.context_compressor.call_llm",
+                side_effect=err,
+            ),
+            patch(
+                "agent.context_compressor._is_connection_error",
+                return_value=False,
+            ),
+            patch("agent.context_compressor.time.monotonic", return_value=1000.0),
+        ):
             result = c._generate_summary(self._msgs())
 
         assert result is None
@@ -1292,7 +1449,9 @@ class TestAuxModelFallbackSurfacedToCallers:
         err_400 = Exception("400 provider rejected configured model")
         err_400.status_code = 400
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="broken-aux-model",
@@ -1328,7 +1487,9 @@ class TestAuxModelFallbackSurfacedToCallers:
         err_400 = Exception("400 aux model busted")
         err_400.status_code = 400
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="main-model",
                 summary_model_override="broken-aux-model",
@@ -1364,8 +1525,12 @@ class TestSummaryFailureTrackingForGatewayWarning:
     can surface a visible warning."""
 
     def test_compress_records_fallback_and_dropped_count_on_summary_failure(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         msgs = [
             {"role": "system", "content": "sys"},
@@ -1378,7 +1543,10 @@ class TestSummaryFailureTrackingForGatewayWarning:
             {"role": "user", "content": "msg 7"},
         ]
 
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("404 model not found")):
+        with patch(
+            "agent.context_compressor.call_llm",
+            side_effect=Exception("404 model not found"),
+        ):
             result = c.compress(msgs)
 
         assert c._last_summary_fallback_used is True
@@ -1387,18 +1555,28 @@ class TestSummaryFailureTrackingForGatewayWarning:
         # Default mode: abort flag must NOT fire.
         assert c._last_compress_aborted is False
         assert any(
-            isinstance(m.get("content"), str) and "Summary generation was unavailable" in m["content"]
+            isinstance(m.get("content"), str)
+            and "Summary generation was unavailable" in m["content"]
             for m in result
         )
 
-    def test_summary_failure_fallback_preserves_tool_paths_and_redacts_secret_context(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1)
+    def test_summary_failure_fallback_preserves_tool_paths_and_redacts_secret_context(
+        self,
+    ):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1
+            )
 
         secret = "ghp_" + ("a" * 36)
         msgs = [
             {"role": "system", "content": "sys"},
-            {"role": "user", "content": f"Fix /tmp/project/app.py and never leak {secret}"},
+            {
+                "role": "user",
+                "content": f"Fix /tmp/project/app.py and never leak {secret}",
+            },
             {
                 "role": "assistant",
                 "content": "I will inspect it.",
@@ -1412,45 +1590,83 @@ class TestSummaryFailureTrackingForGatewayWarning:
                     }
                 ],
             },
-            {"role": "tool", "tool_call_id": "call-1", "content": f"read /tmp/project/app.py with token {secret}"},
+            {
+                "role": "tool",
+                "tool_call_id": "call-1",
+                "content": f"read /tmp/project/app.py with token {secret}",
+            },
             {"role": "assistant", "content": "Found the bug in /tmp/project/app.py"},
             {"role": "user", "content": "Patch it after this"},
             {"role": "assistant", "content": "Ready to patch"},
             {"role": "user", "content": "current live request should stay in tail"},
         ]
 
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("timeout")):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=Exception("timeout")
+        ):
             result = c.compress(msgs)
 
-        fallback = next(m["content"] for m in result if "Summary generation was unavailable" in m.get("content", ""))
+        fallback = next(
+            m["content"]
+            for m in result
+            if "Summary generation was unavailable" in m.get("content", "")
+        )
         assert "Called tool(s): read_file" in fallback
         assert "/tmp/project/app.py" in fallback
         assert secret not in fallback
         assert "ghp_" not in fallback
 
-    def test_summary_failure_fallback_supports_object_tool_calls_and_content_path_mentions(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1)
+    def test_summary_failure_fallback_supports_object_tool_calls_and_content_path_mentions(
+        self,
+    ):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1
+            )
 
         tool_call = MagicMock()
         tool_call.id = "call-object"
         tool_call.function.name = "terminal"
-        tool_call.function.arguments = '{"command":"python /repo/scripts/fix.py", "workdir":"/repo"}'
+        tool_call.function.arguments = (
+            '{"command":"python /repo/scripts/fix.py", "workdir":"/repo"}'
+        )
         msgs = [
             {"role": "system", "content": "sys"},
             {"role": "user", "content": "Review ~/src/pkg/module.py before editing"},
-            {"role": "assistant", "content": "Running command", "tool_calls": [tool_call]},
-            {"role": "tool", "tool_call_id": "call-object", "content": "Traceback in /repo/src/pkg/module.py: boom"},
-            {"role": "assistant", "content": "Need to update C:\\work\\pkg\\module.py too"},
-            {"role": "user", "content": "Patch ~/src/pkg/module.py after checking those files"},
+            {
+                "role": "assistant",
+                "content": "Running command",
+                "tool_calls": [tool_call],
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "call-object",
+                "content": "Traceback in /repo/src/pkg/module.py: boom",
+            },
+            {
+                "role": "assistant",
+                "content": "Need to update C:\\work\\pkg\\module.py too",
+            },
+            {
+                "role": "user",
+                "content": "Patch ~/src/pkg/module.py after checking those files",
+            },
             {"role": "assistant", "content": "Ready to patch"},
             {"role": "user", "content": "tail task"},
         ]
 
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("timeout")):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=Exception("timeout")
+        ):
             result = c.compress(msgs)
 
-        fallback = next(m["content"] for m in result if "Summary generation was unavailable" in m.get("content", ""))
+        fallback = next(
+            m["content"]
+            for m in result
+            if "Summary generation was unavailable" in m.get("content", "")
+        )
         assert "Called tool(s): terminal" in fallback
         assert "/repo/scripts/fix.py" in fallback
         assert "/repo" in fallback
@@ -1461,32 +1677,65 @@ class TestSummaryFailureTrackingForGatewayWarning:
         assert "TOOL: Traceback in /repo/src/pkg/module.py: boom" in fallback
 
     def test_summary_failure_fallback_preserves_last_dropped_turns_without_tail(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1
+            )
 
         msgs = [
             {"role": "system", "content": "sys"},
-            {"role": "user", "content": "Investigate dropped-window request in /tmp/active.py"},
-            {"role": "assistant", "content": "I inspected /tmp/active.py and found the failing branch"},
-            {"role": "tool", "tool_call_id": "call-old", "content": "ValueError: boom in /tmp/active.py"},
+            {
+                "role": "user",
+                "content": "Investigate dropped-window request in /tmp/active.py",
+            },
+            {
+                "role": "assistant",
+                "content": "I inspected /tmp/active.py and found the failing branch",
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "call-old",
+                "content": "ValueError: boom in /tmp/active.py",
+            },
             {"role": "assistant", "content": "Next step is patching /tmp/active.py"},
-            {"role": "user", "content": "Confirm regression coverage for /tmp/active.py"},
+            {
+                "role": "user",
+                "content": "Confirm regression coverage for /tmp/active.py",
+            },
             {"role": "assistant", "content": "Regression note is ready"},
-            {"role": "user", "content": "protected tail request must not be copied from dropped window"},
+            {
+                "role": "user",
+                "content": "protected tail request must not be copied from dropped window",
+            },
         ]
 
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("timeout")):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=Exception("timeout")
+        ):
             result = c.compress(msgs)
 
-        fallback = next(m["content"] for m in result if "Summary generation was unavailable" in m.get("content", ""))
+        fallback = next(
+            m["content"]
+            for m in result
+            if "Summary generation was unavailable" in m.get("content", "")
+        )
         assert "## Last Dropped Turns" in fallback
-        assert "ASSISTANT: I inspected /tmp/active.py and found the failing branch" in fallback
+        assert (
+            "ASSISTANT: I inspected /tmp/active.py and found the failing branch"
+            in fallback
+        )
         assert "TOOL: ValueError: boom in /tmp/active.py" in fallback
         assert "protected tail request must not be copied" not in fallback
 
     def test_summary_failure_fallback_is_bounded(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1
+            )
 
         long_text = "important detail " * 2000
         msgs = [
@@ -1500,10 +1749,16 @@ class TestSummaryFailureTrackingForGatewayWarning:
             {"role": "user", "content": "tail"},
         ]
 
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("timeout")):
+        with patch(
+            "agent.context_compressor.call_llm", side_effect=Exception("timeout")
+        ):
             result = c.compress(msgs)
 
-        fallback = next(m["content"] for m in result if "Summary generation was unavailable" in m.get("content", ""))
+        fallback = next(
+            m["content"]
+            for m in result
+            if "Summary generation was unavailable" in m.get("content", "")
+        )
         assert len(fallback) <= 8300
         assert "deterministic fallback" in fallback
         assert "important detail" in fallback
@@ -1513,8 +1768,12 @@ class TestSummaryFailureTrackingForGatewayWarning:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         msgs = [
             {"role": "system", "content": "sys"},
@@ -1557,7 +1816,9 @@ class TestAbortOnSummaryFailure:
         ]
 
     def _make_compressor(self):
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             return ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -1569,7 +1830,10 @@ class TestAbortOnSummaryFailure:
     def test_compress_aborts_and_preserves_messages_on_summary_failure(self):
         c = self._make_compressor()
         msgs = self._make_msgs()
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("404 model not found")):
+        with patch(
+            "agent.context_compressor.call_llm",
+            side_effect=Exception("404 model not found"),
+        ):
             result = c.compress(msgs)
 
         assert c._last_compress_aborted is True
@@ -1581,7 +1845,8 @@ class TestAbortOnSummaryFailure:
         assert result == msgs
         # No "Summary generation was unavailable" placeholder leaked in.
         assert not any(
-            isinstance(m.get("content"), str) and "Summary generation was unavailable" in m["content"]
+            isinstance(m.get("content"), str)
+            and "Summary generation was unavailable" in m["content"]
             for m in result
         )
 
@@ -1616,6 +1881,7 @@ class TestAbortOnSummaryFailure:
         msgs = self._make_msgs()
 
         import time as _time
+
         c._summary_failure_cooldown_until = _time.monotonic() + 999.0
 
         with patch("agent.context_compressor.call_llm", return_value=mock_response):
@@ -1638,7 +1904,9 @@ class TestAbortOnSummaryFailure:
         c.bind_session_state(db, "s1")
         msgs = self._make_msgs()
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response) as mock_llm:
+        with patch(
+            "agent.context_compressor.call_llm", return_value=mock_response
+        ) as mock_llm:
             result = c.compress(msgs, current_tokens=999999, force=True)
 
         mock_llm.assert_called()
@@ -1646,7 +1914,9 @@ class TestAbortOnSummaryFailure:
         assert len(result) < len(msgs)
         assert db.get_compression_failure_cooldown("s1") is None
 
-    def test_aux_fallback_clears_persisted_session_cooldown_before_retry(self, tmp_path):
+    def test_aux_fallback_clears_persisted_session_cooldown_before_retry(
+        self, tmp_path
+    ):
         db = SessionDB(db_path=tmp_path / "state.db")
         db.create_session("s1", "cli")
         db.record_compression_failure_cooldown("s1", time.time() + 999.0, "timeout")
@@ -1675,7 +1945,9 @@ class TestAbortOnSummaryFailure:
         c._summary_failure_cooldown_until = 0.0
         msgs = self._make_msgs()
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response) as mock_llm:
+        with patch(
+            "agent.context_compressor.call_llm", return_value=mock_response
+        ) as mock_llm:
             result = c.compress(msgs, current_tokens=999999)
 
         mock_llm.assert_called()
@@ -1711,8 +1983,12 @@ class TestCompressWithClient:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         msgs = [
             {"role": "system", "content": [{"type": "text", "text": "system prompt"}]},
@@ -1742,10 +2018,17 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "[CONTEXT SUMMARY]: stuff happened"
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
-        msgs = [{"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"} for i in range(10)]
+        msgs = [
+            {"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"}
+            for i in range(10)
+        ]
         with patch("agent.context_compressor.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
@@ -1758,10 +2041,14 @@ class TestCompressWithClient:
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "[CONTEXT SUMMARY]: compressed middle"
+        mock_response.choices[
+            0
+        ].message.content = "[CONTEXT SUMMARY]: compressed middle"
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -1770,13 +2057,24 @@ class TestCompressWithClient:
             )
 
         msgs = [
-            {"role": "user", "content": "Could you address the reviewer comments in PR#71"},
+            {
+                "role": "user",
+                "content": "Could you address the reviewer comments in PR#71",
+            },
             {
                 "role": "assistant",
                 "content": "",
                 "tool_calls": [
-                    {"id": "call_a", "type": "function", "function": {"name": "skill_view", "arguments": "{}"}},
-                    {"id": "call_b", "type": "function", "function": {"name": "skill_view", "arguments": "{}"}},
+                    {
+                        "id": "call_a",
+                        "type": "function",
+                        "function": {"name": "skill_view", "arguments": "{}"},
+                    },
+                    {
+                        "id": "call_b",
+                        "type": "function",
+                        "function": {"name": "skill_view", "arguments": "{}"},
+                    },
                 ],
             },
             {"role": "tool", "tool_call_id": "call_a", "content": "output a"},
@@ -1821,9 +2119,9 @@ class TestCompressWithClient:
 
         sanitized = compressor._sanitize_tool_pairs(msgs)
 
-        assert [m.get("tool_call_id") for m in sanitized if m.get("role") == "tool"] == [
-            "call_123"
-        ]
+        assert [
+            m.get("tool_call_id") for m in sanitized if m.get("role") == "tool"
+        ] == ["call_123"]
 
     def test_user_role_summary_carries_end_marker(self):
         """When the summary lands as standalone role='user' (e.g. head ends
@@ -1837,8 +2135,12 @@ class TestCompressWithClient:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         # head_last=assistant, tail_first=assistant (same shape as the
         # existing consecutive-user test) → role resolves to "user".
@@ -1860,8 +2162,10 @@ class TestCompressWithClient:
         )
         assert summary_msg["role"] == "user"
         assert "END OF CONTEXT SUMMARY" in summary_msg["content"]
-        assert summary_msg["content"].rstrip().endswith(
-            "respond to the message below, not the summary above ---"
+        assert (
+            summary_msg["content"]
+            .rstrip()
+            .endswith("respond to the message below, not the summary above ---")
         )
 
     def test_assistant_role_summary_carries_end_marker(self):
@@ -1876,8 +2180,12 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "[CONTEXT SUMMARY]: stuff happened"
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         # head_last=user → summary_role="assistant" (same setup as
         # test_summary_role_avoids_consecutive_user_when_head_ends_with_user).
@@ -1902,8 +2210,10 @@ class TestCompressWithClient:
         )
         assert summary_msg["role"] == "assistant"
         assert "END OF CONTEXT SUMMARY" in summary_msg["content"]
-        assert summary_msg["content"].rstrip().endswith(
-            "respond to the message below, not the summary above ---"
+        assert (
+            summary_msg["content"]
+            .rstrip()
+            .endswith("respond to the message below, not the summary above ---")
         )
 
     def test_summary_role_avoids_consecutive_user_messages(self):
@@ -1914,8 +2224,12 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "[CONTEXT SUMMARY]: stuff happened"
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         # Last head message (index 1) is "assistant" → summary should be "user".
         # With min_tail=3, tail = last 3 messages (indices 5-7).
@@ -1947,8 +2261,12 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "[CONTEXT SUMMARY]: stuff happened"
         mock_client.chat.completions.create.return_value = mock_response
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         # Last head message (index 2) is "user" → summary should be "assistant"
         # NOTE: protect_first_n=2 preserves 2 non-system messages in addition to
@@ -1966,9 +2284,7 @@ class TestCompressWithClient:
         ]
         with patch("agent.context_compressor.call_llm", return_value=mock_response):
             result = c.compress(msgs)
-        summary_msg = [
-            m for m in result if m.get(COMPRESSED_SUMMARY_METADATA_KEY)
-        ]
+        summary_msg = [m for m in result if m.get(COMPRESSED_SUMMARY_METADATA_KEY)]
         assert len(summary_msg) == 1
         assert summary_msg[0]["role"] == "assistant"
 
@@ -1979,17 +2295,29 @@ class TestCompressWithClient:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         # Head ends with tool (index 1), tail starts with user (index 6).
         # Default: tool → summary_role="user" → collides with tail.
         # Flip to "assistant" → tool→assistant is fine.
         msgs = [
             {"role": "user", "content": "msg 0"},
-            {"role": "assistant", "content": "", "tool_calls": [
-                {"id": "call_1", "type": "function", "function": {"name": "t", "arguments": "{}"}},
-            ]},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "t", "arguments": "{}"},
+                    },
+                ],
+            },
             {"role": "tool", "tool_call_id": "call_1", "content": "result 1"},
             {"role": "assistant", "content": "msg 3"},
             {"role": "user", "content": "msg 4"},
@@ -2004,7 +2332,7 @@ class TestCompressWithClient:
             r1 = result[i - 1].get("role")
             r2 = result[i].get("role")
             if r1 in {"user", "assistant"} and r2 in {"user", "assistant"}:
-                assert r1 != r2, f"consecutive {r1} at indices {i-1},{i}"
+                assert r1 != r2, f"consecutive {r1} at indices {i - 1},{i}"
 
     def test_double_collision_merges_summary_into_tail(self):
         """When neither role avoids collision with both neighbors, the summary
@@ -2018,8 +2346,12 @@ class TestCompressWithClient:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3
+            )
 
         # Head: [system, user, assistant]  →  last head = assistant
         # Tail: [user, assistant, user]    →  first tail = user
@@ -2030,10 +2362,10 @@ class TestCompressWithClient:
             {"role": "system", "content": "system prompt"},
             {"role": "user", "content": "msg 1"},
             {"role": "assistant", "content": "msg 2"},
-            {"role": "user", "content": "msg 3"},      # compressed
+            {"role": "user", "content": "msg 3"},  # compressed
             {"role": "assistant", "content": "msg 4"},  # compressed
-            {"role": "user", "content": "msg 5"},       # compressed
-            {"role": "user", "content": "msg 6"},       # tail start
+            {"role": "user", "content": "msg 5"},  # compressed
+            {"role": "user", "content": "msg 6"},  # tail start
             {"role": "assistant", "content": "msg 7"},
             {"role": "user", "content": "msg 8"},
         ]
@@ -2045,7 +2377,7 @@ class TestCompressWithClient:
             r1 = result[i - 1].get("role")
             r2 = result[i].get("role")
             if r1 in {"user", "assistant"} and r2 in {"user", "assistant"}:
-                assert r1 != r2, f"consecutive {r1} at indices {i-1},{i}"
+                assert r1 != r2, f"consecutive {r1} at indices {i - 1},{i}"
 
         # The summary text should be merged into the first tail message
         first_tail = [m for m in result if "msg 6" in (m.get("content") or "")]
@@ -2058,8 +2390,12 @@ class TestCompressWithClient:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3
+            )
 
         msgs = [
             {"role": "system", "content": "system prompt"},
@@ -2077,7 +2413,8 @@ class TestCompressWithClient:
             result = c.compress(msgs)
 
         merged_tail = next(
-            m for m in result
+            m
+            for m in result
             if m.get("role") == "user" and isinstance(m.get("content"), list)
         )
         assert isinstance(merged_tail["content"], list)
@@ -2112,8 +2449,12 @@ class TestCompressWithClient:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "SUMMARY_BODY"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3
+            )
 
         msgs = [
             {"role": "system", "content": "system prompt"},
@@ -2122,7 +2463,10 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 3"},
             {"role": "assistant", "content": "msg 4"},
             {"role": "user", "content": "msg 5"},
-            {"role": "user", "content": [{"type": "text", "text": "PRESERVED_TAIL_CONTENT"}]},
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "PRESERVED_TAIL_CONTENT"}],
+            },
             {"role": "assistant", "content": "msg 7"},
             {"role": "user", "content": "msg 8"},
         ]
@@ -2133,10 +2477,9 @@ class TestCompressWithClient:
         merged = next(m for m in result if m.get(COMPRESSED_SUMMARY_METADATA_KEY))
         content = merged["content"]
         text = (
-            content if isinstance(content, str)
-            else " ".join(
-                b.get("text", "") for b in content if isinstance(b, dict)
-            )
+            content
+            if isinstance(content, str)
+            else " ".join(b.get("text", "") for b in content if isinstance(b, dict))
         )
         end = _SUMMARY_END_MARKER.strip()
         # All three fragments present.
@@ -2168,8 +2511,10 @@ class TestCompressWithClient:
         merged = (
             _MERGED_PRIOR_CONTEXT_HEADER + "\n"
             "old tail content here\n\n"
-            + _MERGED_SUMMARY_DELIMITER + "\n\n"
-            + SUMMARY_PREFIX + "\nTHE_SUMMARY_BODY\n\n"
+            + _MERGED_SUMMARY_DELIMITER
+            + "\n\n"
+            + SUMMARY_PREFIX
+            + "\nTHE_SUMMARY_BODY\n\n"
             + _SUMMARY_END_MARKER
         )
 
@@ -2192,8 +2537,12 @@ class TestCompressWithClient:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=1, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=1, protect_last_n=2
+            )
 
         # Head: [system, user]        → last head = user
         # Tail: [assistant, user, assistant] → first tail = assistant
@@ -2205,10 +2554,10 @@ class TestCompressWithClient:
         msgs = [
             {"role": "system", "content": "system prompt"},
             {"role": "user", "content": "msg 1"},
-            {"role": "assistant", "content": "msg 2"},   # compressed
-            {"role": "user", "content": "msg 3"},        # compressed
-            {"role": "assistant", "content": "msg 4"},   # compressed
-            {"role": "assistant", "content": "msg 5"},   # tail start
+            {"role": "assistant", "content": "msg 2"},  # compressed
+            {"role": "user", "content": "msg 3"},  # compressed
+            {"role": "assistant", "content": "msg 4"},  # compressed
+            {"role": "assistant", "content": "msg 5"},  # tail start
             {"role": "user", "content": "msg 6"},
             {"role": "assistant", "content": "msg 7"},
         ]
@@ -2220,7 +2569,7 @@ class TestCompressWithClient:
             r1 = result[i - 1].get("role")
             r2 = result[i].get("role")
             if r1 in {"user", "assistant"} and r2 in {"user", "assistant"}:
-                assert r1 != r2, f"consecutive {r1} at indices {i-1},{i}"
+                assert r1 != r2, f"consecutive {r1} at indices {i - 1},{i}"
 
         # The summary should be merged into the first tail message (assistant at index 5)
         first_tail = [m for m in result if "msg 5" in (m.get("content") or "")]
@@ -2234,8 +2583,12 @@ class TestCompressWithClient:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary text"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
-            c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
+            )
 
         # Head=assistant, Tail=assistant → summary_role="user", no collision.
         # With min_tail=3, tail = last 3 messages (indices 5-7).
@@ -2252,16 +2605,22 @@ class TestCompressWithClient:
         ]
         with patch("agent.context_compressor.call_llm", return_value=mock_response):
             result = c.compress(msgs)
-        summary_msgs = [m for m in result if (m.get("content") or "").startswith(SUMMARY_PREFIX)]
+        summary_msgs = [
+            m for m in result if (m.get("content") or "").startswith(SUMMARY_PREFIX)
+        ]
         assert len(summary_msgs) == 1, "should have a standalone summary message"
         assert summary_msgs[0]["role"] == "user"
 
     def test_summarization_does_not_start_tail_with_tool_outputs(self):
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "[CONTEXT SUMMARY]: compressed middle"
+        mock_response.choices[
+            0
+        ].message.content = "[CONTEXT SUMMARY]: compressed middle"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -2277,7 +2636,11 @@ class TestCompressWithClient:
                 "role": "assistant",
                 "content": "",
                 "tool_calls": [
-                    {"id": "call_c", "type": "function", "function": {"name": "search_files", "arguments": "{}"}},
+                    {
+                        "id": "call_c",
+                        "type": "function",
+                        "function": {"name": "search_files", "arguments": "{}"},
+                    },
                 ],
             },
             {"role": "tool", "tool_call_id": "call_c", "content": "output c"},
@@ -2303,39 +2666,61 @@ class TestSummaryTargetRatio:
 
     def test_tail_budget_scales_with_context(self):
         """Tail token budget should be threshold_tokens * summary_target_ratio."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=200_000):
-            c = ContextCompressor(model="test", quiet_mode=True, summary_target_ratio=0.40)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=200_000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, summary_target_ratio=0.40
+            )
         # 200K < 512K → threshold floored at 75%: 150K * 0.40 ratio = 60K
         assert c.tail_token_budget == 60_000
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=1_000_000):
-            c = ContextCompressor(model="test", quiet_mode=True, summary_target_ratio=0.40)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=1_000_000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, summary_target_ratio=0.40
+            )
         # 1M * 0.50 threshold * 0.40 ratio = 200K
         assert c.tail_token_budget == 200_000
 
     def test_summary_cap_scales_with_context(self):
         """Max summary tokens should be 5% of context, capped at 10K."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=200_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=200_000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.max_summary_tokens == 10_000  # 200K * 0.05
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=1_000_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=1_000_000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.max_summary_tokens == 10_000  # capped at 10K ceiling
 
     def test_ratio_clamped(self):
         """Ratio should be clamped to [0.10, 0.80]."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
-            c = ContextCompressor(model="test", quiet_mode=True, summary_target_ratio=0.05)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, summary_target_ratio=0.05
+            )
         assert c.summary_target_ratio == 0.10
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
-            c = ContextCompressor(model="test", quiet_mode=True, summary_target_ratio=0.95)
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
+            c = ContextCompressor(
+                model="test", quiet_mode=True, summary_target_ratio=0.95
+            )
         assert c.summary_target_ratio == 0.80
 
     def test_default_threshold_floored_at_75_percent_below_512k(self):
         """Sub-512K models get the 75% small-context threshold floor."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.threshold_percent == 0.75
         # 75% of 100K = 75K, above the 64K minimum floor
@@ -2343,14 +2728,18 @@ class TestSummaryTargetRatio:
 
     def test_configured_threshold_used_at_512k_and_above(self):
         """At 512K+ the configured (default 50%) percentage is used directly."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=512_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=512_000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.threshold_percent == 0.50
         assert c.threshold_tokens == 256_000
 
     def test_default_protect_last_n_is_20(self):
         """Default protect_last_n should be 20."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.protect_last_n == 20
 
@@ -2361,7 +2750,9 @@ class TestSummaryTargetRatio:
         always implicitly protected ON TOP OF protect_first_n non-system
         messages.
         """
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.protect_first_n == 3
 
@@ -2369,7 +2760,9 @@ class TestSummaryTargetRatio:
         """protect_first_n=0 should be honoured — for users who rely on rolling
         compaction and want NOTHING pinned at head except the system prompt
         (always implicitly protected)."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
             c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=0)
         assert c.protect_first_n == 0
 
@@ -2381,18 +2774,19 @@ class TestSummaryTargetRatio:
         This is the cleanest configuration for long-running rolling-compaction
         sessions — no user/assistant turn gets pinned verbatim forever just
         because it happened to be early in the session."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
                 protect_first_n=0,
                 protect_last_n=2,
             )
-        msgs = (
-            [{"role": "system", "content": "System prompt"}]
-            + [{"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"}
-               for i in range(8)]
-        )
+        msgs = [{"role": "system", "content": "System prompt"}] + [
+            {"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"}
+            for i in range(8)
+        ]
         result = c.compress(msgs)
         # System prompt (msg[0]) survives as head
         assert result[0]["role"] == "system"
@@ -2418,7 +2812,9 @@ class TestSummaryTargetRatio:
         session forever — a user-reported complaint that a week-old
         resolved question kept getting reinserted into every compaction
         summary."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -2452,7 +2848,9 @@ class TestTokenBudgetTailProtection:
     @pytest.fixture()
     def budget_compressor(self):
         """Compressor with known token budget for tail protection tests."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=200_000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=200_000
+        ):
             c = ContextCompressor(
                 model="test/model",
                 threshold_percent=0.50,  # 100K threshold
@@ -2474,11 +2872,13 @@ class TestTokenBudgetTailProtection:
         # Add 20 messages with large tool outputs (~5K chars each ≈ 1250 tokens)
         for i in range(10):
             messages.append({
-                "role": "assistant", "content": None,
+                "role": "assistant",
+                "content": None,
                 "tool_calls": [{"function": {"name": f"tool_{i}", "arguments": "{}"}}],
             })
             messages.append({
-                "role": "tool", "content": "x" * 5000,
+                "role": "tool",
+                "content": "x" * 5000,
                 "tool_call_id": f"call_{i}",
             })
         # Add 3 recent small messages
@@ -2491,7 +2891,9 @@ class TestTokenBudgetTailProtection:
         cut = c._find_tail_cut_by_tokens(messages, head_end)
         tail_size = len(messages) - cut
         # With token budget, the tail should be much smaller than 20+
-        assert tail_size < 20, f"Tail {tail_size} messages — large tool outputs are blocking compaction"
+        assert tail_size < 20, (
+            f"Tail {tail_size} messages — large tool outputs are blocking compaction"
+        )
         # But at least 3 (hard minimum)
         assert tail_size >= 3
 
@@ -2584,7 +2986,9 @@ class TestTokenBudgetTailProtection:
 
         # Should not early-return (needs > protect_first_n + 3 + 1 = 6)
         # Mock the summary generation to avoid real API call
-        with patch.object(c, "_generate_summary", return_value="Summary of conversation"):
+        with patch.object(
+            c, "_generate_summary", return_value="Summary of conversation"
+        ):
             result = c.compress(messages, current_tokens=90_000)
         # Should have compressed (fewer messages than original)
         assert len(result) < len(messages)
@@ -2594,18 +2998,48 @@ class TestTokenBudgetTailProtection:
         c = budget_compressor
         messages = [
             {"role": "user", "content": "start"},
-            {"role": "assistant", "content": None,
-             "tool_calls": [{"function": {"name": "read_file", "arguments": '{"path": "big.txt"}'}}]},
-            {"role": "tool", "content": "x" * 10000, "tool_call_id": "c1"},  # ~2500 tokens
-            {"role": "assistant", "content": None,
-             "tool_calls": [{"function": {"name": "read_file", "arguments": '{"path": "small.txt"}'}}]},
-            {"role": "tool", "content": "y" * 10000, "tool_call_id": "c2"},  # ~2500 tokens
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "function": {
+                            "name": "read_file",
+                            "arguments": '{"path": "big.txt"}',
+                        }
+                    }
+                ],
+            },
+            {
+                "role": "tool",
+                "content": "x" * 10000,
+                "tool_call_id": "c1",
+            },  # ~2500 tokens
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "function": {
+                            "name": "read_file",
+                            "arguments": '{"path": "small.txt"}',
+                        }
+                    }
+                ],
+            },
+            {
+                "role": "tool",
+                "content": "y" * 10000,
+                "tool_call_id": "c2",
+            },  # ~2500 tokens
             {"role": "user", "content": "short recent message"},
             {"role": "assistant", "content": "short reply"},
         ]
         # With a 1000-token budget, only the last couple messages should be protected
         result, pruned = c._prune_old_tool_results(
-            messages, protect_tail_count=2, protect_tail_tokens=1000,
+            messages,
+            protect_tail_count=2,
+            protect_tail_tokens=1000,
         )
         # At least one old tool result should have been pruned
         assert pruned >= 1
@@ -2643,21 +3077,27 @@ class TestTokenBudgetTailProtection:
         c = budget_compressor
         messages = [
             {"role": "user", "content": "start"},
-            {"role": "assistant", "content": None,
-             "tool_calls": [{"function": {"name": "tool", "arguments": "{}"}}]},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"function": {"name": "tool", "arguments": "{}"}}],
+            },
             {"role": "tool", "content": "x" * 5000, "tool_call_id": "c1"},
             {"role": "user", "content": "recent"},
             {"role": "assistant", "content": "reply"},
         ]
         # protect_tail_count=3 means last 3 messages protected
         result, pruned = c._prune_old_tool_results(
-            messages, protect_tail_count=3,
+            messages,
+            protect_tail_count=3,
         )
         # Tool at index 2 is outside the protected tail (last 3 = indices 2,3,4)
         # so it might or might not be pruned depending on boundary
         assert isinstance(pruned, int)
 
-    def test_multimodal_message_accumulates_text_chars_not_block_count(self, budget_compressor):
+    def test_multimodal_message_accumulates_text_chars_not_block_count(
+        self, budget_compressor
+    ):
         """_find_tail_cut_by_tokens must use text char count, not list length,
         for multimodal content. Regression guard for #16087.
 
@@ -2678,12 +3118,15 @@ class TestTokenBudgetTailProtection:
             {"type": "image_url", "image_url": {"url": "https://example.com/img.jpg"}},
         ]
         messages = [
-            {"role": "user", "content": "head1"},               # 0
-            {"role": "user", "content": multimodal_content},    # 1: BIG (index under test)
-            {"role": "assistant", "content": "tail1"},           # 2
-            {"role": "user", "content": "tail2"},                # 3
-            {"role": "assistant", "content": "tail3"},           # 4
-            {"role": "user", "content": "tail4"},                # 5
+            {"role": "user", "content": "head1"},  # 0
+            {
+                "role": "user",
+                "content": multimodal_content,
+            },  # 1: BIG (index under test)
+            {"role": "assistant", "content": "tail1"},  # 2
+            {"role": "user", "content": "tail2"},  # 3
+            {"role": "assistant", "content": "tail3"},  # 4
+            {"role": "user", "content": "tail4"},  # 5
         ]
         c.tail_token_budget = 80  # soft_ceiling = 120
         head_end = 0
@@ -2705,7 +3148,7 @@ class TestTokenBudgetTailProtection:
         big_plain = "x" * 500
         messages = [
             {"role": "user", "content": "head1"},
-            {"role": "user", "content": big_plain},   # 1: 135 tokens, plain string
+            {"role": "user", "content": big_plain},  # 1: 135 tokens, plain string
             {"role": "assistant", "content": "tail1"},
             {"role": "user", "content": "tail2"},
             {"role": "assistant", "content": "tail3"},
@@ -2722,10 +3165,15 @@ class TestTokenBudgetTailProtection:
         """Image-only content blocks (no 'text' key) contribute 0 chars + base overhead."""
         c = budget_compressor
         c.tail_token_budget = 500
-        image_only = [{"type": "image_url", "image_url": {"url": "https://example.com/x.jpg"}}]
+        image_only = [
+            {"type": "image_url", "image_url": {"url": "https://example.com/x.jpg"}}
+        ]
         messages = [
             {"role": "user", "content": "a" * 4000},
-            {"role": "user", "content": image_only},   # 0 text chars → 10 tokens overhead
+            {
+                "role": "user",
+                "content": image_only,
+            },  # 0 text chars → 10 tokens overhead
             {"role": "assistant", "content": "ok"},
         ]
         head_end = 0
@@ -2761,12 +3209,15 @@ class TestTokenBudgetTailProtection:
         messages = []
         for i in range(50):
             messages.append({
-                "role": "assistant", "content": None,
-                "tool_calls": [{
-                    "id": f"c{i}",
-                    "type": "function",
-                    "function": {"name": "noop", "arguments": "{}"},
-                }],
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": f"c{i}",
+                        "type": "function",
+                        "function": {"name": "noop", "arguments": "{}"},
+                    }
+                ],
             })
             messages.append({
                 "role": "tool",
@@ -2796,7 +3247,10 @@ class TestUpdateModelBudgets:
     def test_tail_budget_recalculated(self):
         """tail_token_budget must change after switching to a different context length."""
         from unittest.mock import patch
-        with patch("agent.context_compressor.get_model_context_length", return_value=200_000):
+
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=200_000
+        ):
             comp = ContextCompressor("model-a", threshold_percent=0.50, quiet_mode=True)
         old_tail = comp.tail_token_budget
         old_max_summary = comp.max_summary_tokens
@@ -2804,15 +3258,22 @@ class TestUpdateModelBudgets:
         comp.update_model("model-b", context_length=32_000)
         assert comp.tail_token_budget != old_tail, "tail_token_budget should change"
         assert comp.tail_token_budget < old_tail, "smaller context → smaller budget"
-        assert comp.max_summary_tokens != old_max_summary, "max_summary_tokens should change"
+        assert comp.max_summary_tokens != old_max_summary, (
+            "max_summary_tokens should change"
+        )
 
     def test_budgets_proportional(self):
         """Budgets should be proportional to context_length after update."""
         from unittest.mock import patch
-        with patch("agent.context_compressor.get_model_context_length", return_value=100_000):
+
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100_000
+        ):
             comp = ContextCompressor("model-a", threshold_percent=0.50, quiet_mode=True)
         comp.update_model("model-b", context_length=10_000)
-        assert comp.tail_token_budget == int(comp.threshold_tokens * comp.summary_target_ratio)
+        assert comp.tail_token_budget == int(
+            comp.threshold_tokens * comp.summary_target_ratio
+        )
         assert comp.max_summary_tokens == min(int(10_000 * 0.05), 4000)
 
 
@@ -2825,8 +3286,13 @@ class TestUpdateModelResetsCalibration:
 
     def _comp(self):
         from unittest.mock import patch
-        with patch("agent.context_compressor.get_model_context_length", return_value=200_000):
-            return ContextCompressor("big-model", threshold_percent=0.50, quiet_mode=True)
+
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=200_000
+        ):
+            return ContextCompressor(
+                "big-model", threshold_percent=0.50, quiet_mode=True
+            )
 
     def test_real_usage_state_cleared(self):
         comp = self._comp()
@@ -2860,7 +3326,10 @@ class TestUpdateModelResetsCalibration:
         # After switching to a 65K model, the stale state is gone, so a rough
         # estimate over the new threshold is NOT deferred — preflight will run.
         comp.update_model("small-model", context_length=65_536)
-        assert comp.should_defer_preflight_to_real_usage(comp.threshold_tokens + 5_000) is False
+        assert (
+            comp.should_defer_preflight_to_real_usage(comp.threshold_tokens + 5_000)
+            is False
+        )
 
 
 class TestTruncateToolCallArgsJson:
@@ -2875,10 +3344,12 @@ class TestTruncateToolCallArgsJson:
 
     def _helper(self):
         from agent.context_compressor import _truncate_tool_call_args_json
+
         return _truncate_tool_call_args_json
 
     def test_shrunken_args_remain_valid_json(self):
         import json as _json
+
         shrink = self._helper()
         original = _json.dumps({
             "path": "~/.hercules/skills/shopping/browser-setup-notes.md",
@@ -2898,12 +3369,14 @@ class TestTruncateToolCallArgsJson:
 
     def test_short_string_leaves_unchanged(self):
         import json as _json
+
         shrink = self._helper()
         payload = _json.dumps({"command": "ls -la", "cwd": "/tmp"})
         assert _json.loads(shrink(payload)) == {"command": "ls -la", "cwd": "/tmp"}
 
     def test_nested_structures_are_walked(self):
         import json as _json
+
         shrink = self._helper()
         payload = _json.dumps({
             "messages": [
@@ -2919,6 +3392,7 @@ class TestTruncateToolCallArgsJson:
 
     def test_non_string_leaves_preserved(self):
         import json as _json
+
         shrink = self._helper()
         payload = _json.dumps({
             "retries": 3,
@@ -2936,6 +3410,7 @@ class TestTruncateToolCallArgsJson:
 
     def test_scalar_json_string_gets_shrunk(self):
         import json as _json
+
         shrink = self._helper()
         payload = _json.dumps("q" * 500)
         parsed = _json.loads(shrink(payload))
@@ -2944,6 +3419,7 @@ class TestTruncateToolCallArgsJson:
 
     def test_unicode_preserved(self):
         import json as _json
+
         shrink = self._helper()
         payload = _json.dumps({"content": "非德满" + ("a" * 500)})
         out = shrink(payload)
@@ -2954,7 +3430,10 @@ class TestTruncateToolCallArgsJson:
         """End-to-end: Pass 3 must never produce the exact failure payload
         that caused the 400 loop (unterminated string, missing brace)."""
         import json as _json
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test/model",
                 threshold_percent=0.85,
@@ -2970,12 +3449,22 @@ class TestTruncateToolCallArgsJson:
         assert len(args_payload) > 500  # triggers the Pass-3 shrink
         messages = [
             {"role": "user", "content": "please write two files"},
-            {"role": "assistant", "content": None, "tool_calls": [
-                {"id": "call_1", "type": "function",
-                 "function": {"name": "write_file", "arguments": args_payload}},
-            ]},
-            {"role": "tool", "tool_call_id": "call_1",
-             "content": '{"bytes_written": 727}'},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "call_1",
+                        "type": "function",
+                        "function": {"name": "write_file", "arguments": args_payload},
+                    },
+                ],
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "call_1",
+                "content": '{"bytes_written": 727}',
+            },
             {"role": "user", "content": "ok"},
             {"role": "assistant", "content": "done"},
         ]
@@ -3004,7 +3493,7 @@ class TestPreflightSentinelGuard:
         _last = last_prompt_tokens
         if _last >= 0 and preflight_tokens > _last:
             return preflight_tokens  # would overwrite
-        return last_prompt_tokens   # preserved
+        return last_prompt_tokens  # preserved
 
     def test_sentinel_preserved_after_compression(self, compressor):
         compressor.last_prompt_tokens = -1
@@ -3070,8 +3559,11 @@ class TestTurnPairPreservation:
         """User + assistant + tool results — pair_end skips the whole group."""
         msgs = [
             {"role": "user", "content": "run it"},
-            {"role": "assistant", "content": None,
-             "tool_calls": [{"function": {"name": "exec", "arguments": "{}"}}]},
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"function": {"name": "exec", "arguments": "{}"}}],
+            },
             {"role": "tool", "tool_call_id": "c1", "content": "ok"},
             {"role": "tool", "tool_call_id": "c2", "content": "ok"},
         ]
@@ -3098,20 +3590,24 @@ class TestTurnPairPreservation:
             {"role": "user", "content": "last user"},
             {"role": "assistant", "content": "last reply"},
         ]
-        result = compressor._ensure_last_user_message_in_tail(msgs, cut_idx=2, head_end=1)
+        result = compressor._ensure_last_user_message_in_tail(
+            msgs, cut_idx=2, head_end=1
+        )
         assert result == 2
 
     def test_user_in_compressed_region_pulled_back(self, compressor):
         """User in the middle (not at head_end) is pulled into the tail (#10896)."""
         msgs = [
-            {"role": "user", "content": "head"},       # 0
-            {"role": "assistant", "content": "hi"},     # 1
-            {"role": "user", "content": "do thing"},   # 2  <- last user
+            {"role": "user", "content": "head"},  # 0
+            {"role": "assistant", "content": "hi"},  # 1
+            {"role": "user", "content": "do thing"},  # 2  <- last user
             {"role": "assistant", "content": "done"},  # 3
         ]
         # head_end=0, so head_end+1=1 <= last_user_idx=2: the #10896 pullback
         # applies and the user stays in the tail (no forward push).
-        result = compressor._ensure_last_user_message_in_tail(msgs, cut_idx=3, head_end=0)
+        result = compressor._ensure_last_user_message_in_tail(
+            msgs, cut_idx=3, head_end=0
+        )
         assert result <= 2
 
     def test_orphan_prevented_user_at_head_end(self, compressor):
@@ -3123,14 +3619,16 @@ class TestTurnPairPreservation:
         together and the tail never starts with a dangling user ask.
         """
         msgs = [
-            {"role": "user", "content": "first exchange"},   # 0 head
-            {"role": "user", "content": "THE ACTIVE ASK"},   # 1 = head_end, last user
-            {"role": "assistant", "content": "done"},        # 2 reply
+            {"role": "user", "content": "first exchange"},  # 0 head
+            {"role": "user", "content": "THE ACTIVE ASK"},  # 1 = head_end, last user
+            {"role": "assistant", "content": "done"},  # 2 reply
             {"role": "tool", "tool_call_id": "c1", "content": "toolout"},  # 3
-            {"role": "assistant", "content": "final reply"}, # 4
+            {"role": "assistant", "content": "final reply"},  # 4
         ]
         head_end = 1
-        result = compressor._ensure_last_user_message_in_tail(msgs, cut_idx=3, head_end=head_end)
+        result = compressor._ensure_last_user_message_in_tail(
+            msgs, cut_idx=3, head_end=head_end
+        )
         # Whole pair (indices 1..3) lands in the compressed region; tail starts at 4.
         assert result == 4
         tail = msgs[result:]
@@ -3174,7 +3672,10 @@ class TestSanitizerStripsOrphanedToolCalls:
                 "role": "assistant",
                 "content": "",
                 "tool_calls": [
-                    {"id": "tc_orphan", "function": {"name": "search", "arguments": "{}"}},
+                    {
+                        "id": "tc_orphan",
+                        "function": {"name": "search", "arguments": "{}"},
+                    },
                 ],
             },
             {"role": "user", "content": "never mind"},
@@ -3198,8 +3699,14 @@ class TestSanitizerStripsOrphanedToolCalls:
                 "role": "assistant",
                 "content": "",
                 "tool_calls": [
-                    {"id": "tc_valid", "function": {"name": "read_file", "arguments": "{}"}},
-                    {"id": "tc_orphan", "function": {"name": "search", "arguments": "{}"}},
+                    {
+                        "id": "tc_valid",
+                        "function": {"name": "read_file", "arguments": "{}"},
+                    },
+                    {
+                        "id": "tc_orphan",
+                        "function": {"name": "search", "arguments": "{}"},
+                    },
                 ],
             },
             {"role": "tool", "tool_call_id": "tc_valid", "content": "file content"},
@@ -3223,7 +3730,10 @@ class TestSanitizerStripsOrphanedToolCalls:
                 "role": "assistant",
                 "content": "Let me search for that.",
                 "tool_calls": [
-                    {"id": "tc_orphan", "function": {"name": "search", "arguments": "{}"}},
+                    {
+                        "id": "tc_orphan",
+                        "function": {"name": "search", "arguments": "{}"},
+                    },
                 ],
             },
             {"role": "user", "content": "thanks"},
@@ -3286,7 +3796,9 @@ class TestCooldownReentryAbort:
         """ConnectionError → first compress aborts (PR #51881).  Second
         compress within the 30s cooldown must ALSO abort — not drop the
         middle window via the static-fallback path."""
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -3318,7 +3830,9 @@ class TestCooldownReentryAbort:
         returns None, second compress must still abort."""
         err = Exception("Error code: 401 - invalid api key")
         err.status_code = 401
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
                 model="test",
                 quiet_mode=True,
@@ -3362,9 +3876,14 @@ class TestDoubleCompactionSummaryRole:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary of earlier turns"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
-                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2,
+                model="test",
+                quiet_mode=True,
+                protect_first_n=2,
+                protect_last_n=2,
             )
         # Simulate second compression: protect_first_n decays to 0.
         c.compression_count = 1
@@ -3402,9 +3921,14 @@ class TestDoubleCompactionSummaryRole:
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = "summary of earlier turns"
 
-        with patch("agent.context_compressor.get_model_context_length", return_value=100000):
+        with patch(
+            "agent.context_compressor.get_model_context_length", return_value=100000
+        ):
             c = ContextCompressor(
-                model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2,
+                model="test",
+                quiet_mode=True,
+                protect_first_n=2,
+                protect_last_n=2,
             )
         c.compression_count = 1  # decay protect_first_n
 
@@ -3416,7 +3940,7 @@ class TestDoubleCompactionSummaryRole:
             {"role": "assistant", "content": "msg 2"},
             {"role": "user", "content": "msg 3"},
             {"role": "assistant", "content": "msg 4"},
-            {"role": "user", "content": "msg 5"},       # tail start (user)
+            {"role": "user", "content": "msg 5"},  # tail start (user)
             {"role": "assistant", "content": "msg 6"},
             {"role": "user", "content": "msg 7"},
         ]
@@ -3425,7 +3949,8 @@ class TestDoubleCompactionSummaryRole:
 
         # No standalone summary message should exist (merged into tail).
         summary_msgs = [
-            m for m in result
+            m
+            for m in result
             if m.get("_compressed_summary") and "msg 5" not in (m.get("content") or "")
         ]
         assert len(summary_msgs) == 0, (
@@ -3436,8 +3961,7 @@ class TestDoubleCompactionSummaryRole:
         assert non_system[0]["role"] == "user"
         # The merged tail should contain the summary text.
         assert any(
-            "summary of earlier turns" in (m.get("content") or "")
-            for m in result
+            "summary of earlier turns" in (m.get("content") or "") for m in result
         )
 
 

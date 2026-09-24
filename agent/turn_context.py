@@ -154,6 +154,7 @@ def build_turn_context(
     # Tell auxiliary_client what the live main provider/model are for this turn.
     try:
         from agent.auxiliary_client import set_runtime_main
+
         set_runtime_main(
             getattr(agent, "provider", "") or "",
             getattr(agent, "model", "") or "",
@@ -194,8 +195,13 @@ def build_turn_context(
             # This keeps the no-MCP first turn off the heavy import path
             # without changing behavior for MCP users.
             import sys as _sys
+
             if "tools.mcp_tool" in _sys.modules:
-                from tools.mcp_tool import has_registered_mcp_tools, refresh_agent_mcp_tools
+                from tools.mcp_tool import (
+                    has_registered_mcp_tools,
+                    refresh_agent_mcp_tools,
+                )
+
                 if has_registered_mcp_tools():
                     refresh_agent_mcp_tools(agent, quiet_mode=True)
     except Exception:
@@ -215,7 +221,9 @@ def build_turn_context(
     # Generate unique task_id if not provided to isolate VMs between tasks.
     effective_task_id = task_id or str(uuid.uuid4())
     agent._current_task_id = effective_task_id
-    turn_id = f"{agent.session_id or 'session'}:{effective_task_id}:{uuid.uuid4().hex[:8]}"
+    turn_id = (
+        f"{agent.session_id or 'session'}:{effective_task_id}:{uuid.uuid4().hex[:8]}"
+    )
     agent._current_turn_id = turn_id
     agent._current_api_request_id = ""
 
@@ -259,12 +267,17 @@ def build_turn_context(
 
     # Log conversation turn start for debugging/observability.
     _preview_text = summarize_user_message_for_log(user_message)
-    _msg_preview = (_preview_text[:80] + "...") if len(_preview_text) > 80 else _preview_text
+    _msg_preview = (
+        (_preview_text[:80] + "...") if len(_preview_text) > 80 else _preview_text
+    )
     _msg_preview = _msg_preview.replace("\n", " ")
     logger.info(
         "conversation turn: session=%s model=%s provider=%s platform=%s history=%d msg=%r",
-        agent.session_id or "none", agent.model, agent.provider or "unknown",
-        agent.platform or "unknown", len(conversation_history or []),
+        agent.session_id or "none",
+        agent.model,
+        agent.provider or "unknown",
+        agent.platform or "unknown",
+        len(conversation_history or []),
         _msg_preview,
     )
 
@@ -283,7 +296,9 @@ def build_turn_context(
         if prior_user_turns > 0:
             agent._user_turn_count = prior_user_turns
             if agent._memory_nudge_interval > 0 and agent._turns_since_memory == 0:
-                agent._turns_since_memory = prior_user_turns % agent._memory_nudge_interval
+                agent._turns_since_memory = (
+                    prior_user_turns % agent._memory_nudge_interval
+                )
 
     # Track user turns for memory flush and periodic nudge logic.
     agent._user_turn_count += 1
@@ -301,13 +316,17 @@ def build_turn_context(
         think_scrubber.reset()
 
     # Preserve the original user message (no nudge injection).
-    original_user_message = persist_user_message if persist_user_message is not None else user_message
+    original_user_message = (
+        persist_user_message if persist_user_message is not None else user_message
+    )
 
     # Track memory nudge trigger (turn-based, checked here).
     should_review_memory = False
-    if (agent._memory_nudge_interval > 0
-            and "memory" in agent.valid_tool_names
-            and agent._memory_store):
+    if (
+        agent._memory_nudge_interval > 0
+        and "memory" in agent.valid_tool_names
+        and agent._memory_store
+    ):
         agent._turns_since_memory += 1
         if agent._turns_since_memory >= agent._memory_nudge_interval:
             should_review_memory = True
@@ -385,18 +404,16 @@ def build_turn_context(
         _preflight_deferred = _defer_preflight(_preflight_tokens)
         # Codex app-server threads are compacted by the codex agent itself;
         # Hercules only initiates compaction in "hercules" mode (#36801).
-        _codex_native_auto = (
-            getattr(agent, "api_mode", None) == "codex_app_server"
-            and str(
-                getattr(
-                    agent,
-                    "codex_app_server_auto_compaction",
-                    "native",
-                )
-                or "native"
-            ).lower()
-            in {"native", "off"}
-        )
+        _codex_native_auto = getattr(
+            agent, "api_mode", None
+        ) == "codex_app_server" and str(
+            getattr(
+                agent,
+                "codex_app_server_auto_compaction",
+                "native",
+            )
+            or "native"
+        ).lower() in {"native", "off"}
 
         if not _preflight_deferred:
             _last = _compressor.last_prompt_tokens
@@ -448,7 +465,9 @@ def build_turn_context(
                 _orig_len = len(messages)
                 _orig_tokens = _preflight_tokens
                 messages, active_system_prompt = agent._compress_context(
-                    messages, system_message, approx_tokens=_preflight_tokens,
+                    messages,
+                    system_message,
+                    approx_tokens=_preflight_tokens,
                     task_id=effective_task_id,
                 )
                 # Re-estimate now so size-only compression (same row count,
@@ -479,6 +498,7 @@ def build_turn_context(
     plugin_user_context = ""
     try:
         from hercules_cli.plugins import invoke_hook as _invoke_hook
+
         _pre_results = _invoke_hook(
             "pre_llm_call",
             session_id=agent.session_id,
@@ -500,6 +520,7 @@ def build_turn_context(
                 get_spill_config as _spill_cfg,
                 spill_if_oversized as _spill_if_oversized,
             )
+
             _spill_config_cached = _spill_cfg()
         except Exception:
             _spill_if_oversized = None  # type: ignore[assignment]
@@ -550,7 +571,9 @@ def build_turn_context(
     # Notify memory providers of the new turn (BEFORE prefetch_all).
     if agent._memory_manager:
         try:
-            _turn_msg = original_user_message if isinstance(original_user_message, str) else ""
+            _turn_msg = (
+                original_user_message if isinstance(original_user_message, str) else ""
+            )
             agent._memory_manager.on_turn_start(agent._user_turn_count, _turn_msg)
         except Exception:
             pass
@@ -559,7 +582,9 @@ def build_turn_context(
     ext_prefetch_cache = ""
     if agent._memory_manager:
         try:
-            _query = original_user_message if isinstance(original_user_message, str) else ""
+            _query = (
+                original_user_message if isinstance(original_user_message, str) else ""
+            )
             ext_prefetch_cache = agent._memory_manager.prefetch_all(_query) or ""
         except Exception:
             pass

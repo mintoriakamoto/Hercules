@@ -56,8 +56,10 @@ _FLAG_GATEWAY_MESSAGE_CONTENT_LIMITED = 1 << 19
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class DiscordAPIError(Exception):
     """Raised when a Discord API call fails."""
+
     def __init__(self, status: int, body: str):
         self.status = status
         self.body = body
@@ -275,7 +277,9 @@ def _detect_capabilities_nonblocking(token: str) -> Dict[str, Any]:
                     if caps.get("detected"):
                         _save_caps_to_disk(token, caps)
                 except Exception:
-                    logger.debug("background discord capability detection failed", exc_info=True)
+                    logger.debug(
+                        "background discord capability detection failed", exc_info=True
+                    )
 
             threading.Thread(
                 target=_bg_detect, name="discord-caps-detect", daemon=True
@@ -301,12 +305,14 @@ def _fetch_capabilities(token: str) -> Dict[str, Any]:
             flags & (_FLAG_GATEWAY_GUILD_MEMBERS | _FLAG_GATEWAY_GUILD_MEMBERS_LIMITED)
         )
         caps["has_message_content"] = bool(
-            flags & (_FLAG_GATEWAY_MESSAGE_CONTENT | _FLAG_GATEWAY_MESSAGE_CONTENT_LIMITED)
+            flags
+            & (_FLAG_GATEWAY_MESSAGE_CONTENT | _FLAG_GATEWAY_MESSAGE_CONTENT_LIMITED)
         )
         caps["detected"] = True
     except Exception as exc:  # nosec — detection is best-effort
         logger.info(
-            "Discord capability detection failed (%s); exposing all actions.", exc,
+            "Discord capability detection failed (%s); exposing all actions.",
+            exc,
         )
 
     return caps
@@ -344,6 +350,7 @@ def _reset_capability_cache() -> None:
 # Action implementations
 # ---------------------------------------------------------------------------
 
+
 def _list_guilds(token: str, **_kwargs: Any) -> str:
     """List all guilds the bot is a member of."""
     guilds = _discord_request("GET", "/users/@me/guilds", token)
@@ -361,7 +368,9 @@ def _list_guilds(token: str, **_kwargs: Any) -> str:
 
 def _server_info(token: str, guild_id: str, **_kwargs: Any) -> str:
     """Get detailed information about a guild."""
-    g = _discord_request("GET", f"/guilds/{guild_id}", token, params={"with_counts": "true"})
+    g = _discord_request(
+        "GET", f"/guilds/{guild_id}", token, params={"with_counts": "true"}
+    )
     return json.dumps({
         "id": g["id"],
         "name": g["name"],
@@ -484,14 +493,18 @@ def _member_info(token: str, guild_id: str, user_id: str, **_kwargs: Any) -> str
     })
 
 
-def _search_members(token: str, guild_id: str, query: str, limit: int = 20, **_kwargs: Any) -> str:
+def _search_members(
+    token: str, guild_id: str, query: str, limit: int = 20, **_kwargs: Any
+) -> str:
     """Search for guild members by name."""
     try:
         limit = int(limit)
     except (TypeError, ValueError):
         limit = 20
     params = {"query": query, "limit": str(min(limit, 100))}
-    members = _discord_request("GET", f"/guilds/{guild_id}/members/search", token, params=params)
+    members = _discord_request(
+        "GET", f"/guilds/{guild_id}/members/search", token, params=params
+    )
     result = []
     for m in members:
         user = m.get("user", {})
@@ -507,8 +520,11 @@ def _search_members(token: str, guild_id: str, query: str, limit: int = 20, **_k
 
 
 def _fetch_messages(
-    token: str, channel_id: str, limit: int = 50,
-    before: Optional[str] = None, after: Optional[str] = None,
+    token: str,
+    channel_id: str,
+    limit: int = 50,
+    before: Optional[str] = None,
+    after: Optional[str] = None,
     **_kwargs: Any,
 ) -> str:
     """Fetch recent messages from a channel."""
@@ -521,7 +537,9 @@ def _fetch_messages(
         params["before"] = before
     if after:
         params["after"] = after
-    messages = _discord_request("GET", f"/channels/{channel_id}/messages", token, params=params)
+    messages = _discord_request(
+        "GET", f"/channels/{channel_id}/messages", token, params=params
+    )
     result = []
     for msg in messages:
         author = msg.get("author", {})
@@ -537,13 +555,19 @@ def _fetch_messages(
             "timestamp": msg.get("timestamp"),
             "edited_timestamp": msg.get("edited_timestamp"),
             "attachments": [
-                {"filename": a.get("filename"), "url": a.get("url"), "size": a.get("size")}
+                {
+                    "filename": a.get("filename"),
+                    "url": a.get("url"),
+                    "size": a.get("size"),
+                }
                 for a in msg.get("attachments", [])
             ],
             "reactions": [
                 {"emoji": r.get("emoji", {}).get("name"), "count": r.get("count", 0)}
                 for r in msg.get("reactions", [])
-            ] if msg.get("reactions") else [],
+            ]
+            if msg.get("reactions")
+            else [],
             "pinned": msg.get("pinned", False),
         })
     return json.dumps({"messages": result, "count": len(result)})
@@ -576,14 +600,18 @@ def _unpin_message(token: str, channel_id: str, message_id: str, **_kwargs: Any)
     return json.dumps({"success": True, "message": f"Message {message_id} unpinned."})
 
 
-def _delete_message(token: str, channel_id: str, message_id: str, **_kwargs: Any) -> str:
+def _delete_message(
+    token: str, channel_id: str, message_id: str, **_kwargs: Any
+) -> str:
     """Delete a message from a channel or thread."""
     _discord_request("DELETE", f"/channels/{channel_id}/messages/{message_id}", token)
     return json.dumps({"success": True, "message": f"Message {message_id} deleted."})
 
 
 def _create_thread(
-    token: str, channel_id: str, name: str,
+    token: str,
+    channel_id: str,
+    name: str,
     message_id: Optional[str] = None,
     auto_archive_duration: int = 1440,
     **_kwargs: Any,
@@ -612,16 +640,30 @@ def _create_thread(
     })
 
 
-def _add_role(token: str, guild_id: str, user_id: str, role_id: str, **_kwargs: Any) -> str:
+def _add_role(
+    token: str, guild_id: str, user_id: str, role_id: str, **_kwargs: Any
+) -> str:
     """Add a role to a guild member."""
-    _discord_request("PUT", f"/guilds/{guild_id}/members/{user_id}/roles/{role_id}", token)
-    return json.dumps({"success": True, "message": f"Role {role_id} added to user {user_id}."})
+    _discord_request(
+        "PUT", f"/guilds/{guild_id}/members/{user_id}/roles/{role_id}", token
+    )
+    return json.dumps({
+        "success": True,
+        "message": f"Role {role_id} added to user {user_id}.",
+    })
 
 
-def _remove_role(token: str, guild_id: str, user_id: str, role_id: str, **_kwargs: Any) -> str:
+def _remove_role(
+    token: str, guild_id: str, user_id: str, role_id: str, **_kwargs: Any
+) -> str:
     """Remove a role from a guild member."""
-    _discord_request("DELETE", f"/guilds/{guild_id}/members/{user_id}/roles/{role_id}", token)
-    return json.dumps({"success": True, "message": f"Role {role_id} removed from user {user_id}."})
+    _discord_request(
+        "DELETE", f"/guilds/{guild_id}/members/{user_id}/roles/{role_id}", token
+    )
+    return json.dumps({
+        "success": True,
+        "message": f"Role {role_id} removed from user {user_id}.",
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -663,12 +705,20 @@ _ACTION_MANIFEST: List[Tuple[str, str, str]] = [
     ("list_roles", "(guild_id)", "roles sorted by position"),
     ("member_info", "(guild_id, user_id)", "lookup a specific member"),
     ("search_members", "(guild_id, query)", "find members by name prefix"),
-    ("fetch_messages", "(channel_id)", "recent messages; optional before/after snowflakes"),
+    (
+        "fetch_messages",
+        "(channel_id)",
+        "recent messages; optional before/after snowflakes",
+    ),
     ("list_pins", "(channel_id)", "pinned messages in a channel"),
     ("pin_message", "(channel_id, message_id)", "pin a message"),
     ("unpin_message", "(channel_id, message_id)", "unpin a message"),
     ("delete_message", "(channel_id, message_id)", "delete a message"),
-    ("create_thread", "(channel_id, name)", "create a public thread; optional message_id anchor"),
+    (
+        "create_thread",
+        "(channel_id, name)",
+        "create a public thread; optional message_id anchor",
+    ),
     ("add_role", "(guild_id, user_id, role_id)", "assign a role"),
     ("remove_role", "(guild_id, user_id, role_id)", "remove a role"),
 ]
@@ -699,6 +749,7 @@ _REQUIRED_PARAMS: Dict[str, List[str]] = {
 # Config-based action allowlist
 # ---------------------------------------------------------------------------
 
+
 def _load_allowed_actions_config() -> Optional[List[str]]:
     """Read ``discord.server_actions`` from user config.
 
@@ -710,6 +761,7 @@ def _load_allowed_actions_config() -> Optional[List[str]]:
     """
     try:
         from hercules_cli.config import load_config
+
         cfg = load_config()
     except Exception as exc:
         logger.debug("discord: could not load config (%s); allowing all actions.", exc)
@@ -725,7 +777,8 @@ def _load_allowed_actions_config() -> Optional[List[str]]:
         names = [str(n).strip() for n in raw if str(n).strip()]
     else:
         logger.warning(
-            "discord.server_actions: unexpected type %s; ignoring.", type(raw).__name__,
+            "discord.server_actions: unexpected type %s; ignoring.",
+            type(raw).__name__,
         )
         return None
 
@@ -733,9 +786,9 @@ def _load_allowed_actions_config() -> Optional[List[str]]:
     invalid = [n for n in names if n not in _ACTIONS]
     if invalid:
         logger.warning(
-            "discord.server_actions: unknown action(s) ignored: %s. "
-            "Known: %s",
-            ", ".join(invalid), ", ".join(_ACTIONS.keys()),
+            "discord.server_actions: unknown action(s) ignored: %s. Known: %s",
+            ", ".join(invalid),
+            ", ".join(_ACTIONS.keys()),
         )
     return valid
 
@@ -764,6 +817,7 @@ def _available_actions(
 # Schema construction
 # ---------------------------------------------------------------------------
 
+
 def _build_schema(
     actions: List[str],
     caps: Optional[Dict[str, Any]] = None,
@@ -788,7 +842,11 @@ def _build_schema(
 
     content_note = ""
     affected_actions = {"fetch_messages", "list_pins"} & set(actions)
-    if affected_actions and caps.get("detected") and caps.get("has_message_content") is False:
+    if (
+        affected_actions
+        and caps.get("detected")
+        and caps.get("has_message_content") is False
+    ):
         names = " and ".join(sorted(affected_actions))
         content_note = (
             f"\n\nNOTE: Bot does NOT have the MESSAGE_CONTENT privileged intent. "
@@ -922,9 +980,7 @@ _ACTION_403_HINT = {
         "Ask the server admin to grant the bot a role that has MANAGE_MESSAGES, "
         "or a per-channel overwrite."
     ),
-    "unpin_message": (
-        "Bot lacks MANAGE_MESSAGES permission in this channel."
-    ),
+    "unpin_message": ("Bot lacks MANAGE_MESSAGES permission in this channel."),
     "delete_message": (
         "Bot lacks MANAGE_MESSAGES permission in this channel, or cannot view the channel/message."
     ),
@@ -946,9 +1002,7 @@ _ACTION_403_HINT = {
     "list_pins": (
         "Bot cannot view this channel (missing VIEW_CHANNEL or READ_MESSAGE_HISTORY)."
     ),
-    "channel_info": (
-        "Bot cannot view this channel (missing VIEW_CHANNEL)."
-    ),
+    "channel_info": ("Bot cannot view this channel (missing VIEW_CHANNEL)."),
     "search_members": (
         "Likely missing the Server Members privileged intent — enable it in the "
         "Discord Developer Portal under your bot's settings."
@@ -973,6 +1027,7 @@ def _enrich_403(action: str, body: str) -> str:
 # Check function
 # ---------------------------------------------------------------------------
 
+
 def check_discord_tool_requirements() -> bool:
     """Tool is available only when a Discord bot token is configured."""
     return bool(_get_bot_token())
@@ -981,6 +1036,7 @@ def check_discord_tool_requirements() -> bool:
 # ---------------------------------------------------------------------------
 # Handlers
 # ---------------------------------------------------------------------------
+
 
 def _run_discord_action(
     action: str,
@@ -1078,9 +1134,18 @@ def discord_admin_handler(action: str, **kwargs) -> str:
 # ---------------------------------------------------------------------------
 
 _HANDLER_DEFAULTS = {
-    "action": "", "guild_id": "", "channel_id": "", "user_id": "",
-    "role_id": "", "message_id": "", "query": "", "name": "",
-    "limit": 50, "before": "", "after": "", "auto_archive_duration": 1440,
+    "action": "",
+    "guild_id": "",
+    "channel_id": "",
+    "user_id": "",
+    "role_id": "",
+    "message_id": "",
+    "query": "",
+    "name": "",
+    "limit": 50,
+    "before": "",
+    "after": "",
+    "auto_archive_duration": 1440,
 }
 
 
@@ -1092,10 +1157,14 @@ def _make_handler(handler_fn):
 
 
 _STATIC_CORE_SCHEMA = _build_schema(
-    list(_CORE_ACTIONS.keys()), caps={"detected": False}, tool_name="discord",
+    list(_CORE_ACTIONS.keys()),
+    caps={"detected": False},
+    tool_name="discord",
 )
 _STATIC_ADMIN_SCHEMA = _build_schema(
-    list(_ADMIN_ACTIONS.keys()), caps={"detected": False}, tool_name="discord_admin",
+    list(_ADMIN_ACTIONS.keys()),
+    caps={"detected": False},
+    tool_name="discord_admin",
 )
 
 registry.register(

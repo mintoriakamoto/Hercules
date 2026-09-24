@@ -10,6 +10,7 @@ Associations are created directly via ``store.reinforce_association`` here so
 the tests target the prefetch logic in isolation (the learn-via-feedback path
 is covered in test_associative_recall.py).
 """
+
 from __future__ import annotations
 
 import pytest
@@ -48,17 +49,19 @@ def test_strong_association_is_spread_into_prefetch(provider):
     provider._store.reinforce_association(a, b, delta=0.6)
 
     out = provider.prefetch("titan blue-green deployment rollout")
-    assert "blue-green deployment" in out          # direct hit present
+    assert "blue-green deployment" in out  # direct hit present
     spread = _spread_lines(out)
     assert len(spread) == 1
-    assert "on-call pager" in spread[0]             # surfaced purely by association
+    assert "on-call pager" in spread[0]  # surfaced purely by association
 
 
 def test_weak_association_below_threshold_is_not_spread(provider):
     a = _add(provider, "The Atlas service caches results in Redis")
     b = _add(provider, "Quarterly planning happens in the second week")
     # Strength below _PREFETCH_SPREAD_MIN_STRENGTH must not surface.
-    provider._store.reinforce_association(a, b, delta=_PREFETCH_SPREAD_MIN_STRENGTH - 0.1)
+    provider._store.reinforce_association(
+        a, b, delta=_PREFETCH_SPREAD_MIN_STRENGTH - 0.1
+    )
 
     out = provider.prefetch("atlas redis cache")
     assert _spread_lines(out) == []

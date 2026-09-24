@@ -1,4 +1,5 @@
 """Tests for Matrix platform adapter (mautrix-python backend)."""
+
 import asyncio
 import re
 import stat
@@ -96,8 +97,15 @@ def _make_fake_mautrix():
     mautrix_client = types.ModuleType("mautrix.client")
 
     class Client:
-        def __init__(self, mxid=None, device_id=None, api=None,
-                     state_store=None, sync_store=None, **kwargs):
+        def __init__(
+            self,
+            mxid=None,
+            device_id=None,
+            api=None,
+            state_store=None,
+            sync_store=None,
+            **kwargs,
+        ):
             self.mxid = mxid
             self.device_id = device_id
             self.api = api
@@ -188,8 +196,10 @@ def _make_fake_mautrix():
     def encrypt_attachment(data):
         encrypted_file = MagicMock()
         encrypted_file.serialize.return_value = {
-            "key": {"k": "testkey"}, "iv": "testiv",
-            "hashes": {"sha256": "testhash"}, "v": "v2",
+            "key": {"k": "testkey"},
+            "iv": "testiv",
+            "hashes": {"sha256": "testhash"},
+            "v": "v2",
         }
         return (b"ciphertext_" + data, encrypted_file)
 
@@ -251,12 +261,14 @@ def _make_fake_mautrix():
 # Platform & Config
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixConfigLoading:
     def test_apply_env_overrides_with_access_token(self, monkeypatch):
         monkeypatch.setenv("MATRIX_ACCESS_TOKEN", "syt_abc123")
         monkeypatch.setenv("MATRIX_HOMESERVER", "https://matrix.example.org")
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -273,6 +285,7 @@ class TestMatrixConfigLoading:
         monkeypatch.setenv("MATRIX_USER_ID", "@bot:example.org")
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -288,6 +301,7 @@ class TestMatrixConfigLoading:
         monkeypatch.delenv("MATRIX_HOMESERVER", raising=False)
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -299,6 +313,7 @@ class TestMatrixConfigLoading:
         monkeypatch.setenv("MATRIX_ENCRYPTION", "true")
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -312,6 +327,7 @@ class TestMatrixConfigLoading:
         monkeypatch.delenv("MATRIX_ENCRYPTION", raising=False)
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -325,6 +341,7 @@ class TestMatrixConfigLoading:
         monkeypatch.delenv("MATRIX_ENCRYPTION", raising=False)
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -338,6 +355,7 @@ class TestMatrixConfigLoading:
         monkeypatch.setenv("MATRIX_HOME_ROOM_NAME", "Bot Room")
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -352,6 +370,7 @@ class TestMatrixConfigLoading:
         monkeypatch.setenv("MATRIX_USER_ID", "@hercules:example.org")
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -363,9 +382,11 @@ class TestMatrixConfigLoading:
 # Adapter helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_adapter():
     """Create a MatrixAdapter with mocked config."""
     from plugins.platforms.matrix.adapter import MatrixAdapter
+
     config = PlatformConfig(
         enabled=True,
         token="syt_test_token",
@@ -381,6 +402,7 @@ def _make_adapter():
 # ---------------------------------------------------------------------------
 # Typing indicator
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixTypingIndicator:
     def setup_method(self):
@@ -415,6 +437,7 @@ class TestMatrixTypingIndicator:
 # mxc:// URL conversion
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixMxcToHttp:
     def setup_method(self):
         self.adapter = _make_adapter()
@@ -423,7 +446,10 @@ class TestMatrixMxcToHttp:
         """mxc://server/media_id should become an authenticated HTTP URL."""
         mxc = "mxc://matrix.org/abc123"
         result = self.adapter._mxc_to_http(mxc)
-        assert result == "https://matrix.example.org/_matrix/client/v1/media/download/matrix.org/abc123"
+        assert (
+            result
+            == "https://matrix.example.org/_matrix/client/v1/media/download/matrix.org/abc123"
+        )
 
     def test_mxc_with_different_server(self):
         """mxc:// from a different server should still use our homeserver."""
@@ -449,6 +475,7 @@ class TestMatrixMxcToHttp:
 # DM detection
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixDmDetection:
     def setup_method(self):
         self.adapter = _make_adapter()
@@ -472,7 +499,11 @@ class TestMatrixDmDetection:
     @pytest.mark.asyncio
     async def test_refresh_dm_cache_with_m_direct(self):
         """_refresh_dm_cache should populate _dm_rooms from m.direct data."""
-        self.adapter._joined_rooms = {"!room_a:ex.org", "!room_b:ex.org", "!room_c:ex.org"}
+        self.adapter._joined_rooms = {
+            "!room_a:ex.org",
+            "!room_b:ex.org",
+            "!room_c:ex.org",
+        }
 
         mock_client = MagicMock()
         mock_resp = MagicMock()
@@ -495,9 +526,13 @@ class TestMatrixDmDetection:
         self.adapter._joined_rooms = {"!dm_room:ex.org"}
         self.adapter._dm_rooms = {"!dm_room:ex.org": True}
         self.adapter._client = MagicMock()
-        self.adapter._client.get_state_event = AsyncMock(side_effect=Exception("no state"))
+        self.adapter._client.get_state_event = AsyncMock(
+            side_effect=Exception("no state")
+        )
         self.adapter._client.state_store = MagicMock()
-        self.adapter._client.state_store.get_members = AsyncMock(return_value=["@bot:ex.org", "@alice:ex.org"])
+        self.adapter._client.state_store.get_members = AsyncMock(
+            return_value=["@bot:ex.org", "@alice:ex.org"]
+        )
 
         assert await self.adapter._is_dm_room("!dm_room:ex.org") is True
 
@@ -509,9 +544,11 @@ class TestMatrixDmDetection:
         self.adapter._dm_rooms = {}
         self.adapter._client = MagicMock()
         self.adapter._client.get_state_event = AsyncMock(
-            side_effect=lambda room_id, event_type: {"name": "Project Room"}
-            if event_type == "m.room.name"
-            else (_ for _ in ()).throw(Exception("no alias"))
+            side_effect=lambda room_id, event_type: (
+                {"name": "Project Room"}
+                if event_type == "m.room.name"
+                else (_ for _ in ()).throw(Exception("no alias"))
+            )
         )
         self.adapter._client.state_store = MagicMock()
         self.adapter._client.state_store.get_members = AsyncMock(
@@ -536,9 +573,11 @@ class TestMatrixDmDetection:
         self.adapter._dm_rooms = {"!named_dm:ex.org": True}
         self.adapter._client = MagicMock()
         self.adapter._client.get_state_event = AsyncMock(
-            side_effect=lambda room_id, event_type: {"name": "Alice & Bot"}
-            if event_type == "m.room.name"
-            else (_ for _ in ()).throw(Exception("no alias"))
+            side_effect=lambda room_id, event_type: (
+                {"name": "Alice & Bot"}
+                if event_type == "m.room.name"
+                else (_ for _ in ()).throw(Exception("no alias"))
+            )
         )
         self.adapter._client.state_store = MagicMock()
         self.adapter._client.state_store.get_members = AsyncMock(
@@ -559,9 +598,11 @@ class TestMatrixDmDetection:
         self.adapter._dm_rooms = {"!stale:ex.org": True}
         self.adapter._client = MagicMock()
         self.adapter._client.get_state_event = AsyncMock(
-            side_effect=lambda room_id, event_type: {"content": {"name": "Ops Room"}}
-            if event_type == "m.room.name"
-            else (_ for _ in ()).throw(Exception("no alias"))
+            side_effect=lambda room_id, event_type: (
+                {"content": {"name": "Ops Room"}}
+                if event_type == "m.room.name"
+                else (_ for _ in ()).throw(Exception("no alias"))
+            )
         )
         self.adapter._client.state_store = MagicMock()
         self.adapter._client.state_store.get_members = AsyncMock(
@@ -620,6 +661,7 @@ class TestMatrixDmDetection:
 # ---------------------------------------------------------------------------
 # Reply fallback stripping
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixReplyFallbackStripping:
     """Test that Matrix reply fallback lines ('> ' prefix) are stripped."""
@@ -687,6 +729,7 @@ class TestMatrixReplyFallbackStripping:
 # Matrix-friendly command aliases
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixBangCommandAlias:
     """Matrix clients may reserve /commands, so Hercules supports !commands."""
 
@@ -751,8 +794,7 @@ class TestMatrixBangCommandAlias:
             == "/queue continue the plan"
         )
         assert (
-            _normalize_matrix_bang_command("!btw research this")
-            == "/btw research this"
+            _normalize_matrix_bang_command("!btw research this") == "/btw research this"
         )
         assert _normalize_matrix_bang_command("!tasks") == "/tasks"
 
@@ -881,6 +923,7 @@ class TestMatrixBangCommandAlias:
 # Thread detection
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixThreadDetection:
     def test_thread_id_from_m_relates_to(self):
         """m.relates_to with rel_type=m.thread should extract the event_id."""
@@ -930,6 +973,7 @@ class TestMatrixThreadDetection:
 # Format message
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixFormatMessage:
     def setup_method(self):
         self.adapter = _make_adapter()
@@ -959,6 +1003,7 @@ class TestMatrixFormatMessage:
 # ---------------------------------------------------------------------------
 # Rendering payloads
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixRenderingPayloads:
     def setup_method(self):
@@ -1055,6 +1100,7 @@ class TestMatrixRenderingPayloads:
 # Markdown to HTML conversion
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixMarkdownToHtml:
     def setup_method(self):
         self.adapter = _make_adapter()
@@ -1122,14 +1168,12 @@ class TestMatrixMarkdownToHtml:
         assert "print" in result
 
     def test_matrix_markdown_preserves_table_structure(self):
-        table = "\n".join(
-            [
-                "| Item | Quantity |",
-                "| --- | --- |",
-                "| Apples | 4 |",
-                "| Bread | 1 |",
-            ]
-        )
+        table = "\n".join([
+            "| Item | Quantity |",
+            "| --- | --- |",
+            "| Apples | 4 |",
+            "| Bread | 1 |",
+        ])
 
         result = self.adapter._markdown_to_html(table)
 
@@ -1143,6 +1187,7 @@ class TestMatrixMarkdownToHtml:
 # ---------------------------------------------------------------------------
 # Helper: display name extraction
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixDisplayName:
     def setup_method(self):
@@ -1189,6 +1234,7 @@ class TestMatrixDisplayName:
 # Requirements check
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixModuleImport:
     def test_module_importable_without_mautrix(self):
         """plugins.platforms.matrix.adapter must be importable even when mautrix is
@@ -1200,25 +1246,32 @@ class TestMatrixModuleImport:
         in subsequent tests).
         """
         import subprocess
+
         result = subprocess.run(
-            [sys.executable, "-c", (
-                "import sys\n"
-                "# Block mautrix completely\n"
-                "class _Blocker:\n"
-                "    def find_module(self, name, path=None):\n"
-                "        if name.startswith('mautrix'): return self\n"
-                "    def load_module(self, name):\n"
-                "        raise ImportError(f'blocked: {name}')\n"
-                "sys.meta_path.insert(0, _Blocker())\n"
-                "for k in list(sys.modules):\n"
-                "    if k.startswith('mautrix'): del sys.modules[k]\n"
-                "from unittest.mock import patch\n"
-                "from plugins.platforms.matrix.adapter import check_matrix_requirements\n"
-                "with patch('tools.lazy_deps.ensure', side_effect=ImportError('blocked')):\n"
-                "    assert not check_matrix_requirements()\n"
-                "print('OK')\n"
-            )],
-            capture_output=True, text=True, timeout=10,
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import sys\n"
+                    "# Block mautrix completely\n"
+                    "class _Blocker:\n"
+                    "    def find_module(self, name, path=None):\n"
+                    "        if name.startswith('mautrix'): return self\n"
+                    "    def load_module(self, name):\n"
+                    "        raise ImportError(f'blocked: {name}')\n"
+                    "sys.meta_path.insert(0, _Blocker())\n"
+                    "for k in list(sys.modules):\n"
+                    "    if k.startswith('mautrix'): del sys.modules[k]\n"
+                    "from unittest.mock import patch\n"
+                    "from plugins.platforms.matrix.adapter import check_matrix_requirements\n"
+                    "with patch('tools.lazy_deps.ensure', side_effect=ImportError('blocked')):\n"
+                    "    assert not check_matrix_requirements()\n"
+                    "print('OK')\n"
+                ),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert result.returncode == 0, (
             f"Subprocess failed:\nstdout: {result.stdout}\nstderr: {result.stderr}"
@@ -1231,6 +1284,7 @@ class TestMatrixRequirements:
         monkeypatch.setenv("MATRIX_HOMESERVER", "https://matrix.example.org")
         monkeypatch.delenv("MATRIX_ENCRYPTION", raising=False)
         from plugins.platforms.matrix.adapter import check_matrix_requirements
+
         with patch("tools.lazy_deps.feature_missing", return_value=()):
             assert check_matrix_requirements() is True
 
@@ -1239,12 +1293,14 @@ class TestMatrixRequirements:
         monkeypatch.delenv("MATRIX_PASSWORD", raising=False)
         monkeypatch.delenv("MATRIX_HOMESERVER", raising=False)
         from plugins.platforms.matrix.adapter import check_matrix_requirements
+
         assert check_matrix_requirements() is False
 
     def test_check_requirements_without_homeserver(self, monkeypatch):
         monkeypatch.setenv("MATRIX_ACCESS_TOKEN", "syt_test")
         monkeypatch.delenv("MATRIX_HOMESERVER", raising=False)
         from plugins.platforms.matrix.adapter import check_matrix_requirements
+
         assert check_matrix_requirements() is False
 
     def test_check_requirements_encryption_true_no_e2ee_deps(self, monkeypatch):
@@ -1254,8 +1310,11 @@ class TestMatrixRequirements:
         monkeypatch.setenv("MATRIX_ENCRYPTION", "true")
 
         import plugins.platforms.matrix.adapter as matrix_mod
-        with patch.object(matrix_mod, "_check_e2ee_deps", return_value=False), \
-             patch("tools.lazy_deps.feature_missing", return_value=()):
+
+        with (
+            patch.object(matrix_mod, "_check_e2ee_deps", return_value=False),
+            patch("tools.lazy_deps.feature_missing", return_value=()),
+        ):
             assert matrix_mod.check_matrix_requirements() is False
 
     def test_check_requirements_e2ee_optional_no_deps_ok(self, monkeypatch):
@@ -1266,9 +1325,12 @@ class TestMatrixRequirements:
         monkeypatch.delenv("MATRIX_ENCRYPTION", raising=False)
 
         import plugins.platforms.matrix.adapter as matrix_mod
-        with patch.object(matrix_mod, "_check_e2ee_deps", return_value=False), \
-             patch("tools.lazy_deps.feature_missing", return_value=()), \
-             patch("tools.lazy_deps.ensure_and_bind", return_value=True):
+
+        with (
+            patch.object(matrix_mod, "_check_e2ee_deps", return_value=False),
+            patch("tools.lazy_deps.feature_missing", return_value=()),
+            patch("tools.lazy_deps.ensure_and_bind", return_value=True),
+        ):
             assert matrix_mod.check_matrix_requirements() is True
 
     def test_check_requirements_encryption_false_no_e2ee_deps_ok(self, monkeypatch):
@@ -1278,8 +1340,11 @@ class TestMatrixRequirements:
         monkeypatch.delenv("MATRIX_ENCRYPTION", raising=False)
 
         import plugins.platforms.matrix.adapter as matrix_mod
-        with patch.object(matrix_mod, "_check_e2ee_deps", return_value=False), \
-             patch("tools.lazy_deps.feature_missing", return_value=()):
+
+        with (
+            patch.object(matrix_mod, "_check_e2ee_deps", return_value=False),
+            patch("tools.lazy_deps.feature_missing", return_value=()),
+        ):
             assert matrix_mod.check_matrix_requirements() is True
 
     def test_check_requirements_encryption_true_with_e2ee_deps(self, monkeypatch):
@@ -1289,8 +1354,11 @@ class TestMatrixRequirements:
         monkeypatch.setenv("MATRIX_ENCRYPTION", "true")
 
         import plugins.platforms.matrix.adapter as matrix_mod
-        with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True), \
-             patch("tools.lazy_deps.feature_missing", return_value=()):
+
+        with (
+            patch.object(matrix_mod, "_check_e2ee_deps", return_value=True),
+            patch("tools.lazy_deps.feature_missing", return_value=()),
+        ):
             assert matrix_mod.check_matrix_requirements() is True
 
     def test_check_e2ee_deps_requires_asyncpg(self, monkeypatch):
@@ -1305,6 +1373,7 @@ class TestMatrixRequirements:
         """
         from plugins.platforms.matrix.adapter import _check_e2ee_deps
         import builtins
+
         real_import = builtins.__import__
 
         def _blocking_import(name, *args, **kwargs):
@@ -1323,6 +1392,7 @@ class TestMatrixRequirements:
         """
         from plugins.platforms.matrix.adapter import _check_e2ee_deps
         import builtins
+
         real_import = builtins.__import__
 
         def _blocking_import(name, *args, **kwargs):
@@ -1356,8 +1426,10 @@ class TestMatrixRequirements:
             assert feature == "platform.matrix"
             return True  # Pretend install succeeded.
 
-        with patch("tools.lazy_deps.feature_missing", return_value=("asyncpg==0.31.0",)), \
-             patch("tools.lazy_deps.ensure_and_bind", side_effect=_fake_ensure_and_bind):
+        with (
+            patch("tools.lazy_deps.feature_missing", return_value=("asyncpg==0.31.0",)),
+            patch("tools.lazy_deps.ensure_and_bind", side_effect=_fake_ensure_and_bind),
+        ):
             matrix_mod.check_matrix_requirements()
 
         assert called["ensure_and_bind"], (
@@ -1370,6 +1442,7 @@ class TestMatrixRequirements:
 # ---------------------------------------------------------------------------
 # Access-token auth / E2EE bootstrap
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixAccessTokenAuth:
     @pytest.mark.asyncio
@@ -1402,15 +1475,25 @@ class TestMatrixAccessTokenAuth:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=FakeWhoamiResponse("@bot:example.org", "DEV123"))
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client.whoami = AsyncMock(
+            return_value=FakeWhoamiResponse("@bot:example.org", "DEV123")
+        )
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
-        mock_client.query_keys = AsyncMock(return_value={
-            "device_keys": {"@bot:example.org": {"DEV123": {
-                "keys": {"ed25519:DEV123": "fake_ed25519_key"},
-            }}},
-        })
+        mock_client.query_keys = AsyncMock(
+            return_value={
+                "device_keys": {
+                    "@bot:example.org": {
+                        "DEV123": {
+                            "keys": {"ed25519:DEV123": "fake_ed25519_key"},
+                        }
+                    }
+                },
+            }
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_access_token"
         mock_client.api.session = MagicMock()
@@ -1427,13 +1510,18 @@ class TestMatrixAccessTokenAuth:
 
         # Patch Client constructor to return our mock
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         assert await adapter.connect() is True
 
         mock_client.whoami.assert_awaited_once()
@@ -1522,9 +1610,13 @@ class TestDeviceKeyReVerification:
         mock_keys_mismatch = MagicMock()
         mock_device = MagicMock()
         mock_device.keys = {"ed25519:TESTDEVICE": "server_old_key"}
-        mock_keys_mismatch.device_keys = {"@bot:example.org": {"TESTDEVICE": mock_device}}
+        mock_keys_mismatch.device_keys = {
+            "@bot:example.org": {"TESTDEVICE": mock_device}
+        }
 
-        mock_client.query_keys = AsyncMock(side_effect=[mock_keys_missing, mock_keys_mismatch])
+        mock_client.query_keys = AsyncMock(
+            side_effect=[mock_keys_missing, mock_keys_mismatch]
+        )
 
         mock_olm = MagicMock()
         mock_olm.account = MagicMock()
@@ -1559,7 +1651,9 @@ class TestMatrixE2EEHardFail:
         fake_mautrix_mods = _make_fake_mautrix()
 
         mock_client = MagicMock()
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123"))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123")
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_access_token"
         mock_client.api.session = MagicMock()
@@ -1571,6 +1665,7 @@ class TestMatrixE2EEHardFail:
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=False):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
@@ -1600,7 +1695,9 @@ class TestMatrixE2EEHardFail:
         mock_sync_store.put_next_batch = AsyncMock()
 
         mock_client = MagicMock()
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123"))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123")
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_access_token"
         mock_client.api.session = MagicMock()
@@ -1609,7 +1706,9 @@ class TestMatrixE2EEHardFail:
         mock_client.device_id = None
         mock_client.crypto = None
         mock_client.sync_store = mock_sync_store
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {}}, "next_batch": "s1"})
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {}}, "next_batch": "s1"}
+        )
         mock_client.get_account_data = AsyncMock(return_value=MagicMock(content={}))
         mock_client.add_dispatcher = MagicMock()
         mock_client.add_event_handler = MagicMock()
@@ -1618,10 +1717,15 @@ class TestMatrixE2EEHardFail:
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=False):
             with patch.dict("sys.modules", fake_mautrix_mods):
-                with patch.object(matrix_mod, "_create_matrix_session", return_value=MagicMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                with patch.object(
+                    matrix_mod, "_create_matrix_session", return_value=MagicMock()
+                ):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         result = await adapter.connect()
 
         assert result is True
@@ -1647,7 +1751,9 @@ class TestMatrixE2EEHardFail:
         fake_mautrix_mods = _make_fake_mautrix()
 
         mock_client = MagicMock()
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123"))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123")
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_access_token"
         mock_client.api.session = MagicMock()
@@ -1657,9 +1763,12 @@ class TestMatrixE2EEHardFail:
         mock_client.crypto = None
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(side_effect=Exception("olm init failed"))
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            side_effect=Exception("olm init failed")
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 result = await adapter.connect()
@@ -1740,15 +1849,25 @@ class TestMatrixDeviceId:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="WHOAMI_DEV"))
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="WHOAMI_DEV")
+        )
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
-        mock_client.query_keys = AsyncMock(return_value={
-            "device_keys": {"@bot:example.org": {"MY_STABLE_DEVICE": {
-                "keys": {"ed25519:MY_STABLE_DEVICE": "fake_ed25519_key"},
-            }}},
-        })
+        mock_client.query_keys = AsyncMock(
+            return_value={
+                "device_keys": {
+                    "@bot:example.org": {
+                        "MY_STABLE_DEVICE": {
+                            "keys": {"ed25519:MY_STABLE_DEVICE": "fake_ed25519_key"},
+                        }
+                    }
+                },
+            }
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_access_token"
         mock_client.api.session = MagicMock()
@@ -1763,13 +1882,18 @@ class TestMatrixDeviceId:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         assert await adapter.connect() is True
 
         # The configured device_id should override the whoami device_id.
@@ -1805,7 +1929,9 @@ class TestMatrixPasswordLoginDeviceId:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.login = AsyncMock(return_value=MagicMock(device_id="STABLE_PW_DEVICE", access_token="tok"))
+        mock_client.login = AsyncMock(
+            return_value=MagicMock(device_id="STABLE_PW_DEVICE", access_token="tok")
+        )
         mock_client.sync = AsyncMock(return_value={"rooms": {"join": {}}})
         mock_client.add_event_handler = MagicMock()
         mock_client.api = MagicMock()
@@ -1835,6 +1961,7 @@ class TestMatrixDeviceIdConfig:
         monkeypatch.setenv("MATRIX_DEVICE_ID", "HERCULES_BOT")
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -1847,6 +1974,7 @@ class TestMatrixDeviceIdConfig:
         monkeypatch.delenv("MATRIX_DEVICE_ID", raising=False)
 
         from gateway.config import GatewayConfig, _apply_env_overrides
+
         config = GatewayConfig()
         _apply_env_overrides(config)
 
@@ -1984,7 +2112,9 @@ class TestMatrixSyncLoop:
         fake_client.sync_store = mock_sync_store
         fake_client.get_state_event = AsyncMock(side_effect=Exception("no state"))
         fake_client.state_store = MagicMock()
-        fake_client.state_store.get_members = AsyncMock(return_value=["@bot:example.org", "@alice:example.org"])
+        fake_client.state_store.get_members = AsyncMock(
+            return_value=["@bot:example.org", "@alice:example.org"]
+        )
         fake_client.state_store.get_member = AsyncMock(return_value=None)
 
         def handle_sync(sync_data):
@@ -2036,17 +2166,23 @@ class TestMatrixSyncLoop:
         mock_client.device_id = None
         mock_client.crypto = None
         mock_client.sync_store = mock_sync_store
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123"))
-        mock_client.sync = AsyncMock(return_value={
-            "rooms": {"join": {"!dm:example.org": {}}},
-            "next_batch": "s1",
-        })
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123")
+        )
+        mock_client.sync = AsyncMock(
+            return_value={
+                "rooms": {"join": {"!dm:example.org": {}}},
+                "next_batch": "s1",
+            }
+        )
         mock_client.get_account_data = AsyncMock(
             return_value=MagicMock(content={"@alice:example.org": ["!dm:example.org"]})
         )
         mock_client.get_state_event = AsyncMock(side_effect=Exception("no state"))
         mock_client.state_store = MagicMock()
-        mock_client.state_store.get_members = AsyncMock(return_value=["@bot:example.org", "@alice:example.org"])
+        mock_client.state_store.get_members = AsyncMock(
+            return_value=["@bot:example.org", "@alice:example.org"]
+        )
         mock_client.state_store.get_member = AsyncMock(return_value=None)
         mock_client.add_event_handler = MagicMock()
         mock_client.add_dispatcher = MagicMock()
@@ -2070,8 +2206,11 @@ class TestMatrixSyncLoop:
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.dict("sys.modules", fake_mautrix_mods):
-            with patch.object(matrix_mod, "_create_matrix_session", return_value=MagicMock()):
+            with patch.object(
+                matrix_mod, "_create_matrix_session", return_value=MagicMock()
+            ):
                 with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
                     assert await adapter.connect() is True
 
@@ -2138,7 +2277,9 @@ class TestMatrixSyncLoop:
         fake_client.get_account_data = AsyncMock(return_value=MagicMock(content={}))
         fake_client.get_state_event = AsyncMock(side_effect=Exception("no state"))
         fake_client.state_store = MagicMock()
-        fake_client.state_store.get_members = AsyncMock(return_value=["@bot:example.org", "@alice:example.org"])
+        fake_client.state_store.get_members = AsyncMock(
+            return_value=["@bot:example.org", "@alice:example.org"]
+        )
         fake_client.state_store.get_member = AsyncMock(return_value=None)
 
         def handle_sync(sync_data):
@@ -2167,7 +2308,9 @@ class TestMatrixSyncLoop:
         adapter._client = MagicMock()
         adapter._client.get_state_event = AsyncMock(side_effect=Exception("no state"))
         adapter._client.state_store = MagicMock()
-        adapter._client.state_store.get_members = AsyncMock(return_value=["@bot:example.org", "@alice:example.org"])
+        adapter._client.state_store.get_members = AsyncMock(
+            return_value=["@bot:example.org", "@alice:example.org"]
+        )
         adapter._client.state_store.get_member = AsyncMock(return_value=None)
 
         captured = []
@@ -2231,6 +2374,7 @@ class TestMatrixSyncLoop:
         await adapter.disconnect()
         assert adapter._invite_join_tasks == {}
 
+
 class TestMatrixUploadAndSend:
     @pytest.mark.asyncio
     async def test_upload_unencrypted_room_uses_plain_url(self):
@@ -2246,7 +2390,11 @@ class TestMatrixUploadAndSend:
         adapter._client = mock_client
 
         result = await adapter._upload_and_send(
-            "!room:example.org", b"hello", "test.txt", "text/plain", "m.file",
+            "!room:example.org",
+            b"hello",
+            "test.txt",
+            "text/plain",
+            "m.file",
         )
 
         assert result.success is True
@@ -2269,7 +2417,11 @@ class TestMatrixUploadAndSend:
 
         with patch.dict("sys.modules", _make_fake_mautrix()):
             result = await adapter._upload_and_send(
-                "!room:example.org", b"secret", "secret.txt", "text/plain", "m.file",
+                "!room:example.org",
+                b"secret",
+                "secret.txt",
+                "text/plain",
+                "m.file",
             )
 
         assert result.success is True
@@ -2326,13 +2478,17 @@ class TestMatrixUploadAndSend:
         assert sent["m.relates_to"]["m.in_reply_to"] == {"event_id": "$root"}
 
     @pytest.mark.asyncio
-    async def test_send_multiple_images_preserves_logical_batch_order_and_thread(self, tmp_path):
+    async def test_send_multiple_images_preserves_logical_batch_order_and_thread(
+        self, tmp_path
+    ):
         adapter = _make_adapter()
         mock_client = MagicMock()
-        mock_client.upload_media = AsyncMock(side_effect=[
-            "mxc://example.org/one",
-            "mxc://example.org/two",
-        ])
+        mock_client.upload_media = AsyncMock(
+            side_effect=[
+                "mxc://example.org/one",
+                "mxc://example.org/two",
+            ]
+        )
         mock_client.send_message_event = AsyncMock(side_effect=["$one", "$two"])
         adapter._client = mock_client
         first = tmp_path / "one.png"
@@ -2347,7 +2503,10 @@ class TestMatrixUploadAndSend:
         )
 
         assert mock_client.send_message_event.await_count == 2
-        bodies = [call.args[2]["body"] for call in mock_client.send_message_event.await_args_list]
+        bodies = [
+            call.args[2]["body"]
+            for call in mock_client.send_message_event.await_args_list
+        ]
         assert bodies == ["First image (1/2)", "Second image (2/2)"]
         for call in mock_client.send_message_event.await_args_list:
             sent = call.args[2]
@@ -2386,7 +2545,9 @@ class TestMatrixDiagnostics:
         assert diagnostics["media"]["max_media_bytes"] == 123
 
     def test_matrix_recovery_key_is_never_logged(self, caplog, monkeypatch):
-        from plugins.platforms.matrix.adapter import _handle_generated_matrix_recovery_key
+        from plugins.platforms.matrix.adapter import (
+            _handle_generated_matrix_recovery_key,
+        )
 
         secret = "super-secret-generated-recovery-key"
         monkeypatch.delenv("MATRIX_RECOVERY_KEY_OUTPUT_FILE", raising=False)
@@ -2396,8 +2557,12 @@ class TestMatrixDiagnostics:
         assert secret not in caplog.text
         assert "will not be logged" in caplog.text
 
-    def test_matrix_recovery_key_output_file_is_0600(self, tmp_path, monkeypatch, caplog):
-        from plugins.platforms.matrix.adapter import _handle_generated_matrix_recovery_key
+    def test_matrix_recovery_key_output_file_is_0600(
+        self, tmp_path, monkeypatch, caplog
+    ):
+        from plugins.platforms.matrix.adapter import (
+            _handle_generated_matrix_recovery_key,
+        )
 
         secret = "super-secret-generated-recovery-key"
         output_path = tmp_path / "matrix-recovery-key.txt"
@@ -2437,16 +2602,24 @@ class TestMatrixDiagnostics:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123"))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123")
+        )
         mock_client.sync = AsyncMock(return_value={"rooms": {"join": {}}})
         mock_client.add_event_handler = MagicMock()
         mock_client.add_dispatcher = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
-        mock_client.query_keys = AsyncMock(return_value={
-            "device_keys": {"@bot:example.org": {"DEV123": {
-                "keys": {"ed25519:DEV123": "fake_ed25519_key"},
-            }}},
-        })
+        mock_client.query_keys = AsyncMock(
+            return_value={
+                "device_keys": {
+                    "@bot:example.org": {
+                        "DEV123": {
+                            "keys": {"ed25519:DEV123": "fake_ed25519_key"},
+                        }
+                    }
+                },
+            }
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_token"
         mock_client.api.session = MagicMock()
@@ -2463,13 +2636,18 @@ class TestMatrixDiagnostics:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         assert await adapter.connect() is True
 
         mock_olm.generate_recovery_key.assert_not_called()
@@ -2508,16 +2686,24 @@ class TestMatrixDiagnostics:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123"))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123")
+        )
         mock_client.sync = AsyncMock(return_value={"rooms": {"join": {}}})
         mock_client.add_event_handler = MagicMock()
         mock_client.add_dispatcher = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
-        mock_client.query_keys = AsyncMock(return_value={
-            "device_keys": {"@bot:example.org": {"DEV123": {
-                "keys": {"ed25519:DEV123": "fake_ed25519_key"},
-            }}},
-        })
+        mock_client.query_keys = AsyncMock(
+            return_value={
+                "device_keys": {
+                    "@bot:example.org": {
+                        "DEV123": {
+                            "keys": {"ed25519:DEV123": "fake_ed25519_key"},
+                        }
+                    }
+                },
+            }
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_token"
         mock_client.api.session = MagicMock()
@@ -2534,13 +2720,18 @@ class TestMatrixDiagnostics:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         assert await adapter.connect() is True
 
         mock_olm.generate_recovery_key.assert_not_called()
@@ -2580,7 +2771,10 @@ class TestMatrixDiagnostics:
         }
 
     def test_matrix_capability_claims_match_adapter_surfaces(self):
-        from plugins.platforms.matrix.adapter import MatrixAdapter, get_matrix_capabilities
+        from plugins.platforms.matrix.adapter import (
+            MatrixAdapter,
+            get_matrix_capabilities,
+        )
 
         capabilities = get_matrix_capabilities()
         required_methods = {
@@ -2629,10 +2823,12 @@ class TestMatrixEncryptedSendFallback:
         adapter._encryption = True
 
         fake_client = MagicMock()
-        fake_client.send_message_event = AsyncMock(side_effect=[
-            Exception("encryption error"),
-            "$event123",  # mautrix returns EventID string directly
-        ])
+        fake_client.send_message_event = AsyncMock(
+            side_effect=[
+                Exception("encryption error"),
+                "$event123",  # mautrix returns EventID string directly
+            ]
+        )
         mock_crypto = MagicMock()
         mock_crypto.share_keys = AsyncMock()
         fake_client.crypto = mock_crypto
@@ -2650,6 +2846,7 @@ class TestMatrixEncryptedSendFallback:
 # E2EE: _joined_rooms reference preservation for CryptoStateStore
 # ---------------------------------------------------------------------------
 
+
 class TestJoinedRoomsReference:
     def test_joined_rooms_reference_preserved_after_reassignment(self):
         """_CryptoStateStore must see updates after initial sync populates rooms."""
@@ -2663,13 +2860,17 @@ class TestJoinedRoomsReference:
         joined.update(["!room1:example.org", "!room2:example.org"])
 
         import asyncio
-        rooms = asyncio.get_event_loop().run_until_complete(store.find_shared_rooms("@user:ex"))
+
+        rooms = asyncio.get_event_loop().run_until_complete(
+            store.find_shared_rooms("@user:ex")
+        )
         assert set(rooms) == {"!room1:example.org", "!room2:example.org"}
 
 
 # ---------------------------------------------------------------------------
 # E2EE: connect registers encrypted event handler
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixEncryptedEventHandler:
     @pytest.mark.asyncio
@@ -2695,15 +2896,25 @@ class TestMatrixEncryptedEventHandler:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None  # Will be set during connect
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123"))
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123")
+        )
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
-        mock_client.query_keys = AsyncMock(return_value={
-            "device_keys": {"@bot:example.org": {"DEV123": {
-                "keys": {"ed25519:DEV123": "fake_ed25519_key"},
-            }}},
-        })
+        mock_client.query_keys = AsyncMock(
+            return_value={
+                "device_keys": {
+                    "@bot:example.org": {
+                        "DEV123": {
+                            "keys": {"ed25519:DEV123": "fake_ed25519_key"},
+                        }
+                    }
+                },
+            }
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_token"
         mock_client.api.session = MagicMock()
@@ -2718,13 +2929,18 @@ class TestMatrixEncryptedEventHandler:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         assert await adapter.connect() is True
 
         # Verify inbound event handlers were registered as sync-awaited
@@ -2768,14 +2984,22 @@ class TestMatrixEncryptedEventHandler:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123"))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(user_id="@bot:example.org", device_id="DEV123")
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.add_dispatcher = MagicMock()
-        mock_client.query_keys = AsyncMock(return_value={
-            "device_keys": {"@bot:example.org": {"DEV123": {
-                "keys": {"ed25519:DEV123": "fake_ed25519_key"},
-            }}},
-        })
+        mock_client.query_keys = AsyncMock(
+            return_value={
+                "device_keys": {
+                    "@bot:example.org": {
+                        "DEV123": {
+                            "keys": {"ed25519:DEV123": "fake_ed25519_key"},
+                        }
+                    }
+                },
+            }
+        )
         mock_client.api = MagicMock()
         mock_client.api.token = "syt_test_token"
         mock_client.api.session = MagicMock()
@@ -2786,7 +3010,10 @@ class TestMatrixEncryptedEventHandler:
         mock_olm = MagicMock()
         mock_olm.load = AsyncMock()
         mock_olm.share_keys = AsyncMock(
-            side_effect=[None, Exception("One time key signed_curve25519:AAAAAQ already exists")]
+            side_effect=[
+                None,
+                Exception("One time key signed_curve25519:AAAAAQ already exists"),
+            ]
         )
         mock_olm.share_keys_min_trust = None
         mock_olm.send_keys_min_trust = None
@@ -2794,9 +3021,12 @@ class TestMatrixEncryptedEventHandler:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 result = await adapter.connect()
@@ -2807,6 +3037,7 @@ class TestMatrixEncryptedEventHandler:
 # ---------------------------------------------------------------------------
 # Disconnect
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixDisconnect:
     @pytest.mark.asyncio
@@ -2865,11 +3096,13 @@ class TestMatrixDisconnect:
 # Markdown to HTML: security tests
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixMarkdownHtmlSecurity:
     """Tests for HTML injection prevention in _markdown_to_html_fallback."""
 
     def setup_method(self):
         from plugins.platforms.matrix.adapter import MatrixAdapter
+
         self.convert = MatrixAdapter._markdown_to_html_fallback
 
     def test_script_injection_in_header(self):
@@ -2926,24 +3159,26 @@ class TestMatrixMarkdownHtmlSecurity:
 # Markdown to HTML: extended formatting tests
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixMarkdownHtmlFormatting:
     """Tests for new formatting capabilities in _markdown_to_html_fallback."""
 
     def setup_method(self):
         from plugins.platforms.matrix.adapter import MatrixAdapter
+
         self.convert = MatrixAdapter._markdown_to_html_fallback
 
     def test_fenced_code_block(self):
-        result = self.convert('```python\ndef hello():\n    pass\n```')
+        result = self.convert("```python\ndef hello():\n    pass\n```")
         assert "<pre><code" in result
         assert "language-python" in result
 
     def test_fenced_code_block_no_lang(self):
-        result = self.convert('```\nsome code\n```')
+        result = self.convert("```\nsome code\n```")
         assert "<pre><code>" in result
 
     def test_code_block_html_escaped(self):
-        result = self.convert('```\n<script>alert(1)</script>\n```')
+        result = self.convert("```\n<script>alert(1)</script>\n```")
         assert "&lt;script&gt;" in result
         assert "<script>" not in result
 
@@ -2995,25 +3230,34 @@ class TestMatrixMarkdownHtmlFormatting:
 # Link URL sanitization
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixLinkSanitization:
     def test_safe_https_url(self):
         from plugins.platforms.matrix.adapter import MatrixAdapter
-        assert MatrixAdapter._sanitize_link_url("https://example.com") == "https://example.com"
+
+        assert (
+            MatrixAdapter._sanitize_link_url("https://example.com")
+            == "https://example.com"
+        )
 
     def test_javascript_blocked(self):
         from plugins.platforms.matrix.adapter import MatrixAdapter
+
         assert MatrixAdapter._sanitize_link_url("javascript:alert(1)") == ""
 
     def test_data_blocked(self):
         from plugins.platforms.matrix.adapter import MatrixAdapter
+
         assert MatrixAdapter._sanitize_link_url("data:text/html,bad") == ""
 
     def test_vbscript_blocked(self):
         from plugins.platforms.matrix.adapter import MatrixAdapter
+
         assert MatrixAdapter._sanitize_link_url("vbscript:bad") == ""
 
     def test_quotes_escaped(self):
         from plugins.platforms.matrix.adapter import MatrixAdapter
+
         result = MatrixAdapter._sanitize_link_url('http://x"y')
         assert '"' not in result
         assert "&quot;" in result
@@ -3022,6 +3266,7 @@ class TestMatrixLinkSanitization:
 # ---------------------------------------------------------------------------
 # Reactions
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixReactions:
     def setup_method(self):
@@ -3039,7 +3284,11 @@ class TestMatrixReactions:
         assert result == "$reaction1"
         mock_client.send_message_event.assert_called_once()
         call_args = mock_client.send_message_event.call_args
-        content = call_args.args[2] if len(call_args.args) > 2 else call_args.kwargs.get("content")
+        content = (
+            call_args.args[2]
+            if len(call_args.args) > 2
+            else call_args.kwargs.get("content")
+        )
         assert content["m.relates_to"]["rel_type"] == "m.annotation"
         assert content["m.relates_to"]["key"] == "\U0001f44d"
 
@@ -3067,8 +3316,12 @@ class TestMatrixReactions:
             message_id="$msg1",
         )
         await self.adapter.on_processing_start(event)
-        self.adapter._send_reaction.assert_called_once_with("!room:ex", "$msg1", "\U0001f440")
-        assert self.adapter._pending_reactions == {("!room:ex", "$msg1"): "$reaction_event_123"}
+        self.adapter._send_reaction.assert_called_once_with(
+            "!room:ex", "$msg1", "\U0001f440"
+        )
+        assert self.adapter._pending_reactions == {
+            ("!room:ex", "$msg1"): "$reaction_event_123"
+        }
 
     @pytest.mark.asyncio
     async def test_on_processing_complete_sends_check(self):
@@ -3091,7 +3344,9 @@ class TestMatrixReactions:
         )
         await self.adapter.on_processing_complete(event, ProcessingOutcome.SUCCESS)
         self.adapter._redact_reaction.assert_not_awaited()
-        self.adapter._send_reaction.assert_called_once_with("!room:ex", "$msg1", "\u2705")
+        self.adapter._send_reaction.assert_called_once_with(
+            "!room:ex", "$msg1", "\u2705"
+        )
         await asyncio.sleep(0.03)
         self.adapter._redact_reaction.assert_awaited_once_with(
             "!room:ex",
@@ -3120,7 +3375,9 @@ class TestMatrixReactions:
         )
         await self.adapter.on_processing_complete(event, ProcessingOutcome.FAILURE)
         self.adapter._redact_reaction.assert_not_awaited()
-        self.adapter._send_reaction.assert_called_once_with("!room:ex", "$msg1", "\u274c")
+        self.adapter._send_reaction.assert_called_once_with(
+            "!room:ex", "$msg1", "\u274c"
+        )
         await asyncio.sleep(0.03)
         self.adapter._redact_reaction.assert_awaited_once_with(
             "!room:ex",
@@ -3168,7 +3425,9 @@ class TestMatrixReactions:
         )
         await self.adapter.on_processing_complete(event, ProcessingOutcome.SUCCESS)
         self.adapter._redact_reaction.assert_not_called()
-        self.adapter._send_reaction.assert_called_once_with("!room:ex", "$msg1", "\u2705")
+        self.adapter._send_reaction.assert_called_once_with(
+            "!room:ex", "$msg1", "\u2705"
+        )
 
     @pytest.mark.asyncio
     async def test_approval_reaction_cleanup_is_delayed(self):
@@ -3220,6 +3479,7 @@ class TestMatrixReactions:
 # ---------------------------------------------------------------------------
 # Read receipts
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixReadReceipts:
     def setup_method(self):
@@ -3280,6 +3540,7 @@ class TestMatrixReadReceipts:
 # Media normalization
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixImageOnlyMediaNormalization:
     def setup_method(self):
         self.adapter = _make_adapter()
@@ -3288,8 +3549,8 @@ class TestMatrixImageOnlyMediaNormalization:
         self.adapter._is_dm_room = AsyncMock(return_value=True)
         self.adapter._get_display_name = AsyncMock(return_value="Alice")
         self.adapter._background_read_receipt = MagicMock()
-        self.adapter._mxc_to_http = (
-            lambda url: "https://matrix.example.org/_matrix/media/v3/download/example/30.png"
+        self.adapter._mxc_to_http = lambda url: (
+            "https://matrix.example.org/_matrix/media/v3/download/example/30.png"
         )
 
     @pytest.mark.asyncio
@@ -3382,7 +3643,9 @@ class TestMatrixImageOnlyMediaNormalization:
         self.adapter._client.download_media.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_external_media_download_rejects_oversized_content_length(self, monkeypatch):
+    async def test_external_media_download_rejects_oversized_content_length(
+        self, monkeypatch
+    ):
         import aiohttp
         import tools.url_safety as url_safety
 
@@ -3421,7 +3684,9 @@ class TestMatrixImageOnlyMediaNormalization:
         monkeypatch.setattr(
             url_safety,
             "is_safe_url",
-            lambda candidate, **_kwargs: str(candidate) == "https://example.com/image.png",
+            lambda candidate, **_kwargs: (
+                str(candidate) == "https://example.com/image.png"
+            ),
         )
 
         with pytest.raises(ValueError, match="exceeds Matrix limit"):
@@ -3471,7 +3736,9 @@ class TestMatrixImageOnlyMediaNormalization:
         monkeypatch.setattr(
             url_safety,
             "is_safe_url",
-            lambda candidate, **_kwargs: str(candidate) == "https://example.com/image.png",
+            lambda candidate, **_kwargs: (
+                str(candidate) == "https://example.com/image.png"
+            ),
         )
 
         with pytest.raises(ValueError, match="exceeds Matrix limit"):
@@ -3519,7 +3786,9 @@ class TestMatrixImageOnlyMediaNormalization:
         monkeypatch.setattr(
             url_safety,
             "is_safe_url",
-            lambda candidate, **_kwargs: str(candidate) == "https://example.com/image.png",
+            lambda candidate, **_kwargs: (
+                str(candidate) == "https://example.com/image.png"
+            ),
         )
 
         with pytest.raises(ValueError, match="unsafe redirect"):
@@ -3582,7 +3851,9 @@ class TestMatrixImageOnlyMediaNormalization:
 
             def get(self, url, *_args, **_kwargs):
                 self.requested.append(url)
-                return _RedirectResponse() if len(self.requested) == 1 else _OkResponse()
+                return (
+                    _RedirectResponse() if len(self.requested) == 1 else _OkResponse()
+                )
 
         session = _Session()
         monkeypatch.setattr(aiohttp, "ClientSession", lambda **_kwargs: session)
@@ -3600,7 +3871,9 @@ class TestMatrixImageOnlyMediaNormalization:
         ]
 
     @pytest.mark.asyncio
-    async def test_external_media_download_httpx_installs_redirect_guard(self, monkeypatch):
+    async def test_external_media_download_httpx_installs_redirect_guard(
+        self, monkeypatch
+    ):
         """The httpx fallback re-checks redirect targets via the shared guard."""
         import tools.url_safety as url_safety
         from gateway.platforms.base import _ssrf_redirect_guard
@@ -3654,12 +3927,12 @@ class TestMatrixImageOnlyMediaNormalization:
     @pytest.mark.asyncio
     async def test_external_media_download_rejects_unsafe_initial_url(self):
         with pytest.raises(ValueError, match="unsafe media URL"):
-            await self.adapter._download_external_media_with_cap(
-                "file:///etc/passwd"
-            )
+            await self.adapter._download_external_media_with_cap("file:///etc/passwd")
 
     @pytest.mark.asyncio
-    async def test_external_media_download_rejects_non_image_content_type(self, monkeypatch):
+    async def test_external_media_download_rejects_non_image_content_type(
+        self, monkeypatch
+    ):
         import aiohttp
         import tools.url_safety as url_safety
 
@@ -3720,7 +3993,9 @@ class TestMatrixImageOnlyMediaNormalization:
         assert "#frag" not in caplog.text
 
     @pytest.mark.asyncio
-    async def test_send_image_failure_response_does_not_expose_signed_url_query(self, monkeypatch):
+    async def test_send_image_failure_response_does_not_expose_signed_url_query(
+        self, monkeypatch
+    ):
         from gateway.platforms.base import SendResult
         import tools.url_safety as url_safety
 
@@ -3740,7 +4015,9 @@ class TestMatrixImageOnlyMediaNormalization:
         assert "source URL was not shown" in sent_text
 
     @pytest.mark.asyncio
-    async def test_send_image_failure_response_does_not_expose_signed_url_fragment(self, monkeypatch):
+    async def test_send_image_failure_response_does_not_expose_signed_url_fragment(
+        self, monkeypatch
+    ):
         from gateway.platforms.base import SendResult
         import tools.url_safety as url_safety
 
@@ -3785,7 +4062,9 @@ class TestMatrixImageOnlyMediaNormalization:
         assert signed_url not in sent_text
 
     @pytest.mark.asyncio
-    async def test_send_image_failure_log_still_redacts_signed_url(self, caplog, monkeypatch):
+    async def test_send_image_failure_log_still_redacts_signed_url(
+        self, caplog, monkeypatch
+    ):
         from gateway.platforms.base import SendResult
         import tools.url_safety as url_safety
 
@@ -3858,9 +4137,12 @@ class TestMatrixImageOnlyMediaNormalization:
 
         assert captured_event is None
         self.adapter._client.download_media.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # Message redaction
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixRedaction:
     def setup_method(self):
@@ -3888,6 +4170,7 @@ class TestMatrixRedaction:
 # ---------------------------------------------------------------------------
 # Room creation & invite
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixRoomManagement:
     def setup_method(self):
@@ -3926,6 +4209,7 @@ class TestMatrixRoomManagement:
 # Presence
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixPresence:
     def setup_method(self):
         self.adapter = _make_adapter()
@@ -3959,6 +4243,7 @@ class TestMatrixPresence:
 # ("Hall of Mirrors": recursive pairing / echo loops triggered by bridge
 # or bot-self senders bypassing the early-drop guard in _on_room_message).
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixSelfSenderFilter:
     def setup_method(self):
@@ -4000,15 +4285,20 @@ class TestMatrixSystemBridgeFilter:
 
     def test_appservice_underscore_prefix_is_bridge(self):
         # Conventional appservice namespace puppets
-        assert self.adapter._is_system_or_bridge_sender(
-            "@_telegram_12345:bridge.example.org"
-        ) is True
-        assert self.adapter._is_system_or_bridge_sender(
-            "@_discord_999:example.org"
-        ) is True
-        assert self.adapter._is_system_or_bridge_sender(
-            "@_slackbridge_puppet:example.org"
-        ) is True
+        assert (
+            self.adapter._is_system_or_bridge_sender(
+                "@_telegram_12345:bridge.example.org"
+            )
+            is True
+        )
+        assert (
+            self.adapter._is_system_or_bridge_sender("@_discord_999:example.org")
+            is True
+        )
+        assert (
+            self.adapter._is_system_or_bridge_sender("@_slackbridge_puppet:example.org")
+            is True
+        )
 
     def test_empty_localpart_is_system(self):
         assert self.adapter._is_system_or_bridge_sender("@:server.example") is True
@@ -4018,22 +4308,21 @@ class TestMatrixSystemBridgeFilter:
         assert self.adapter._is_system_or_bridge_sender("   ") is True
 
     def test_regular_user_is_not_bridge(self):
-        assert self.adapter._is_system_or_bridge_sender(
-            "@alice:example.org"
-        ) is False
+        assert self.adapter._is_system_or_bridge_sender("@alice:example.org") is False
         # A user whose localpart merely CONTAINS an underscore is not a
         # bridge — the convention is a LEADING underscore.
-        assert self.adapter._is_system_or_bridge_sender(
-            "@alice_smith:example.org"
-        ) is False
+        assert (
+            self.adapter._is_system_or_bridge_sender("@alice_smith:example.org")
+            is False
+        )
 
     def test_bot_account_is_not_bridge(self):
         # The Hercules bot itself (no leading underscore) must not be
         # classified as a bridge — that filter is a pairing guard, not
         # a self-filter.
-        assert self.adapter._is_system_or_bridge_sender(
-            "@daemon:nerdworks.casa"
-        ) is False
+        assert (
+            self.adapter._is_system_or_bridge_sender("@daemon:nerdworks.casa") is False
+        )
 
 
 class TestMatrixOnRoomMessageFilter:
@@ -4047,7 +4336,9 @@ class TestMatrixOnRoomMessageFilter:
         self.adapter._handle_media_message = AsyncMock()
 
     @staticmethod
-    def _mk_event(sender, body="hi", msgtype="m.text", event_id=None, ts=None, room_id=None):
+    def _mk_event(
+        sender, body="hi", msgtype="m.text", event_id=None, ts=None, room_id=None
+    ):
         import time as _t
 
         ev = MagicMock()
@@ -4165,8 +4456,12 @@ class TestMatrixOnRoomMessageFilter:
 
     @pytest.mark.asyncio
     async def test_duplicate_event_id_dropped(self):
-        ev1 = self._mk_event(sender="@alice:example.org", body="hello bot", event_id="$dup")
-        ev2 = self._mk_event(sender="@alice:example.org", body="hello again bot", event_id="$dup")
+        ev1 = self._mk_event(
+            sender="@alice:example.org", body="hello bot", event_id="$dup"
+        )
+        ev2 = self._mk_event(
+            sender="@alice:example.org", body="hello again bot", event_id="$dup"
+        )
 
         await self.adapter._on_room_message(ev1)
         await self.adapter._on_room_message(ev2)
@@ -4365,7 +4660,9 @@ class TestMatrixClockSkewWarning:
         # Server events are dated 2h before startup_ts (skewed clock).
         skewed_event_ts_ms = int((self.adapter._startup_ts - 7200) * 1000)
 
-        with caplog.at_level(logging.WARNING, logger="plugins.platforms.matrix.adapter"):
+        with caplog.at_level(
+            logging.WARNING, logger="plugins.platforms.matrix.adapter"
+        ):
             for i in range(5):
                 ev = self._mk_event(
                     sender=f"@alice{i}:example.org", ts_ms=skewed_event_ts_ms
@@ -4378,7 +4675,8 @@ class TestMatrixClockSkewWarning:
         # logger name so unrelated stdlib/library warnings can't satisfy the
         # assertion.
         skew_warnings = [
-            r for r in caplog.records
+            r
+            for r in caplog.records
             if r.name == "plugins.platforms.matrix.adapter"
             and r.levelname == "WARNING"
             and "set-ntp" in r.getMessage()
@@ -4404,17 +4702,18 @@ class TestMatrixClockSkewWarning:
         self.adapter._startup_ts = now - 1
         old_ts_ms = int((self.adapter._startup_ts - 3600) * 1000)
 
-        with caplog.at_level(logging.WARNING, logger="plugins.platforms.matrix.adapter"):
+        with caplog.at_level(
+            logging.WARNING, logger="plugins.platforms.matrix.adapter"
+        ):
             for i in range(5):
-                ev = self._mk_event(
-                    sender=f"@alice{i}:example.org", ts_ms=old_ts_ms
-                )
+                ev = self._mk_event(sender=f"@alice{i}:example.org", ts_ms=old_ts_ms)
                 await self.adapter._on_room_message(ev)
 
         # Backfill drops are silent — no clock-skew warning fired.
         assert self.adapter._clock_skew_warned is False
         skew_warnings = [
-            r for r in caplog.records
+            r
+            for r in caplog.records
             if r.name == "plugins.platforms.matrix.adapter"
             and "set-ntp" in r.getMessage()
         ]
@@ -4430,11 +4729,11 @@ class TestMatrixClockSkewWarning:
         self.adapter._startup_ts = now - 120  # extra slack vs the 30s gate
         old_ts_ms = int((self.adapter._startup_ts - 3600) * 1000)
 
-        with caplog.at_level(logging.WARNING, logger="plugins.platforms.matrix.adapter"):
+        with caplog.at_level(
+            logging.WARNING, logger="plugins.platforms.matrix.adapter"
+        ):
             for i in range(2):  # only 2 late drops — under the threshold
-                ev = self._mk_event(
-                    sender=f"@alice{i}:example.org", ts_ms=old_ts_ms
-                )
+                ev = self._mk_event(sender=f"@alice{i}:example.org", ts_ms=old_ts_ms)
                 await self.adapter._on_room_message(ev)
 
         assert self.adapter._late_grace_drops == 2
@@ -4456,19 +4755,20 @@ class TestMatrixClockSkewWarning:
         self.adapter._startup_ts = now - 120
         # Each event has a different age, ranging from 1h to 30d ago.
         ages_in_hours = [1, 24, 168, 720, 4]  # 1h, 1d, 1w, 30d, 4h
-        with caplog.at_level(logging.WARNING, logger="plugins.platforms.matrix.adapter"):
+        with caplog.at_level(
+            logging.WARNING, logger="plugins.platforms.matrix.adapter"
+        ):
             for i, hrs in enumerate(ages_in_hours):
                 ts_ms = int((self.adapter._startup_ts - hrs * 3600) * 1000)
-                ev = self._mk_event(
-                    sender=f"@alice{i}:example.org", ts_ms=ts_ms
-                )
+                ev = self._mk_event(sender=f"@alice{i}:example.org", ts_ms=ts_ms)
                 await self.adapter._on_room_message(ev)
 
         # The varied-skew guard should keep the counter from reaching 3.
         assert self.adapter._late_grace_drops < 3
         assert self.adapter._clock_skew_warned is False
         skew_warnings = [
-            r for r in caplog.records
+            r
+            for r in caplog.records
             if r.name == "plugins.platforms.matrix.adapter"
             and "set-ntp" in r.getMessage()
         ]
@@ -4493,10 +4793,13 @@ class TestMatrixClockSkewWarning:
         self.adapter._startup_ts = now - 60
         skewed_ms = int((self.adapter._startup_ts - 7200) * 1000)
 
-        with caplog.at_level(logging.WARNING, logger="plugins.platforms.matrix.adapter"):
+        with caplog.at_level(
+            logging.WARNING, logger="plugins.platforms.matrix.adapter"
+        ):
             for i in range(3):
                 ev = self._mk_event(
-                    sender=f"@alice{i}:example.org", ts_ms=skewed_ms,
+                    sender=f"@alice{i}:example.org",
+                    ts_ms=skewed_ms,
                     event_id=f"$first-{i}",
                 )
                 await self.adapter._on_room_message(ev)
@@ -4512,13 +4815,15 @@ class TestMatrixClockSkewWarning:
             skewed_ms2 = int((self.adapter._startup_ts - 7200) * 1000)
             for i in range(3):
                 ev = self._mk_event(
-                    sender=f"@bob{i}:example.org", ts_ms=skewed_ms2,
+                    sender=f"@bob{i}:example.org",
+                    ts_ms=skewed_ms2,
                     event_id=f"$second-{i}",
                 )
                 await self.adapter._on_room_message(ev)
 
         skew_warnings = [
-            r for r in caplog.records
+            r
+            for r in caplog.records
             if r.name == "plugins.platforms.matrix.adapter"
             and "set-ntp" in r.getMessage()
         ]
@@ -4530,6 +4835,7 @@ class TestMatrixClockSkewWarning:
 # ---------------------------------------------------------------------------
 # DM auto-thread
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixDmAutoThread:
     def setup_method(self):
@@ -4577,10 +4883,10 @@ class TestMatrixDmAutoThread:
         assert thread_id is None
 
 
-
 # ---------------------------------------------------------------------------
 # Proxy configuration
 # ---------------------------------------------------------------------------
+
 
 class TestMatrixProxyConfig:
     """Verify that MatrixAdapter resolves and propagates proxy settings."""
@@ -4589,17 +4895,30 @@ class TestMatrixProxyConfig:
         monkeypatch.setenv("MATRIX_ACCESS_TOKEN", "syt_test")
         monkeypatch.setenv("MATRIX_HOMESERVER", "https://matrix.example.org")
         # Clear generic proxy vars so they don't leak from the host
-        for key in ("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY",
-                    "https_proxy", "http_proxy", "all_proxy", "MATRIX_PROXY"):
+        for key in (
+            "HTTPS_PROXY",
+            "HTTP_PROXY",
+            "ALL_PROXY",
+            "https_proxy",
+            "http_proxy",
+            "all_proxy",
+            "MATRIX_PROXY",
+        ):
             monkeypatch.delenv(key, raising=False)
         if proxy_env:
             for k, v in proxy_env.items():
                 monkeypatch.setenv(k, v)
         with patch.dict("sys.modules", _make_fake_mautrix()):
             from plugins.platforms.matrix.adapter import MatrixAdapter
-            cfg = PlatformConfig(enabled=True, token="syt_test",
-                                 extra={"homeserver": "https://matrix.example.org",
-                                        "user_id": "@bot:example.org"})
+
+            cfg = PlatformConfig(
+                enabled=True,
+                token="syt_test",
+                extra={
+                    "homeserver": "https://matrix.example.org",
+                    "user_id": "@bot:example.org",
+                },
+            )
             return MatrixAdapter(cfg)
 
     def test_no_proxy_by_default(self, monkeypatch):
@@ -4607,19 +4926,25 @@ class TestMatrixProxyConfig:
         assert adapter._proxy_url is None
 
     def test_matrix_proxy_env_var(self, monkeypatch):
-        adapter = self._make_adapter(monkeypatch,
-                                     proxy_env={"MATRIX_PROXY": "socks5://proxy:1080"})
+        adapter = self._make_adapter(
+            monkeypatch, proxy_env={"MATRIX_PROXY": "socks5://proxy:1080"}
+        )
         assert adapter._proxy_url == "socks5://proxy:1080"
 
     def test_generic_proxy_fallback(self, monkeypatch):
-        adapter = self._make_adapter(monkeypatch,
-                                     proxy_env={"HTTPS_PROXY": "http://corp:8080"})
+        adapter = self._make_adapter(
+            monkeypatch, proxy_env={"HTTPS_PROXY": "http://corp:8080"}
+        )
         assert adapter._proxy_url == "http://corp:8080"
 
     def test_matrix_proxy_takes_priority(self, monkeypatch):
-        adapter = self._make_adapter(monkeypatch,
-                                     proxy_env={"MATRIX_PROXY": "socks5://special:1080",
-                                                "HTTPS_PROXY": "http://generic:8080"})
+        adapter = self._make_adapter(
+            monkeypatch,
+            proxy_env={
+                "MATRIX_PROXY": "socks5://special:1080",
+                "HTTPS_PROXY": "http://generic:8080",
+            },
+        )
         assert adapter._proxy_url == "socks5://special:1080"
 
 
@@ -4630,6 +4955,7 @@ class TestCreateMatrixSession:
     async def test_no_proxy_returns_trust_env_session(self):
         with patch.dict("sys.modules", _make_fake_mautrix()):
             from plugins.platforms.matrix.adapter import _create_matrix_session
+
             session = _create_matrix_session(None)
             try:
                 assert session.trust_env is True
@@ -4640,6 +4966,7 @@ class TestCreateMatrixSession:
     async def test_http_proxy_sets_default_proxy(self):
         with patch.dict("sys.modules", _make_fake_mautrix()):
             from plugins.platforms.matrix.adapter import _create_matrix_session
+
             session = _create_matrix_session("http://proxy:8080")
             try:
                 assert str(session._default_proxy) == "http://proxy:8080"
@@ -4650,14 +4977,18 @@ class TestCreateMatrixSession:
     async def test_socks_proxy_uses_connector(self):
         fake_connector = MagicMock()
         with patch.dict("sys.modules", _make_fake_mautrix()):
-            with patch.dict("sys.modules", {
-                "aiohttp_socks": MagicMock(
-                    ProxyConnector=MagicMock(
-                        from_url=MagicMock(return_value=fake_connector)
-                    )
-                ),
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "aiohttp_socks": MagicMock(
+                        ProxyConnector=MagicMock(
+                            from_url=MagicMock(return_value=fake_connector)
+                        )
+                    ),
+                },
+            ):
                 from plugins.platforms.matrix.adapter import _create_matrix_session
+
                 session = _create_matrix_session("socks5://proxy:1080")
                 try:
                     assert session.connector is fake_connector
@@ -4753,6 +5084,7 @@ class TestMatrixDeadInviteHandling:
 # Device ID resolution when whoami returns None
 # ---------------------------------------------------------------------------
 
+
 class TestDeviceIdNoneResolution:
     """connect() should resolve device_id when whoami returns None."""
 
@@ -4780,9 +5112,12 @@ class TestDeviceIdNoneResolution:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(
-            user_id="@bot:example.org", device_id=None,
-        ))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(
+                user_id="@bot:example.org",
+                device_id=None,
+            )
+        )
 
         resolve_resp = MagicMock()
         resolve_dev = MagicMock()
@@ -4795,7 +5130,9 @@ class TestDeviceIdNoneResolution:
         verify_resp.device_keys = {"@bot:example.org": {"RESOLVED_DEV": verify_dev}}
         mock_client.query_keys = AsyncMock(side_effect=[resolve_resp, verify_resp])
 
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
         mock_client.api = MagicMock()
@@ -4812,13 +5149,18 @@ class TestDeviceIdNoneResolution:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         result = await adapter.connect()
 
         assert result is True
@@ -4860,15 +5202,20 @@ class TestDeviceIdNoneResolution:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(
-            user_id="@bot:example.org", device_id=None,
-        ))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(
+                user_id="@bot:example.org",
+                device_id=None,
+            )
+        )
 
         resolve_resp = MagicMock()
         resolve_resp.device_keys = {"@bot:example.org": {}}
         mock_client.query_keys = AsyncMock(return_value=resolve_resp)
 
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
         mock_client.api = MagicMock()
@@ -4885,13 +5232,18 @@ class TestDeviceIdNoneResolution:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         await adapter.connect()
 
         assert adapter._device_id_unverified is True
@@ -4922,18 +5274,25 @@ class TestDeviceIdNoneResolution:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(
-            user_id="@bot:example.org", device_id=None,
-        ))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(
+                user_id="@bot:example.org",
+                device_id=None,
+            )
+        )
 
         resolve_resp = MagicMock()
-        resolve_resp.device_keys = {"@bot:example.org": {
-            "DEV_A": {"keys": {"ed25519:DEV_A": "key_a"}},
-            "DEV_B": {"keys": {"ed25519:DEV_B": "key_b"}},
-        }}
+        resolve_resp.device_keys = {
+            "@bot:example.org": {
+                "DEV_A": {"keys": {"ed25519:DEV_A": "key_a"}},
+                "DEV_B": {"keys": {"ed25519:DEV_B": "key_b"}},
+            }
+        }
         mock_client.query_keys = AsyncMock(return_value=resolve_resp)
 
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
         mock_client.api = MagicMock()
@@ -4950,13 +5309,18 @@ class TestDeviceIdNoneResolution:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         await adapter.connect()
 
         assert adapter._device_id_unverified is True
@@ -4987,13 +5351,18 @@ class TestDeviceIdNoneResolution:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(
-            user_id="@bot:example.org", device_id=None,
-        ))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(
+                user_id="@bot:example.org",
+                device_id=None,
+            )
+        )
 
         mock_client.query_keys = AsyncMock(side_effect=Exception("server unavailable"))
 
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
         mock_client.api = MagicMock()
@@ -5010,13 +5379,18 @@ class TestDeviceIdNoneResolution:
         mock_olm.account.identity_keys = {"ed25519": "fake_ed25519_key"}
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm)
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         try:
                             await adapter.connect()
                         except Exception:
@@ -5103,6 +5477,7 @@ class TestVerifyDeviceKeysGuards:
 # Reconnect-disconnect guard
 # ---------------------------------------------------------------------------
 
+
 class TestMatrixReconnectDisconnect:
     """connect() must disconnect existing client before reconnecting."""
 
@@ -5127,11 +5502,16 @@ class TestMatrixReconnectDisconnect:
         mock_client.state_store = MagicMock()
         mock_client.sync_store = MagicMock()
         mock_client.crypto = None
-        mock_client.whoami = AsyncMock(return_value=MagicMock(
-            user_id="@bot:example.org", device_id="NEW_DEV",
-        ))
+        mock_client.whoami = AsyncMock(
+            return_value=MagicMock(
+                user_id="@bot:example.org",
+                device_id="NEW_DEV",
+            )
+        )
         mock_client.query_keys = AsyncMock()
-        mock_client.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client.add_event_handler = MagicMock()
         mock_client.handle_sync = MagicMock(return_value=[])
         mock_client.api = MagicMock()
@@ -5142,6 +5522,7 @@ class TestMatrixReconnectDisconnect:
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.dict("sys.modules", fake_mautrix_mods):
             with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
                 with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
@@ -5182,13 +5563,18 @@ class TestDeviceIdRecoveryOnReconnect:
         mock_client1.state_store = MagicMock()
         mock_client1.sync_store = MagicMock()
         mock_client1.crypto = None
-        mock_client1.whoami = AsyncMock(return_value=MagicMock(
-            user_id="@bot:example.org", device_id=None,
-        ))
+        mock_client1.whoami = AsyncMock(
+            return_value=MagicMock(
+                user_id="@bot:example.org",
+                device_id=None,
+            )
+        )
         resolve_resp = MagicMock()
         resolve_resp.device_keys = {"@bot:example.org": {}}
         mock_client1.query_keys = AsyncMock(return_value=resolve_resp)
-        mock_client1.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client1.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client1.add_event_handler = MagicMock()
         mock_client1.handle_sync = MagicMock(return_value=[])
         mock_client1.api = MagicMock()
@@ -5204,14 +5590,21 @@ class TestDeviceIdRecoveryOnReconnect:
         mock_olm1.account = MagicMock()
         mock_olm1.account.identity_keys = {"ed25519": "fake_key"}
 
-        fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client1)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm1)
+        fake_mautrix_mods["mautrix.client"].Client = MagicMock(
+            return_value=mock_client1
+        )
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm1
+        )
 
         import plugins.platforms.matrix.adapter as matrix_mod
+
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         await adapter.connect()
 
         assert adapter._device_id_unverified is True
@@ -5225,9 +5618,12 @@ class TestDeviceIdRecoveryOnReconnect:
         mock_client2.state_store = MagicMock()
         mock_client2.sync_store = MagicMock()
         mock_client2.crypto = None
-        mock_client2.whoami = AsyncMock(return_value=MagicMock(
-            user_id="@bot:example.org", device_id=None,
-        ))
+        mock_client2.whoami = AsyncMock(
+            return_value=MagicMock(
+                user_id="@bot:example.org",
+                device_id=None,
+            )
+        )
         resolve_resp2 = MagicMock()
         resolve_dev = MagicMock()
         resolve_dev.keys = {"ed25519:DEV2": "fake_ed25519_key2"}
@@ -5237,7 +5633,9 @@ class TestDeviceIdRecoveryOnReconnect:
         verify_dev.keys = {"ed25519:DEV2": "fake_ed25519_key2"}
         verify_resp.device_keys = {"@bot:example.org": {"DEV2": verify_dev}}
         mock_client2.query_keys = AsyncMock(side_effect=[resolve_resp2, verify_resp])
-        mock_client2.sync = AsyncMock(return_value={"rooms": {"join": {"!room:server": {}}}})
+        mock_client2.sync = AsyncMock(
+            return_value={"rooms": {"join": {"!room:server": {}}}}
+        )
         mock_client2.add_event_handler = MagicMock()
         mock_client2.handle_sync = MagicMock(return_value=[])
         mock_client2.api = MagicMock()
@@ -5253,13 +5651,19 @@ class TestDeviceIdRecoveryOnReconnect:
         mock_olm2.account = MagicMock()
         mock_olm2.account.identity_keys = {"ed25519": "fake_ed25519_key2"}
 
-        fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client2)
-        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(return_value=mock_olm2)
+        fake_mautrix_mods["mautrix.client"].Client = MagicMock(
+            return_value=mock_client2
+        )
+        fake_mautrix_mods["mautrix.crypto"].OlmMachine = MagicMock(
+            return_value=mock_olm2
+        )
 
         with patch.object(matrix_mod, "_check_e2ee_deps", return_value=True):
             with patch.dict("sys.modules", fake_mautrix_mods):
                 with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):
-                    with patch.object(adapter, "_sync_loop", AsyncMock(return_value=None)):
+                    with patch.object(
+                        adapter, "_sync_loop", AsyncMock(return_value=None)
+                    ):
                         result = await adapter.connect()
 
         assert result is True

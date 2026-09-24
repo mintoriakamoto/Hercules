@@ -102,7 +102,9 @@ def test_console_ws_confirmed_command_executes_after_confirmation(console_client
     assert load_config()["display"]["interface"] == "cli"
 
 
-def test_console_ws_uses_hosted_context_for_opt_data_policy(console_client, monkeypatch):
+def test_console_ws_uses_hosted_context_for_opt_data_policy(
+    console_client, monkeypatch
+):
     monkeypatch.setattr(web_server, "_default_hercules_root_is_opt_data", lambda: True)
 
     with console_client.websocket_connect(_url()) as conn:

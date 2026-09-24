@@ -44,9 +44,11 @@ class TestVerifyConsoleScriptsInstalled:
         for name in ("hercules", "hercules-agent", "hercules-acp"):
             (fake_scripts_dir / f"{name}.exe").write_bytes(b"fake")
 
-        with patch("hercules_cli.main._is_windows", return_value=True), \
-             patch("hercules_cli.main._venv_scripts_dir", return_value=fake_scripts_dir), \
-             patch("hercules_cli.main._run_quarantined_install") as mock_install:
+        with (
+            patch("hercules_cli.main._is_windows", return_value=True),
+            patch("hercules_cli.main._venv_scripts_dir", return_value=fake_scripts_dir),
+            patch("hercules_cli.main._run_quarantined_install") as mock_install,
+        ):
             from hercules_cli.main import _verify_console_scripts_installed
 
             _verify_console_scripts_installed(["uv", "pip"], env={})
@@ -59,9 +61,11 @@ class TestVerifyConsoleScriptsInstalled:
         (fake_scripts_dir / "hercules-agent.exe").write_bytes(b"fake")
         (fake_scripts_dir / "hercules-acp.exe").write_bytes(b"fake")
 
-        with patch("hercules_cli.main._is_windows", return_value=True), \
-             patch("hercules_cli.main._venv_scripts_dir", return_value=fake_scripts_dir), \
-             patch("hercules_cli.main._run_quarantined_install") as mock_install:
+        with (
+            patch("hercules_cli.main._is_windows", return_value=True),
+            patch("hercules_cli.main._venv_scripts_dir", return_value=fake_scripts_dir),
+            patch("hercules_cli.main._run_quarantined_install") as mock_install,
+        ):
             from hercules_cli.main import _verify_console_scripts_installed
 
             _verify_console_scripts_installed(["uv", "pip"], env={})
@@ -73,8 +77,10 @@ class TestVerifyConsoleScriptsInstalled:
         assert mock_install.call_args[1]["scripts_dir"] == fake_scripts_dir
 
     def test_skips_off_windows(self, temp_pyproject, fake_scripts_dir):
-        with patch("hercules_cli.main._is_windows", return_value=False), \
-             patch("hercules_cli.main._run_quarantined_install") as mock_install:
+        with (
+            patch("hercules_cli.main._is_windows", return_value=False),
+            patch("hercules_cli.main._run_quarantined_install") as mock_install,
+        ):
             from hercules_cli.main import _verify_console_scripts_installed
 
             _verify_console_scripts_installed(["uv", "pip"], env={})
@@ -90,9 +96,11 @@ class TestVerifyConsoleScriptsInstalled:
     def test_primary_install_success_still_verifies_scripts(self):
         import hercules_cli.main as main_mod
 
-        with patch("hercules_cli.main._is_windows", return_value=False), \
-             patch("hercules_cli.main._run_quarantined_install") as mock_install, \
-             patch("hercules_cli.main._verify_console_scripts_installed") as mock_verify:
+        with (
+            patch("hercules_cli.main._is_windows", return_value=False),
+            patch("hercules_cli.main._run_quarantined_install") as mock_install,
+            patch("hercules_cli.main._verify_console_scripts_installed") as mock_verify,
+        ):
             main_mod._install_python_dependencies_with_optional_fallback(
                 ["uv", "pip"], env={"VIRTUAL_ENV": "x"}
             )
@@ -110,7 +118,9 @@ class TestVerifyConsoleScriptsInstalled:
         import hercules_cli.main as main_mod
 
         with patch("hercules_cli.main._is_windows", return_value=True):
-            names = {path.name for path in main_mod._hercules_exe_shims(fake_scripts_dir)}
+            names = {
+                path.name for path in main_mod._hercules_exe_shims(fake_scripts_dir)
+            }
 
         assert {"hercules.exe", "hercules-agent.exe", "hercules-acp.exe"} <= names
         assert "hercules-gateway.exe" in names

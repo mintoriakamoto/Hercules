@@ -154,9 +154,7 @@ def test_concurrent_compression_does_not_fork_session(tmp_path: Path) -> None:
     # of children created — and must never exceed one. (Both rotating would be
     # the fork; the winner rolling back to parent under contention yields zero,
     # which agrees with zero children.)
-    rotated = sum(
-        1 for a in (agent_a, agent_b) if a.session_id != parent_sid
-    )
+    rotated = sum(1 for a in (agent_a, agent_b) if a.session_id != parent_sid)
     assert rotated <= 1, (
         f"Expected at most one agent to rotate session_id, got {rotated}. "
         "More than one rotating means the lock didn't serialize them."
@@ -202,7 +200,9 @@ def test_skipped_compression_returns_messages_unchanged(tmp_path: Path) -> None:
     agent.context_compressor.compress.assert_not_called()
 
 
-def test_compression_restores_user_turn_when_compressor_drops_all_users(tmp_path: Path) -> None:
+def test_compression_restores_user_turn_when_compressor_drops_all_users(
+    tmp_path: Path,
+) -> None:
     """Provider chat templates need at least one user message after compaction.
 
     A plugin or future compressor can legally return a compacted context made
@@ -236,11 +236,15 @@ def test_compression_restores_user_turn_when_compressor_drops_all_users(tmp_path
     assert user_messages == [{"role": "user", "content": "please continue from here"}]
 
 
-def test_lock_refresh_keeps_owner_live_past_initial_ttl(tmp_path: Path, monkeypatch) -> None:
+def test_lock_refresh_keeps_owner_live_past_initial_ttl(
+    tmp_path: Path, monkeypatch
+) -> None:
     """The owning compression call must keep its lease alive while it runs."""
     real_try_acquire = SessionDB.try_acquire_compression_lock
 
-    def _short_ttl(self, session_id: str, holder: str, ttl_seconds: float = 300.0) -> bool:
+    def _short_ttl(
+        self, session_id: str, holder: str, ttl_seconds: float = 300.0
+    ) -> bool:
         return real_try_acquire(self, session_id, holder, ttl_seconds=1.0)
 
     monkeypatch.setattr(SessionDB, "try_acquire_compression_lock", _short_ttl)
@@ -274,9 +278,10 @@ def test_lock_refresh_keeps_owner_live_past_initial_ttl(tmp_path: Path, monkeypa
         time.sleep(0.05)
     assert db.get_compression_lock_holder(parent_sid) is not None
     time.sleep(1.2)
-    assert db.try_acquire_compression_lock(
-        parent_sid, "refresh_probe", ttl_seconds=1.0
-    ) is False, "live owner lease expired and was reclaimable before compression finished"
+    assert (
+        db.try_acquire_compression_lock(parent_sid, "refresh_probe", ttl_seconds=1.0)
+        is False
+    ), "live owner lease expired and was reclaimable before compression finished"
     t_a.join(timeout=10)
 
     assert not t_a.is_alive()
@@ -284,11 +289,15 @@ def test_lock_refresh_keeps_owner_live_past_initial_ttl(tmp_path: Path, monkeypa
     assert db.get_compression_lock_holder(parent_sid) is None
 
 
-def test_post_compress_exception_stops_lock_refresher(tmp_path: Path, monkeypatch) -> None:
+def test_post_compress_exception_stops_lock_refresher(
+    tmp_path: Path, monkeypatch
+) -> None:
     """A warning-path exception after compress() returns must still release the lock."""
     real_try_acquire = SessionDB.try_acquire_compression_lock
 
-    def _short_ttl(self, session_id: str, holder: str, ttl_seconds: float = 300.0) -> bool:
+    def _short_ttl(
+        self, session_id: str, holder: str, ttl_seconds: float = 300.0
+    ) -> bool:
         return real_try_acquire(self, session_id, holder, ttl_seconds=1.0)
 
     monkeypatch.setattr(SessionDB, "try_acquire_compression_lock", _short_ttl)
@@ -301,7 +310,9 @@ def test_post_compress_exception_stops_lock_refresher(tmp_path: Path, monkeypatc
     agent._compression_lock_ttl_seconds = 1.0
     agent._compression_lock_refresh_interval = 0.1
     agent.context_compressor._last_summary_error = "summary failed"
-    agent._emit_warning = lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("warn boom"))
+    agent._emit_warning = lambda *_a, **_k: (_ for _ in ()).throw(
+        RuntimeError("warn boom")
+    )
 
     messages = [{"role": "user", "content": f"m{i}"} for i in range(20)]
 
@@ -312,11 +323,15 @@ def test_post_compress_exception_stops_lock_refresher(tmp_path: Path, monkeypatc
     assert db.try_acquire_compression_lock(parent_sid, "probe", ttl_seconds=1.0) is True
 
 
-def test_abort_warning_exception_stops_lock_refresher(tmp_path: Path, monkeypatch) -> None:
+def test_abort_warning_exception_stops_lock_refresher(
+    tmp_path: Path, monkeypatch
+) -> None:
     """An abort-path warning exception must still release the refreshed lock."""
     real_try_acquire = SessionDB.try_acquire_compression_lock
 
-    def _short_ttl(self, session_id: str, holder: str, ttl_seconds: float = 300.0) -> bool:
+    def _short_ttl(
+        self, session_id: str, holder: str, ttl_seconds: float = 300.0
+    ) -> bool:
         return real_try_acquire(self, session_id, holder, ttl_seconds=1.0)
 
     monkeypatch.setattr(SessionDB, "try_acquire_compression_lock", _short_ttl)
@@ -335,7 +350,9 @@ def test_abort_warning_exception_stops_lock_refresher(tmp_path: Path, monkeypatc
         return [{"role": "user", "content": "tail"}]
 
     agent.context_compressor.compress.side_effect = _aborting_compress
-    agent._emit_warning = lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("abort boom"))
+    agent._emit_warning = lambda *_a, **_k: (_ for _ in ()).throw(
+        RuntimeError("abort boom")
+    )
 
     messages = [{"role": "user", "content": f"m{i}"} for i in range(20)]
 
@@ -346,11 +363,15 @@ def test_abort_warning_exception_stops_lock_refresher(tmp_path: Path, monkeypatc
     assert db.try_acquire_compression_lock(parent_sid, "probe", ttl_seconds=1.0) is True
 
 
-def test_typeerror_fallback_exception_stops_lock_refresher(tmp_path: Path, monkeypatch) -> None:
+def test_typeerror_fallback_exception_stops_lock_refresher(
+    tmp_path: Path, monkeypatch
+) -> None:
     """A strict-signature fallback failure must still release the refreshed lock."""
     real_try_acquire = SessionDB.try_acquire_compression_lock
 
-    def _short_ttl(self, session_id: str, holder: str, ttl_seconds: float = 300.0) -> bool:
+    def _short_ttl(
+        self, session_id: str, holder: str, ttl_seconds: float = 300.0
+    ) -> bool:
         return real_try_acquire(self, session_id, holder, ttl_seconds=1.0)
 
     monkeypatch.setattr(SessionDB, "try_acquire_compression_lock", _short_ttl)
@@ -401,10 +422,14 @@ class _NoLockSubsystemDB:
         )
 
     def get_compression_lock_holder(self, *_a, **_k):
-        raise AttributeError("'SessionDB' object has no attribute 'get_compression_lock_holder'")
+        raise AttributeError(
+            "'SessionDB' object has no attribute 'get_compression_lock_holder'"
+        )
 
     def release_compression_lock(self, *_a, **_k):
-        raise AttributeError("'SessionDB' object has no attribute 'release_compression_lock'")
+        raise AttributeError(
+            "'SessionDB' object has no attribute 'release_compression_lock'"
+        )
 
     def __getattr__(self, name):
         # Everything else (create_session, append, rotation helpers) goes to
@@ -412,7 +437,9 @@ class _NoLockSubsystemDB:
         return getattr(self._real, name)
 
 
-def test_missing_lock_subsystem_fails_open_not_infinite_loop(tmp_path: Path, monkeypatch) -> None:
+def test_missing_lock_subsystem_fails_open_not_infinite_loop(
+    tmp_path: Path, monkeypatch
+) -> None:
     """Version skew (no lock methods) must fail OPEN, not raise into the loop.
 
     Reproduces the "API call #47/#48/#49 ... has no attribute
@@ -452,7 +479,9 @@ def test_missing_lock_subsystem_fails_open_not_infinite_loop(tmp_path: Path, mon
     assert agent.session_id != parent_sid
 
 
-def test_review_fork_disables_compression_to_prevent_stale_parent_fork(tmp_path: Path) -> None:
+def test_review_fork_disables_compression_to_prevent_stale_parent_fork(
+    tmp_path: Path,
+) -> None:
     """The background-review fork must set ``compression_enabled = False``
     so it can never compress the parent it shares a session_id with
     (issue #38727).

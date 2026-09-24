@@ -203,13 +203,11 @@ def get_tools() -> list:
 if __name__ == "__main__":
     # Test the tools
     print("Testing task_model_routing tool...")
-    result = analyze_task_model_routing(
-        {
-            "task_description": "Analyze the security of our AWS infrastructure",
-            "available_tools": 10,
-            "include_reasoning": True,
-        }
-    )
+    result = analyze_task_model_routing({
+        "task_description": "Analyze the security of our AWS infrastructure",
+        "available_tools": 10,
+        "include_reasoning": True,
+    })
     print(f"Result: {result}\n")
 
     print("Testing get_model_tier_info tool...")

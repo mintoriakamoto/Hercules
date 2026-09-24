@@ -24,29 +24,35 @@ class RoutingMetrics:
 
     # Decision tracking
     total_routed: int = 0
-    by_tier: Dict[str, int] = field(default_factory=lambda: {
-        ModelTier.FAST_CHEAP.value: 0,
-        ModelTier.BALANCED.value: 0,
-        ModelTier.CAPABLE.value: 0,
-        ModelTier.EXTENDED.value: 0,
-    })
-    by_category: Dict[str, int] = field(default_factory=lambda: {
-        TaskCategory.READ.value: 0,
-        TaskCategory.ANALYZE.value: 0,
-        TaskCategory.CODE.value: 0,
-        TaskCategory.REASONING.value: 0,
-        TaskCategory.RESEARCH.value: 0,
-        TaskCategory.SECURITY.value: 0,
-        "uncategorized": 0,
-    })
+    by_tier: Dict[str, int] = field(
+        default_factory=lambda: {
+            ModelTier.FAST_CHEAP.value: 0,
+            ModelTier.BALANCED.value: 0,
+            ModelTier.CAPABLE.value: 0,
+            ModelTier.EXTENDED.value: 0,
+        }
+    )
+    by_category: Dict[str, int] = field(
+        default_factory=lambda: {
+            TaskCategory.READ.value: 0,
+            TaskCategory.ANALYZE.value: 0,
+            TaskCategory.CODE.value: 0,
+            TaskCategory.REASONING.value: 0,
+            TaskCategory.RESEARCH.value: 0,
+            TaskCategory.SECURITY.value: 0,
+            "uncategorized": 0,
+        }
+    )
 
     # Complexity distribution
-    by_complexity: Dict[str, int] = field(default_factory=lambda: {
-        "simple": 0,
-        "moderate": 0,
-        "complex": 0,
-        "critical": 0,
-    })
+    by_complexity: Dict[str, int] = field(
+        default_factory=lambda: {
+            "simple": 0,
+            "moderate": 0,
+            "complex": 0,
+            "critical": 0,
+        }
+    )
 
     # Performance metrics
     total_cost_savings_estimate: float = 0.0
@@ -135,7 +141,7 @@ class RoutingMetrics:
 Routing Metrics Summary:
   Total Routed: {self.total_routed}
   Successful: {self.successful_routings} ({self.get_success_rate():.1f}%)
-  Failed: {self.failed_routings} ({(self.failed_routings/max(1,self.total_routed)*100):.1f}%)
+  Failed: {self.failed_routings} ({(self.failed_routings / max(1, self.total_routed) * 100):.1f}%)
 
   Tier Distribution:
     fast_cheap: {self.by_tier.get(ModelTier.FAST_CHEAP.value, 0)} ({self._pct(self.by_tier.get(ModelTier.FAST_CHEAP.value, 0))}%)
@@ -179,7 +185,7 @@ Routing Metrics Summary:
         """Format percentage."""
         if self.total_routed == 0:
             return "0"
-        return f"{(value/self.total_routed*100):.0f}"
+        return f"{(value / self.total_routed * 100):.0f}"
 
     def reset(self):
         """Reset all metrics."""
@@ -256,12 +262,15 @@ class RoutingMetricsTracker:
     ):
         """Record a routing failure (thread-safe)."""
         with self._lock:
-            self._metrics.record_routing_failure(reason=reason, fallback_used=fallback_used)
+            self._metrics.record_routing_failure(
+                reason=reason, fallback_used=fallback_used
+            )
 
     def get_metrics(self) -> RoutingMetrics:
         """Get a copy of current metrics."""
         with self._lock:
             import copy
+
             return copy.deepcopy(self._metrics)
 
     def get_summary(self) -> str:
@@ -316,7 +325,9 @@ def record_routing_decision(
 
 def record_routing_failure(reason: str = "unknown", fallback_used: bool = False):
     """Record a routing failure to global metrics."""
-    get_routing_metrics_tracker().record_routing_failure(reason=reason, fallback_used=fallback_used)
+    get_routing_metrics_tracker().record_routing_failure(
+        reason=reason, fallback_used=fallback_used
+    )
 
 
 def get_routing_metrics() -> RoutingMetrics:

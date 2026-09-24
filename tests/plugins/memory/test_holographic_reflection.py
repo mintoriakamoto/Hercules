@@ -27,6 +27,7 @@ def db_path(tmp_path):
 # Importance: storage + retrieval weighting
 # ---------------------------------------------------------------------------
 
+
 def test_importance_stored_and_clamped(db_path):
     store = MemoryStore(db_path=db_path)
     try:
@@ -75,6 +76,7 @@ def test_default_importance_is_neutral(db_path):
 # Reflection primitives
 # ---------------------------------------------------------------------------
 
+
 def test_unreflected_selection_and_mark(db_path):
     store = MemoryStore(db_path=db_path)
     try:
@@ -116,6 +118,7 @@ def test_derived_fact_provenance(db_path):
 # MemoryLLM reflect / score / extract importance
 # ---------------------------------------------------------------------------
 
+
 def test_llm_reflect_parses_insights():
     def chat(system, user):
         return (
@@ -150,16 +153,27 @@ def test_llm_extract_includes_importance():
 # End-to-end provider reflection
 # ---------------------------------------------------------------------------
 
+
 def test_provider_reflection_promotes_linked_insight(tmp_path):
     provider = HolographicMemoryProvider(
-        config={"db_path": str(tmp_path / "m.db"), "auto_extract": False, "auto_reflect": False}
+        config={
+            "db_path": str(tmp_path / "m.db"),
+            "auto_extract": False,
+            "auto_reflect": False,
+        }
     )
     provider.initialize(session_id="s", hercules_home=str(tmp_path), platform="cli")
     try:
         store = provider._store
-        id1 = store.add_fact("user deployed to Fly.io again", category="project", fact_type="episodic")
-        id2 = store.add_fact("user chose Fly over Docker", category="project", fact_type="episodic")
-        store.add_fact("user asked about Fly scaling", category="project", fact_type="episodic")
+        id1 = store.add_fact(
+            "user deployed to Fly.io again", category="project", fact_type="episodic"
+        )
+        id2 = store.add_fact(
+            "user chose Fly over Docker", category="project", fact_type="episodic"
+        )
+        store.add_fact(
+            "user asked about Fly scaling", category="project", fact_type="episodic"
+        )
 
         def chat(system, user):
             return (

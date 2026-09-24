@@ -17,6 +17,7 @@ from hercules_cli import main as hercules_main
 # mock patches that target "tools.file_tools._get_file_ops" etc.
 # ---------------------------------------------------------------------------
 
+
 def _reset_modules(prefixes: tuple[str, ...]):
     for name in list(sys.modules):
         if any(name == p or name.startswith(p + ".") for p in prefixes):
@@ -110,7 +111,12 @@ def _install_prompt_toolkit_stubs():
 
 def _import_cli():
     for name in list(sys.modules):
-        if name == "cli" or name == "run_agent" or name == "tools" or name.startswith("tools."):
+        if (
+            name == "cli"
+            or name == "run_agent"
+            or name == "tools"
+            or name.startswith("tools.")
+        ):
             sys.modules.pop(name, None)
 
     if "firecrawl" not in sys.modules:
@@ -129,10 +135,18 @@ def test_hercules_cli_init_does_not_eagerly_resolve_runtime_provider(monkeypatch
 
     def _unexpected_runtime_resolve(**kwargs):
         calls["count"] += 1
-        raise AssertionError("resolve_runtime_provider should not be called in HerculesCLI.__init__")
+        raise AssertionError(
+            "resolve_runtime_provider should not be called in HerculesCLI.__init__"
+        )
 
-    monkeypatch.setattr("hercules_cli.runtime_provider.resolve_runtime_provider", _unexpected_runtime_resolve)
-    monkeypatch.setattr("hercules_cli.runtime_provider.format_runtime_provider_error", lambda exc: str(exc))
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider",
+        _unexpected_runtime_resolve,
+    )
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.format_runtime_provider_error",
+        lambda exc: str(exc),
+    )
 
     shell = cli.HerculesCLI(model="gpt-5", compact=True, max_turns=1)
 
@@ -160,8 +174,13 @@ def test_runtime_resolution_failure_is_not_sticky(monkeypatch):
         def __init__(self, *args, **kwargs):
             self.kwargs = kwargs
 
-    monkeypatch.setattr("hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve)
-    monkeypatch.setattr("hercules_cli.runtime_provider.format_runtime_provider_error", lambda exc: str(exc))
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve
+    )
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.format_runtime_provider_error",
+        lambda exc: str(exc),
+    )
     monkeypatch.setattr(cli, "AIAgent", _DummyAgent)
 
     shell = cli.HerculesCLI(model="gpt-5", compact=True, max_turns=1)
@@ -184,8 +203,13 @@ def test_runtime_resolution_rebuilds_agent_on_routing_change(monkeypatch):
             "source": "env/config",
         }
 
-    monkeypatch.setattr("hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve)
-    monkeypatch.setattr("hercules_cli.runtime_provider.format_runtime_provider_error", lambda exc: str(exc))
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve
+    )
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.format_runtime_provider_error",
+        lambda exc: str(exc),
+    )
 
     shell = cli.HerculesCLI(model="gpt-5", compact=True, max_turns=1)
     shell.provider = "openrouter"
@@ -239,10 +263,14 @@ def test_codex_provider_replaces_incompatible_default_model(monkeypatch):
     monkeypatch.delenv("LLM_MODEL", raising=False)
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
     # Ensure local user config does not leak a model into the test
-    monkeypatch.setitem(cli.CLI_CONFIG, "model", {
-        "default": "",
-        "base_url": "https://openrouter.ai/api/v1",
-    })
+    monkeypatch.setitem(
+        cli.CLI_CONFIG,
+        "model",
+        {
+            "default": "",
+            "base_url": "https://openrouter.ai/api/v1",
+        },
+    )
 
     def _runtime_resolve(**kwargs):
         return {
@@ -253,8 +281,13 @@ def test_codex_provider_replaces_incompatible_default_model(monkeypatch):
             "source": "env/config",
         }
 
-    monkeypatch.setattr("hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve)
-    monkeypatch.setattr("hercules_cli.runtime_provider.format_runtime_provider_error", lambda exc: str(exc))
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve
+    )
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.format_runtime_provider_error",
+        lambda exc: str(exc),
+    )
     monkeypatch.setattr(
         "hercules_cli.codex_models.get_codex_model_ids",
         lambda access_token=None: ["gpt-5.2-codex", "gpt-5.1-codex-mini"],
@@ -309,7 +342,9 @@ def test_model_flow_openrouter_clears_stale_custom_key(tmp_path, monkeypatch):
         "hercules_cli.models.model_ids",
         lambda **kwargs: ["anthropic/claude-sonnet-4.6"],
     )
-    monkeypatch.setattr("hercules_cli.models.get_pricing_for_provider", lambda *a, **k: {})
+    monkeypatch.setattr(
+        "hercules_cli.models.get_pricing_for_provider", lambda *a, **k: {}
+    )
     monkeypatch.setattr(
         "hercules_cli.auth._prompt_model_selection",
         lambda *args, **kwargs: "anthropic/claude-sonnet-4.6",
@@ -332,7 +367,9 @@ def test_model_flow_anthropic_clears_stale_custom_key_and_mode(tmp_path, monkeyp
 
     config_path = _seed_stale_custom_model(tmp_path, monkeypatch)
 
-    monkeypatch.setattr("hercules_cli.auth.get_anthropic_key", lambda: "sk-ant-api03-test")
+    monkeypatch.setattr(
+        "hercules_cli.auth.get_anthropic_key", lambda: "sk-ant-api03-test"
+    )
     monkeypatch.setattr(
         "agent.anthropic_adapter.read_claude_code_credentials",
         lambda: None,
@@ -373,11 +410,15 @@ def test_codex_provider_uses_config_model(monkeypatch):
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
 
     # Set model via config
-    monkeypatch.setitem(cli.CLI_CONFIG, "model", {
-        "default": "gpt-5.2-codex",
-        "provider": "openai-codex",
-        "base_url": "https://chatgpt.com/backend-api/codex",
-    })
+    monkeypatch.setitem(
+        cli.CLI_CONFIG,
+        "model",
+        {
+            "default": "gpt-5.2-codex",
+            "provider": "openai-codex",
+            "base_url": "https://chatgpt.com/backend-api/codex",
+        },
+    )
 
     def _runtime_resolve(**kwargs):
         return {
@@ -388,8 +429,13 @@ def test_codex_provider_uses_config_model(monkeypatch):
             "source": "env/config",
         }
 
-    monkeypatch.setattr("hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve)
-    monkeypatch.setattr("hercules_cli.runtime_provider.format_runtime_provider_error", lambda exc: str(exc))
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve
+    )
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.format_runtime_provider_error",
+        lambda exc: str(exc),
+    )
     # Prevent live API call from overriding the config model
     monkeypatch.setattr(
         "hercules_cli.codex_models.get_codex_model_ids",
@@ -416,11 +462,15 @@ def test_codex_config_model_not_replaced_by_normalization(monkeypatch):
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
 
     # User explicitly configured gpt-5.3-codex in config.yaml
-    monkeypatch.setitem(cli.CLI_CONFIG, "model", {
-        "default": "gpt-5.3-codex",
-        "provider": "openai-codex",
-        "base_url": "https://chatgpt.com/backend-api/codex",
-    })
+    monkeypatch.setitem(
+        cli.CLI_CONFIG,
+        "model",
+        {
+            "default": "gpt-5.3-codex",
+            "provider": "openai-codex",
+            "base_url": "https://chatgpt.com/backend-api/codex",
+        },
+    )
 
     def _runtime_resolve(**kwargs):
         return {
@@ -431,8 +481,13 @@ def test_codex_config_model_not_replaced_by_normalization(monkeypatch):
             "source": "env/config",
         }
 
-    monkeypatch.setattr("hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve)
-    monkeypatch.setattr("hercules_cli.runtime_provider.format_runtime_provider_error", lambda exc: str(exc))
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve
+    )
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.format_runtime_provider_error",
+        lambda exc: str(exc),
+    )
     # API returns a DIFFERENT model than what the user configured
     monkeypatch.setattr(
         "hercules_cli.codex_models.get_codex_model_ids",
@@ -466,8 +521,13 @@ def test_codex_provider_preserves_explicit_codex_model(monkeypatch):
             "source": "env/config",
         }
 
-    monkeypatch.setattr("hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve)
-    monkeypatch.setattr("hercules_cli.runtime_provider.format_runtime_provider_error", lambda exc: str(exc))
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve
+    )
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.format_runtime_provider_error",
+        lambda exc: str(exc),
+    )
 
     shell = cli.HerculesCLI(model="gpt-5.1-codex-mini", compact=True, max_turns=1)
 
@@ -493,8 +553,13 @@ def test_codex_provider_strips_provider_prefix_from_model(monkeypatch):
             "source": "env/config",
         }
 
-    monkeypatch.setattr("hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve)
-    monkeypatch.setattr("hercules_cli.runtime_provider.format_runtime_provider_error", lambda exc: str(exc))
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _runtime_resolve
+    )
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.format_runtime_provider_error",
+        lambda exc: str(exc),
+    )
 
     shell = cli.HerculesCLI(model="openai/gpt-5.3-codex", compact=True, max_turns=1)
 
@@ -513,12 +578,20 @@ def test_cmd_model_falls_back_to_auto_on_invalid_provider(monkeypatch, capsys):
 
     def _resolve_provider(requested, **kwargs):
         if requested == "invalid-provider":
-            raise AuthError("Unknown provider 'invalid-provider'.", code="invalid_provider")
+            raise AuthError(
+                "Unknown provider 'invalid-provider'.", code="invalid_provider"
+            )
         return "openrouter"
 
     monkeypatch.setattr("hercules_cli.auth.resolve_provider", _resolve_provider)
-    monkeypatch.setattr(hercules_main, "_prompt_provider_choice", lambda choices, **kwargs: len(choices) - 1)
-    monkeypatch.setattr("sys.stdin", type("FakeTTY", (), {"isatty": lambda self: True})())
+    monkeypatch.setattr(
+        hercules_main,
+        "_prompt_provider_choice",
+        lambda choices, **kwargs: len(choices) - 1,
+    )
+    monkeypatch.setattr(
+        "sys.stdin", type("FakeTTY", (), {"isatty": lambda self: True})()
+    )
 
     hercules_main.cmd_model(SimpleNamespace())
     output = capsys.readouterr().out
@@ -534,10 +607,18 @@ def test_model_flow_custom_saves_verified_v1_base_url(monkeypatch, capsys):
         lambda key: "" if key in {"OPENAI_BASE_URL", "OPENAI_API_KEY"} else "",
     )
     saved_env = {}
-    monkeypatch.setattr("hercules_cli.config.save_env_value", lambda key, value: saved_env.__setitem__(key, value))
-    monkeypatch.setattr("hercules_cli.auth._save_model_choice", lambda model: saved_env.__setitem__("MODEL", model))
+    monkeypatch.setattr(
+        "hercules_cli.config.save_env_value",
+        lambda key, value: saved_env.__setitem__(key, value),
+    )
+    monkeypatch.setattr(
+        "hercules_cli.auth._save_model_choice",
+        lambda model: saved_env.__setitem__("MODEL", model),
+    )
     monkeypatch.setattr("hercules_cli.auth.deactivate_provider", lambda: None)
-    monkeypatch.setattr("hercules_cli.main._save_custom_provider", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        "hercules_cli.main._save_custom_provider", lambda *args, **kwargs: None
+    )
     monkeypatch.setattr(
         "hercules_cli.models.probe_api_models",
         lambda api_key, base_url: {
@@ -559,7 +640,10 @@ def test_model_flow_custom_saves_verified_v1_base_url(monkeypatch, capsys):
     # then display name. The api_mode prompt also runs before model selection.
     answers = iter(["http://localhost:8000", "local-key", "", "", "", "", ""])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
-    monkeypatch.setattr("hercules_cli.secret_prompt.masked_secret_prompt", lambda _prompt="": next(answers))
+    monkeypatch.setattr(
+        "hercules_cli.secret_prompt.masked_secret_prompt",
+        lambda _prompt="": next(answers),
+    )
 
     hercules_main._model_flow_custom({})
     output = capsys.readouterr().out
@@ -592,32 +676,34 @@ def test_model_flow_custom_persists_selected_api_mode(monkeypatch):
         },
     )
     monkeypatch.setattr("hercules_cli.config.load_config", lambda: saved_cfg)
-    monkeypatch.setattr("hercules_cli.config.save_config", lambda cfg: saved_cfg.update(cfg))
+    monkeypatch.setattr(
+        "hercules_cli.config.save_config", lambda cfg: saved_cfg.update(cfg)
+    )
     monkeypatch.setattr(
         "hercules_cli.main._save_custom_provider",
-        lambda base_url, api_key="", model="", context_length=None, name=None, api_mode=None: captured_provider.update(
-            {
+        lambda base_url, api_key="", model="", context_length=None, name=None, api_mode=None: (
+            captured_provider.update({
                 "base_url": base_url,
                 "api_key": api_key,
                 "model": model,
                 "context_length": context_length,
                 "name": name,
                 "api_mode": api_mode,
-            }
+            })
         ),
     )
 
-    answers = iter(
-        [
-            "https://codex.example.com/v1",
-            "3",
-            "chosen-model",
-            "",
-            "",
-        ]
-    )
+    answers = iter([
+        "https://codex.example.com/v1",
+        "3",
+        "chosen-model",
+        "",
+        "",
+    ])
     monkeypatch.setattr("builtins.input", lambda _prompt="": next(answers))
-    monkeypatch.setattr("hercules_cli.secret_prompt.masked_secret_prompt", lambda _prompt="": "test-key")
+    monkeypatch.setattr(
+        "hercules_cli.secret_prompt.masked_secret_prompt", lambda _prompt="": "test-key"
+    )
 
     hercules_main._model_flow_custom({"model": {"provider": "custom"}})
 
@@ -632,19 +718,23 @@ def test_model_flow_custom_persists_selected_api_mode(monkeypatch):
 # _auto_provider_name — unit tests
 # ---------------------------------------------------------------------------
 
+
 def test_auto_provider_name_localhost():
     from hercules_cli.main import _auto_provider_name
+
     assert _auto_provider_name("http://localhost:11434/v1") == "Local (localhost:11434)"
     assert _auto_provider_name("http://127.0.0.1:1234/v1") == "Local (127.0.0.1:1234)"
 
 
 def test_auto_provider_name_runpod():
     from hercules_cli.main import _auto_provider_name
+
     assert "RunPod" in _auto_provider_name("https://xyz.runpod.io/v1")
 
 
 def test_auto_provider_name_remote():
     from hercules_cli.main import _auto_provider_name
+
     result = _auto_provider_name("https://api.together.xyz/v1")
     assert result == "Api.together.xyz"
 
@@ -658,11 +748,14 @@ def test_save_custom_provider_uses_provided_name(monkeypatch, tmp_path):
     cfg_path.write_text(yaml.dump({}))
 
     monkeypatch.setattr(
-        "hercules_cli.config.load_config", lambda: yaml.safe_load(cfg_path.read_text()) or {},
+        "hercules_cli.config.load_config",
+        lambda: yaml.safe_load(cfg_path.read_text()) or {},
     )
     saved = {}
+
     def _save(cfg):
         saved.update(cfg)
+
     monkeypatch.setattr("hercules_cli.config.save_config", _save)
 
     _save_custom_provider("http://localhost:11434/v1", name="Ollama")

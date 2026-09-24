@@ -93,9 +93,7 @@ def test_explanation_for_partial_stream_recovery():
 
 def test_explanation_for_max_iterations_reached_prefix_match():
     """``max_iterations_reached(...)`` carries a parenthetical suffix."""
-    out = AIAgent._format_turn_completion_explanation(
-        "max_iterations_reached(10/10)"
-    )
+    out = AIAgent._format_turn_completion_explanation("max_iterations_reached(10/10)")
     assert "iteration" in out.lower()
 
 

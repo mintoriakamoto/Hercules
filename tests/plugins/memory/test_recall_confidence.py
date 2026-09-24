@@ -5,6 +5,7 @@ corroboration, and recency) plus a `confidence_label`, and each recall reports
 an overall `recall_confidence` — so the agent can hedge a weak memory instead of
 asserting it as fact.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,20 +24,29 @@ from plugins.memory.holographic import (
 
 # --- the confidence function ----------------------------------------------
 
+
 def test_confidence_rewards_trust_corroboration_recency():
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     strong = {"trust_score": 0.95, "helpful_count": 5, "updated_at": now}
     weak = {"trust_score": 0.2, "helpful_count": 0, "updated_at": now}
     assert _recall_confidence(strong) > _recall_confidence(weak)
-    assert _recall_confidence(strong) >= 0.66   # high
+    assert _recall_confidence(strong) >= 0.66  # high
     assert _recall_confidence(weak) < 0.5
 
 
 def test_confidence_decays_with_age():
-    fresh = {"trust_score": 0.6, "helpful_count": 1,
-             "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")}
-    old = {"trust_score": 0.6, "helpful_count": 1,
-           "updated_at": (datetime.now(timezone.utc) - timedelta(days=365)).strftime("%Y-%m-%d %H:%M:%S")}
+    fresh = {
+        "trust_score": 0.6,
+        "helpful_count": 1,
+        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    old = {
+        "trust_score": 0.6,
+        "helpful_count": 1,
+        "updated_at": (datetime.now(timezone.utc) - timedelta(days=365)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        ),
+    }
     assert _recall_confidence(old) < _recall_confidence(fresh)
 
 
@@ -55,6 +65,7 @@ def test_confidence_labels():
 
 # --- end-to-end through the provider --------------------------------------
 
+
 @pytest.fixture()
 def provider(tmp_path):
     p = HolographicMemoryProvider(config={"db_path": str(tmp_path / "conf.db")})
@@ -66,7 +77,9 @@ def provider(tmp_path):
 
 
 def _search(provider, query, **kw):
-    return json.loads(provider._handle_fact_store({"action": "search", "query": query, **kw}))
+    return json.loads(
+        provider._handle_fact_store({"action": "search", "query": query, **kw})
+    )
 
 
 def test_search_results_carry_confidence_and_overall(provider):

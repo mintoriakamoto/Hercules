@@ -90,16 +90,20 @@ def resolve_modal_backend_state(
     normalized_mode = normalize_modal_mode(modal_mode)
     if managed_enabled is None:
         managed_enabled = managed_nous_tools_enabled()
-    managed_mode_blocked = (
-        requested_mode == "managed" and not managed_enabled
-    )
+    managed_mode_blocked = requested_mode == "managed" and not managed_enabled
 
     if normalized_mode == "managed":
         selected_backend = "managed" if managed_enabled and managed_ready else None
     elif normalized_mode == "direct":
         selected_backend = "direct" if has_direct else None
     else:
-        selected_backend = "managed" if managed_enabled and managed_ready else "direct" if has_direct else None
+        selected_backend = (
+            "managed"
+            if managed_enabled and managed_ready
+            else "direct"
+            if has_direct
+            else None
+        )
 
     return {
         "requested_mode": requested_mode,
@@ -114,8 +118,7 @@ def resolve_modal_backend_state(
 def resolve_openai_audio_api_key() -> str:
     """Prefer the voice-tools key, but fall back to the normal OpenAI key."""
     return (
-        os.getenv("VOICE_TOOLS_OPENAI_KEY", "")
-        or os.getenv("OPENAI_API_KEY", "")
+        os.getenv("VOICE_TOOLS_OPENAI_KEY", "") or os.getenv("OPENAI_API_KEY", "")
     ).strip()
 
 
@@ -126,16 +129,19 @@ def prefers_gateway(config_section: str) -> bool:
     """
     try:
         from hercules_cli.config import load_config
+
         section = (load_config() or {}).get(config_section)
         if isinstance(section, dict):
             return is_truthy_value(section.get("use_gateway"), default=False)
     except ImportError as e:
         # Configuration module not available in this context
         import logging as _logging
+
         _logging.debug("could not load config module for gateway preference: %s", e)
     except (OSError, ValueError) as e:
         # Configuration file read error
         import logging as _logging
+
         _logging.debug(
             "error reading config for gateway preference in %s: %s",
             config_section,
@@ -144,6 +150,7 @@ def prefers_gateway(config_section: str) -> bool:
     except Exception as e:
         # Unexpected error
         import logging as _logging
+
         _logging.exception(
             "unexpected error checking gateway preference for %s: %s",
             config_section,

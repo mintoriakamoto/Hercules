@@ -11,6 +11,7 @@ Detection is restricted to properties of the running interpreter
 (``sys.prefix`` / ``sys.executable``) so a pip/venv install on a machine
 that also has ``uv tool install hercules-agent`` does not get misclassified.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -45,9 +46,14 @@ def _patch_managed_uv(request):
     def _fake_update_managed_uv():
         return None  # never actually self-update in tests
 
-    with patch("hercules_cli.managed_uv.resolve_uv", side_effect=_fake_resolve_uv), \
-         patch("hercules_cli.managed_uv.ensure_uv", side_effect=_fake_ensure_uv), \
-         patch("hercules_cli.managed_uv.update_managed_uv", side_effect=_fake_update_managed_uv):
+    with (
+        patch("hercules_cli.managed_uv.resolve_uv", side_effect=_fake_resolve_uv),
+        patch("hercules_cli.managed_uv.ensure_uv", side_effect=_fake_ensure_uv),
+        patch(
+            "hercules_cli.managed_uv.update_managed_uv",
+            side_effect=_fake_update_managed_uv,
+        ),
+    ):
         yield
 
 
@@ -60,26 +66,32 @@ class TestIsUvToolInstall:
     def test_returns_true_when_sys_prefix_matches_uv_tool_layout(self):
         from hercules_cli import config
 
-        with patch.object(config.sys, "prefix", "/home/user/.local/share/uv/tools/hercules-agent"):
+        with patch.object(
+            config.sys, "prefix", "/home/user/.local/share/uv/tools/hercules-agent"
+        ):
             assert config.is_uv_tool_install() is True
 
     def test_returns_true_when_sys_executable_matches_uv_tool_layout(self):
         """Some uv-tool layouts surface the marker on ``sys.executable`` (bin/python)."""
         from hercules_cli import config
 
-        with patch.object(config.sys, "prefix", "/some/unrelated/venv"), \
-             patch.object(
-                 config.sys,
-                 "executable",
-                 "/home/user/.local/share/uv/tools/hercules-agent/bin/python",
-             ):
+        with (
+            patch.object(config.sys, "prefix", "/some/unrelated/venv"),
+            patch.object(
+                config.sys,
+                "executable",
+                "/home/user/.local/share/uv/tools/hercules-agent/bin/python",
+            ),
+        ):
             assert config.is_uv_tool_install() is True
 
     def test_returns_false_when_neither_prefix_nor_executable_matches(self):
         from hercules_cli import config
 
-        with patch.object(config.sys, "prefix", "/some/unrelated/venv"), \
-             patch.object(config.sys, "executable", "/usr/bin/python3"):
+        with (
+            patch.object(config.sys, "prefix", "/some/unrelated/venv"),
+            patch.object(config.sys, "executable", "/usr/bin/python3"),
+        ):
             assert config.is_uv_tool_install() is False
 
     def test_does_not_consult_uv_tool_list(self):
@@ -90,9 +102,11 @@ class TestIsUvToolInstall:
         from the detection path."""
         from hercules_cli import config
 
-        with patch.object(config.sys, "prefix", "/some/unrelated/venv"), \
-             patch.object(config.sys, "executable", "/usr/bin/python3"), \
-             patch("subprocess.run") as mock_run:
+        with (
+            patch.object(config.sys, "prefix", "/some/unrelated/venv"),
+            patch.object(config.sys, "executable", "/usr/bin/python3"),
+            patch("subprocess.run") as mock_run,
+        ):
             assert config.is_uv_tool_install() is False
             mock_run.assert_not_called()
 
@@ -111,6 +125,8 @@ class TestIsUvToolInstall:
     def test_handles_empty_executable(self):
         from hercules_cli import config
 
-        with patch.object(config.sys, "prefix", "/some/unrelated/venv"), \
-             patch.object(config.sys, "executable", ""):
+        with (
+            patch.object(config.sys, "prefix", "/some/unrelated/venv"),
+            patch.object(config.sys, "executable", ""),
+        ):
             assert config.is_uv_tool_install() is False

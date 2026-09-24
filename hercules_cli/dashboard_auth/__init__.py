@@ -8,6 +8,7 @@ plugins.
 Providers register themselves via the plugin hook
 ``ctx.register_dashboard_auth_provider`` (see ``plugins/dashboard_auth/``).
 """
+
 from hercules_cli.dashboard_auth.base import (
     DashboardAuthProvider,
     Session,

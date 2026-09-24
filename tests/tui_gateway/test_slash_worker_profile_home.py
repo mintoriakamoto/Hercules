@@ -10,51 +10,61 @@ import pytest
 
 def test_slash_worker_accepts_profile_home():
     """_SlashWorker.__init__ accepts profile_home parameter."""
-    with patch.dict("sys.modules", {
-        "hercules_constants": MagicMock(get_hercules_home=MagicMock(return_value="/tmp/hercules_test")),
-    }):
+    with patch.dict(
+        "sys.modules",
+        {
+            "hercules_constants": MagicMock(
+                get_hercules_home=MagicMock(return_value="/tmp/hercules_test")
+            ),
+        },
+    ):
         with patch("subprocess.Popen") as mock_popen:
             mock_popen.return_value.stdout = MagicMock()
             mock_popen.return_value.stderr = MagicMock()
-            
+
             from tui_gateway.server import _SlashWorker
-            
+
             # Test initialization with profile_home
             worker = _SlashWorker(
                 session_key="test_key",
                 model="test-model",
-                profile_home="/home/luke/.hercules/profiles/work"
+                profile_home="/home/luke/.hercules/profiles/work",
             )
-            
+
             # Verify Popen was called
             assert mock_popen.called
-            
+
             # Check that HERCULES_HOME was set in the environment
             call_kwargs = mock_popen.call_args[1]
             assert "env" in call_kwargs
-            assert call_kwargs["env"]["HERCULES_HOME"] == "/home/luke/.hercules/profiles/work"
+            assert (
+                call_kwargs["env"]["HERCULES_HOME"]
+                == "/home/luke/.hercules/profiles/work"
+            )
 
 
 def test_slash_worker_without_profile_home():
     """_SlashWorker works without profile_home parameter (backward compatible)."""
-    with patch.dict("sys.modules", {
-        "hercules_constants": MagicMock(get_hercules_home=MagicMock(return_value="/tmp/hercules_test")),
-    }):
+    with patch.dict(
+        "sys.modules",
+        {
+            "hercules_constants": MagicMock(
+                get_hercules_home=MagicMock(return_value="/tmp/hercules_test")
+            ),
+        },
+    ):
         with patch("subprocess.Popen") as mock_popen:
             mock_popen.return_value.stdout = MagicMock()
             mock_popen.return_value.stderr = MagicMock()
-            
+
             from tui_gateway.server import _SlashWorker
-            
+
             # Test initialization without profile_home (backward compatible)
-            worker = _SlashWorker(
-                session_key="test_key",
-                model="test-model"
-            )
-            
+            worker = _SlashWorker(session_key="test_key", model="test-model")
+
             # Verify Popen was called
             assert mock_popen.called
-            
+
             # Check that HERCULES_HOME was NOT overridden
             call_kwargs = mock_popen.call_args[1]
             assert "env" in call_kwargs
@@ -67,25 +77,28 @@ def test_slash_worker_without_profile_home():
 
 def test_slash_worker_with_none_profile_home():
     """_SlashWorker with explicit profile_home=None works."""
-    with patch.dict("sys.modules", {
-        "hercules_constants": MagicMock(get_hercules_home=MagicMock(return_value="/tmp/hercules_test")),
-    }):
+    with patch.dict(
+        "sys.modules",
+        {
+            "hercules_constants": MagicMock(
+                get_hercules_home=MagicMock(return_value="/tmp/hercules_test")
+            ),
+        },
+    ):
         with patch("subprocess.Popen") as mock_popen:
             mock_popen.return_value.stdout = MagicMock()
             mock_popen.return_value.stderr = MagicMock()
-            
+
             from tui_gateway.server import _SlashWorker
-            
+
             # Test initialization with explicit None
             worker = _SlashWorker(
-                session_key="test_key",
-                model="test-model",
-                profile_home=None
+                session_key="test_key", model="test-model", profile_home=None
             )
-            
+
             # Verify Popen was called
             assert mock_popen.called
-            
+
             # Check that HERCULES_HOME was NOT set
             call_kwargs = mock_popen.call_args[1]
             env = call_kwargs["env"]
@@ -97,23 +110,25 @@ def test_slash_worker_with_none_profile_home():
 
 def test_slash_worker_inherits_argv_correctly():
     """_SlashWorker passes correct argv to Popen."""
-    with patch.dict("sys.modules", {
-        "hercules_constants": MagicMock(get_hercules_home=MagicMock(return_value="/tmp/hercules_test")),
-    }):
+    with patch.dict(
+        "sys.modules",
+        {
+            "hercules_constants": MagicMock(
+                get_hercules_home=MagicMock(return_value="/tmp/hercules_test")
+            ),
+        },
+    ):
         with patch("subprocess.Popen") as mock_popen:
             mock_popen.return_value.stdout = MagicMock()
             mock_popen.return_value.stderr = MagicMock()
-            
+
             from tui_gateway.server import _SlashWorker
-            
+
             # Test that argv is correct
-            worker = _SlashWorker(
-                session_key="my_session",
-                model="gpt-4"
-            )
-            
+            worker = _SlashWorker(session_key="my_session", model="gpt-4")
+
             call_args = mock_popen.call_args[0][0]
-            
+
             # Verify argv structure
             assert sys.executable in call_args
             assert "-m" in call_args

@@ -17,13 +17,18 @@ resolve_managed_tool_gateway = managed_tool_gateway.resolve_managed_tool_gateway
 
 
 def test_resolve_managed_tool_gateway_derives_vendor_origin_from_shared_domain():
-    with patch.dict(
-        os.environ,
-        {
-            "TOOL_GATEWAY_DOMAIN": "nousresearch.com",
-        },
-        clear=False,
-    ), patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=True):
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "TOOL_GATEWAY_DOMAIN": "nousresearch.com",
+            },
+            clear=False,
+        ),
+        patch.object(
+            managed_tool_gateway, "managed_nous_tools_enabled", return_value=True
+        ),
+    ):
         result = resolve_managed_tool_gateway(
             "firecrawl",
             token_reader=lambda: "nous-token",
@@ -36,13 +41,18 @@ def test_resolve_managed_tool_gateway_derives_vendor_origin_from_shared_domain()
 
 
 def test_resolve_managed_tool_gateway_uses_vendor_specific_override():
-    with patch.dict(
-        os.environ,
-        {
-            "BROWSER_USE_GATEWAY_URL": "http://browser-use-gateway.localhost:3009/",
-        },
-        clear=False,
-    ), patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=True):
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "BROWSER_USE_GATEWAY_URL": "http://browser-use-gateway.localhost:3009/",
+            },
+            clear=False,
+        ),
+        patch.object(
+            managed_tool_gateway, "managed_nous_tools_enabled", return_value=True
+        ),
+    ):
         result = resolve_managed_tool_gateway(
             "browser-use",
             token_reader=lambda: "nous-token",
@@ -53,13 +63,18 @@ def test_resolve_managed_tool_gateway_uses_vendor_specific_override():
 
 
 def test_resolve_managed_tool_gateway_is_inactive_without_nous_token():
-    with patch.dict(
-        os.environ,
-        {
-            "TOOL_GATEWAY_DOMAIN": "nousresearch.com",
-        },
-        clear=False,
-    ), patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=True):
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "TOOL_GATEWAY_DOMAIN": "nousresearch.com",
+            },
+            clear=False,
+        ),
+        patch.object(
+            managed_tool_gateway, "managed_nous_tools_enabled", return_value=True
+        ),
+    ):
         result = resolve_managed_tool_gateway(
             "firecrawl",
             token_reader=lambda: None,
@@ -69,13 +84,17 @@ def test_resolve_managed_tool_gateway_is_inactive_without_nous_token():
 
 
 def test_resolve_managed_tool_gateway_is_disabled_without_subscription():
-    with patch.dict(os.environ, {"TOOL_GATEWAY_DOMAIN": "nousresearch.com"}, clear=False), \
-         patch.object(managed_tool_gateway, "managed_nous_tools_enabled", return_value=False):
+    with (
+        patch.dict(
+            os.environ, {"TOOL_GATEWAY_DOMAIN": "nousresearch.com"}, clear=False
+        ),
+        patch.object(
+            managed_tool_gateway, "managed_nous_tools_enabled", return_value=False
+        ),
+    ):
         result = resolve_managed_tool_gateway(
             "firecrawl",
             token_reader=lambda: "nous-token",
         )
 
     assert result is None
-
-

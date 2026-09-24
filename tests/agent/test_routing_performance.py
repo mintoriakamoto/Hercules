@@ -60,9 +60,7 @@ class TestRoutingPerformance:
     @pytest.mark.performance
     def test_routing_scalability_many_tasks(self):
         """Routing should scale linearly with number of tasks."""
-        tasks = [
-            "Task " + str(i) for i in range(100)
-        ]
+        tasks = ["Task " + str(i) for i in range(100)]
 
         start = time.perf_counter()
         results = []
@@ -83,7 +81,9 @@ class TestRoutingPerformance:
     def test_simple_task_routing_faster_than_complex(self):
         """Simple tasks should route faster than complex ones (less analysis)."""
         simple_task = "Read a file"
-        complex_task = "Design a distributed system with fault tolerance and load balancing"
+        complex_task = (
+            "Design a distributed system with fault tolerance and load balancing"
+        )
 
         # Time simple task
         start = time.perf_counter()
@@ -166,6 +166,7 @@ class TestRoutingPerformance:
         # Get baseline
         gc.collect()
         import sys
+
         baseline = sys.getsizeof(None)
 
         # Make many routing calls

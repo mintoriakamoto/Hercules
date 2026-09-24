@@ -9,6 +9,7 @@ These tests drive the provider end-to-end (add → search → feedback) against 
 real on-disk SQLite store, asserting on the observable trust deltas rather than
 internal bookkeeping.
 """
+
 from __future__ import annotations
 
 import json
@@ -35,7 +36,9 @@ def provider(tmp_path):
 
 
 def _add(provider, content, **kw):
-    out = json.loads(provider._handle_fact_store({"action": "add", "content": content, **kw}))
+    out = json.loads(
+        provider._handle_fact_store({"action": "add", "content": content, **kw})
+    )
     return int(out["fact_id"])
 
 
@@ -47,16 +50,21 @@ def _trust(provider, fact_id):
 
 
 def _search(provider, query, **kw):
-    return json.loads(provider._handle_fact_store({"action": "search", "query": query, **kw}))
+    return json.loads(
+        provider._handle_fact_store({"action": "search", "query": query, **kw})
+    )
 
 
 def _feedback(provider, fact_id, action="helpful"):
-    return json.loads(provider._handle_fact_feedback({"action": action, "fact_id": fact_id}))
+    return json.loads(
+        provider._handle_fact_feedback({"action": action, "fact_id": fact_id})
+    )
 
 
 # ---------------------------------------------------------------------------
 # Core behaviour
 # ---------------------------------------------------------------------------
+
 
 def test_helpful_feedback_reinforces_co_recalled_facts(provider):
     """A helpful rating nudges the trust of facts recalled alongside it."""
@@ -65,7 +73,9 @@ def test_helpful_feedback_reinforces_co_recalled_facts(provider):
 
     res = _search(provider, "kubernetes clusters deployment")
     recalled = {r["fact_id"] for r in res["results"]}
-    assert {a, b} <= recalled, "both facts should be co-recalled for the test to be meaningful"
+    assert {a, b} <= recalled, (
+        "both facts should be co-recalled for the test to be meaningful"
+    )
 
     before_b = _trust(provider, b)
     result = _feedback(provider, a, "helpful")
@@ -133,7 +143,10 @@ def test_rated_fact_is_not_in_its_own_co_activation_set(provider):
 def test_reinforcement_is_bounded_by_max_fanout(provider):
     """Even a wide recall boosts at most _CO_ACTIVATION_MAX_FANOUT partners."""
     ids = [
-        _add(provider, f"Foxtrot shared-topic widget fact number {i} about caching layers")
+        _add(
+            provider,
+            f"Foxtrot shared-topic widget fact number {i} about caching layers",
+        )
         for i in range(_CO_ACTIVATION_MAX_FANOUT + 5)
     ]
     res = _search(provider, "foxtrot shared-topic widget caching layers", limit=50)
@@ -163,7 +176,12 @@ def test_repeated_helpful_feedback_accumulates_association(provider):
 
 def test_co_activation_capture_never_raises_on_malformed_results(provider):
     """The capture helper is best-effort and tolerates junk without raising."""
-    provider._note_co_activation([{"no_fact_id": 1}, "not-a-dict", None, {"fact_id": "x"}])
+    provider._note_co_activation([
+        {"no_fact_id": 1},
+        "not-a-dict",
+        None,
+        {"fact_id": "x"},
+    ])
     # No episode should have been recorded from unusable rows.
     assert len(provider._last_recall) == 0
 

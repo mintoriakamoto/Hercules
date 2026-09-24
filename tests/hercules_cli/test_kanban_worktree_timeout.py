@@ -29,12 +29,17 @@ class TestWorktreeTimeoutRaisesCleanError:
         monkeypatch.setenv("HERCULES_KANBAN_WORKTREE_TIMEOUT_SECONDS", "5")
         target = tmp_path / "wt"
 
-        with patch.object(k, "_git_common_dir", return_value=None), \
-             patch.object(k, "_git_branch_exists", return_value=False), \
-             patch.object(
-                 k.subprocess, "run",
-                 side_effect=subprocess.TimeoutExpired(cmd="git worktree add", timeout=5),
-             ):
+        with (
+            patch.object(k, "_git_common_dir", return_value=None),
+            patch.object(k, "_git_branch_exists", return_value=False),
+            patch.object(
+                k.subprocess,
+                "run",
+                side_effect=subprocess.TimeoutExpired(
+                    cmd="git worktree add", timeout=5
+                ),
+            ),
+        ):
             with pytest.raises(RuntimeError) as exc:
                 k._ensure_git_worktree(Path(tmp_path), target, "task-branch")
 
@@ -51,9 +56,11 @@ class TestWorktreeTimeoutRaisesCleanError:
             stderr = "fatal: branch already checked out"
             stdout = ""
 
-        with patch.object(k, "_git_common_dir", return_value=None), \
-             patch.object(k, "_git_branch_exists", return_value=False), \
-             patch.object(k.subprocess, "run", return_value=_R()):
+        with (
+            patch.object(k, "_git_common_dir", return_value=None),
+            patch.object(k, "_git_branch_exists", return_value=False),
+            patch.object(k.subprocess, "run", return_value=_R()),
+        ):
             with pytest.raises(RuntimeError) as exc:
                 k._ensure_git_worktree(Path(tmp_path), target, "task-branch")
         assert "worktree add failed" in str(exc.value)

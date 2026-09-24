@@ -37,14 +37,14 @@ def _msys_to_windows_path(cwd: str) -> str:
         return cwd
     # Match leading "/<single letter>/" or exactly "/<letter>" (bare drive root),
     # plus /cygdrive/<letter>/... and /mnt/<letter>/... variants.
-    m = re.match(r'^/(?:(?:cygdrive|mnt)/)?([a-zA-Z])(/.*)?$', cwd)
+    m = re.match(r"^/(?:(?:cygdrive|mnt)/)?([a-zA-Z])(/.*)?$", cwd)
     if not m:
         return cwd
     # Reject /cygdrive or /mnt with no drive letter — the optional group above
     # already requires the letter. Multi-char first segments (/home, /tmp)
     # fail the single-letter capture and fall through as no-ops.
     drive = m.group(1).upper()
-    tail = (m.group(2) or "").replace('/', '\\')
+    tail = (m.group(2) or "").replace("/", "\\")
     return f"{drive}:{tail or chr(92)}"  # chr(92) = backslash, avoid raw-string escape
 
 
@@ -58,11 +58,11 @@ def _windows_to_msys_path(cwd: str) -> str:
     """
     if not _IS_WINDOWS or not cwd:
         return cwd
-    m = re.match(r'^([a-zA-Z]):[\\/]*(.*)$', cwd)
+    m = re.match(r"^([a-zA-Z]):[\\/]*(.*)$", cwd)
     if not m:
         return cwd
     drive = m.group(1).lower()
-    tail = (m.group(2) or "").replace('\\', '/').lstrip('/')
+    tail = (m.group(2) or "").replace("\\", "/").lstrip("/")
     return f"/{drive}/{tail}" if tail else f"/{drive}/"
 
 
@@ -130,6 +130,7 @@ def _build_provider_env_blocklist() -> frozenset:
 
     try:
         from hercules_cli.auth import PROVIDER_REGISTRY
+
         for pconfig in PROVIDER_REGISTRY.values():
             blocked.update(pconfig.api_key_env_vars)
             if pconfig.auth_type == "aws_sdk":
@@ -141,6 +142,7 @@ def _build_provider_env_blocklist() -> frozenset:
 
     try:
         from hercules_cli.config import OPTIONAL_ENV_VARS
+
         for name, metadata in OPTIONAL_ENV_VARS.items():
             category = metadata.get("category")
             if category in {"tool", "messaging"}:
@@ -397,7 +399,9 @@ def _inject_session_context_env(env: dict) -> None:
             env.pop(var_name, None)
 
 
-def _sanitize_subprocess_env(base_env: dict | None, extra_env: dict | None = None) -> dict:
+def _sanitize_subprocess_env(
+    base_env: dict | None, extra_env: dict | None = None
+) -> dict:
     """Filter Hercules-managed secrets from a subprocess environment."""
     try:
         from tools.env_passthrough import is_env_passthrough as _is_passthrough
@@ -416,7 +420,7 @@ def _sanitize_subprocess_env(base_env: dict | None, extra_env: dict | None = Non
 
     for key, value in (extra_env or {}).items():
         if key.startswith(_HERCULES_PROVIDER_ENV_FORCE_PREFIX):
-            real_key = key[len(_HERCULES_PROVIDER_ENV_FORCE_PREFIX):]
+            real_key = key[len(_HERCULES_PROVIDER_ENV_FORCE_PREFIX) :]
             if _is_hercules_internal_secret(real_key):
                 continue
             sanitized[real_key] = value
@@ -428,6 +432,7 @@ def _sanitize_subprocess_env(base_env: dict | None, extra_env: dict | None = Non
     _inject_context_hercules_home(sanitized)
 
     from hercules_constants import apply_subprocess_home_env
+
     apply_subprocess_home_env(sanitized)
 
     # Same cross-session leak guard as _make_run_env, for the background/PTY
@@ -543,6 +548,7 @@ def hercules_subprocess_env(*, inherit_credentials: bool = False) -> dict[str, s
 
     _inject_context_hercules_home(env)
     from hercules_constants import apply_subprocess_home_env
+
     apply_subprocess_home_env(env)
 
     # Active-venv markers must not clobber another project's environment.
@@ -589,11 +595,17 @@ def _find_bash() -> str:
     #   PortableGit: %LOCALAPPDATA%\hercules\git\bin\bash.exe   (primary)
     #   MinGit:      %LOCALAPPDATA%\hercules\git\usr\bin\bash.exe (legacy/32-bit fallback)
     _local_appdata = os.environ.get("LOCALAPPDATA", "")
-    _hercules_portable_git = os.path.join(_local_appdata, "hercules", "git") if _local_appdata else ""
+    _hercules_portable_git = (
+        os.path.join(_local_appdata, "hercules", "git") if _local_appdata else ""
+    )
     if _hercules_portable_git:
         for candidate in (
-            os.path.join(_hercules_portable_git, "bin", "bash.exe"),        # PortableGit (primary)
-            os.path.join(_hercules_portable_git, "usr", "bin", "bash.exe"), # MinGit fallback
+            os.path.join(
+                _hercules_portable_git, "bin", "bash.exe"
+            ),  # PortableGit (primary)
+            os.path.join(
+                _hercules_portable_git, "usr", "bin", "bash.exe"
+            ),  # MinGit fallback
         ):
             if os.path.isfile(candidate):
                 return candidate
@@ -603,8 +615,18 @@ def _find_bash() -> str:
     # may return WSL's bash (which doesn't understand Windows paths and
     # will fail silently).  Explicit Git-for-Windows paths avoid that.
     for candidate in (
-        os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Git", "bin", "bash.exe"),
-        os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), "Git", "bin", "bash.exe"),
+        os.path.join(
+            os.environ.get("ProgramFiles", r"C:\Program Files"),
+            "Git",
+            "bin",
+            "bash.exe",
+        ),
+        os.path.join(
+            os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
+            "Git",
+            "bin",
+            "bash.exe",
+        ),
         os.path.join(_local_appdata, "Programs", "Git", "bin", "bash.exe"),
     ):
         if candidate and os.path.isfile(candidate):
@@ -856,7 +878,7 @@ def _make_run_env(env: dict) -> dict:
     run_env = {}
     for k, v in merged.items():
         if k.startswith(_HERCULES_PROVIDER_ENV_FORCE_PREFIX):
-            real_key = k[len(_HERCULES_PROVIDER_ENV_FORCE_PREFIX):]
+            real_key = k[len(_HERCULES_PROVIDER_ENV_FORCE_PREFIX) :]
             if _is_hercules_internal_secret(real_key):
                 continue
             run_env[real_key] = v
@@ -875,6 +897,7 @@ def _make_run_env(env: dict) -> dict:
     _inject_context_hercules_home(run_env)
 
     from hercules_constants import apply_subprocess_home_env
+
     apply_subprocess_home_env(run_env)
 
     # Bridge ContextVar-based session vars into the subprocess env (with the
@@ -1014,6 +1037,7 @@ class LocalEnvironment(BaseEnvironment):
             # the path so we can guarantee no spaces.
             try:
                 from hercules_constants import get_hercules_home
+
                 cache_dir = get_hercules_home() / "cache" / "terminal"
             except Exception:
                 cache_dir = Path(tempfile.gettempdir()) / "hercules_terminal"
@@ -1040,9 +1064,14 @@ class LocalEnvironment(BaseEnvironment):
         """Use native paths for Python, but Git Bash-friendly paths for cd."""
         return BaseEnvironment._quote_cwd_for_cd(_windows_to_msys_path(cwd))
 
-    def _run_bash(self, cmd_string: str, *, login: bool = False,
-                  timeout: int = 120,
-                  stdin_data: str | None = None) -> subprocess.Popen:
+    def _run_bash(
+        self,
+        cmd_string: str,
+        *,
+        login: bool = False,
+        timeout: int = 120,
+        stdin_data: str | None = None,
+    ) -> subprocess.Popen:
         bash = _find_bash()
         # For login-shell invocations (used by init_session to build the
         # environment snapshot), prepend sources for the user's bashrc /
@@ -1116,7 +1145,9 @@ class LocalEnvironment(BaseEnvironment):
         def _group_alive(pgid: int) -> bool:
             try:
                 # POSIX-only: _IS_WINDOWS is handled before this helper is used.
-                os.killpg(pgid, 0)  # windows-footgun: ok — POSIX process-group alive probe
+                os.killpg(
+                    pgid, 0
+                )  # windows-footgun: ok — POSIX process-group alive probe
                 return True
             except ProcessLookupError:
                 return False
@@ -1163,7 +1194,9 @@ class LocalEnvironment(BaseEnvironment):
                         raise
 
                 try:
-                    os.killpg(pgid, signal.SIGTERM)  # windows-footgun: ok — POSIX process-group SIGTERM (guarded by _IS_WINDOWS above)
+                    os.killpg(
+                        pgid, signal.SIGTERM
+                    )  # windows-footgun: ok — POSIX process-group SIGTERM (guarded by _IS_WINDOWS above)
                 except ProcessLookupError:
                     return
 
@@ -1175,7 +1208,9 @@ class LocalEnvironment(BaseEnvironment):
 
                 try:
                     # POSIX-only: _IS_WINDOWS is handled by the outer branch.
-                    os.killpg(pgid, signal.SIGKILL)  # windows-footgun: ok — POSIX process-group SIGKILL
+                    os.killpg(
+                        pgid, signal.SIGKILL
+                    )  # windows-footgun: ok — POSIX process-group SIGKILL
                 except ProcessLookupError:
                     return
                 _wait_for_group_exit(pgid, 2.0)
@@ -1252,6 +1287,7 @@ class LocalEnvironment(BaseEnvironment):
         # a failed/interrupted mv could have left behind (#38249).
         try:
             import glob
+
             for tmp in glob.glob(f"{self._snapshot_path}.tmp.*"):
                 try:
                     os.unlink(tmp)
