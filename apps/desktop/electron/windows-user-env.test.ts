@@ -6,7 +6,9 @@ import { expandWindowsEnvRefs, parseRegQueryValue, readWindowsUserEnvVar } from 
 // ── parseRegQueryValue ─────────────────────────────────────────────────────
 
 test('parseRegQueryValue extracts a REG_SZ value', () => {
-  const out = ['', 'HKEY_CURRENT_USER\\Environment', '    HERCULES_HOME    REG_SZ    F:\\Hercules\\data', ''].join('\r\n')
+  const out = ['', 'HKEY_CURRENT_USER\\Environment', '    HERCULES_HOME    REG_SZ    F:\\Hercules\\data', ''].join(
+    '\r\n'
+  )
   assert.equal(parseRegQueryValue(out, 'HERCULES_HOME'), 'F:\\Hercules\\data')
 })
 

@@ -35,7 +35,10 @@ vi.mock('@/hercules', async importOriginal => ({
 }))
 
 const RUNTIME_SESSION_ID = 'rt-new-001'
-type HarnessHandle = Pick<ReturnType<typeof useSessionActions>, 'createBackendSessionForSend' | 'startFreshSessionDraft'>
+type HarnessHandle = Pick<
+  ReturnType<typeof useSessionActions>,
+  'createBackendSessionForSend' | 'startFreshSessionDraft'
+>
 
 function storedSession(overrides: Partial<SessionInfo> = {}): SessionInfo {
   return {
@@ -670,5 +673,4 @@ describe('createBackendSessionForSend workspace target', () => {
 
     expect(params).toMatchObject({ cwd: '/clicked-workspace' })
   })
-
 })

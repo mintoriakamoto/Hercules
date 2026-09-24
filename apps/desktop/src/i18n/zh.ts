@@ -724,7 +724,8 @@ export const zh: Translations = {
       defaultConnection: '默认连接会用于所有没有自定义覆盖的 profile。',
       profileConnection: profile => `仅当“${profile}”是当前 profile 时使用此连接。设为本地即可继承默认连接。`,
       envOverrideTitle: '环境变量正在控制此桌面会话。',
-      envOverrideDesc: '取消设置 HERCULES_DESKTOP_REMOTE_URL 和 HERCULES_DESKTOP_REMOTE_TOKEN 后才会使用下面保存的设置。',
+      envOverrideDesc:
+        '取消设置 HERCULES_DESKTOP_REMOTE_URL 和 HERCULES_DESKTOP_REMOTE_TOKEN 后才会使用下面保存的设置。',
       modeTitle: '连接模式',
       localTitle: '本地网关',
       localDesc: '在 localhost 启动私有 Hercules 后端。这是默认方式，并且可离线工作。',

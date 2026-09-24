@@ -40,7 +40,10 @@ const statusFromLiveSession = (status?: string, running = false) => {
   return running || status === 'working' ? 'running…' : 'ready'
 }
 
-export const writeActiveSessionFile = (sessionId: null | string, file = process.env.HERCULES_TUI_ACTIVE_SESSION_FILE) => {
+export const writeActiveSessionFile = (
+  sessionId: null | string,
+  file = process.env.HERCULES_TUI_ACTIVE_SESSION_FILE
+) => {
   if (!file || !sessionId) {
     return
   }
@@ -378,7 +381,6 @@ export function useSessionLifecycle(opts: UseSessionLifecycleOptions) {
             if (previousSid && previousSid !== r.session_id) {
               void closeSession(previousSid)
             }
-
           })
           .catch((e: Error) => {
             sys(`error: ${e.message}`)

@@ -573,15 +573,7 @@ function buildPosixPinArgs({ installStamp, activeRoot, herculesHome, pinCommit =
   return args
 }
 
-async function fetchManifest({
-  scriptPath,
-  installerKind,
-  emit,
-  herculesHome,
-  activeRoot,
-  installStamp,
-  pinCommit
-}) {
+async function fetchManifest({ scriptPath, installerKind, emit, herculesHome, activeRoot, installStamp, pinCommit }) {
   const isPosix = installerKind === 'posix'
 
   const args = isPosix

@@ -2659,7 +2659,9 @@ async function handOffWindowsBootstrapRecovery(reason) {
   // --repair (full venv recreate) and drove reinstall loops. The venv interpreter
   // and the bootstrap-complete marker are present earlier and are better signals.
   const haveRealInstall =
-    fileExists(venvPython) || fileExists(venvHercules) || fileExists(path.join(updateRoot, '.hercules-bootstrap-complete'))
+    fileExists(venvPython) ||
+    fileExists(venvHercules) ||
+    fileExists(path.join(updateRoot, '.hercules-bootstrap-complete'))
 
   const updaterArgs = haveRealInstall ? ['--update', '--branch', branch] : ['--repair', '--branch', branch]
 
@@ -3360,7 +3362,8 @@ function createActiveBackend(backendArgs) {
 function resolveHerculesBackend(backendArgs) {
   // 1. Explicit override -- HERCULES_DESKTOP_HERCULES_ROOT points at a developer
   //    checkout. Honour it as-is (no bootstrap; the user is driving).
-  const overrideRoot = process.env.HERCULES_DESKTOP_HERCULES_ROOT && path.resolve(process.env.HERCULES_DESKTOP_HERCULES_ROOT)
+  const overrideRoot =
+    process.env.HERCULES_DESKTOP_HERCULES_ROOT && path.resolve(process.env.HERCULES_DESKTOP_HERCULES_ROOT)
 
   if (overrideRoot && isHerculesSourceRoot(overrideRoot)) {
     const backend = createPythonBackend(overrideRoot, `Hercules source at ${overrideRoot}`, backendArgs)
@@ -5598,7 +5601,9 @@ async function discoverCloudAgents(org?: string) {
     // A 401 means the portal session lapsed between the liveness check and the
     // call — surface it as a re-login, not a generic failure.
     if (error && error.statusCode === 401) {
-      const err = new Error('Your Hercules Cloud session has expired. Open Settings → Gateway and sign in again.') as any
+      const err = new Error(
+        'Your Hercules Cloud session has expired. Open Settings → Gateway and sign in again.'
+      ) as any
       err.needsCloudLogin = true
       err.cause = error
       throw err
@@ -7979,7 +7984,10 @@ ipcMain.handle('hercules:notify', (_event, payload) => {
     const action = actions[index]
 
     if (action?.id) {
-      mainWindow.webContents.send('hercules:notification-action', { sessionId: payload?.sessionId, actionId: action.id })
+      mainWindow.webContents.send('hercules:notification-action', {
+        sessionId: payload?.sessionId,
+        actionId: action.id
+      })
     }
   })
   notification.show()
@@ -8940,7 +8948,9 @@ ipcMain.handle('hercules:uninstall:run', async (_event, payload) => {
 ipcMain.handle('hercules:vscode-theme:fetch', async (_event, id) => fetchMarketplaceThemes(String(id || '')))
 
 // Search the Marketplace for color-theme extensions (empty query = top installs).
-ipcMain.handle('hercules:vscode-theme:search', async (_event, query) => searchMarketplaceThemes(String(query || ''), 20))
+ipcMain.handle('hercules:vscode-theme:search', async (_event, query) =>
+  searchMarketplaceThemes(String(query || ''), 20)
+)
 
 // ---------------------------------------------------------------------------
 // hercules:// deep links (e.g. hercules://blueprint/morning-brief?time=08:00).

@@ -95,13 +95,18 @@ test('resolveRemovableAppPath returns null for an unrecognized Windows dir', () 
 
 test('resolveRemovableAppPath uses APPIMAGE on Linux when set', () => {
   assert.equal(
-    resolveRemovableAppPath('/tmp/.mount_HerculesXXXX/hercules', 'linux', { APPIMAGE: '/home/x/Apps/Hercules.AppImage' }),
+    resolveRemovableAppPath('/tmp/.mount_HerculesXXXX/hercules', 'linux', {
+      APPIMAGE: '/home/x/Apps/Hercules.AppImage'
+    }),
     '/home/x/Apps/Hercules.AppImage'
   )
 })
 
 test('resolveRemovableAppPath finds the unpacked dir on Linux', () => {
-  assert.equal(resolveRemovableAppPath('/opt/hercules/linux-unpacked/hercules', 'linux', {}), '/opt/hercules/linux-unpacked')
+  assert.equal(
+    resolveRemovableAppPath('/opt/hercules/linux-unpacked/hercules', 'linux', {}),
+    '/opt/hercules/linux-unpacked'
+  )
   // A system-package install (/usr/bin) → null, left to apt/dnf.
   assert.equal(resolveRemovableAppPath('/usr/bin/hercules', 'linux', {}), null)
 })

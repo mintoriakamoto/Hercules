@@ -73,7 +73,9 @@ test('normalizeHerculesHomeRoot maps profile homes back to the global Hercules r
     '/Users/test/.hercules'
   )
   assert.equal(
-    normalizeHerculesHomeRoot('C:\\Users\\test\\AppData\\Local\\hercules\\profiles\\oracle', { pathModule: path.win32 }),
+    normalizeHerculesHomeRoot('C:\\Users\\test\\AppData\\Local\\hercules\\profiles\\oracle', {
+      pathModule: path.win32
+    }),
     'C:\\Users\\test\\AppData\\Local\\hercules'
   )
   assert.equal(normalizeHerculesHomeRoot('/Users/test/.hercules', { pathModule: path.posix }), '/Users/test/.hercules')

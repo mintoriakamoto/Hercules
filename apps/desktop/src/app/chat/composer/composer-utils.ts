@@ -79,7 +79,5 @@ export function isPendingDraftPersistCurrent(
   pending: PendingDraftPersist | null,
   expected: PendingDraftPersist | null
 ): boolean {
-  return (
-    pending !== null && expected !== null && pending.scope === expected.scope && pending.text === expected.text
-  )
+  return pending !== null && expected !== null && pending.scope === expected.scope && pending.text === expected.text
 }
