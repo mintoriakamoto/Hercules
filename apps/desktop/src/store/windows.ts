@@ -102,7 +102,10 @@ export async function openSessionInNewWindow(sessionId: string, opts?: { watch?:
     return
   }
 
-  await openWindow(() => window.herculesDesktop.openSessionWindow(sessionId, opts), 'Could not open chat in a new window')
+  await openWindow(
+    () => window.herculesDesktop.openSessionWindow(sessionId, opts),
+    'Could not open chat in a new window'
+  )
 }
 
 // Open a fresh compact window on the new-session draft.

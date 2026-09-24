@@ -1120,7 +1120,13 @@ export function installMcpCatalogEntry(
   name: string,
   env: Record<string, string> = {}
 ): Promise<{ ok: boolean; name?: string; pid?: number; action?: string; background?: boolean }> {
-  return window.herculesDesktop.api<{ ok: boolean; name?: string; pid?: number; action?: string; background?: boolean }>({
+  return window.herculesDesktop.api<{
+    ok: boolean
+    name?: string
+    pid?: number
+    action?: string
+    background?: boolean
+  }>({
     ...profileScoped(),
     path: '/api/mcp/catalog/install',
     method: 'POST',

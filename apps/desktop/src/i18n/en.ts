@@ -540,8 +540,7 @@ export const en: Translations = {
       localDesc: 'Start a private Hercules backend on localhost. This is the default and works offline.',
       remoteTitle: 'Remote gateway',
       remoteDesc: 'Connect this desktop shell to a remote Hercules backend.',
-      remoteAuthHint:
-        'Hosted gateways use OAuth or a username and password; self-hosted ones may use a session token.',
+      remoteAuthHint: 'Hosted gateways use OAuth or a username and password; self-hosted ones may use a session token.',
       cloudTitle: 'Hercules Cloud',
       cloudDesc: 'Sign in once to Hercules Cloud and pick from the agents on your account — no URL to paste.',
       cloudSignInTitle: 'Hercules Cloud',
@@ -1861,7 +1860,8 @@ export const en: Translations = {
     maybeLater: 'Maybe later',
     moreChanges: count => `+ ${count} more change${count === 1 ? '' : 's'} included.`,
     manualTitle: 'Update from your terminal',
-    manualBody: 'You installed Hercules from the command line, so updates run there too. Paste this into your terminal:',
+    manualBody:
+      'You installed Hercules from the command line, so updates run there too. Paste this into your terminal:',
     manualPickedUp: 'Hercules will pick up the new version next time you launch it.',
     guiSkewTitle: 'Update the desktop app',
     guiSkewBody:
@@ -1954,7 +1954,8 @@ export const en: Translations = {
       xai: { short: 'Grok models', description: 'Direct access to xAI Grok models.' },
       local: {
         short: 'self-hosted',
-        description: 'Point Hercules at a local or self-hosted OpenAI-compatible endpoint (vLLM, llama.cpp, Ollama, etc).'
+        description:
+          'Point Hercules at a local or self-hosted OpenAI-compatible endpoint (vLLM, llama.cpp, Ollama, etc).'
       }
     },
     backToSignIn: 'Back to sign in',

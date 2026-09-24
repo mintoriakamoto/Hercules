@@ -34,7 +34,12 @@ const profile = (name: string, isDefault = false): ProfileInfo => ({
 })
 
 const remoteConn = (over: Partial<HerculesConnection> = {}): HerculesConnection =>
-  ({ baseUrl: 'https://hercules-roy.tail.ts.net', mode: 'remote', profile: 'vps-remote', ...over }) as HerculesConnection
+  ({
+    baseUrl: 'https://hercules-roy.tail.ts.net',
+    mode: 'remote',
+    profile: 'vps-remote',
+    ...over
+  }) as HerculesConnection
 
 const localConn = (over: Partial<HerculesConnection> = {}): HerculesConnection =>
   ({ baseUrl: '', mode: 'local', profile: 'default', ...over }) as HerculesConnection
