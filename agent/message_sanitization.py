@@ -34,6 +34,10 @@ def _sanitize_surrogates(text: str) -> str:
     Surrogates are invalid in UTF-8 and will crash ``json.dumps()`` inside the
     OpenAI SDK.  This is a fast no-op when the text contains no surrogates.
     """
+    # ``str.isascii`` is an O(1) flag check and surrogates are never ASCII, so
+    # the regex scan only runs for the (rare) non-ASCII leaf.
+    if text.isascii():
+        return text
     if _SURROGATE_RE.search(text):
         return _SURROGATE_RE.sub("\ufffd", text)
     return text
@@ -322,6 +326,8 @@ def _strip_non_ascii(text: str) -> str:
     Used as a last resort when the system encoding is ASCII and can't handle
     any non-ASCII characters (e.g. LANG=C on Chromebooks).
     """
+    if text.isascii():
+        return text
     return text.encode("ascii", errors="ignore").decode("ascii")
 
 
