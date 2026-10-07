@@ -201,10 +201,64 @@ def _extract_text_from_slack_blocks(blocks: list) -> str:
                     _append_line(rendered, quote_depth=quote_depth, bullet=bullet)
 
     for block in blocks:
-        if (block or {}).get("type") == "rich_text":
+        block_type = (block or {}).get("type")
+        if block_type == "rich_text":
             _walk_elements(block.get("elements", []))
+        elif block_type == "table":
+            table_text = _render_slack_table_block(block)
+            if table_text:
+                parts.append(table_text)
 
     return "\n".join(parts)
+
+
+#: Cap on one rendered pasted table; Slack lets a user paste arbitrarily large
+#: spreadsheets, and 20k chars stays well under Slack's own 40k message ceiling.
+_SLACK_TABLE_MAX_CHARS = 20_000
+
+
+def _collect_slack_table_cell_text(value: Any) -> str:
+    """Collect every ``text`` leaf in a table cell's raw/rich-text subtree."""
+    parts: list[str] = []
+
+    def _visit(node: Any) -> None:
+        if isinstance(node, list):
+            for item in node:
+                _visit(item)
+            return
+        if not isinstance(node, dict):
+            return
+        text = node.get("text")
+        if isinstance(text, str):
+            parts.append(text)
+        for child in node.values():
+            _visit(child)
+
+    _visit(value)
+    return " ".join(p for p in parts if p).strip()
+
+
+def _render_slack_table_block(block: dict, max_chars: int = _SLACK_TABLE_MAX_CHARS) -> str:
+    """Render a Slack ``table`` block as ``cell | cell`` lines.
+
+    A pasted table arrives as a ``table`` block (top-level or nested in
+    ``attachments[].blocks[]``) and appears in neither ``text`` nor the file
+    list, so without this the agent only sees the sentence before it.
+    """
+    rows = block.get("rows") if isinstance(block, dict) else None
+    if not isinstance(rows, list):
+        return ""
+    lines: list[str] = []
+    for row in rows:
+        if not isinstance(row, list):
+            continue
+        rendered = " | ".join(_collect_slack_table_cell_text(cell) for cell in row)
+        if rendered.strip(" |"):
+            lines.append(rendered)
+    text = "\n".join(lines)
+    if len(text) > max_chars:
+        text = text[: max_chars - 20].rstrip() + "\n[table truncated]"
+    return text
 
 
 def _serialize_slack_blocks_for_agent(blocks: list, max_chars: int = 6000) -> str:
@@ -212,6 +266,9 @@ def _serialize_slack_blocks_for_agent(blocks: list, max_chars: int = 6000) -> st
     if not blocks:
         return ""
 
+    # table blocks are rendered by _render_slack_table_block; the allowlist
+    # drops ``rows``, so dumping one here would only emit an empty husk.
+    blocks = [b for b in blocks if (b or {}).get("type") != "table"]
     if all((block or {}).get("type") == "rich_text" for block in blocks):
         return ""
 
@@ -2722,6 +2779,11 @@ class SlackAdapter(BasePlatformAdapter):
                     body = body.strip()
                     if len(body) > 500:
                         body = body[:497] + "..."
+                # Pasted tables live in ``attachments[].blocks[]``, absent from
+                # text/fallback/files.
+                nested_text = _extract_text_from_slack_blocks(att.get("blocks") or [])
+                if nested_text and nested_text not in body:
+                    body = f"{body}\n{nested_text}".strip() if body else nested_text
 
                 if header and body:
                     section = f"{header}\n   {body}"
