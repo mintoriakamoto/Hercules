@@ -186,6 +186,35 @@ def _escape_invalid_chars_in_json_strings(raw: str) -> str:
     return "".join(out)
 
 
+def _scan_json_stack(raw: str) -> list[str] | None:
+    """Open brace/bracket stack of a JSON prefix, ignoring delimiters inside
+    string values (``{"code": "}"}`` keeps one open brace). ``None`` when the
+    text ends inside an unterminated string: closing brackets then cannot
+    produce valid JSON, and closing the string would fabricate a value.
+    """
+    stack: list[str] = []
+    in_string = False
+    i, n = 0, len(raw)
+    while i < n:
+        ch = raw[i]
+        if in_string:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+        elif ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            expected = "{" if ch == "}" else "["
+            if stack and stack[-1] == expected:
+                stack.pop()
+        i += 1
+    return None if in_string else stack
+
+
 def _repair_tool_call_arguments(raw_args: str, tool_name: str = "?") -> str:
     """Attempt to repair malformed tool_call argument JSON.
 
@@ -228,13 +257,11 @@ def _repair_tool_call_arguments(raw_args: str, tool_name: str = "?") -> str:
     fixed = raw_stripped
     # 1. Strip trailing commas before } or ]
     fixed = re.sub(r",\s*([}\]])", r"\1", fixed)
-    # 2. Close unclosed structures
-    open_curly = fixed.count("{") - fixed.count("}")
-    open_bracket = fixed.count("[") - fixed.count("]")
-    if open_curly > 0:
-        fixed += "}" * open_curly
-    if open_bracket > 0:
-        fixed += "]" * open_bracket
+    # 2. Close unclosed structures. String-aware, and closers go in stack
+    # order: {"items": [{"n": 1}, {"n": 2 needs "}]}", not "}}" + "]".
+    stack = _scan_json_stack(fixed)
+    if stack:
+        fixed += "".join("}" if ch == "{" else "]" for ch in reversed(stack))
     # 3. Remove excess closing braces/brackets (bounded to 50 iterations)
     for _ in range(50):
         try:
