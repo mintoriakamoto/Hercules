@@ -34,14 +34,12 @@ def _table(rows) -> dict:
 
 
 def test_render_handles_raw_rich_ragged_and_malformed_cells():
-    block = _table(
-        [
-            [_raw("Name"), _rich("Status")],
-            "not-a-row",
-            [_raw(""), None],
-            [_raw("Hercules"), _rich("ok"), {"type": "mystery"}],
-        ]
-    )
+    block = _table([
+        [_raw("Name"), _rich("Status")],
+        "not-a-row",
+        [_raw(""), None],
+        [_raw("Hercules"), _rich("ok"), {"type": "mystery"}],
+    ])
     assert _render_slack_table_block(block) == "Name | Status\nHercules | ok | "
     assert _render_slack_table_block({"type": "table"}) == ""
     assert _render_slack_table_block({"type": "table", "rows": "bad"}) == ""

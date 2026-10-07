@@ -238,7 +238,9 @@ def _collect_slack_table_cell_text(value: Any) -> str:
     return " ".join(p for p in parts if p).strip()
 
 
-def _render_slack_table_block(block: dict, max_chars: int = _SLACK_TABLE_MAX_CHARS) -> str:
+def _render_slack_table_block(
+    block: dict, max_chars: int = _SLACK_TABLE_MAX_CHARS
+) -> str:
     """Render a Slack ``table`` block as ``cell | cell`` lines.
 
     A pasted table arrives as a ``table`` block (top-level or nested in

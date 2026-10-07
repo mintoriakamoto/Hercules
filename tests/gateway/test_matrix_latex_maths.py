@@ -9,7 +9,10 @@ def _adapter() -> MatrixAdapter:
         PlatformConfig(
             enabled=True,
             token="syt_test_token",
-            extra={"homeserver": "https://matrix.example.org", "user_id": "@bot:example.org"},
+            extra={
+                "homeserver": "https://matrix.example.org",
+                "user_id": "@bot:example.org",
+            },
         )
     )
 
@@ -18,7 +21,8 @@ def test_inline_and_display_math_survive_sanitizer_with_escaped_tex():
     html = _adapter()._markdown_to_html("Wave: $a<b$ and $$\\hat{H}\\Psi = E\\Psi$$")
     assert '<span data-mx-maths="a&lt;b">a&lt;b</span>' in html
     assert (
-        '<div data-mx-maths="\\hat{H}\\Psi = E\\Psi">\\hat{H}\\Psi = E\\Psi</div>' in html
+        '<div data-mx-maths="\\hat{H}\\Psi = E\\Psi">\\hat{H}\\Psi = E\\Psi</div>'
+        in html
     )
     assert "$" not in html
 

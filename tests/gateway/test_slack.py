@@ -1690,8 +1690,14 @@ class TestIncomingDocumentHandling:
                         {
                             "type": "table",
                             "rows": [
-                                [{"type": "raw_text", "text": "Item"}, {"type": "raw_text", "text": "Qty"}],
-                                [{"type": "raw_text", "text": "Apples"}, {"type": "raw_text", "text": "3"}],
+                                [
+                                    {"type": "raw_text", "text": "Item"},
+                                    {"type": "raw_text", "text": "Qty"},
+                                ],
+                                [
+                                    {"type": "raw_text", "text": "Apples"},
+                                    {"type": "raw_text", "text": "3"},
+                                ],
                             ],
                         }
                     ]
@@ -1707,13 +1713,20 @@ class TestIncomingDocumentHandling:
         assert "Apples | 3" in msg_event.text
 
     @pytest.mark.asyncio
-    async def test_top_level_pasted_table_reaches_agent_without_json_husk(self, adapter):
+    async def test_top_level_pasted_table_reaches_agent_without_json_husk(
+        self, adapter
+    ):
         event = self._make_event(
             text="intro sentence",
             blocks=[
                 {
                     "type": "table",
-                    "rows": [[{"type": "raw_text", "text": "col1"}, {"type": "raw_text", "text": "col2"}]],
+                    "rows": [
+                        [
+                            {"type": "raw_text", "text": "col1"},
+                            {"type": "raw_text", "text": "col2"},
+                        ]
+                    ],
                 }
             ],
         )

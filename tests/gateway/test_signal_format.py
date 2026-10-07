@@ -460,7 +460,8 @@ class TestTableRealignment:
         assert len(rows) == 4
         pipe_offsets = [i for i, ch in enumerate(rows[0]) if ch == "|"]
         assert all(
-            [i for i, ch in enumerate(row) if ch == "|"] == pipe_offsets for row in rows[1:]
+            [i for i, ch in enumerate(row) if ch == "|"] == pipe_offsets
+            for row in rows[1:]
         )
 
     def test_non_table_pipes_left_alone(self):
