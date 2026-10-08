@@ -61,10 +61,7 @@ jobs:
           build-args: |
             HERCULES_GIT_SHA=${{ github.sha }}
           cache-from: ${{ matrix.cache-from }}
-          # Always write cache: PR builds benefit from cross-run caching, and
-          # main builds push to the persistent scope for future PRs. PR cache
-          # retention is shorter to avoid storage quota exhaustion.
-          cache-to: ${{ github.event_name == 'pull_request' && format('type=gha,mode=max,scope=docker-{0}-pr', matrix.arch) || matrix.cache-to }}
+          cache-to: ${{ (github.event_name != 'pull_request') && matrix.cache-to || '' }}
 
       - name: Log in to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'release'
