@@ -4309,6 +4309,36 @@ def run_conversation(
                         compression_attempts = 0
                         _retry.primary_recovery_attempted = False
                         continue
+                    # Fallback first (above). With nothing left to move to, a
+                    # transient outage parks the turn on a bounded auto-recovery
+                    # ladder instead of ending it.
+                    from agent.turn_recovery_autorecover import (
+                        interrupted_result as _ladder_interrupted,
+                        next_recovery_wait as _ladder_wait,
+                        wait_interruptibly as _ladder_sleep,
+                    )
+
+                    _ladder_wait_s = _ladder_wait(agent, api_error, classified, _retry)
+                    if _ladder_wait_s is not None:
+                        agent._flush_status_buffer()
+                        _ladder_cycle = (
+                            f"cycle {_retry.auto_recovery_cycles_used}/"
+                            f"{agent._auto_recovery_cycles}"
+                        )
+                        if _ladder_sleep(
+                            agent,
+                            _ladder_wait_s,
+                            f"auto-recovery wait ({_ladder_cycle})",
+                        ):
+                            return _ladder_interrupted(
+                                agent,
+                                messages,
+                                conversation_history,
+                                api_call_count,
+                                _ladder_cycle,
+                            )
+                        retry_count = 0
+                        continue
                     # Terminal — flush buffered retry/fallback trace.
                     agent._flush_status_buffer()
                     _final_summary = agent._summarize_api_error(api_error)
