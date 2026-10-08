@@ -1,54 +1,79 @@
-# Automatically label PRs based on files changed
-# Uses actions/labeler@v4 format
+# Automatically label PRs based on files changed (actions/labeler v5+ format)
 
 'type: bugfix':
-  - tools/approval.py
-  - tools/delegate_tool.py
-  - tools/registry.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tools/approval.py'
+          - 'tools/delegate_tool.py'
+          - 'tools/registry.py'
 
 'type: security':
-  - tools/approval.py
-  - tools/delegate_tool.py
-  - tools/registry.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tools/approval.py'
+          - 'tools/delegate_tool.py'
+          - 'tools/registry.py'
 
 'area: approval':
-  - tools/approval.py
-  - tools/terminal_tool.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tools/approval.py'
+          - 'tools/terminal_tool.py'
 
 'area: delegation':
-  - tools/delegate_tool.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tools/delegate_tool.py'
 
 'area: registry':
-  - tools/registry.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tools/registry.py'
 
 'area: skills':
-  - tools/skills*.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tools/skills*.py'
 
 'area: gateway':
-  - gateway/**/*
-  - tui_gateway/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'gateway/**/*'
+          - 'tui_gateway/**/*'
 
 'area: agent':
-  - agent/**/*
-  - run_agent.py
-  - tools/memory_tool.py
-  - tools/url_safety.py
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'agent/**/*'
+          - 'run_agent.py'
+          - 'tools/memory_tool.py'
+          - 'tools/url_safety.py'
 
 'area: cli':
-  - hercules_cli/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'hercules_cli/**/*'
 
 'area: docs':
-  - CLAUDE.md
-  - README.md
-  - '**/*.md'
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'CLAUDE.md'
+          - 'README.md'
+          - '**/*.md'
 
 'area: tests':
-  - tests/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/**/*'
 
 'area: cron':
-  - cron/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'cron/**/*'
 
 'area: config':
-  - '**/*.yaml'
-  - '**/*.yml'
-  - config/**/*
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.yaml'
+          - '**/*.yml'
+          - 'config/**/*'
