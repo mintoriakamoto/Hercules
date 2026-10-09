@@ -1,424 +1,311 @@
-"""Tool for managing self-improvement of agent skills via CORAL system."""
+"""Callback factories for bridging AIAgent events to ACP notifications.
 
-from __future__ import annotations
+Each factory returns a callable with the signature that AIAgent expects
+for its callbacks. Internally, the callbacks push ACP session updates
+to the client via ``conn.session_update()`` using
+``asyncio.run_coroutine_threadsafe()`` (since AIAgent runs in a worker
+thread while the event loop lives on the main thread).
+"""
 
-from typing import Any, Dict, Optional
+import asyncio
+import json
+import logging
+from collections import deque
+from typing import Any, Callable, Deque, Dict
 
-from agent.self_improvement_coral import (
-    get_improvement_engine,
-    ImprovementType,
+import acp
+from acp.schema import AgentPlanUpdate, PlanEntry
+
+from .tools import (
+    build_tool_complete,
+    build_tool_start,
+    make_tool_call_id,
 )
 
-
-def analyze_skill_performance(skill_name: str) -> Dict[str, Any]:
-    """Analyze performance of a specific skill.
-
-    Args:
-        skill_name: Name of the skill to analyze
-
-    Returns:
-        Dictionary with:
-        - skill_name: The analyzed skill
-        - success_rate: Recent success rate (0.0-1.0)
-        - avg_latency_ms: Average execution time
-        - total_runs: Total executions tracked
-        - improvement_potential: Estimated improvement opportunity
-        - recommendation: Suggested next action
-
-    Examples:
-        analyze_skill_performance("read_file")
-        analyze_skill_performance("web_search")
-    """
-    engine = get_improvement_engine()
-    metrics = engine.analyze_performance(skill_name)
-
-    if not metrics:
-        return {
-            "skill_name": skill_name,
-            "error": "No performance data available yet",
-            "recommendation": "Execute the skill several times to build performance baseline",
-        }
-
-    profile = engine._load_or_create_profile(skill_name)
-    improvement_potential = 1.0 - metrics.success_rate
-
-    return {
-        "skill_name": skill_name,
-        "success_rate": round(metrics.success_rate, 3),
-        "avg_latency_ms": round(metrics.avg_latency_ms, 2),
-        "total_runs": profile.total_runs,
-        "improvement_potential": round(improvement_potential, 3),
-        "recommendation": _get_recommendation(
-            metrics.success_rate, improvement_potential
-        ),
-    }
+logger = logging.getLogger(__name__)
 
 
-def propose_skill_improvement(
-    skill_name: str,
-    improvement_type: str = "performance",
-    description: str = "",
-    expected_improvement: float = 1.1,
-) -> Dict[str, Any]:
-    """Propose an improvement to a skill.
+def _json_loads_maybe_prefix(value: str) -> Any | None:
+    """Parse a JSON object even when Hercules appended a human hint after it."""
+    if not isinstance(value, str):
+        return None
 
-    Args:
-        skill_name: Skill to improve
-        improvement_type: Type of improvement (performance, generalization, efficiency, reliability, maintainability)
-        description: Description of the proposed improvement
-        expected_improvement: Expected improvement ratio (e.g., 1.2 = 20% improvement)
-
-    Returns:
-        Dictionary with:
-        - skill_name: The skill
-        - version: New version number
-        - improvement_type: Category of improvement
-        - description: The proposed change
-        - confidence: Confidence level in the improvement
-        - status: Whether proposal was accepted
-
-    Examples:
-        propose_skill_improvement("read_file", "efficiency", "Add caching for repeated reads", 1.15)
-        propose_skill_improvement("web_search", "reliability", "Add retry logic for timeouts")
-    """
-    engine = get_improvement_engine()
+    text = value.strip()
+    if not text:
+        return None
 
     try:
-        imp_type = ImprovementType[improvement_type.upper()]
-    except KeyError:
-        return {
-            "error": f"Invalid improvement_type. Must be one of: {', '.join(t.value for t in ImprovementType)}",
-            "skill_name": skill_name,
-        }
+        return json.loads(text)
+    except json.JSONDecodeError:
+        try:
+            decoder = json.JSONDecoder()
+            data, _ = decoder.raw_decode(text)
+            return data
+        except ValueError:
+            return None
 
-    improvement = engine.propose_improvement(
-        skill_name=skill_name,
-        improvement_type=imp_type,
-        description=description or f"Proposed {improvement_type} improvement",
-        expected_ratio=expected_improvement,
-        confidence=0.7,
+
+def _build_plan_update_from_todo_result(result: Any) -> AgentPlanUpdate | None:
+    """Translate Hercules' todo tool result into ACP's native plan update.
+
+    Zed renders ``sessionUpdate: plan`` as its first-class task/todo panel. The
+    Hercules agent already maintains task state through the ``todo`` tool, so the
+    ACP adapter should expose that state natively instead of only as a generic
+    tool-call transcript block.
+    """
+    if not isinstance(result, str) or not result.strip():
+        return None
+
+    try:
+        data = _json_loads_maybe_prefix(result)
+    except (TypeError, ValueError):
+        return None
+
+    if not isinstance(data, dict) or not isinstance(data.get("todos"), list):
+        return None
+
+    todos = data["todos"]
+    if not todos:
+        return AgentPlanUpdate(session_update="plan", entries=[])
+
+    status_map = {
+        "pending": "pending",
+        "in_progress": "in_progress",
+        "completed": "completed",
+        # ACP plans only support pending/in_progress/completed. Preserve
+        # cancelled tasks as terminal entries instead of dropping them and
+        # making the client's full-list replacement lose visible context.
+        "cancelled": "completed",
+    }
+    entries: list[PlanEntry] = []
+    for item in todos:
+        if not isinstance(item, dict):
+            continue
+        content = str(item.get("content") or item.get("id") or "").strip()
+        if not content:
+            continue
+        raw_status = str(item.get("status") or "pending").strip()
+        status = status_map.get(raw_status, "pending")
+        if raw_status == "cancelled":
+            content = f"[cancelled] {content}"
+        entries.append(PlanEntry(content=content, priority="medium", status=status))
+
+    return AgentPlanUpdate(session_update="plan", entries=entries)
+
+
+def _send_update(
+    conn: acp.Client,
+    session_id: str,
+    loop: asyncio.AbstractEventLoop,
+    update: Any,
+) -> None:
+    """Fire-and-forget an ACP session update from a worker thread."""
+    from agent.async_utils import safe_schedule_threadsafe
+
+    future = safe_schedule_threadsafe(
+        conn.session_update(session_id, update),
+        loop,
+        logger=logger,
+        log_message="Failed to send ACP update",
     )
-
-    if not improvement:
-        return {
-            "skill_name": skill_name,
-            "error": "Cannot propose improvement without performance baseline",
-            "recommendation": "Execute the skill several times first",
-        }
-
-    return {
-        "skill_name": improvement.skill_name,
-        "version": improvement.version,
-        "improvement_type": improvement.improvement_type.value,
-        "description": improvement.description,
-        "expected_improvement_ratio": improvement.improvement_ratio,
-        "confidence": round(improvement.confidence, 2),
-        "status": "proposed",
-    }
+    if future is None:
+        return
+    try:
+        future.result(timeout=5)
+    except (TimeoutError, RuntimeError, OSError):
+        logger.debug("Failed to send ACP update", exc_info=True)
 
 
-def apply_skill_improvement(skill_name: str, version: str) -> Dict[str, Any]:
-    """Apply a proposed improvement to a skill.
+# ------------------------------------------------------------------
+# Tool progress callback
+# ------------------------------------------------------------------
 
-    Args:
-        skill_name: Skill to improve
-        version: Version of the improvement to apply
 
-    Returns:
-        Dictionary with:
-        - skill_name: The skill
-        - version: Applied version
-        - status: Whether application was successful
+def make_tool_progress_cb(
+    conn: acp.Client,
+    session_id: str,
+    loop: asyncio.AbstractEventLoop,
+    tool_call_ids: Dict[str, Deque[str]],
+    tool_call_meta: Dict[str, Dict[str, Any]],
+    edit_approval_policy_getter: Callable[[], tuple[str, str | None]] | None = None,
+) -> Callable:
+    """Create a ``tool_progress_callback`` for AIAgent.
 
-    Examples:
-        apply_skill_improvement("read_file", "1.1")
+    Signature expected by AIAgent::
+
+        tool_progress_callback(event_type: str, name: str, preview: str, args: dict, **kwargs)
+
+    Emits ``ToolCallStart`` for ``tool.started`` events and tracks IDs in a FIFO
+    queue per tool name so duplicate/parallel same-name calls still complete
+    against the correct ACP tool call. Other event types (``tool.completed``,
+    ``reasoning.available``) are silently ignored.
     """
-    engine = get_improvement_engine()
-    profile = engine._load_or_create_profile(skill_name)
 
-    # Find improvement with matching version
-    improvement = None
-    for imp in profile.improvements:
-        if imp.version == version:
-            improvement = imp
-            break
+    def _tool_progress(
+        event_type: str,
+        name: str | None = None,
+        preview: str | None = None,
+        args: Any = None,
+        **kwargs,
+    ) -> None:
+        if event_type != "tool.started":
+            return
+        if isinstance(args, str):
+            try:
+                args = json.loads(args)
+            except (json.JSONDecodeError, TypeError):
+                args = {"raw": args}
+        if not isinstance(args, dict):
+            args = {}
 
-    if not improvement:
-        return {
-            "skill_name": skill_name,
-            "error": f"Improvement version {version} not found",
-        }
+        tc_id = make_tool_call_id()
+        queue = tool_call_ids.get(name or "")
+        if queue is None:
+            queue = deque()
+            if name is not None:
+                tool_call_ids[name] = queue
+        elif isinstance(queue, str):
+            queue = deque([queue])
+            if name is not None:
+                tool_call_ids[name] = queue
+        if name is not None:
+            queue.append(tc_id)
+            tool_call_ids[name] = queue
 
-    success = engine.apply_improvement(skill_name, improvement)
+        snapshot = None
+        if name in {"write_file", "patch", "skill_manage"}:
+            try:
+                from agent.display import capture_local_edit_snapshot
 
-    return {
-        "skill_name": skill_name,
-        "version": improvement.version,
-        "description": improvement.description,
-        "status": "applied" if success else "failed",
-    }
+                snapshot = capture_local_edit_snapshot(name, args)
+            except Exception:
+                logger.debug(
+                    "Failed to capture ACP edit snapshot for %s", name, exc_info=True
+                )
+        tool_call_meta[tc_id] = {"args": args, "snapshot": snapshot}
+
+        edit_diff = None
+        if name in {"write_file", "patch"} and edit_approval_policy_getter is not None:
+            try:
+                from acp_adapter.edit_approval import (
+                    build_edit_proposal,
+                    should_auto_approve_edit,
+                )
+
+                proposal = build_edit_proposal(name, args)
+                if proposal is not None:
+                    policy, cwd = edit_approval_policy_getter()
+                    if should_auto_approve_edit(proposal, policy, cwd):
+                        edit_diff = proposal
+            except Exception:
+                logger.debug(
+                    "Failed to prepare auto-approved ACP edit diff for %s",
+                    name,
+                    exc_info=True,
+                )
+
+        update = build_tool_start(tc_id, name, args, edit_diff=edit_diff)
+        _send_update(conn, session_id, loop, update)
+
+    return _tool_progress
 
 
-def record_skill_execution(
-    skill_name: str,
-    success: bool,
-    latency_ms: float = 0.0,
-    context: Optional[Dict[str, str]] = None,
-) -> Dict[str, Any]:
-    """Record execution of a skill for performance tracking.
+# ------------------------------------------------------------------
+# Thinking callback
+# ------------------------------------------------------------------
 
-    Args:
-        skill_name: Name of the executed skill
-        success: Whether execution succeeded
-        latency_ms: Execution time in milliseconds
-        context: Additional context (e.g., complexity level, data type)
 
-    Returns:
-        Dictionary with:
-        - skill_name: The skill
-        - recorded: Whether execution was recorded
-        - total_runs: Total runs of this skill
+def make_thinking_cb(
+    conn: acp.Client,
+    session_id: str,
+    loop: asyncio.AbstractEventLoop,
+) -> Callable:
+    """Create a ``thinking_callback`` for AIAgent."""
 
-    Examples:
-        record_skill_execution("read_file", True, 45.2, {"file_size": "large"})
-        record_skill_execution("web_search", success=True, latency_ms=1200)
+    def _thinking(text: str) -> None:
+        if not text:
+            return
+        update = acp.update_agent_thought_text(text)
+        _send_update(conn, session_id, loop, update)
+
+    return _thinking
+
+
+# ------------------------------------------------------------------
+# Step callback
+# ------------------------------------------------------------------
+
+
+def make_step_cb(
+    conn: acp.Client,
+    session_id: str,
+    loop: asyncio.AbstractEventLoop,
+    tool_call_ids: Dict[str, Deque[str]],
+    tool_call_meta: Dict[str, Dict[str, Any]],
+) -> Callable:
+    """Create a ``step_callback`` for AIAgent.
+
+    Signature expected by AIAgent::
+
+        step_callback(api_call_count: int, prev_tools: list)
     """
-    engine = get_improvement_engine()
-    engine.record_execution(
-        skill_name=skill_name,
-        success=success,
-        latency_ms=latency_ms,
-        context=context or {},
-    )
 
-    profile = engine._load_or_create_profile(skill_name)
+    def _step(api_call_count: int, prev_tools: Any = None) -> None:
+        if prev_tools and isinstance(prev_tools, list):
+            for tool_info in prev_tools:
+                tool_name = None
+                result = None
+                function_args = None
 
-    return {
-        "skill_name": skill_name,
-        "recorded": True,
-        "total_runs": profile.total_runs,
-        "status": "recorded",
-    }
+                if isinstance(tool_info, dict):
+                    tool_name = tool_info.get("name") or tool_info.get("function_name")
+                    result = tool_info.get("result") or tool_info.get("output")
+                    function_args = tool_info.get("arguments") or tool_info.get("args")
+                elif isinstance(tool_info, str):
+                    tool_name = tool_info
 
+                queue = tool_call_ids.get(tool_name or "")
+                if isinstance(queue, str):
+                    queue = deque([queue])
+                    if tool_name is not None:
+                        tool_call_ids[tool_name] = queue
+                if tool_name and queue:
+                    tc_id = queue.popleft()
+                    meta = tool_call_meta.pop(tc_id, {})
+                    update = build_tool_complete(
+                        tc_id,
+                        tool_name,
+                        result=str(result) if result is not None else None,
+                        function_args=function_args or meta.get("args"),
+                        snapshot=meta.get("snapshot"),
+                    )
+                    _send_update(conn, session_id, loop, update)
+                    if tool_name == "todo":
+                        plan_update = _build_plan_update_from_todo_result(result)
+                        if plan_update is not None:
+                            _send_update(conn, session_id, loop, plan_update)
+                    if not queue:
+                        tool_call_ids.pop(tool_name, None)
 
-def get_improvement_statistics() -> Dict[str, Any]:
-    """Get overall improvement statistics.
-
-    Returns:
-        Dictionary with global improvement metrics
-
-    Examples:
-        get_improvement_statistics()
-    """
-    engine = get_improvement_engine()
-    stats = engine.get_improvement_stats()
-
-    return {
-        "total_skills_tracked": stats["total_skills_tracked"],
-        "total_improvements_applied": stats["total_improvements_applied"],
-        "average_improvement_ratio": round(stats["average_improvement_ratio"], 3),
-        "average_confidence": round(stats["avg_confidence"], 2),
-        "estimated_total_improvement": f"{(stats['average_improvement_ratio'] - 1.0) * 100:.1f}%",
-    }
-
-
-def get_transfer_opportunities(skill_name: str) -> Dict[str, Any]:
-    """Identify skills that could benefit from improvements to another skill.
-
-    Cross-domain transfer learning: find which other skills might benefit
-    from successful improvements made to the source skill.
-
-    Args:
-        skill_name: Skill with successful improvements
-
-    Returns:
-        Dictionary with:
-        - source_skill: The source skill
-        - candidates: List of skills that could benefit
-        - count: Number of candidates
-
-    Examples:
-        get_transfer_opportunities("read_file")
-    """
-    engine = get_improvement_engine()
-    candidates = engine.get_transfer_opportunities(skill_name)
-
-    return {
-        "source_skill": skill_name,
-        "candidates": candidates,
-        "count": len(candidates),
-        "note": "These skills may benefit from similar improvements to the source skill",
-    }
+    return _step
 
 
-def _get_recommendation(success_rate: float, improvement_potential: float) -> str:
-    """Generate actionable recommendation based on performance."""
-    if success_rate < 0.7:
-        return f"⚠️ Low reliability ({success_rate * 100:.0f}%). Recommend reliability improvements."
-    elif success_rate < 0.85:
-        return f"🔧 Moderate reliability ({success_rate * 100:.0f}%). Consider efficiency or generalization improvements."
-    elif improvement_potential > 0.15:
-        return "📈 Good performance with room for optimization. Consider performance improvements."
-    else:
-        return "✅ Excellent performance. Monitor for any regression."
+# ------------------------------------------------------------------
+# Agent message callback
+# ------------------------------------------------------------------
 
 
-# Tool schemas for registry
-ANALYZE_PERFORMANCE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "skill_name": {"type": "string", "description": "Name of the skill to analyze"}
-    },
-    "required": ["skill_name"],
-}
+def make_message_cb(
+    conn: acp.Client,
+    session_id: str,
+    loop: asyncio.AbstractEventLoop,
+) -> Callable:
+    """Create a callback that streams agent response text to the editor."""
 
-PROPOSE_IMPROVEMENT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "skill_name": {"type": "string", "description": "Skill to improve"},
-        "improvement_type": {
-            "type": "string",
-            "enum": [
-                "performance",
-                "generalization",
-                "efficiency",
-                "reliability",
-                "maintainability",
-            ],
-            "description": "Category of improvement",
-        },
-        "description": {
-            "type": "string",
-            "description": "Description of the proposed improvement",
-        },
-        "expected_improvement": {
-            "type": "number",
-            "description": "Expected improvement ratio (e.g., 1.2 for 20% improvement)",
-            "default": 1.1,
-        },
-    },
-    "required": ["skill_name"],
-}
+    def _message(text: str) -> None:
+        if not text:
+            return
+        update = acp.update_agent_message_text(text)
+        _send_update(conn, session_id, loop, update)
 
-APPLY_IMPROVEMENT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "skill_name": {"type": "string", "description": "Skill to improve"},
-        "version": {
-            "type": "string",
-            "description": "Version of the improvement to apply",
-        },
-    },
-    "required": ["skill_name", "version"],
-}
-
-RECORD_EXECUTION_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "skill_name": {"type": "string", "description": "Name of the executed skill"},
-        "success": {"type": "boolean", "description": "Whether execution succeeded"},
-        "latency_ms": {
-            "type": "number",
-            "description": "Execution time in milliseconds",
-            "default": 0.0,
-        },
-        "context": {
-            "type": "object",
-            "description": "Additional execution context",
-            "additionalProperties": {"type": "string"},
-        },
-    },
-    "required": ["skill_name", "success"],
-}
-
-TRANSFER_OPPORTUNITIES_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "skill_name": {
-            "type": "string",
-            "description": "Skill with successful improvements",
-        }
-    },
-    "required": ["skill_name"],
-}
-
-# Register tools with the agent
-from tools.registry import registry
-
-registry.register(
-    name="analyze_skill_performance",
-    toolset="learning",
-    schema=ANALYZE_PERFORMANCE_SCHEMA,
-    handler=lambda args, **kw: analyze_skill_performance(args.get("skill_name", "")),
-    check_fn=lambda: True,
-    requires_env=None,
-    emoji="📊",
-    description="Analyze recent performance of a skill",
-)
-
-registry.register(
-    name="propose_skill_improvement",
-    toolset="learning",
-    schema=PROPOSE_IMPROVEMENT_SCHEMA,
-    handler=lambda args, **kw: propose_skill_improvement(
-        skill_name=args.get("skill_name", ""),
-        improvement_type=args.get("improvement_type", "performance"),
-        description=args.get("description", ""),
-        expected_improvement=args.get("expected_improvement", 1.1),
-    ),
-    check_fn=lambda: True,
-    requires_env=None,
-    emoji="💡",
-    description="Propose an improvement to a skill",
-)
-
-registry.register(
-    name="apply_skill_improvement",
-    toolset="learning",
-    schema=APPLY_IMPROVEMENT_SCHEMA,
-    handler=lambda args, **kw: apply_skill_improvement(
-        skill_name=args.get("skill_name", ""), version=args.get("version", "")
-    ),
-    check_fn=lambda: True,
-    requires_env=None,
-    emoji="✅",
-    description="Apply a proposed improvement to a skill",
-)
-
-registry.register(
-    name="record_skill_execution",
-    toolset="learning",
-    schema=RECORD_EXECUTION_SCHEMA,
-    handler=lambda args, **kw: record_skill_execution(
-        skill_name=args.get("skill_name", ""),
-        success=args.get("success", False),
-        latency_ms=args.get("latency_ms", 0.0),
-        context=args.get("context"),
-    ),
-    check_fn=lambda: True,
-    requires_env=None,
-    emoji="⏱️",
-    description="Record execution of a skill for performance tracking",
-)
-
-registry.register(
-    name="get_improvement_statistics",
-    toolset="learning",
-    schema={"type": "object", "properties": {}},
-    handler=lambda args, **kw: get_improvement_statistics(),
-    check_fn=lambda: True,
-    requires_env=None,
-    emoji="📈",
-    description="Get overall improvement statistics",
-)
-
-registry.register(
-    name="get_transfer_opportunities",
-    toolset="learning",
-    schema=TRANSFER_OPPORTUNITIES_SCHEMA,
-    handler=lambda args, **kw: get_transfer_opportunities(args.get("skill_name", "")),
-    check_fn=lambda: True,
-    requires_env=None,
-    emoji="🔄",
-    description="Identify skills that could benefit from improvements to another skill",
-)
+    return _message
