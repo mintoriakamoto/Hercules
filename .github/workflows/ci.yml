@@ -42,6 +42,7 @@ jobs:
       scan: ${{ steps.classify.outputs.scan }}
       deps: ${{ steps.classify.outputs.deps }}
       docker_meta: ${{ steps.classify.outputs.docker_meta }}
+      shell: ${{ steps.classify.outputs.shell }}
       mcp_catalog: ${{ steps.classify.outputs.mcp_catalog }}
       event_name: ${{ github.event_name }}
     steps:

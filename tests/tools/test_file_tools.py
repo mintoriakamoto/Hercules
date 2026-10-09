@@ -1054,3 +1054,21 @@ class TestSilentFileMisplacementE2E:
         )
 
         ft._last_known_cwd.pop(task_id, None)
+
+
+class TestConflictMarkerFlag:
+    def test_read_flags_balanced_conflict_blocks_only(self, tmp_path):
+        from tools.file_tools import read_file_tool
+
+        conflicted = tmp_path / "c.py"
+        conflicted.write_text(
+            "x=1\n<<<<<<< HEAD\ny=2\n=======\ny=3\n>>>>>>> feature\nz=4\n",
+            encoding="utf-8",
+        )
+        result = json.loads(read_file_tool(str(conflicted)))
+        assert result["conflict_blocks"] == 1
+        assert "merge-conflict" in result["_hint"]
+
+        prose = tmp_path / "p.py"
+        prose.write_text("print('<<<<<<< not a conflict')\n", encoding="utf-8")
+        assert "conflict_blocks" not in json.loads(read_file_tool(str(prose)))

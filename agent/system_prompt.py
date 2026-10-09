@@ -24,8 +24,9 @@ Pure helpers that read the agent's state.  AIAgent keeps thin forwarders.
 from __future__ import annotations
 
 import json
+import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from agent.prompt_builder import (
     DEFAULT_AGENT_IDENTITY,
@@ -46,6 +47,8 @@ from agent.prompt_builder import (
 )
 from agent.runtime_cwd import resolve_context_cwd
 from utils import is_truthy_value
+
+logger = logging.getLogger(__name__)
 
 
 def _ra():
@@ -141,6 +144,32 @@ def _tui_embedded_pane_clarifier(hint: str) -> str:
     if not is_truthy_value(os.getenv("HERCULES_DESKTOP_TERMINAL")):
         return hint
     return hint + _TUI_EMBEDDED_PANE_CLARIFIER
+
+
+def _auto_load_parts(agent: Any) -> List[str]:
+    """``skills.auto_load`` blocks, resolved once per agent so the prompt stays
+    byte-stable across model switches and compression. Config errors never
+    block session start; HERCULES_IGNORE_RULES=1 suppresses the list."""
+    if not getattr(agent, "_auto_load_skills_resolved", False):
+        result: Tuple[str, List[str], List[str]] = ("", [], [])
+        try:
+            if os.environ.get("HERCULES_IGNORE_RULES") != "1":
+                from agent.skill_commands import build_auto_load_prompt
+
+                result = build_auto_load_prompt(
+                    task_id=getattr(agent, "session_id", None)
+                )
+            if result[2]:
+                logger.warning(
+                    "skills.auto_load: skill(s) not found or disabled, skipped: %s",
+                    ", ".join(result[2]),
+                )
+        except Exception:
+            logger.debug("skills.auto_load: injection skipped", exc_info=True)
+        agent._auto_load_skills_result = result
+        agent._auto_load_skills_resolved = True
+    prompt = agent._auto_load_skills_result[0]
+    return [prompt] if prompt else []
 
 
 def build_system_prompt_parts(
@@ -337,6 +366,9 @@ def build_system_prompt_parts(
         skills_prompt = ""
     if skills_prompt:
         stable_parts.append(skills_prompt)
+    # Pinned skills (skills.auto_load) are per-agent constants, resolved once,
+    # so they live in the stable prefix.
+    stable_parts.extend(_auto_load_parts(agent))
 
     # Alibaba Coding Plan API always returns "glm-4.7" as model name regardless
     # of the requested model. Inject explicit model identity into the system prompt

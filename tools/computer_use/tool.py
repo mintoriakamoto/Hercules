@@ -39,6 +39,7 @@ For captures / actions with `capture_after=True`:
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -152,6 +153,58 @@ def _is_blocked_type(text: str) -> Optional[str]:
 
 # Per-process cached backend; lazily instantiated on first call.
 _backend_lock = threading.Lock()
+
+# Screenshot dedup: a tight capture -> act -> capture loop on a static screen
+# resends the same large image every step. When the next capture of the SAME
+# target (app, window) in the SAME session is byte-identical, the tool returns
+# the fresh text metadata (element index included) plus a "screen unchanged"
+# note and omits the image. Append-only, so prompt-cache prefixes stay intact.
+# A consecutive-omission cap re-delivers full pixels before compaction could
+# evict the image the note refers to. Sessionless calls never dedup.
+_screenshot_dedup_lock = threading.Lock()
+_last_screenshot_state: Dict[str, Dict[str, Any]] = {}
+_SCREENSHOT_DEDUP_MAX_STREAK = 2
+
+
+def _screenshot_dedup_check(
+    session_id: str, digest: str, target: Tuple[str, str]
+) -> bool:
+    """True when this capture should go out WITHOUT its image. Any miss (new
+    pixels, new target, streak exhausted, first capture) stores this frame."""
+    with _screenshot_dedup_lock:
+        state = _last_screenshot_state.get(session_id)
+        if (
+            state is not None
+            and state.get("digest") == digest
+            and state.get("target") == target
+            and int(state.get("streak", 0)) < _SCREENSHOT_DEDUP_MAX_STREAK
+        ):
+            state["streak"] = int(state.get("streak", 0)) + 1
+            return True
+        _last_screenshot_state[session_id] = {
+            "digest": digest,
+            "target": target,
+            "streak": 0,
+        }
+        return False
+
+
+def _reset_screenshot_dedup(session_id: Optional[str] = None) -> None:
+    """Forget dedup state (all sessions, or one)."""
+    with _screenshot_dedup_lock:
+        if session_id is None:
+            _last_screenshot_state.clear()
+        else:
+            _last_screenshot_state.pop(session_id, None)
+
+
+def _capture_digest(cap: CaptureResult) -> str:
+    return hashlib.sha256(
+        (str(cap.image_mime_type or "") + ":").encode("utf-8")
+        + (cap.png_b64 or "").encode("ascii", "ignore")
+    ).hexdigest()
+
+
 _backend: Optional[ComputerUseBackend] = None
 # Session-scoped approval state.
 _session_auto_approve = False
@@ -198,6 +251,7 @@ def reset_backend_for_tests() -> None:  # pragma: no cover
                 pass
         _backend = None
     _session_auto_approve = False
+    _reset_screenshot_dedup()
     _always_allow = set()
 
 
@@ -314,7 +368,12 @@ def handle_computer_use(args: Dict[str, Any], **kwargs) -> Any:
         })
 
     try:
-        return _dispatch(backend, action, args)
+        return _dispatch(
+            backend,
+            action,
+            args,
+            session_id=str(kwargs.get("session_id") or "") or None,
+        )
     except Exception as e:
         logger.exception("computer_use %s failed", action)
         return json.dumps({"error": f"{action} failed: {e}"})
@@ -374,7 +433,12 @@ def _summarize_action(action: str, args: Dict[str, Any]) -> str:
     return action
 
 
-def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) -> Any:
+def _dispatch(
+    backend: ComputerUseBackend,
+    action: str,
+    args: Dict[str, Any],
+    session_id: Optional[str] = None,
+) -> Any:
     capture_after = bool(args.get("capture_after"))
 
     if action == "capture":
@@ -383,7 +447,9 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
             return json.dumps({"error": f"bad mode {mode!r}; use som|vision|ax"})
         cap = backend.capture(mode=mode, app=args.get("app"))
         return _capture_response(
-            cap, max_elements=_coerce_max_elements(args.get("max_elements"))
+            cap,
+            max_elements=_coerce_max_elements(args.get("max_elements")),
+            session_id=session_id,
         )
 
     if action == "wait":
@@ -400,7 +466,7 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
         if not app:
             return json.dumps({"error": "focus_app requires `app`"})
         res = backend.focus_app(app, raise_window=bool(args.get("raise_window")))
-        return _maybe_follow_capture(backend, res, capture_after)
+        return _maybe_follow_capture(backend, res, capture_after, session_id=session_id)
 
     if action in {"click", "double_click", "right_click", "middle_click"}:
         button = args.get("button")
@@ -424,7 +490,7 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
             click_count=click_count,
             modifiers=args.get("modifiers"),
         )
-        return _maybe_follow_capture(backend, res, capture_after)
+        return _maybe_follow_capture(backend, res, capture_after, session_id=session_id)
 
     if action == "drag":
         has_elements = (
@@ -445,7 +511,7 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
             button=args.get("button", "left"),
             modifiers=args.get("modifiers"),
         )
-        return _maybe_follow_capture(backend, res, capture_after)
+        return _maybe_follow_capture(backend, res, capture_after, session_id=session_id)
 
     if action == "scroll":
         coord = args.get("coordinate") or (None, None)
@@ -457,22 +523,22 @@ def _dispatch(backend: ComputerUseBackend, action: str, args: Dict[str, Any]) ->
             y=coord[1] if coord and coord[1] is not None else None,
             modifiers=args.get("modifiers"),
         )
-        return _maybe_follow_capture(backend, res, capture_after)
+        return _maybe_follow_capture(backend, res, capture_after, session_id=session_id)
 
     if action == "type":
         res = backend.type_text(args.get("text", ""))
-        return _maybe_follow_capture(backend, res, capture_after)
+        return _maybe_follow_capture(backend, res, capture_after, session_id=session_id)
 
     if action == "key":
         res = backend.key(args.get("keys", ""))
-        return _maybe_follow_capture(backend, res, capture_after)
+        return _maybe_follow_capture(backend, res, capture_after, session_id=session_id)
 
     if action == "set_value":
         value = args.get("value")
         if value is None:
             return json.dumps({"error": "set_value requires `value`"})
         res = backend.set_value(value=str(value), element=args.get("element"))
-        return _maybe_follow_capture(backend, res, capture_after)
+        return _maybe_follow_capture(backend, res, capture_after, session_id=session_id)
 
     return json.dumps({"error": f"unknown action {action!r}"})
 
@@ -595,7 +661,9 @@ def _coerce_max_elements(value: Any) -> int:
 
 
 def _capture_response(
-    cap: CaptureResult, max_elements: int = _DEFAULT_MAX_ELEMENTS
+    cap: CaptureResult,
+    max_elements: int = _DEFAULT_MAX_ELEMENTS,
+    session_id: Optional[str] = None,
 ) -> Any:
     total_elements = len(cap.elements)
     visible_elements = cap.elements[:max_elements]
@@ -639,7 +707,27 @@ def _capture_response(
         )
     summary = "\n".join(summary_lines)
 
-    if cap.png_b64 and cap.mode != "ax" and not image_too_small:
+    deliver_image = bool(cap.png_b64 and cap.mode != "ax" and not image_too_small)
+    screen_unchanged = bool(
+        deliver_image
+        and session_id
+        and _screenshot_dedup_check(
+            session_id,
+            _capture_digest(cap),
+            (str(cap.app or ""), str(cap.window_title or "")),
+        )
+    )
+    if screen_unchanged:
+        # Same pixels for the same target in this session: no image (and no
+        # aux-vision call); the element metadata below is fresh.
+        summary_lines.append(
+            "  (screen unchanged since the previous screenshot — image omitted to "
+            "save context; the prior screenshot still shows the current state. "
+            "Element indices are fresh and remain the preferred way to act.)"
+        )
+        deliver_image = False
+
+    if deliver_image:
         # Decide whether to hand the screenshot to the auxiliary.vision
         # pipeline (text-only result) or keep the multimodal envelope (main
         # model handles vision natively). Issue #24015: previously the
@@ -732,6 +820,8 @@ def _capture_response(
     }
     if truncated_elements:
         payload["truncated_elements"] = truncated_elements
+    if screen_unchanged:
+        payload["screen_unchanged"] = True
     return json.dumps(payload)
 
 
@@ -910,6 +1000,7 @@ def _maybe_follow_capture(
     backend: ComputerUseBackend,
     res: ActionResult,
     do_capture: bool,
+    session_id: Optional[str] = None,
 ) -> Any:
     if not do_capture:
         return _text_response(res)
@@ -928,7 +1019,7 @@ def _maybe_follow_capture(
         logger.warning("follow-up capture failed: %s", e)
         return _text_response(res)
     # Combine action summary with the capture.
-    resp = _capture_response(cap)
+    resp = _capture_response(cap, session_id=session_id)
     if isinstance(resp, dict) and resp.get("_multimodal"):
         prefix = f"[{res.action}] ok={res.ok}" + (
             f" — {res.message}" if res.message else ""

@@ -454,6 +454,53 @@ def _get_max_async_children() -> int:
     return _get_max_concurrent_children()
 
 
+# Fraction of a configured child_timeout_seconds after which the child is
+# warned once (via its steer channel) that time is running out, so a slow but
+# recoverable child can wrap up and return its summary instead of being
+# abandoned with its whole context.
+_BUDGET_WARNING_FRACTION = 0.8
+
+
+def _budget_warning_text(elapsed_seconds: float, child_timeout: float) -> str:
+    return (
+        f"[delegation budget warning] {elapsed_seconds:.0f}s of your "
+        f"{child_timeout:.0f}s time budget have elapsed. Finish the current step "
+        "and return your summary now; the work is discarded if the budget runs out."
+    )
+
+
+def _warn_child_budget(
+    child: Any, elapsed_seconds: float, child_timeout: float
+) -> None:
+    """Queue the warning through the child's steer path (delivered at its next
+    iteration boundary). Best-effort: a child without ``steer`` is skipped."""
+    steer = getattr(child, "steer", None)
+    if not callable(steer):
+        return
+    try:
+        steer(_budget_warning_text(elapsed_seconds, child_timeout))
+    except Exception as exc:
+        logger.debug("budget warning steer failed: %s", exc)
+
+
+def _await_child_with_budget_warning(
+    future: Any, child: Any, child_timeout: Optional[float]
+) -> Any:
+    """``future.result(timeout=child_timeout)`` with one steer warning at 80%.
+
+    The total wait is unchanged: the second wait covers only the remaining
+    budget, so a child that never finishes still times out at child_timeout.
+    """
+    if not child_timeout or child_timeout <= 0:
+        return future.result(timeout=child_timeout)
+    warn_after = child_timeout * _BUDGET_WARNING_FRACTION
+    try:
+        return future.result(timeout=warn_after)
+    except FuturesTimeoutError:
+        _warn_child_budget(child, warn_after, child_timeout)
+    return future.result(timeout=child_timeout - warn_after)
+
+
 def _get_child_timeout() -> Optional[float]:
     """Read delegation.child_timeout_seconds from config.
 
@@ -2273,7 +2320,9 @@ def _run_single_child(
             propagate_context_to_thread(_run_with_thread_capture)
         )
         try:
-            result = _child_future.result(timeout=child_timeout)
+            result = _await_child_with_budget_warning(
+                _child_future, child, child_timeout
+            )
         except Exception as _timeout_exc:
             # Signal the child to stop so its thread can exit cleanly.
             try:

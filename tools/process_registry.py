@@ -95,6 +95,15 @@ def format_uptime_short(seconds: int) -> str:
     return f"{hours}h {mins}m"
 
 
+# Heartbeat: opt-in periodic "still running, here is the output since last
+# time" event for long bounded jobs (test suites, builds, deploys). Time-driven,
+# so bounded by construction (at most 3600/HEARTBEAT_MIN_SECONDS events per hour
+# per process). The floor keeps it from becoming a 5-second poll.
+HEARTBEAT_MIN_SECONDS = 60
+HEARTBEAT_OUTPUT_CHARS = 2000
+HEARTBEAT_TICK_SECONDS = 5
+
+
 @dataclass
 class ProcessSession:
     """A tracked background process with output buffering."""
@@ -130,6 +139,13 @@ class ProcessSession:
     )
     watcher_interval: int = 0  # 0 = no watcher configured
     notify_on_complete: bool = False  # Queue agent notification on exit
+    heartbeat_seconds: int = (
+        0  # 0 = off; else a "heartbeat" event every N s while running
+    )
+    total_output_chars: int = 0  # chars ever ingested (output_buffer is a rolling tail)
+    _heartbeat_last: float = field(default=0.0, repr=False)
+    _heartbeat_total_at_last: int = field(default=0, repr=False)
+    _heartbeat_seq: int = field(default=0, repr=False)
     # Watch patterns — trigger agent notification when output matches any pattern
     watch_patterns: List[str] = field(default_factory=list)
     _watch_hits: int = field(default=0, repr=False)  # total matches delivered
@@ -191,6 +207,8 @@ class ProcessRegistry:
         import queue as _queue_mod
 
         self.completion_queue: _queue_mod.Queue = _queue_mod.Queue()
+        self._heartbeat_thread: Optional[threading.Thread] = None
+        self._heartbeat_thread_lock = threading.Lock()
 
         # Track sessions whose completion was already consumed by the agent
         # via wait/log.  Drain loops AND gateway/tui watchers skip notifications
@@ -374,6 +392,86 @@ class ProcessRegistry:
             "thread_id": session.watcher_thread_id,
             "message_id": session.watcher_message_id,
         })
+
+    # -- heartbeat ------------------------------------------------------------
+    def arm_heartbeat(self, session: ProcessSession, seconds: int) -> int:
+        """Enable periodic heartbeat events for ``session``; returns the interval."""
+        seconds = max(int(seconds), HEARTBEAT_MIN_SECONDS)
+        session.heartbeat_seconds = seconds
+        session._heartbeat_last = time.time()
+        session._heartbeat_total_at_last = session.total_output_chars
+        self._ensure_heartbeat_thread()
+        return seconds
+
+    def _ensure_heartbeat_thread(self) -> None:
+        with self._heartbeat_thread_lock:
+            if self._heartbeat_thread is not None and self._heartbeat_thread.is_alive():
+                return
+            self._heartbeat_thread = threading.Thread(
+                target=self._heartbeat_loop, name="process-heartbeat", daemon=True
+            )
+            self._heartbeat_thread.start()
+
+    def _heartbeat_due(self, now: float) -> List[ProcessSession]:
+        with self._lock:
+            sessions = list(self._running.values())
+        return [
+            s
+            for s in sessions
+            if s.heartbeat_seconds > 0
+            and not s.exited
+            and now - s._heartbeat_last >= s.heartbeat_seconds
+        ]
+
+    def _heartbeat_loop(self) -> None:
+        """One daemon thread for every heartbeat session: reader threads block on
+        the pipe and cannot keep time, and a timer per process would leak threads."""
+        while True:
+            time.sleep(HEARTBEAT_TICK_SECONDS)
+            now = time.time()
+            for session in self._heartbeat_due(now):
+                try:
+                    self._emit_heartbeat(session, now)
+                except Exception:
+                    logger.debug(
+                        "heartbeat emit failed for %s", session.id, exc_info=True
+                    )
+
+    def _emit_heartbeat(self, session: ProcessSession, now: float) -> None:
+        with session._lock:
+            delta = session.total_output_chars - session._heartbeat_total_at_last
+            output = session.output_buffer[-delta:] if delta > 0 else ""
+            session._heartbeat_total_at_last = session.total_output_chars
+            session._heartbeat_last = now
+            session._heartbeat_seq += 1
+            seq = session._heartbeat_seq
+        from tools.ansi_strip import strip_ansi
+
+        output = strip_ansi(output)
+        if len(output) > HEARTBEAT_OUTPUT_CHARS:
+            cut = len(output) - HEARTBEAT_OUTPUT_CHARS
+            output = (
+                f"...({cut} earlier characters omitted)\n"
+                + output[-HEARTBEAT_OUTPUT_CHARS:]
+            )
+        notification = {
+            "session_id": session.id,
+            "session_key": session.session_key,
+            "command": session.command,
+            "type": "heartbeat",
+            "seq": seq,
+            "interval": session.heartbeat_seconds,
+            "elapsed": int(now - session.started_at) if session.started_at else 0,
+            "output": output,
+            "platform": session.watcher_platform,
+            "chat_id": session.watcher_chat_id,
+            "user_id": session.watcher_user_id,
+            "user_name": session.watcher_user_name,
+            "thread_id": session.watcher_thread_id,
+            "message_id": session.watcher_message_id,
+        }
+        _redact_process_result(notification)
+        self.completion_queue.put(notification)
 
     def _global_watch_admit(self, now: float) -> bool:
         """Return True if this watch_match event is allowed through the global breaker.
@@ -1006,6 +1104,7 @@ class ProcessRegistry:
                     first_chunk = False
                 with session._lock:
                     session.output_buffer += chunk
+                    session.total_output_chars += len(chunk)
                     if len(session.output_buffer) > session.max_output_chars:
                         session.output_buffer = session.output_buffer[
                             -session.max_output_chars :
@@ -1055,6 +1154,7 @@ class ProcessRegistry:
                     prev_output_len = len(new_output)
                     with session._lock:
                         session.output_buffer = new_output
+                        session.total_output_chars += len(delta)
                         if len(session.output_buffer) > session.max_output_chars:
                             session.output_buffer = session.output_buffer[
                                 -session.max_output_chars :
@@ -1111,6 +1211,7 @@ class ProcessRegistry:
                         )
                         with session._lock:
                             session.output_buffer += text
+                            session.total_output_chars += len(text)
                             if len(session.output_buffer) > session.max_output_chars:
                                 session.output_buffer = session.output_buffer[
                                     -session.max_output_chars :
@@ -1360,6 +1461,7 @@ class ProcessRegistry:
         with session._lock:
             if drained:
                 session.output_buffer += drained
+                session.total_output_chars += len(drained)
                 if len(session.output_buffer) > session.max_output_chars:
                     session.output_buffer = session.output_buffer[
                         -session.max_output_chars :
@@ -2233,6 +2335,16 @@ def format_process_notification(evt: dict) -> "str | None":
             text += f"\n({_sup} earlier matches were suppressed by rate limit)"
         text += "]"
         return text
+
+    if evt_type == "heartbeat":
+        _out = evt.get("output") or "(no new output since the last heartbeat)"
+        return (
+            f"[Background process {_sid} heartbeat #{evt.get('seq', '?')} — still "
+            f"running after {evt.get('elapsed', '?')}s (next in "
+            f"{evt.get('interval', '?')}s; you will also be told when it exits).\n"
+            f"Command: {_cmd}\n"
+            f"Output since last heartbeat:\n{_out}]"
+        )
 
     if evt_type == "async_delegation":
         return _format_async_delegation(evt)

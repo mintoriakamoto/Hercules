@@ -2134,13 +2134,28 @@ def _seed_from_env(
             payload["secret_source"] = secret_source
         return payload
 
+    def _with_numbered_siblings(env_vars: List[str]) -> List[str]:
+        """*env_vars* plus ``VAR_2``, ``VAR_3``, ... until the first unset one.
+
+        Setting ``PROVIDER_API_KEY_2`` is the whole opt-in for a rotation pool.
+        """
+        names = list(env_vars)
+        for base in env_vars:
+            n = 2
+            while _get_env_prefer_dotenv(f"{base}_{n}"):
+                names.append(f"{base}_{n}")
+                n += 1
+        return names
+
     if provider == "openrouter":
         # Prefer ~/.hercules/.env over os.environ
-        token = _get_env_prefer_dotenv("OPENROUTER_API_KEY")
-        if token:
-            source = "env:OPENROUTER_API_KEY"
+        for env_var in _with_numbered_siblings(["OPENROUTER_API_KEY"]):
+            token = _get_env_prefer_dotenv(env_var)
+            if not token:
+                continue
+            source = f"env:{env_var}"
             if _is_source_suppressed(provider, source):
-                return changed, active_sources
+                continue
             active_sources.add(source)
             changed |= _upsert_entry(
                 entries,
@@ -2148,7 +2163,7 @@ def _seed_from_env(
                 source,
                 _env_payload(
                     source=source,
-                    env_var="OPENROUTER_API_KEY",
+                    env_var=env_var,
                     token=token,
                     base_url=OPENROUTER_BASE_URL,
                 ),
@@ -2170,6 +2185,7 @@ def _seed_from_env(
             "CLAUDE_CODE_OAUTH_TOKEN",
             "ANTHROPIC_API_KEY",
         ]
+    env_vars = _with_numbered_siblings(env_vars)
 
     for env_var in env_vars:
         # Prefer ~/.hercules/.env over os.environ
