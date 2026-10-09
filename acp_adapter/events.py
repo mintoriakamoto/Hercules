@@ -1,298 +1,128 @@
-"""Callback factories for bridging AIAgent events to ACP notifications.
+"""Anthropic prompt caching strategy.
 
-Each factory returns a callable with the signature that AIAgent expects
-for its callbacks. Internally, the callbacks push ACP session updates
-to the client via ``conn.session_update()`` using
-``asyncio.run_coroutine_threadsafe()`` (since AIAgent runs in a worker
-thread while the event loop lives on the main thread).
+Single layout: ``system_and_3``. 4 cache_control breakpoints — system
+prompt + last 3 non-system messages, all at the same TTL (5m or 1h).
+Reduces input token costs by ~75% on multi-turn conversations within a
+single session.
+
+Pure functions -- no class state, no AIAgent dependency.
 """
 
-import asyncio
-import json
-import logging
-from collections import deque
-from typing import Any, Callable, Deque, Dict
-
-import acp
-from acp.schema import AgentPlanUpdate, PlanEntry
-
-from .tools import (
-    build_tool_complete,
-    build_tool_start,
-    make_tool_call_id,
-)
-
-logger = logging.getLogger(__name__)
+import copy
+from typing import Any, Dict, List
 
 
-def _json_loads_maybe_prefix(value: str) -> Any:
-    """Parse a JSON object even when Hercules appended a human hint after it."""
-    text = value.strip()
-    try:
-        return json.loads(text)
-    except Exception:
-        decoder = json.JSONDecoder()
-        data, _ = decoder.raw_decode(text)
-        return data
-
-
-def _build_plan_update_from_todo_result(result: Any) -> AgentPlanUpdate | None:
-    """Translate Hercules' todo tool result into ACP's native plan update.
-
-    Zed renders ``sessionUpdate: plan`` as its first-class task/todo panel. The
-    Hercules agent already maintains task state through the ``todo`` tool, so the
-    ACP adapter should expose that state natively instead of only as a generic
-    tool-call transcript block.
-    """
-    if not isinstance(result, str) or not result.strip():
-        return None
-
-    try:
-        data = _json_loads_maybe_prefix(result)
-    except Exception:
-        return None
-
-    if not isinstance(data, dict) or not isinstance(data.get("todos"), list):
-        return None
-
-    todos = data["todos"]
-    if not todos:
-        return AgentPlanUpdate(session_update="plan", entries=[])
-
-    status_map = {
-        "pending": "pending",
-        "in_progress": "in_progress",
-        "completed": "completed",
-        # ACP plans only support pending/in_progress/completed. Preserve
-        # cancelled tasks as terminal entries instead of dropping them and
-        # making the client's full-list replacement lose visible context.
-        "cancelled": "completed",
-    }
-    entries: list[PlanEntry] = []
-    for item in todos:
-        if not isinstance(item, dict):
-            continue
-        content = str(item.get("content") or item.get("id") or "").strip()
-        if not content:
-            continue
-        raw_status = str(item.get("status") or "pending").strip()
-        status = status_map.get(raw_status, "pending")
-        if raw_status == "cancelled":
-            content = f"[cancelled] {content}"
-        entries.append(PlanEntry(content=content, priority="medium", status=status))
-
-    return AgentPlanUpdate(session_update="plan", entries=entries)
-
-
-def _send_update(
-    conn: acp.Client,
-    session_id: str,
-    loop: asyncio.AbstractEventLoop,
-    update: Any,
+def _apply_cache_marker(
+    msg: dict, cache_marker: dict, native_anthropic: bool = False
 ) -> None:
-    """Fire-and-forget an ACP session update from a worker thread."""
-    from agent.async_utils import safe_schedule_threadsafe
+    """Add cache_control to a single message, handling all format variations."""
+    role = msg.get("role", "")
+    content = msg.get("content")
 
-    future = safe_schedule_threadsafe(
-        conn.session_update(session_id, update),
-        loop,
-        logger=logger,
-        log_message="Failed to send ACP update",
-    )
-    if future is None:
+    if role == "tool" and native_anthropic:
+        # Native Anthropic layout: top-level marker; the adapter moves it
+        # inside the tool_result block.
+        msg["cache_control"] = cache_marker
         return
-    try:
-        future.result(timeout=5)
-    except Exception:
-        logger.debug("Failed to send ACP update", exc_info=True)
+
+    if content is None or content == "":
+        if role == "tool" and not native_anthropic:
+            # OpenRouter rejects top-level cache_control on role:tool (silent
+            # hang) and an empty message has no content part to carry the
+            # marker — skip. Non-empty tool content falls through below and
+            # gets the marker on a content part, which OpenRouter honors.
+            return
+        if role == "assistant" and not native_anthropic:
+            # Empty assistant turns are pure tool_calls. A top-level marker
+            # here is ignored on the envelope layout, so skip.
+            return
+        msg["cache_control"] = cache_marker
+        return
+
+    if isinstance(content, str):
+        msg["content"] = [
+            {"type": "text", "text": content, "cache_control": cache_marker}
+        ]
+        return
+
+    if isinstance(content, list) and content:
+        last = content[-1]
+        if isinstance(last, dict):
+            last["cache_control"] = cache_marker
 
 
-# ------------------------------------------------------------------
-# Tool progress callback
-# ------------------------------------------------------------------
+def _can_carry_marker(msg: dict, native_anthropic: bool) -> bool:
+    """True if a marker on this message is actually honored by the provider.
 
-
-def make_tool_progress_cb(
-    conn: acp.Client,
-    session_id: str,
-    loop: asyncio.AbstractEventLoop,
-    tool_call_ids: Dict[str, Deque[str]],
-    tool_call_meta: Dict[str, Dict[str, Any]],
-    edit_approval_policy_getter: Callable[[], tuple[str, str | None]] | None = None,
-) -> Callable:
-    """Create a ``tool_progress_callback`` for AIAgent.
-
-    Signature expected by AIAgent::
-
-        tool_progress_callback(event_type: str, name: str, preview: str, args: dict, **kwargs)
-
-    Emits ``ToolCallStart`` for ``tool.started`` events and tracks IDs in a FIFO
-    queue per tool name so duplicate/parallel same-name calls still complete
-    against the correct ACP tool call.  Other event types (``tool.completed``,
-    ``reasoning.available``) are silently ignored.
+    On the native Anthropic layout every message works (top-level markers are
+    relocated by the adapter). On the envelope layout (OpenRouter et al.) only
+    markers inside content parts are honored: empty-content messages (e.g.
+    assistant turns that are pure tool_calls) and empty tool messages would
+    receive a top-level marker the provider ignores — wasting one of the four
+    breakpoints. Skip those so the breakpoints land on messages that count.
     """
-
-    def _tool_progress(
-        event_type: str,
-        name: str = None,
-        preview: str = None,
-        args: Any = None,
-        **kwargs,
-    ) -> None:
-        # Only emit ACP ToolCallStart for tool.started; ignore other event types
-        if event_type != "tool.started":
-            return
-        if isinstance(args, str):
-            try:
-                args = json.loads(args)
-            except (json.JSONDecodeError, TypeError):
-                args = {"raw": args}
-        if not isinstance(args, dict):
-            args = {}
-
-        tc_id = make_tool_call_id()
-        queue = tool_call_ids.get(name)
-        if queue is None:
-            queue = deque()
-            tool_call_ids[name] = queue
-        elif isinstance(queue, str):
-            queue = deque([queue])
-            tool_call_ids[name] = queue
-        queue.append(tc_id)
-
-        snapshot = None
-        if name in {"write_file", "patch", "skill_manage"}:
-            try:
-                from agent.display import capture_local_edit_snapshot
-
-                snapshot = capture_local_edit_snapshot(name, args)
-            except Exception:
-                logger.debug(
-                    "Failed to capture ACP edit snapshot for %s", name, exc_info=True
-                )
-        tool_call_meta[tc_id] = {"args": args, "snapshot": snapshot}
-
-        edit_diff = None
-        if name in {"write_file", "patch"} and edit_approval_policy_getter is not None:
-            try:
-                from acp_adapter.edit_approval import (
-                    build_edit_proposal,
-                    should_auto_approve_edit,
-                )
-
-                proposal = build_edit_proposal(name, args)
-                if proposal is not None:
-                    policy, cwd = edit_approval_policy_getter()
-                    if should_auto_approve_edit(proposal, policy, cwd):
-                        edit_diff = proposal
-            except Exception:
-                logger.debug(
-                    "Failed to prepare auto-approved ACP edit diff for %s",
-                    name,
-                    exc_info=True,
-                )
-
-        update = build_tool_start(tc_id, name, args, edit_diff=edit_diff)
-        _send_update(conn, session_id, loop, update)
-
-    return _tool_progress
+    if native_anthropic:
+        return True
+    content = msg.get("content")
+    if content is None or content == "":
+        return False
+    if isinstance(content, list):
+        # _apply_cache_marker only marks the LAST content part, so the carrier
+        # predicate must agree: a list whose last element isn't a dict cannot
+        # actually receive a marker and would waste a breakpoint. Mirror the
+        # `content` truthiness + last-element-dict check in _apply_cache_marker.
+        return bool(content) and isinstance(content[-1], dict)
+    return isinstance(content, str)
 
 
-# ------------------------------------------------------------------
-# Thinking callback
-# ------------------------------------------------------------------
+def _build_marker(ttl: str) -> Dict[str, str]:
+    """Build a cache_control marker dict for the given TTL ('5m' or '1h')."""
+    marker: Dict[str, str] = {"type": "ephemeral"}
+    if ttl == "1h":
+        marker["ttl"] = "1h"
+    return marker
 
 
-def make_thinking_cb(
-    conn: acp.Client,
-    session_id: str,
-    loop: asyncio.AbstractEventLoop,
-) -> Callable:
-    """Create a ``thinking_callback`` for AIAgent."""
+def apply_anthropic_cache_control(
+    api_messages: List[Dict[str, Any]],
+    cache_ttl: str = "5m",
+    native_anthropic: bool = False,
+) -> List[Dict[str, Any]]:
+    """Apply system_and_3 caching strategy to messages for Anthropic models.
 
-    def _thinking(text: str) -> None:
-        if not text:
-            return
-        update = acp.update_agent_thought_text(text)
-        _send_update(conn, session_id, loop, update)
+    Places up to 4 cache_control breakpoints: system prompt + last 3 non-system
+    messages, all at the same TTL.
 
-    return _thinking
-
-
-# ------------------------------------------------------------------
-# Step callback
-# ------------------------------------------------------------------
-
-
-def make_step_cb(
-    conn: acp.Client,
-    session_id: str,
-    loop: asyncio.AbstractEventLoop,
-    tool_call_ids: Dict[str, Deque[str]],
-    tool_call_meta: Dict[str, Dict[str, Any]],
-) -> Callable:
-    """Create a ``step_callback`` for AIAgent.
-
-    Signature expected by AIAgent::
-
-        step_callback(api_call_count: int, prev_tools: list)
+    Returns:
+        New list in which ONLY the <=4 messages receiving a breakpoint are
+        deep-copied (marker application mutates nested content); all other
+        entries are the caller's message dicts unchanged. This runs on every
+        API iteration — deep-copying the whole history to mark 4 messages
+        was the single largest per-iteration allocation on long
+        conversations.
     """
+    messages = list(api_messages)
+    if not messages:
+        return messages
 
-    def _step(api_call_count: int, prev_tools: Any = None) -> None:
-        if prev_tools and isinstance(prev_tools, list):
-            for tool_info in prev_tools:
-                tool_name = None
-                result = None
-                function_args = None
+    marker = _build_marker(cache_ttl)
 
-                if isinstance(tool_info, dict):
-                    tool_name = tool_info.get("name") or tool_info.get("function_name")
-                    result = tool_info.get("result") or tool_info.get("output")
-                    function_args = tool_info.get("arguments") or tool_info.get("args")
-                elif isinstance(tool_info, str):
-                    tool_name = tool_info
+    targets: List[int] = []
+    if messages[0].get("role") == "system":
+        targets.append(0)
 
-                queue = tool_call_ids.get(tool_name or "")
-                if isinstance(queue, str):
-                    queue = deque([queue])
-                    tool_call_ids[tool_name] = queue
-                if tool_name and queue:
-                    tc_id = queue.popleft()
-                    meta = tool_call_meta.pop(tc_id, {})
-                    update = build_tool_complete(
-                        tc_id,
-                        tool_name,
-                        result=str(result) if result is not None else None,
-                        function_args=function_args or meta.get("args"),
-                        snapshot=meta.get("snapshot"),
-                    )
-                    _send_update(conn, session_id, loop, update)
-                    if tool_name == "todo":
-                        plan_update = _build_plan_update_from_todo_result(result)
-                        if plan_update is not None:
-                            _send_update(conn, session_id, loop, plan_update)
-                    if not queue:
-                        tool_call_ids.pop(tool_name, None)
+    remaining = max(0, 4 - len(targets))
+    non_sys = [
+        i
+        for i in range(len(messages))
+        if messages[i].get("role") != "system"
+        and _can_carry_marker(messages[i], native_anthropic=native_anthropic)
+    ]
+    if remaining:
+        targets.extend(non_sys[-remaining:])
 
-    return _step
+    for idx in targets:
+        messages[idx] = copy.deepcopy(messages[idx])
+        _apply_cache_marker(messages[idx], marker, native_anthropic=native_anthropic)
 
-
-# ------------------------------------------------------------------
-# Agent message callback
-# ------------------------------------------------------------------
-
-
-def make_message_cb(
-    conn: acp.Client,
-    session_id: str,
-    loop: asyncio.AbstractEventLoop,
-) -> Callable:
-    """Create a callback that streams agent response text to the editor."""
-
-    def _message(text: str) -> None:
-        if not text:
-            return
-        update = acp.update_agent_message_text(text)
-        _send_update(conn, session_id, loop, update)
-
-    return _message
+    return messages
