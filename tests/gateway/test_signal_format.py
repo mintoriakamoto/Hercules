@@ -446,6 +446,57 @@ class TestMarkdownStripPatch:
 # ===========================================================================
 
 
+class TestTableRealignment:
+    """GFM pipe tables are re-aligned to a fixed monospace width and rendered
+    as a single MONOSPACE range."""
+
+    def test_table_becomes_single_monospace_block(self):
+        md = "| Name | Age |\n|------|-----|\n| Alice | 30 |\n| Bob | 25 |"
+        text, styles = _m2s(md)
+        mono = _find_style(styles, "MONOSPACE")
+        assert len(mono) == 1
+        start, length = (int(p) for p in mono[0].split(":")[:2])
+        rows = text[start : start + length].split("\n")
+        assert len(rows) == 4
+        pipe_offsets = [i for i, ch in enumerate(rows[0]) if ch == "|"]
+        assert all(
+            [i for i, ch in enumerate(row) if ch == "|"] == pipe_offsets
+            for row in rows[1:]
+        )
+
+    def test_non_table_pipes_left_alone(self):
+        text, styles = _m2s("cost | value\nnot a table")
+        assert text == "cost | value\nnot a table"
+        assert _find_style(styles, "MONOSPACE") == []
+
+    def test_table_surrounded_by_prose_keeps_prose_out_of_monospace(self):
+        md = "Before.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\nAfter."
+        text, styles = _m2s(md)
+        assert text.startswith("Before.\n\n")
+        assert text.endswith("\n\nAfter.")
+        mono = _find_style(styles, "MONOSPACE")
+        assert len(mono) == 1
+        start, length = (int(p) for p in mono[0].split(":")[:2])
+        block = text[start : start + length]
+        assert "Before" not in block and "After" not in block
+        assert block.startswith("| A")
+
+    def test_code_block_after_table_keeps_its_own_range(self):
+        md = "| A | B |\n|---|---|\n| 1 | 2 |\n\nsee:\n```py\nprint(1)\n```"
+        text, styles = _m2s(md)
+        blocks = [
+            text[int(a) : int(a) + int(n)]
+            for a, n, _ in (st.split(":") for st in _find_style(styles, "MONOSPACE"))
+        ]
+        assert "print(1)" in blocks
+        assert any(b.startswith("| A") for b in blocks)
+
+    def test_table_inside_fenced_code_is_untouched(self):
+        md = "```\n| a |b|\n|-|-|\n| 1 |2|\n```"
+        text, _ = _m2s(md)
+        assert text == "| a |b|\n|-|-|\n| 1 |2|"
+
+
 class TestSignalStreamingPatch:
     """Tests for signal-streaming-patch: cursor suppression and edit support.
 

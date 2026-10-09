@@ -8,6 +8,44 @@ from __future__ import annotations
 
 import re
 
+from agent.markdown_tables import is_table_divider, realign_markdown_tables
+
+# Signal has no fixed-width client area; this budgets for a phone screen in the
+# app's monospace face. Wider tables fall back to realign_markdown_tables()'s
+# vertical "Key: value" rendering rather than soft-wrapping mid-cell.
+_TABLE_WIDTH = 40
+
+
+def _fence_tables(source: str) -> str:
+    """Re-align GFM pipe tables and wrap each in a code fence.
+
+    Runs before code-block extraction so the fence becomes one MONOSPACE range
+    through the existing code-block path (which keeps later style offsets
+    right), and tables already inside fenced code are left byte-for-byte.
+    """
+    if "|" not in source:
+        return source
+    parts = re.split(r"(```.*?```)", source, flags=re.DOTALL)
+    for idx, part in enumerate(parts):
+        if idx % 2 == 1 or "|" not in part:
+            continue
+        lines = part.split("\n")
+        out: list[str] = []
+        i, n = 0, len(lines)
+        while i < n:
+            if "|" in lines[i] and i + 1 < n and is_table_divider(lines[i + 1]):
+                j = i + 2
+                while j < n and "|" in lines[j] and lines[j].strip():
+                    j += 1
+                rendered = realign_markdown_tables("\n".join(lines[i:j]), _TABLE_WIDTH)
+                out.extend(["```", *rendered.split("\n"), "```"])
+                i = j
+                continue
+            out.append(lines[i])
+            i += 1
+        parts[idx] = "\n".join(out)
+    return "".join(parts)
+
 
 def markdown_to_signal(text: str) -> tuple[str, list[str]]:
     """Convert markdown to plain text + Signal textStyles list.
@@ -44,6 +82,7 @@ def markdown_to_signal(text: str) -> tuple[str, list[str]]:
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = text.strip()
     text = _normalize_bullet_markers(text)
+    text = _fence_tables(text)
 
     styles: list[tuple[int, int, str]] = []
 

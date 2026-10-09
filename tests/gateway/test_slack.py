@@ -1680,6 +1680,64 @@ class TestIncomingDocumentHandling:
         assert msg_event.text == "https://example.com/thread"
 
     @pytest.mark.asyncio
+    async def test_attachment_nested_pasted_table_reaches_agent(self, adapter):
+        """Pasted tables arrive in attachments[].blocks[] and nowhere else."""
+        event = self._make_event(
+            text="here are the numbers",
+            attachments=[
+                {
+                    "blocks": [
+                        {
+                            "type": "table",
+                            "rows": [
+                                [
+                                    {"type": "raw_text", "text": "Item"},
+                                    {"type": "raw_text", "text": "Qty"},
+                                ],
+                                [
+                                    {"type": "raw_text", "text": "Apples"},
+                                    {"type": "raw_text", "text": "3"},
+                                ],
+                            ],
+                        }
+                    ]
+                }
+            ],
+        )
+
+        await adapter._handle_slack_message(event)
+
+        msg_event = adapter.handle_message.call_args[0][0]
+        assert "here are the numbers" in msg_event.text
+        assert "Item | Qty" in msg_event.text
+        assert "Apples | 3" in msg_event.text
+
+    @pytest.mark.asyncio
+    async def test_top_level_pasted_table_reaches_agent_without_json_husk(
+        self, adapter
+    ):
+        event = self._make_event(
+            text="intro sentence",
+            blocks=[
+                {
+                    "type": "table",
+                    "rows": [
+                        [
+                            {"type": "raw_text", "text": "col1"},
+                            {"type": "raw_text", "text": "col2"},
+                        ]
+                    ],
+                }
+            ],
+        )
+
+        await adapter._handle_slack_message(event)
+
+        msg_event = adapter.handle_message.call_args[0][0]
+        assert "col1 | col2" in msg_event.text
+        assert '"table"' not in msg_event.text
+
+    @pytest.mark.asyncio
     async def test_channel_routing_ignores_bot_mentions_inside_block_text(
         self, adapter
     ):

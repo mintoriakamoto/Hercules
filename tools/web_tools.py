@@ -473,6 +473,40 @@ def _get_extract_char_limit() -> int:
     return DEFAULT_EXTRACT_CHAR_LIMIT
 
 
+# Unambiguous file signatures. Backends return fetched bodies as text with NUL
+# bytes dropped, so signatures are compared NUL-stripped. Two-letter magics
+# (BM, MZ, ID3) are left out on purpose: real pages can start with them.
+_BINARY_SIGNATURES = (
+    (b"SQLite format 3\x00", "SQLite database"),
+    (b"PK\x03\x04", "ZIP archive"),
+    (b"\x1f\x8b", "gzip archive"),
+    (b"BZh", "bzip2 archive"),
+    (b"\xfd7zXZ\x00", "xz archive"),
+    (b"7z\xbc\xaf\x27\x1c", "7-Zip archive"),
+    (b"\x7fELF", "ELF executable"),
+    (b"\xcf\xfa\xed\xfe", "Mach-O executable"),
+    (b"\xfe\xed\xfa\xcf", "Mach-O executable"),
+    (b"\x89PNG\r\n\x1a\n", "PNG image"),
+    (b"\xff\xd8\xff", "JPEG image"),
+    (b"GIF87a", "GIF image"),
+    (b"GIF89a", "GIF image"),
+    (b"II*\x00", "TIFF image"),
+    (b"MM\x00*", "TIFF image"),
+    (b"fLaC", "FLAC audio"),
+    (b"OggS", "Ogg media"),
+)
+
+
+def _binary_payload_kind(text: str) -> str:
+    """Type name when a fetched body is a raw binary file, else ``""``."""
+    head = text[:32].encode("latin-1", "ignore").replace(b"\x00", b"")
+    for prefix, name in _BINARY_SIGNATURES:
+        sig = prefix.replace(b"\x00", b"")
+        if sig and head.startswith(sig):
+            return name
+    return ""
+
+
 def convert_base64_images_to_links(text: str) -> str:
     """Replace inline base64 image blobs with labeled markdown links.
 
@@ -1019,6 +1053,23 @@ async def web_extract_tool(
             url = result.get("url", "")
             raw_content = result.get("raw_content", "") or result.get("content", "")
             if not raw_content:
+                continue
+            binary_kind = _binary_payload_kind(raw_content)
+            if binary_kind:
+                # A backend that fetched a raw file hands back its bytes as
+                # "text"; hundreds of K chars of that would enter context.
+                result["content"] = ""
+                result["error"] = (
+                    f"URL returned binary content ({binary_kind}), not a page. "
+                    "Download it with the terminal (curl -L -o) and use read_file "
+                    "(SQLite/Office auto-extract) or terminal utilities on the file."
+                )
+                logger.info(
+                    "%s (binary payload: %s, %d chars dropped)",
+                    url,
+                    binary_kind,
+                    len(raw_content),
+                )
                 continue
             clean = convert_base64_images_to_links(raw_content)
             model_text, truncated = _truncate_with_footer(

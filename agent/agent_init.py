@@ -1682,6 +1682,19 @@ def init_agent(
     except (TypeError, ValueError):
         _api_retries = 3
     agent._api_max_retries = _api_retries
+    # Bounded auto-recovery cycles once retries AND the fallback chain are spent
+    # on a transient outage (agent/turn_recovery_autorecover.py). 0 disables.
+    from agent.turn_recovery_autorecover import DEFAULT_AUTO_RECOVERY_CYCLES
+
+    try:
+        agent._auto_recovery_cycles = max(
+            int(
+                _agent_section.get("auto_recovery_cycles", DEFAULT_AUTO_RECOVERY_CYCLES)
+            ),
+            0,
+        )
+    except (TypeError, ValueError):
+        agent._auto_recovery_cycles = DEFAULT_AUTO_RECOVERY_CYCLES
 
     # Initialize context compressor for automatic context management
     # Compresses conversation when approaching model's context limit

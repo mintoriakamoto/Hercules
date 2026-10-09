@@ -27,16 +27,26 @@ EXPECTED_FIELDS = {
     "primary_recovery_attempted",
     "has_retried_429",
     "auth_failover_attempted",
+    "auto_recovery_cycles_used",
     "restart_with_compressed_messages",
     "restart_with_length_continuation",
     "restart_with_rebuilt_messages",
 }
 
 
+# Per-attempt counters (not one-shot guards) start at zero.
+COUNTER_FIELDS = {"auto_recovery_cycles_used"}
+
+
 def test_all_guards_default_false():
     s = TurnRetryState()
     for name, value in s:
-        assert value is False, f"{name} should default to False"
+        if name in COUNTER_FIELDS:
+            assert value == 0 and not isinstance(value, bool), (
+                f"{name} should default to 0"
+            )
+        else:
+            assert value is False, f"{name} should default to False"
 
 
 def test_field_set_matches_contract():

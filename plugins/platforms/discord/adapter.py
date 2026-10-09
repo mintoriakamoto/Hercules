@@ -6948,7 +6948,14 @@ class DiscordAdapter(BasePlatformAdapter):
             no_thread_channels = {
                 ch.strip() for ch in no_thread_channels_raw.split(",") if ch.strip()
             }
-            skip_thread = bool(channel_keys & no_thread_channels) or is_free_channel
+            # free_response_auto_thread: free-response channels reply inline unless
+            # the operator opts in; then each top-level message gets its own thread.
+            free_response_auto_thread = os.getenv(
+                "DISCORD_FREE_RESPONSE_AUTO_THREAD", "false"
+            ).lower() in {"true", "1", "yes"}
+            skip_thread = bool(channel_keys & no_thread_channels) or (
+                is_free_channel and not free_response_auto_thread
+            )
             auto_thread = os.getenv("DISCORD_AUTO_THREAD", "true").lower() in {
                 "true",
                 "1",
@@ -9230,6 +9237,12 @@ def _apply_yaml_config(yaml_cfg: dict, discord_cfg: dict) -> dict | None:
         os.environ["DISCORD_FREE_RESPONSE_CHANNELS"] = str(frc)
     if "auto_thread" in discord_cfg and not os.getenv("DISCORD_AUTO_THREAD"):
         os.environ["DISCORD_AUTO_THREAD"] = str(discord_cfg["auto_thread"]).lower()
+    if "free_response_auto_thread" in discord_cfg and not os.getenv(
+        "DISCORD_FREE_RESPONSE_AUTO_THREAD"
+    ):
+        os.environ["DISCORD_FREE_RESPONSE_AUTO_THREAD"] = str(
+            discord_cfg["free_response_auto_thread"]
+        ).lower()
     if "reactions" in discord_cfg and not os.getenv("DISCORD_REACTIONS"):
         os.environ["DISCORD_REACTIONS"] = str(discord_cfg["reactions"]).lower()
     # ignored_channels: channels where bot never responds (even when mentioned)

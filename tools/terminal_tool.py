@@ -2136,6 +2136,7 @@ def terminal_tool(
     pty: bool = False,
     notify_on_complete: bool = False,
     watch_patterns: Optional[List[str]] = None,
+    heartbeat: int = 0,
 ) -> str:
     """
     Execute a command in the configured terminal environment.
@@ -2169,6 +2170,22 @@ def terminal_tool(
         # Note: force parameter is internal only, not exposed to model API
     """
     try:
+        if heartbeat and (
+            not isinstance(heartbeat, int)
+            or isinstance(heartbeat, bool)
+            or heartbeat < 0
+        ):
+            return json.dumps(
+                {
+                    "output": "",
+                    "exit_code": -1,
+                    "error": "heartbeat must be a whole number of seconds (min 60).",
+                },
+                ensure_ascii=False,
+            )
+        if heartbeat and background:
+            # The heartbeat rides the completion delivery path.
+            notify_on_complete = True
         if not isinstance(command, str):
             logger.warning(
                 "Rejected invalid terminal command value: %s",
@@ -2780,6 +2797,17 @@ def terminal_tool(
                             "notify_on_complete": True,
                         })
 
+                if heartbeat and background:
+                    if proc_session.notify_on_complete:
+                        result_data["heartbeat_seconds"] = (
+                            process_registry.arm_heartbeat(proc_session, heartbeat)
+                        )
+                    else:
+                        result_data["heartbeat_ignored"] = (
+                            "heartbeat needs notify_on_complete delivery, which this "
+                            "session cannot receive"
+                        )
+
                 # Set watch patterns for output monitoring
                 if watch_patterns and background:
                     proc_session.watch_patterns = list(watch_patterns)
@@ -3249,6 +3277,11 @@ TERMINAL_SCHEMA = {
                 "items": {"type": "string"},
                 "description": "Strings to watch for in background process output. HARD RATE LIMIT: at most 1 notification per 15 seconds per process — matches arriving inside the cooldown are dropped. After 3 consecutive 15-second windows with dropped matches, watch_patterns is automatically disabled for that process and promoted to notify_on_complete behavior (one notification on exit, no more mid-process spam). USE ONLY for truly rare, one-shot mid-process signals on LONG-LIVED processes that will never exit on their own — e.g. ['Application startup complete'] on a server so you know when to hit its endpoint, or ['migration done'] on a daemon. DO NOT use for: (1) end-of-run markers like 'DONE'/'PASS' — use notify_on_complete instead; (2) error patterns like 'ERROR'/'Traceback' in loops or multi-item batch jobs — they fire on every iteration and you'll hit the strike limit fast; (3) anything you'd ever combine with notify_on_complete. When in doubt, choose notify_on_complete. MUTUALLY EXCLUSIVE with notify_on_complete — set one, not both.",
             },
+            "heartbeat": {
+                "type": "integer",
+                "minimum": 60,
+                "description": "With background=true: every N seconds (min 60) you get a heartbeat notification carrying the output produced since the last one, plus the normal exit notification (implies notify_on_complete=true). Use it for long bounded jobs you must stay on top of (a full test suite, a build, a deploy) so you react to a failure within N seconds instead of at exit. Leave it off for short jobs and silent daemons.",
+            },
         },
         "required": ["command"],
     },
@@ -3266,6 +3299,7 @@ def _handle_terminal(args, **kw):
         pty=args.get("pty", False),
         notify_on_complete=args.get("notify_on_complete", False),
         watch_patterns=args.get("watch_patterns"),
+        heartbeat=args.get("heartbeat") or 0,
     )
 
 
