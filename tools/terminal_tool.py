@@ -54,7 +54,9 @@ logger = logging.getLogger(__name__)
 # Global interrupt event: set by the agent when a user interrupt arrives.
 # The terminal tool polls this during command execution so it can kill
 # long-running subprocesses immediately instead of blocking until timeout.
+# Backward-compatible re-export: the event now lives in tools.interrupt.
 # ---------------------------------------------------------------------------
+from tools.interrupt import _interrupt_event  # noqa: F401
 # display_hercules_home imported lazily at call site (stale-module safety during hercules update)
 
 
