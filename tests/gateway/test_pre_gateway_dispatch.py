@@ -59,6 +59,11 @@ def _make_runner(platform: Platform):
     runner.session_store = MagicMock()
     runner._running_agents = {}
     runner._update_prompt_pending = {}
+    # __init__ sets self.hooks = HookRegistry(); object.__new__ skips it.
+    # A bare registry with no discover_and_load() has no handlers, so emit is a no-op.
+    from gateway.hooks import HookRegistry
+
+    runner.hooks = HookRegistry()
     return runner, adapter
 
 
