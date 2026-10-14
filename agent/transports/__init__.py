@@ -20,7 +20,7 @@ from agent.transports.types import (
     build_tool_call,
     map_finish_reason,
 )  # noqa: F401
-from agent.transports.unified import FallbackMode, TransportFactory
+from agent.transports.unified import FallbackMode, TransportFactory, TransportNotAvailable
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,13 @@ def get_transport(api_mode: str):
     if cls is not None:
         return cls()
 
-    return _factory.get_transport(api_mode)
+    # Not registered. Do NOT call _factory.get_transport() here: it calls back
+    # into this function, which recursed without bound. Go straight to the
+    # legacy handler (keeps fallback telemetry) and map "no legacy path" to None.
+    try:
+        return _factory._handle_try_legacy(api_mode)
+    except TransportNotAvailable:
+        return None
 
 
 def get_fallback_stats() -> dict:
