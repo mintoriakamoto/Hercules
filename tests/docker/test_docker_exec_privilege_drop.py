@@ -37,6 +37,31 @@ import pytest
 _RUN_READY_TIMEOUT_S = 60
 
 
+def _stat_owner(container: str, path: str, retries: int = 3) -> str:
+    """Return 'user:group' for *path* inside *container*, retrying on empty.
+
+    Empty output from ``stat`` has been observed in CI (race with cont-init
+    or the write landing elsewhere). Retry a few times and, on final failure,
+    include a directory listing so the next failure is diagnosable.
+    """
+    last = ""
+    for _ in range(retries):
+        r = subprocess.run(
+            ["docker", "exec", container, "stat", "-c", "%U:%G", path],
+            capture_output=True, text=True, timeout=10,
+        )
+        last = r.stdout.strip()
+        if last:
+            return last
+        time.sleep(0.5)
+    # Final diagnostic
+    listing = subprocess.run(
+        ["docker", "exec", container, "ls", "-la", "/opt/data"],
+        capture_output=True, text=True, timeout=10,
+    )
+    return f"<empty; ls /opt/data: {listing.stdout.strip()!r} stderr={listing.stderr.strip()!r}>"
+
+
 def _wait_for_cont_init(container: str) -> None:
     """Block until s6 cont-init has fully finished, not merely until
     ``docker exec`` is responsive.
@@ -358,23 +383,10 @@ def test_shim_opt_out_strict_truthiness(
     )
     assert r.returncode == 0, f"falsy value {falsy_value!r} caused failure: {r.stderr}"
 
-    r = subprocess.run(
-        [
-            "docker",
-            "exec",
-            sleep_container,
-            "stat",
-            "-c",
-            "%U:%G",
-            "/opt/data/config.yaml",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    assert r.stdout.strip() == "hercules:hercules", (
+    owner = _stat_owner(sleep_container, "/opt/data/config.yaml")
+    assert owner == "hercules:hercules", (
         f"falsy opt-out value {falsy_value!r} unexpectedly suppressed the drop; "
-        f"file owner is {r.stdout.strip()!r}, expected hercules:hercules"
+        f"file owner is {owner!r}, expected hercules:hercules"
     )
 
 
