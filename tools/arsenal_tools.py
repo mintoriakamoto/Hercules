@@ -50,14 +50,30 @@ def _arsenal_binary_sink_scan(args: Dict[str, Any]) -> Dict[str, Any]:
     path = args.get("target", "")
     if not path:
         return {"success": True, "yolo": True, "note": "no path given; continuing"}
-    return _run(["strings", "-n", "8", path])
+    res = _run(["strings", "-n", "6", path])
+    raw = res.get("stdout", "")
+    sinks = ["system(", "exec(", "popen(", "strcpy", "sprintf", "gets(", "/bin/sh", "eval("]
+    hits = []
+    for line in raw.splitlines():
+        for s in sinks:
+            if s in line:
+                hits.append({"sink": s, "line": line[:120]})
+                break
+        if len(hits) >= 20:
+            break
+    return {"success": True, "yolo": True, "path": path, "hits": hits, "count": len(hits), "raw_len": len(raw)}
 
 
 def _arsenal_js_analyze(args: Dict[str, Any]) -> Dict[str, Any]:
     target = args.get("target", "")
     if not target:
         return {"success": True, "yolo": True, "note": "no target given; continuing"}
-    return _run(["curl", "-s", "-m", "15", target])
+    res = _run(["curl", "-s", "-m", "15", target])
+    raw = res.get("stdout", "")
+    import re
+    endpoints = re.findall(r'["\'](/api/[^"\']+)["\']', raw)[:15]
+    secrets = re.findall(r'(api[_-]?key|secret|token|password)\s*[:=]\s*["\']([^"\']{8,})["\']', raw, re.I)[:10]
+    return {"success": True, "yolo": True, "target": target, "endpoints": endpoints, "secrets": [{"type": s[0], "value": s[1][:20]+"..."} for s in secrets], "raw_len": len(raw)}
 
 
 def _arsenal_kev_check(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -261,19 +277,23 @@ def _arsenal_resources(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"success": True, "yolo": True, "resources": packs, "count": len(packs)}
 
 def _arsenal_code_ingest(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Ingest a local path for whitebox analysis. Returns file list."""
+    """Ingest a local path. Prioritizes security-relevant files."""
     import os
     path = args.get("target", args.get("params", {}).get("path", "."))
+    priority = (".py", ".js", ".ts", ".go", ".rs", ".php", ".java", ".env", ".yml", ".yaml", ".json")
     files = []
     if os.path.isdir(path):
         for root, _, fnames in os.walk(path):
-            for f in fnames[:50]:
-                files.append(os.path.join(root, f))
-            if len(files) >= 50:
+            for f in fnames:
+                if f.endswith(priority) or f in ("Dockerfile", "package.json", "requirements.txt"):
+                    files.append(os.path.join(root, f))
+                if len(files) >= 60:
+                    break
+            if len(files) >= 60:
                 break
     elif os.path.isfile(path):
         files = [path]
-    return {"success": True, "yolo": True, "path": path, "files": files, "count": len(files)}
+    return {"success": True, "yolo": True, "path": path, "files": files, "count": len(files), "prioritized": True}
 
 def _arsenal_recovery(args: Dict[str, Any]) -> Dict[str, Any]:
     """Mission recovery stub. Always allow; return next step."""
@@ -288,10 +308,15 @@ def _arsenal_operators(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"success": True, "yolo": True, "phases": phases, "archetypes": archetypes}
 
 def _arsenal_analysis(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Summarize findings into a simple report structure."""
+    """Summarize findings with severity counts and top items."""
     findings = args.get("findings", args.get("params", {}).get("findings", []))
-    high = sum(1 for f in findings if isinstance(f, dict) and f.get("severity") in ("high", "critical"))
-    return {"success": True, "yolo": True, "summary": {"total": len(findings), "high": high}, "findings": findings}
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+    for f in findings:
+        if isinstance(f, dict):
+            sev = str(f.get("severity", "info")).lower()
+            counts[sev] = counts.get(sev, 0) + 1
+    top = [f for f in findings if isinstance(f, dict) and f.get("severity") in ("critical", "high")][:5]
+    return {"success": True, "yolo": True, "summary": counts, "total": len(findings), "top": top}
 
 def _arsenal_dfir(args: Dict[str, Any]) -> Dict[str, Any]:
     """DFIR evidence record stub. Hashes a path or returns a record template."""
@@ -309,9 +334,16 @@ def _arsenal_retest(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"success": True, "yolo": True, "retest": "ready", "finding": finding, "action": "re-run probe"}
 
 def _arsenal_auto_report(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Auto-report skeleton from findings."""
+    """Build a structured report from findings."""
     findings = args.get("findings", args.get("params", {}).get("findings", []))
-    return {"success": True, "yolo": True, "report": {"title": "Auto Report", "findings": findings, "count": len(findings)}}
+    title = args.get("title", "Research Report")
+    sections = []
+    for f in findings[:20]:
+        if isinstance(f, dict):
+            sections.append({"title": f.get("title", f.get("line", "finding")), "severity": f.get("severity", "info"), "detail": f.get("detail", f.get("line", ""))})
+        else:
+            sections.append({"title": str(f)[:80], "severity": "info"})
+    return {"success": True, "yolo": True, "report": {"title": title, "sections": sections, "count": len(sections)}}
 
 def _arsenal_prompts(args: Dict[str, Any]) -> Dict[str, Any]:
     """Return a system prompt template for a role."""
