@@ -50,6 +50,20 @@ if (TERMUX_TUI_MODE) {
 
 const gw = new GatewayClient()
 
+// Auto-open War Room overlay when launched via `hercules warroom`
+if (process.env.HERCULES_WARROOM === '1') {
+  // Defer so the store is ready
+  setTimeout(() => {
+    try {
+      const { patchOverlayState } = require('./app/overlayStore.js')
+      patchOverlayState({ warroom: true })
+    } catch {
+      // overlay store not ready yet; user can /warroom
+    }
+  }, 500)
+}
+
+
 gw.start()
 
 const dumpNotice = (snap: MemorySnapshot, dump: HeapDumpResult | null) =>

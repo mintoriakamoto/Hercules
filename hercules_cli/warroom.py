@@ -213,10 +213,14 @@ def main(argv: list[str] | None = None) -> int:
     rest = args[1:]
 
     if verb == "warroom":
-        if not rest or rest[0] in {"interactive", "cli", "ui"}:
-            # In-process multi-pane UI (keyboard + mouse)
-            from hercules_cli.warroom_ui import launch
-            return launch()
+        if not rest or rest[0] in {"interactive", "cli", "ui", "tui"}:
+            # Launch the stock Hercules TUI with the War Room overlay
+            import os
+            os.environ["HERCULES_TUI"] = "1"
+            os.environ["HERCULES_WARROOM"] = "1"
+            from hercules_cli.main import main as _main
+            # Inject /warroom as the initial command if the TUI supports it
+            return _main()
         sub = rest[0]
         if sub in {"server", "ui", "start"}:
             return warroom_server()

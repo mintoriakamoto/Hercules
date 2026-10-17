@@ -143,6 +143,7 @@ export interface OverlayState {
   sessions: boolean
   skillsHub: boolean
   sudo: null | SudoReq
+  warroom: boolean
 }
 
 export interface PagerState {
