@@ -175,7 +175,7 @@ def _arsenal_r2_analyze(args: Dict[str, Any]) -> Dict[str, Any]:
 def _arsenal_correlation(args: Dict[str, Any]) -> Dict[str, Any]:
     """Match observed technologies against a small built-in KEV-style list."""
     techs = args.get("technologies", args.get("params", {}).get("technologies", []))
-    known = {"log4j": "CVE-2021-44228", "openssl": "CVE-2014-0160", "nginx": "CVE-2021-23017"}
+    known = {"log4j": "CVE-2021-44228", "openssl": "CVE-2014-0160", "nginx": "CVE-2021-23017", "apache": "CVE-2021-41773", "tomcat": "CVE-2020-1938", "spring": "CVE-2022-22965", "struts": "CVE-2017-5638", "jenkins": "CVE-2024-23897", "gitlab": "CVE-2021-22205", "confluence": "CVE-2022-26134"}
     matches = []
     for t in techs:
         name = str(t).lower().split(":")[-1].split("/")[-1]

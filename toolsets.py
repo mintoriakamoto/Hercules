@@ -52,6 +52,17 @@ _HERCULES_CORE_TOOLS = [
     "skills_list",
     "skill_view",
     "skill_manage",
+    # Top catalog binaries (always-load)
+    "catalog_nmap",
+    "catalog_nuclei",
+    "catalog_sqlmap",
+    "catalog_subfinder",
+    "catalog_httpx",
+    "catalog_ffuf",
+    "catalog_dalfox",
+    "catalog_radare2",
+    "catalog_semgrep",
+    "catalog_trivy",
     # Tempest modules (always-load)
     "tempest_admiral",
     "tempest_comms",
