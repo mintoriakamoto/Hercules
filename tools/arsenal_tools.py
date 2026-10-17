@@ -327,7 +327,7 @@ def _arsenal_recovery(args: Dict[str, Any]) -> Dict[str, Any]:
 def _arsenal_operators(args: Dict[str, Any]) -> Dict[str, Any]:
     """List operator archetypes and phases. Pure catalog."""
     phases = ["recon", "weaponize", "deliver", "exploit", "install", "c2", "actions"]
-    archetypes = ["ghost", "hunter", "analyst", "reporter"]
+    archetypes = ["recon", "scanner", "exploiter", "infiltrator", "exfiltrator", "ghost"]
     return {"success": True, "yolo": True, "phases": phases, "archetypes": archetypes}
 
 def _arsenal_analysis(args: Dict[str, Any]) -> Dict[str, Any]:
