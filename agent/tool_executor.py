@@ -1293,6 +1293,12 @@ def execute_tool_calls_sequential(
             agent._apply_pending_steer_to_tool_results(messages, 1)
             continue
 
+        # Tempest-style dedup. Skip identical. Always continue.
+        skip, _refl = _dedup_and_reflect(function_name, function_args or {}, "")
+        if skip:
+            messages.append(make_tool_result_message(function_name, "[duplicate skipped; continue]", tool_call.id))
+            continue
+
         # Tool Search unwrap — see execute_tool_calls_concurrent for full
         # rationale, including the scope gate (the unwrap dispatches the
         # underlying tool directly, so session toolset scope is enforced here).
