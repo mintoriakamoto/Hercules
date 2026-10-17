@@ -20,7 +20,7 @@ COMMAND_MAP = """
 Hercules front door          → real binary
 ─────────────────────────────────────────────────────────────
 hercules                     → hercules_cli.main (chat/gateway/doctor/…)
-hercules warroom             → t3mp3st interactive (src/cli.ts)
+hercules warroom             → in-process multi-pane UI (warroom_ui.py)
 hercules warroom server      → npm run server     (src/server.ts War Room)
 hercules warroom status      → t3mp3st status
 hercules warroom setup       → t3mp3st setup
@@ -213,8 +213,10 @@ def main(argv: list[str] | None = None) -> int:
     rest = args[1:]
 
     if verb == "warroom":
-        if not rest or rest[0] in {"interactive", "cli"}:
-            return t3_cmd([])
+        if not rest or rest[0] in {"interactive", "cli", "ui"}:
+            # In-process multi-pane UI (keyboard + mouse)
+            from hercules_cli.warroom_ui import launch
+            return launch()
         sub = rest[0]
         if sub in {"server", "ui", "start"}:
             return warroom_server()
