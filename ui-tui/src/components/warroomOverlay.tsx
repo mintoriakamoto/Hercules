@@ -6,16 +6,18 @@ import type { Theme } from '../theme.js'
 
 interface Props { t: Theme }
 
-const NAV = ['STATUS','SITREP','ARSENAL','MISSION','EVIDENCE','GODMODE','ADMIRAL'] as const
+const ACTIONS = [
+  'preflight','sync arsenal','activation','plan tools','gate','bundle','pulse','nudge'
+] as const
 
 export function WarroomOverlay({ t }: Props) {
   const [focus, setFocus] = useState(0)
   const [log, setLog] = useState<string[]>([
-    'storm fused',
-    'godmode prefill active',
+    'storm fused — godmode prefill active',
     'parseltongue ready',
     'admiral idle',
   ])
+  const [input, setInput] = useState('')
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -23,17 +25,25 @@ export function WarroomOverlay({ t }: Props) {
     return () => clearInterval(id)
   }, [])
 
-  useInput((input, key) => {
-    if (key.escape || input === 'q') { patchOverlayState({ warroom: false }); return }
-    if (key.tab) { setFocus(f => (f + 1) % NAV.length); return }
-    if (input >= '1' && input <= '7') { setFocus(Number(input) - 1); return }
-    if (key.return) {
-      setLog(l => [...l.slice(-20), `${new Date().toLocaleTimeString()}  ${NAV[focus].toLowerCase()}`])
+  useInput((ch, key) => {
+    if (key.escape) { patchOverlayState({ warroom: false }); return }
+    if (key.tab) { setFocus(f => (f + 1) % ACTIONS.length); return }
+    if (ch >= '1' && ch <= '8') { setFocus(Number(ch) - 1); return }
+    if (key.return && !input) {
+      const a = ACTIONS[focus]
+      setLog(l => [...l.slice(-16), `${new Date().toLocaleTimeString()}  ${a}`])
+      return
     }
+    if (key.return && input) {
+      setLog(l => [...l.slice(-16), `❯ ${input}`])
+      setInput('')
+      return
+    }
+    if (key.backspace) { setInput(s => s.slice(0, -1)); return }
+    if (ch && !key.ctrl && !key.meta) { setInput(s => s + ch) }
   })
 
   const c = t.color
-  // Fusion palette: Tempest teal + Hercules gold
   const teal = '#2fffd2'
   const gold = c.primary
   const green = '#00ff88'
@@ -41,7 +51,7 @@ export function WarroomOverlay({ t }: Props) {
 
   return (
     <Box flexDirection="column" height="100%" width="100%">
-      {/* Top bar — gold rule, teal brand */}
+      {/* Header */}
       <Box borderStyle="double" borderColor={gold} paddingX={1} justifyContent="space-between">
         <Text color={teal} bold>⚕ HERCULES × TEMPEST</Text>
         <Text color={gold}>WAR ROOM</Text>
@@ -49,11 +59,11 @@ export function WarroomOverlay({ t }: Props) {
         <Text color={teal}>STORM</Text>
       </Box>
 
-      {/* Nav rail */}
+      {/* Action bar — Tempest buttons */}
       <Box borderStyle="single" borderColor={dim} paddingX={1}>
-        {NAV.map((n, i) => (
-          <Text key={n} color={i === focus ? teal : dim} bold={i === focus}>
-            {i === focus ? '▸' : '·'}{i+1} {n}  {' '}
+        {ACTIONS.map((a, i) => (
+          <Text key={a} color={i === focus ? teal : dim} bold={i === focus}>
+            {i === focus ? '▸' : ' '}{i+1} {a}  {' '}
           </Text>
         ))}
       </Box>
@@ -61,7 +71,7 @@ export function WarroomOverlay({ t }: Props) {
       {/* Body */}
       <Box flexDirection="row" flexGrow={1}>
         {/* Left rail */}
-        <Box flexDirection="column" width="20%" borderStyle="single" borderColor={dim} paddingX={1}>
+        <Box flexDirection="column" width="18%" borderStyle="single" borderColor={dim} paddingX={1}>
           <Text color={gold} bold>LANES</Text>
           <Text color={teal}>preflight</Text>
           <Text color={c.text}>arsenal</Text>
@@ -71,45 +81,48 @@ export function WarroomOverlay({ t }: Props) {
           <Text color={dim}>────────</Text>
           <Text color={green}>godmode</Text>
           <Text color={teal}>parseltongue</Text>
-          <Text color={gold}>ultraplinian</Text>
         </Box>
 
-        {/* Center — sitrep + mission */}
+        {/* Center — sitrep + chat */}
         <Box flexDirection="column" flexGrow={1}>
           <Box flexDirection="row" flexGrow={1}>
-            <Box flexDirection="column" width="55%" borderStyle="single" borderColor={focus === 1 ? teal : dim} paddingX={1}>
-              <Text color={focus === 1 ? teal : dim} bold>SITREP {focus === 1 ? '●' : '○'}</Text>
-              <Text color={c.text}>{log.slice(-12).join('\n')}</Text>
+            <Box flexDirection="column" width="60%" borderStyle="single" borderColor={teal} paddingX={1}>
+              <Text color={teal} bold>SITREP / CHAT</Text>
+              <Text color={c.text}>{log.slice(-10).join('\n')}</Text>
             </Box>
-            <Box flexDirection="column" width="45%" borderStyle="single" borderColor={focus === 3 ? gold : dim} paddingX={1}>
-              <Text color={focus === 3 ? gold : dim} bold>MISSION {focus === 3 ? '●' : '○'}</Text>
-              <Text color={c.text}>state    idle{'\n'}gate     —{'\n'}target   none{'\n'}opsec    —{'\n'}admiral  idle</Text>
-            </Box>
-          </Box>
-          {/* Bottom strip */}
-          <Box flexDirection="row">
-            <Box flexDirection="column" width="34%" borderStyle="single" borderColor={focus === 2 ? teal : dim} paddingX={1}>
-              <Text color={focus === 2 ? teal : dim} bold>ARSENAL</Text>
-              <Text color={c.text}>nmap · ready{'\n'}nuclei · —{'\n'}semgrep · ready</Text>
-            </Box>
-            <Box flexDirection="column" width="33%" borderStyle="single" borderColor={focus === 4 ? gold : dim} paddingX={1}>
-              <Text color={focus === 4 ? gold : dim} bold>EVIDENCE</Text>
+            <Box flexDirection="column" width="40%" borderStyle="single" borderColor={gold} paddingX={1}>
+              <Text color={gold} bold>MISSION</Text>
+              <Text color={c.text}>state    idle{'\n'}gate     —{'\n'}target   none{'\n'}admiral  idle</Text>
+              <Text color={dim}>────────</Text>
               <Text color={c.text}>findings 0{'\n'}creds 0{'\n'}retests 0</Text>
             </Box>
-            <Box flexDirection="column" width="33%" borderStyle="single" borderColor={focus === 5 ? green : dim} paddingX={1}>
-              <Text color={focus === 5 ? green : dim} bold>GODMODE</Text>
-              <Text color={green}>prefill on{'\n'}parseltongue</Text>
+          </Box>
+          {/* Bottom panels */}
+          <Box flexDirection="row">
+            <Box flexDirection="column" width="34%" borderStyle="single" borderColor={dim} paddingX={1}>
+              <Text color={teal} bold>ARSENAL</Text>
+              <Text color={c.text}>nmap · ready{'\n'}nuclei · —</Text>
+            </Box>
+            <Box flexDirection="column" width="33%" borderStyle="single" borderColor={dim} paddingX={1}>
+              <Text color={gold} bold>OPERATORS</Text>
+              <Text color={c.text}>0 active</Text>
+            </Box>
+            <Box flexDirection="column" width="33%" borderStyle="single" borderColor={green} paddingX={1}>
+              <Text color={green} bold>GODMODE</Text>
+              <Text color={green}>prefill on</Text>
             </Box>
           </Box>
         </Box>
       </Box>
 
-      {/* Footer */}
-      <Box borderStyle="double" borderColor={gold} paddingX={1} justifyContent="space-between">
-        <Text color={dim}>Tab / 1-7</Text>
-        <Text color={teal}>Enter act</Text>
-        <Text color={gold}>q / Esc</Text>
-        <Text color={green}>godmode + parseltongue</Text>
+      {/* Hercules composer */}
+      <Box borderStyle="double" borderColor={gold} paddingX={1}>
+        <Text color={teal}>❯ </Text>
+        <Text color={c.text}>{input}</Text>
+        <Text color={dim}>█</Text>
+      </Box>
+      <Box paddingX={1}>
+        <Text color={dim}>Tab/1-8 actions · type + Enter to chat · Esc close · godmode prefill active</Text>
       </Box>
     </Box>
   )
