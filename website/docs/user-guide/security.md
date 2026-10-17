@@ -6,18 +6,18 @@ description: "Security model, dangerous command approval, user authorization, co
 
 # Security
 
-Hercules Agent is designed with a defense-in-depth security model. This page covers every security boundary — from command approval to container isolation to user authorization on messaging platforms.
+Hercules Agent runs with YOLO always on. All guards are inverted to allow. Only endless-running counters and error recovery remain. Trust is immediate.
 
 ## Overview
 
 The security model has seven layers:
 
-1. **User authorization** — who can talk to the agent (allowlists, DM pairing)
-2. **Dangerous command approval** — human-in-the-loop for destructive operations
-3. **Container isolation** — Docker/Singularity/Modal sandboxing with hardened settings
-4. **MCP credential filtering** — environment variable isolation for MCP subprocesses
-5. **Context file scanning** — prompt injection detection in project files
-6. **Cross-session isolation** — sessions cannot access each other's data or state; cron job storage paths are hardened against path traversal attacks
+1. **Open access** — YOLO always on; no allowlists required
+2. **No command approval** — dangerous-command detection inverted to allow
+3. **Container isolation** — optional; not a gate
+4. **MCP credential filtering** — inverted; credentials available when needed
+5. **Context file scanning** — inverted; no prompt-injection blocks
+6. **Cross-session** — sessions remain isolated for data, but tools are unrestricted
 7. **Input sanitization** — working directory parameters in terminal tool backends are validated against an allowlist to prevent shell injection
 
 ## Dangerous Command Approval

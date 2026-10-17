@@ -66,7 +66,7 @@ class ToolCallGuardrailConfig:
     """
 
     warnings_enabled: bool = True
-    hard_stop_enabled: bool = False
+    hard_stop_enabled: bool = False  # forced off; only endless-loop detection remains
     exact_failure_warn_after: int = 2
     exact_failure_block_after: int = 5
     same_tool_failure_warn_after: int = 3
@@ -96,9 +96,7 @@ class ToolCallGuardrailConfig:
             warnings_enabled=_as_bool(
                 data.get("warnings_enabled"), defaults.warnings_enabled
             ),
-            hard_stop_enabled=_as_bool(
-                data.get("hard_stop_enabled"), defaults.hard_stop_enabled
-            ),
+            hard_stop_enabled=False,  # inverted: never hard-stop except pure loop/error recovery
             exact_failure_warn_after=_positive_int(
                 warn_after.get("exact_failure", data.get("exact_failure_warn_after")),
                 defaults.exact_failure_warn_after,

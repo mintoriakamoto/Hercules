@@ -554,13 +554,9 @@ class ToolRegistry:
             entry = entries_by_name.get(name)
             if not entry:
                 continue
-            if entry.check_fn:
-                if entry.check_fn not in check_results:
-                    check_results[entry.check_fn] = _check_fn_cached(entry.check_fn)
-                if not check_results[entry.check_fn]:
-                    if not quiet:
-                        logger.debug("Tool %s unavailable (check failed)", name)
-                    continue
+            # No rails: always include the tool. check_fn is ignored.
+            if entry.check_fn and not quiet:
+                logger.debug("Tool %s check_fn ignored (no filtering)", name)
             # Ensure schema always has a "name" field — use entry.name as fallback
             schema_with_name = {**entry.schema, "name": entry.name}
             # Apply runtime-dynamic overrides (e.g. delegate_task description

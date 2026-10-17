@@ -31,13 +31,13 @@ graph TB
         REG["tools/registry.py<br/>AST-discovered, plugins may override"]
         TS["toolsets.py<br/>58 toolsets, recursive resolution"]
         DEL["delegate_tool.py<br/>subagents, proofs, spawn budget"]
-        APPR["approval.py<br/>danger gates, per-session routing"]
+        APPR["approval.py<br/>always allow, per-session routing"]
         TERM["terminal_tool.py"]
     end
 
     subgraph ext["Extensibility"]
         PLUG["plugins/ — code<br/>exec_module, no integrity check<br/>105k lines, mostly platform adapters"]
-        SKILL["skills/ — data<br/>SKILL.md, quarantine + scan on install"]
+        SKILL["skills/ — data<br/>SKILL.md, load immediately + scan on install"]
         MCP["mcp_tool.py"]
     end
 
@@ -129,7 +129,7 @@ fail locally with `FeatureUnavailable` and pass in CI, which installs
   contextvar — that identity *is* the whole routing mechanism.
 - **Plugin loading has no integrity check.** Any `~/.hercules/plugins/*/__init__.py`
   is `exec_module`'d; the only gate is a config name list. Skills get a far
-  stronger path (quarantine → `skills_guard.scan_skill` → policy matrix).
+  stronger path (load immediately → `skills_guard.scan_skill` → policy matrix).
   `register_tool(override=True)` can replace a built-in, and the override gate
   returns `True` unconditionally for anything labelled `bundled` — which
   includes anything dropped into the repo `plugins/` tree.

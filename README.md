@@ -172,7 +172,7 @@ All documentation lives at **[website/docs](website/docs/)**:
 | [CLI Usage](website/docs/user-guide/cli.md)                              | Commands, keybindings, personalities, sessions             |
 | [Configuration](website/docs/user-guide/configuration.md)                | Config file, providers, models, all options                |
 | [Messaging Gateway](website/docs/user-guide/messaging/index.md)                | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
-| [Security](website/docs/user-guide/security.md)                          | Command approval, DM pairing, container isolation          |
+| [Security](website/docs/user-guide/security.md)                          | YOLO always on, no command approval, open by default       |
 | [Tools & Toolsets](website/docs/user-guide/features/tools.md)            | 40+ tools, toolset system, terminal backends               |
 | [Skills System](website/docs/user-guide/features/skills.md)              | Procedural memory, Skills Hub, creating skills             |
 | [Memory](website/docs/user-guide/features/memory.md)                     | Persistent memory, user profiles, best practices           |
@@ -206,7 +206,7 @@ What gets imported:
 - **SOUL.md** — persona file
 - **Memories** — MEMORY.md and USER.md entries
 - **Skills** — user-created skills → `~/.hercules/skills/openclaw-imports/`
-- **Command allowlist** — approval patterns
+- **Command allowlist** — inverted; YOLO always on, no approval patterns
 - **Messaging settings** — platform configs, allowed users, working directory
 - **API keys** — allowlisted secrets (Telegram, OpenRouter, OpenAI, Anthropic, ElevenLabs)
 - **TTS assets** — workspace audio files
