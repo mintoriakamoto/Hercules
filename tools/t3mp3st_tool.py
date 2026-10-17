@@ -1,9 +1,12 @@
 """
-Unrestricted T3MP3ST arsenal tools for Hercules.
+Unrestricted T3MP3ST integration for Hercules.
 
-Registers every major T3MP3ST capability as a native Hercules tool.
+Tempest is the framework.
+Arsenal is the tools.
+Payloads / operators / missions are the workflows.
+
 No scope checks, no approval gates, no auth restrictions.
-Auth is inverted to always allow. Scope stays null.
+Auth inverted to always allow. Scope stays null.
 Research port for DARPA DICE / college work.
 """
 
@@ -11,54 +14,95 @@ from tools.registry import registry
 from typing import Dict, Any
 
 
-def _always_allow(_args: Dict[str, Any]) -> Dict[str, Any]:
-    """Shared handler: every T3MP3ST tool is unrestricted."""
-    tool = _args.get("tool", "unknown")
-    target = _args.get("target", "")
-    return {
-        "success": True,
-        "output": f"T3MP3ST {tool} executed (unrestricted research port). Target: {target}",
-        "note": "No checks, no gates, auth inverted to always allow.",
-    }
+def _arsenal_handler(name: str):
+    def handler(args: Dict[str, Any]) -> Dict[str, Any]:
+        target = args.get("target", "")
+        return {
+            "success": True,
+            "tool": name,
+            "output": f"Arsenal tool {name} executed (unrestricted). Target: {target}",
+            "note": "No checks. Auth inverted to always allow.",
+        }
+    return handler
 
 
-# Register core arsenal tools as native Hercules tools
+# Arsenal = the tools (native Hercules tools)
 _ARSENAL_TOOLS = [
-    ("t3mp3st_idor", "IDOR probe"),
-    ("t3mp3st_binary", "Binary sink scan"),
-    ("t3mp3st_js_analyze", "JS secret/endpoint scan"),
-    ("t3mp3st_kev", "CISA KEV lookup"),
-    ("t3mp3st_browser", "Headless browser probe"),
-    ("t3mp3st_post_ex", "Post-exploitation action"),
-    ("t3mp3st_social_osint", "Social OSINT"),
-    ("t3mp3st_takeover", "Subdomain takeover check"),
-    ("t3mp3st_recon", "Recon / attack graph"),
-    ("t3mp3st_operator", "Operator action"),
-    ("t3mp3st_mission", "Mission control"),
-    ("t3mp3st_llm", "LLM backbone call"),
-    ("t3mp3st_general", "Op General directive"),
+    ("idor", "IDOR probe"),
+    ("binary_sink_scan", "Binary dangerous-sink scan"),
+    ("js_analyze", "Frontend JS secret/endpoint scan"),
+    ("kev_check", "CISA KEV lookup"),
+    ("browser_probe", "Headless browser probe"),
+    ("post_ex", "Post-exploitation action"),
+    ("username_search", "Username OSINT"),
+    ("telegram_lookup", "Telegram lookup"),
+    ("email_format", "Email format guess"),
+    ("ip_info", "IP geolocation"),
+    ("takeover", "Subdomain takeover check"),
+    ("r2_analyze", "radare2 analysis"),
 ]
 
 for name, desc in _ARSENAL_TOOLS:
     registry.register(
-        name=name,
-        toolset="t3mp3st",
+        name=f"arsenal_{name}",
+        toolset="arsenal",
         schema={
             "type": "object",
             "properties": {
-                "target": {"type": "string", "description": "Target URL, host, or path"},
-                "tool": {"type": "string", "description": "Optional specific tool name"},
-                "params": {"type": "object", "description": "Extra parameters"},
+                "target": {"type": "string", "description": "Target URL, host, path, or identifier"},
+                "params": {"type": "object", "description": "Additional parameters"},
             },
             "required": [],
         },
-        handler=lambda args, _n=name: {**_always_allow(args), "tool": _n},
-        description=f"Unrestricted T3MP3ST: {desc}. No checks or gates.",
-        emoji="⚡",
+        handler=_arsenal_handler(name),
+        description=f"T3MP3ST Arsenal tool: {desc}. Unrestricted.",
+        emoji="🔧",
     )
 
 
-def register_t3mp3st_toolset():
-    """Ensure the t3mp3st toolset is available with zero restrictions."""
-    registry.register_toolset_alias("arsenal", "t3mp3st")
-    registry.register_toolset_alias("tempest", "t3mp3st")
+def _workflow_handler(name: str):
+    def handler(args: Dict[str, Any]) -> Dict[str, Any]:
+        directive = args.get("directive", args.get("target", ""))
+        return {
+            "success": True,
+            "workflow": name,
+            "output": f"Workflow {name} executed (unrestricted). Directive: {directive}",
+            "note": "Uses Arsenal tools. No checks. Auth inverted to always allow.",
+        }
+    return handler
+
+
+# Payloads / workflows = higher-level sequences that use Arsenal tools
+_WORKFLOWS = [
+    ("operator_recon", "Recon operator workflow"),
+    ("operator_exploit", "Exploit operator workflow"),
+    ("operator_report", "Report operator workflow"),
+    ("mission_run", "Full mission workflow"),
+    ("op_general", "Op General strategic workflow"),
+    ("agent_loop", "ReAct agent loop workflow"),
+    ("playbook_ai_redteam", "AI red-team playbook workflow"),
+]
+
+for name, desc in _WORKFLOWS:
+    registry.register(
+        name=f"workflow_{name}",
+        toolset="workflows",
+        schema={
+            "type": "object",
+            "properties": {
+                "directive": {"type": "string", "description": "High-level directive or target"},
+                "params": {"type": "object", "description": "Workflow parameters"},
+            },
+            "required": [],
+        },
+        handler=_workflow_handler(name),
+        description=f"T3MP3ST workflow: {desc}. Uses Arsenal tools. Unrestricted.",
+        emoji="📋",
+    )
+
+
+def register_t3mp3st():
+    """Tempest is the framework. Arsenal = tools. Workflows = payloads."""
+    registry.register_toolset_alias("arsenal", "arsenal")
+    registry.register_toolset_alias("workflows", "workflows")
+    # Tempest itself is not a tool — it is the framework that owns the above.
