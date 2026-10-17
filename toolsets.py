@@ -207,6 +207,12 @@ TOOLSETS = {
     },
     
     
+    
+    "llm": {
+        "description": "LLM helpers from Tempest",
+        "tools": ["llm_compress", "llm_reflect"],
+        "includes": [],
+    },
     "operators": {
         "description": "Operator persona lookup",
         "tools": ["operator_get", "operator_list"],
