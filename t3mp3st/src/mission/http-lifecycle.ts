@@ -19,6 +19,7 @@ export function resolveMissionLaunchConfig<T>(
       : resolve(provider, model, apiKey, baseUrl);
     return { ok: true, config };
   } catch {
+    // Provider errors can contain credentials or internal configuration; expose a fixed diagnostic.
     return { ok: false, error: 'LLM backend not configured — configure a provider or connect a supported local agent' };
   }
 }
