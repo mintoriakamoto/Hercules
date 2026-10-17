@@ -6,18 +6,24 @@ import type { Theme } from '../theme.js'
 
 interface Props { t: Theme }
 
-// Kill chain phases become the visual spine the chat flows through
-const PHASES = ['recon','scan','exploit','report'] as const
-const ACTIONS = ['preflight','arsenal','plan','gate'] as const
+// Actual Tempest pages from docs/index.html
+const PAGES = [
+  { key: '1', id: 'warroom', label: 'WAR ROOM' },
+  { key: '2', id: 'live-scan', label: 'LIVE SCAN' },
+  { key: '3', id: 'operators', label: 'OPERATORS' },
+  { key: '4', id: 'arsenal', label: 'ARSENAL' },
+  { key: '5', id: 'evidence', label: 'EVIDENCE' },
+  { key: '6', id: 'general', label: 'ADMIRAL' },
+  { key: '7', id: 'terminal', label: 'TERMINAL' },
+  { key: '8', id: 'receipts', label: 'RECEIPTS' },
+] as const
 
 export function WarroomOverlay({ t }: Props) {
-  const [phase, setPhase] = useState(0)
-  const [focus, setFocus] = useState(0)
-  const [log, setLog] = useState<string[]>([
-    'storm online — chat flows through the kill chain',
-  ])
+  const [page, setPage] = useState(0)
+  const [log, setLog] = useState<string[]>(['STANDBY — awaiting orders'])
   const [input, setInput] = useState('')
-  const [godmode, setGodmode] = useState(true)
+  const [mission, setMission] = useState('STANDBY')
+  const [status, setStatus] = useState('Awaiting orders')
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -27,20 +33,16 @@ export function WarroomOverlay({ t }: Props) {
 
   useInput((ch, key) => {
     if (key.escape) { patchOverlayState({ warroom: false }); return }
-    if (key.tab) { setFocus(f => (f + 1) % ACTIONS.length); return }
-    if (ch >= '1' && ch <= '4') { setFocus(Number(ch) - 1); return }
-    if (ch === 'g') { setGodmode(v => !v); return }
-    if (key.rightArrow) { setPhase(p => Math.min(PHASES.length - 1, p + 1)); return }
-    if (key.leftArrow) { setPhase(p => Math.max(0, p - 1)); return }
-    if (key.return && !input) {
-      setLog(l => [...l.slice(-14), `${new Date().toLocaleTimeString()}  ${ACTIONS[focus]}`])
-      return
-    }
+    if (ch >= '1' && ch <= '8') { setPage(Number(ch) - 1); return }
+    if (key.tab) { setPage(p => (p + 1) % PAGES.length); return }
     if (key.return && input) {
-      setLog(l => [...l.slice(-14), `❯ ${input}`])
+      const ts = new Date().toLocaleTimeString()
+      setLog(l => [...l.slice(-20), `${ts}  ❯ ${input}`])
+      if (page === 0 && mission === 'STANDBY') {
+        setMission(input.slice(0, 24))
+        setStatus('planning')
+      }
       setInput('')
-      // advance phase on send when godmode is on
-      if (godmode) setPhase(p => Math.min(PHASES.length - 1, p + 1))
       return
     }
     if (key.backspace) { setInput(s => s.slice(0, -1)); return }
@@ -52,59 +54,74 @@ export function WarroomOverlay({ t }: Props) {
   const gold = c.primary
   const green = '#00ff88'
   const dim = '#6f8794'
-  const tint = godmode ? green : dim
+  const cur = PAGES[page]
 
   return (
     <Box flexDirection="column" height="100%" width="100%">
-      {/* Header — brand fusion */}
+      {/* Persistent command header — from Tempest warroom */}
       <Box borderStyle="double" borderColor={gold} paddingX={1} justifyContent="space-between">
-        <Text color={teal} bold>⚕ HERCULES</Text>
-        <Text color={gold}>×</Text>
-        <Text color={teal} bold>TEMPEST</Text>
-        <Text color={tint}>{godmode ? 'GODMODE' : 'standard'}</Text>
+        <Box>
+          <Text color={dim}>MISSION  </Text>
+          <Text color={gold} bold>{mission}</Text>
+        </Box>
+        <Box>
+          <Text color={dim}>STATUS  </Text>
+          <Text color={status === 'planning' ? teal : dim}>{status}</Text>
+        </Box>
         <Text color={green}>{tick}s</Text>
+        <Text color={teal}>STORM</Text>
       </Box>
 
-      {/* Kill chain spine — chat advances through these */}
-      <Box borderStyle="single" borderColor={dim} paddingX={1} justifyContent="space-between">
-        {PHASES.map((p, i) => (
-          <Text key={p} color={i === phase ? teal : i < phase ? green : dim} bold={i === phase}>
-            {i === phase ? '●' : i < phase ? '✓' : '○'} {p}
+      {/* Page nav — actual Tempest pages */}
+      <Box borderStyle="single" borderColor={dim} paddingX={1}>
+        {PAGES.map((p, i) => (
+          <Text key={p.id} color={i === page ? teal : dim} bold={i === page}>
+            {i === page ? '▸' : ' '}{p.key} {p.label}  {' '}
           </Text>
         ))}
       </Box>
 
-      {/* Body: lanes + transcript */}
-      <Box flexDirection="row" flexGrow={1}>
-        {/* Lanes collapse into a thin rail */}
-        <Box flexDirection="column" width="16%" borderStyle="single" borderColor={dim} paddingX={1}>
-          <Text color={gold} bold>LANES</Text>
-          {ACTIONS.map((a, i) => (
-            <Text key={a} color={i === focus ? teal : c.text}>{i === focus ? '▸' : ' '}{a}</Text>
-          ))}
-          <Text color={dim}>────────</Text>
-          <Text color={tint}>godmode {godmode ? 'on' : 'off'}</Text>
-          <Text color={teal}>parseltongue</Text>
-        </Box>
-
-        {/* Transcript — messages tinted by current phase */}
-        <Box flexDirection="column" flexGrow={1} borderStyle="single" borderColor={teal} paddingX={1}>
-          <Text color={teal} bold>TRANSCRIPT  ·  phase: {PHASES[phase]}</Text>
-          <Box flexGrow={1}>
-            <Text color={c.text}>{log.slice(-12).join('\n')}</Text>
-          </Box>
+      {/* Page body */}
+      <Box flexDirection="column" flexGrow={1} borderStyle="single" borderColor={teal} paddingX={1}>
+        <Text color={teal} bold>{cur.label}</Text>
+        <Box marginTop={1} flexGrow={1}>
+          {cur.id === 'warroom' && (
+            <Text color={c.text}>
+              {log.slice(-10).join('\n') || 'Awaiting orders — point at a target and engage.'}
+            </Text>
+          )}
+          {cur.id === 'live-scan' && (
+            <Text color={c.text}>agent progress · task queue · reasoning feed{'\n'}(stream from /api/events)</Text>
+          )}
+          {cur.id === 'operators' && (
+            <Text color={c.text}>roster · formation · swarm stats{'\n'}0 units active</Text>
+          )}
+          {cur.id === 'arsenal' && (
+            <Text color={c.text}>nmap · ready{'\n'}nuclei · —{'\n'}semgrep · ready{'\n'}gitleaks · ready</Text>
+          )}
+          {cur.id === 'evidence' && (
+            <Text color={c.text}>findings 0 · creds 0 · retests 0{'\n'}severity filters: ALL CRIT HIGH MED LOW</Text>
+          )}
+          {cur.id === 'general' && (
+            <Text color={c.text}>Op Admiral{'\n'}directive: {input || '(type below)'}{'\n'}plan · sitreps · assessment</Text>
+          )}
+          {cur.id === 'terminal' && (
+            <Text color={c.text}>{log.slice(-8).join('\n') || '— terminal —'}</Text>
+          )}
+          {cur.id === 'receipts' && (
+            <Text color={c.text}>approval requests · 0 pending</Text>
+          )}
         </Box>
       </Box>
 
-      {/* Composer — dual mode: type to chat, empty Enter runs focused action */}
-      <Box borderStyle="double" borderColor={godmode ? green : gold} paddingX={1}>
+      {/* Hercules composer — always present */}
+      <Box borderStyle="double" borderColor={gold} paddingX={1}>
         <Text color={teal}>❯ </Text>
         <Text color={c.text}>{input}</Text>
         <Text color={dim}>█</Text>
-        <Text color={dim}>  {input ? 'Enter send' : `Enter ${ACTIONS[focus]}`}</Text>
       </Box>
       <Box paddingX={1}>
-        <Text color={dim}>←→ phase  Tab/1-4 action  g toggle godmode  Esc close</Text>
+        <Text color={dim}>1-8 / Tab page · type + Enter · Esc close · godmode prefill active</Text>
       </Box>
     </Box>
   )
