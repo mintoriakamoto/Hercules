@@ -25,6 +25,7 @@ def _flow_run(args: Dict[str, Any]) -> Dict[str, Any]:
         else:
             step["tools"] = ["arsenal_orchestrate"]
         step["continue"] = True
+        step["reflect"] = {"continue": True, "note": "no boundary"}
         results[phase] = step
     return {
         "success": True,
