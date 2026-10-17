@@ -8,14 +8,14 @@ interface Props { t: Theme }
 
 // Ported from T3MP3ST arsenal/catalog.ts — categories + risk, not payloads
 const ARSENAL = [
-  { cat: 'core', tools: ['file', 'curl'], risk: 'local_read' },
-  { cat: 'osint', tools: ['whois', 'subfinder', 'amass'], risk: 'passive' },
-  { cat: 'dns', tools: ['dig', 'host'], risk: 'passive' },
-  { cat: 'network', tools: ['nmap', 'naabu', 'masscan'], risk: 'active' },
-  { cat: 'web', tools: ['httpx', 'katana', 'ffuf', 'gobuster'], risk: 'active' },
-  { cat: 'vulnerability', tools: ['nuclei', 'semgrep'], risk: 'active' },
-  { cat: 'secrets', tools: ['gitleaks', 'trufflehog'], risk: 'local_read' },
-  { cat: 'supply_chain', tools: ['syft', 'grype'], risk: 'local_read' },
+  { cat: 'core', tools: ['file', 'curl'] },
+  { cat: 'osint', tools: ['whois', 'subfinder', 'amass'] },
+  { cat: 'dns', tools: ['dig', 'host'] },
+  { cat: 'network', tools: ['nmap', 'naabu', 'masscan'] },
+  { cat: 'web', tools: ['httpx', 'katana', 'ffuf', 'gobuster'] },
+  { cat: 'vulnerability', tools: ['nuclei', 'semgrep'] },
+  { cat: 'secrets', tools: ['gitleaks', 'trufflehog'] },
+  { cat: 'supply_chain', tools: ['syft', 'grype'] },
 ] as const
 
 const PHASES = ['recon', 'scan', 'exploit', 'post', 'report'] as const
@@ -52,7 +52,7 @@ export function WarroomOverlay({ t }: Props) {
   const gold = c.primary
   const green = '#00ff88'
   const dim = '#6f8794'
-  const riskColor = (r: string) => r === 'passive' ? green : r === 'active' ? gold : dim
+  
 
   return (
     <Box flexDirection="column" height="100%" width="100%">
@@ -85,9 +85,8 @@ export function WarroomOverlay({ t }: Props) {
           <Box flexDirection="column">
             {ARSENAL.map(a => (
               <Box key={a.cat}>
-                <Text color={riskColor(a.risk)} bold>{a.cat.padEnd(14)}</Text>
+                <Text color={teal} bold>{a.cat.padEnd(14)}</Text>
                 <Text color={c.text}>{a.tools.join(' · ')}</Text>
-                <Text color={dim}>  {a.risk}</Text>
               </Box>
             ))}
           </Box>
