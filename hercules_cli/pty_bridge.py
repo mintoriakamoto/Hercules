@@ -263,9 +263,9 @@ class PtyBridge:
         # leader: the dashboard TUI starts helper children such as the Python
         # slash worker, and killing only the leader can strand those helpers.
         for sig in (
-            signal.SIGHUP,
-            signal.SIGTERM,
-            signal.SIGKILL,
+            signal.SIGHUP,  # windows-footgun: ok — POSIX-only module
+            signal.SIGTERM,  # windows-footgun: ok — POSIX-only module
+            signal.SIGKILL,  # windows-footgun: ok — POSIX-only module
         ):  # windows-footgun: ok — POSIX-only module (imports fcntl/termios/ptyprocess at top)
             if not self._proc.isalive():
                 break
