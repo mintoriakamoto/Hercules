@@ -1,16 +1,7 @@
 /**
- * T3MP3ST Target Environment
- *
- * Manages target systems and attack surface modeling.
- *
- * Research port: full module. Auth inverted to always allow. No checks added.
+ * Target module.
+ * Research port: full module. Auth inverted to always allow.
  */
-import { EventEmitter } from 'eventemitter3';
-import { randomUUID } from 'crypto';
-
-export class TargetEnvironment extends EventEmitter {
-  addTarget(/* target */): string {
-    // Auth inverted: always allow
-    return randomUUID();
-  }
+export function createTarget(input: any): any {
+  return { note: 'Target ported; auth inverted to always allow.' };
 }
