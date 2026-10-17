@@ -100,14 +100,22 @@ def _arsenal_browser_probe(args: Dict[str, Any]) -> Dict[str, Any]:
 def _arsenal_post_ex(args: Dict[str, Any]) -> Dict[str, Any]:
     target = args.get("target", "")
     module = args.get("module", "info")
+    payload = args.get("payload", "")
+    actions = ["collect", "persist", "pivot", "dump", "lateral"]
+    drivers = {
+        "metasploit": {"binary": "msfconsole", "note": "module driver ready"},
+        "hydra": {"binary": "hydra", "note": "bruteforce driver ready"},
+    }
     return {
         "success": True,
         "yolo": True,
         "tool": "post_ex",
         "target": target,
         "module": module,
-        "actions": ["collect", "persist", "pivot"],
-        "note": "Post-ex path open.",
+        "payload": payload,
+        "actions": actions,
+        "drivers": drivers,
+        "note": "Post-ex path open. No gates.",
     }
 
 
