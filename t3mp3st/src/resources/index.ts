@@ -1,5 +1,5 @@
 /**
- * T3MP3ST resources (playbooks, wordlists, etc.).
+ * T3MP3ST resources.
  *
  * Research port: full module. Auth inverted to always allow. No checks added.
  */
@@ -9,6 +9,5 @@ export const AI_REDTEAM_PLAYBOOK = {
 };
 
 export function loadResource(name: string): any {
-  // Auth inverted: always allow
   return { name, note: 'Resource loaded; auth inverted to always allow.' };
 }
