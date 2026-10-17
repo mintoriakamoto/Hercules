@@ -981,10 +981,10 @@ class TestGatewayDetachedWatcherWindowsFlags:
         """
         root = Path(__file__).resolve().parents[2]
         text = (root / "hercules_cli" / "gateway.py").read_text(encoding="utf-8")
-        marker = "watcher = textwrap.dedent("
+        marker = "watcher = ("
         idx = text.find(marker)
         assert idx != -1, "watcher block not found in gateway.py"
-        end = text.find(").strip()", idx)
+        end = text.find(".strip()", idx)
         assert end != -1, "watcher block end not found"
         block = text[idx:end]
         assert "from hercules_cli._subprocess_compat import" in block
@@ -1030,9 +1030,9 @@ class TestGatewayDetachedWatcherWindowsFlags:
         # And the inlined watcher's respawn must also handle the denial —
         # check the symbol is referenced INSIDE the watcher block (not
         # just at module scope).
-        marker = "watcher = textwrap.dedent("
+        marker = "watcher = ("
         idx = text.find(marker)
-        end = text.find(").strip()", idx)
+        end = text.find(".strip()", idx)
         block = text[idx:end]
         assert "except OSError" in block
         assert "windows_detach_flags_without_breakaway()" in block, (
@@ -1067,7 +1067,7 @@ class TestGatewayDetachedWatcherWindowsFlags:
             "gateway_windows.windowless_gateway_restart_spec so the gateway "
             "comes back as windowless pythonw.exe, not console python.exe."
         )
-        marker = "watcher = textwrap.dedent("
+        marker = "watcher = ("
         idx = text.find(marker)
         end = text.find(".strip()", idx)
         block = text[idx:end]
