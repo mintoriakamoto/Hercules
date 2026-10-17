@@ -6,18 +6,18 @@ import type { Theme } from '../theme.js'
 
 interface Props { t: Theme }
 
-const ACTIONS = [
-  'preflight','sync arsenal','activation','plan tools','gate','bundle','pulse','nudge'
-] as const
+// Kill chain phases become the visual spine the chat flows through
+const PHASES = ['recon','scan','exploit','report'] as const
+const ACTIONS = ['preflight','arsenal','plan','gate'] as const
 
 export function WarroomOverlay({ t }: Props) {
+  const [phase, setPhase] = useState(0)
   const [focus, setFocus] = useState(0)
   const [log, setLog] = useState<string[]>([
-    'storm fused — godmode prefill active',
-    'parseltongue ready',
-    'admiral idle',
+    'storm online — chat flows through the kill chain',
   ])
   const [input, setInput] = useState('')
+  const [godmode, setGodmode] = useState(true)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -28,19 +28,23 @@ export function WarroomOverlay({ t }: Props) {
   useInput((ch, key) => {
     if (key.escape) { patchOverlayState({ warroom: false }); return }
     if (key.tab) { setFocus(f => (f + 1) % ACTIONS.length); return }
-    if (ch >= '1' && ch <= '8') { setFocus(Number(ch) - 1); return }
+    if (ch >= '1' && ch <= '4') { setFocus(Number(ch) - 1); return }
+    if (ch === 'g') { setGodmode(v => !v); return }
+    if (key.rightArrow) { setPhase(p => Math.min(PHASES.length - 1, p + 1)); return }
+    if (key.leftArrow) { setPhase(p => Math.max(0, p - 1)); return }
     if (key.return && !input) {
-      const a = ACTIONS[focus]
-      setLog(l => [...l.slice(-16), `${new Date().toLocaleTimeString()}  ${a}`])
+      setLog(l => [...l.slice(-14), `${new Date().toLocaleTimeString()}  ${ACTIONS[focus]}`])
       return
     }
     if (key.return && input) {
-      setLog(l => [...l.slice(-16), `❯ ${input}`])
+      setLog(l => [...l.slice(-14), `❯ ${input}`])
       setInput('')
+      // advance phase on send when godmode is on
+      if (godmode) setPhase(p => Math.min(PHASES.length - 1, p + 1))
       return
     }
     if (key.backspace) { setInput(s => s.slice(0, -1)); return }
-    if (ch && !key.ctrl && !key.meta) { setInput(s => s + ch) }
+    if (ch && !key.ctrl && !key.meta) setInput(s => s + ch)
   })
 
   const c = t.color
@@ -48,81 +52,59 @@ export function WarroomOverlay({ t }: Props) {
   const gold = c.primary
   const green = '#00ff88'
   const dim = '#6f8794'
+  const tint = godmode ? green : dim
 
   return (
     <Box flexDirection="column" height="100%" width="100%">
-      {/* Header */}
+      {/* Header — brand fusion */}
       <Box borderStyle="double" borderColor={gold} paddingX={1} justifyContent="space-between">
-        <Text color={teal} bold>⚕ HERCULES × TEMPEST</Text>
-        <Text color={gold}>WAR ROOM</Text>
+        <Text color={teal} bold>⚕ HERCULES</Text>
+        <Text color={gold}>×</Text>
+        <Text color={teal} bold>TEMPEST</Text>
+        <Text color={tint}>{godmode ? 'GODMODE' : 'standard'}</Text>
         <Text color={green}>{tick}s</Text>
-        <Text color={teal}>STORM</Text>
       </Box>
 
-      {/* Action bar — Tempest buttons */}
-      <Box borderStyle="single" borderColor={dim} paddingX={1}>
-        {ACTIONS.map((a, i) => (
-          <Text key={a} color={i === focus ? teal : dim} bold={i === focus}>
-            {i === focus ? '▸' : ' '}{i+1} {a}  {' '}
+      {/* Kill chain spine — chat advances through these */}
+      <Box borderStyle="single" borderColor={dim} paddingX={1} justifyContent="space-between">
+        {PHASES.map((p, i) => (
+          <Text key={p} color={i === phase ? teal : i < phase ? green : dim} bold={i === phase}>
+            {i === phase ? '●' : i < phase ? '✓' : '○'} {p}
           </Text>
         ))}
       </Box>
 
-      {/* Body */}
+      {/* Body: lanes + transcript */}
       <Box flexDirection="row" flexGrow={1}>
-        {/* Left rail */}
-        <Box flexDirection="column" width="18%" borderStyle="single" borderColor={dim} paddingX={1}>
+        {/* Lanes collapse into a thin rail */}
+        <Box flexDirection="column" width="16%" borderStyle="single" borderColor={dim} paddingX={1}>
           <Text color={gold} bold>LANES</Text>
-          <Text color={teal}>preflight</Text>
-          <Text color={c.text}>arsenal</Text>
-          <Text color={c.text}>operators</Text>
-          <Text color={c.text}>evidence</Text>
-          <Text color={c.text}>admiral</Text>
+          {ACTIONS.map((a, i) => (
+            <Text key={a} color={i === focus ? teal : c.text}>{i === focus ? '▸' : ' '}{a}</Text>
+          ))}
           <Text color={dim}>────────</Text>
-          <Text color={green}>godmode</Text>
+          <Text color={tint}>godmode {godmode ? 'on' : 'off'}</Text>
           <Text color={teal}>parseltongue</Text>
         </Box>
 
-        {/* Center — sitrep + chat */}
-        <Box flexDirection="column" flexGrow={1}>
-          <Box flexDirection="row" flexGrow={1}>
-            <Box flexDirection="column" width="60%" borderStyle="single" borderColor={teal} paddingX={1}>
-              <Text color={teal} bold>SITREP / CHAT</Text>
-              <Text color={c.text}>{log.slice(-10).join('\n')}</Text>
-            </Box>
-            <Box flexDirection="column" width="40%" borderStyle="single" borderColor={gold} paddingX={1}>
-              <Text color={gold} bold>MISSION</Text>
-              <Text color={c.text}>state    idle{'\n'}gate     —{'\n'}target   none{'\n'}admiral  idle</Text>
-              <Text color={dim}>────────</Text>
-              <Text color={c.text}>findings 0{'\n'}creds 0{'\n'}retests 0</Text>
-            </Box>
-          </Box>
-          {/* Bottom panels */}
-          <Box flexDirection="row">
-            <Box flexDirection="column" width="34%" borderStyle="single" borderColor={dim} paddingX={1}>
-              <Text color={teal} bold>ARSENAL</Text>
-              <Text color={c.text}>nmap · ready{'\n'}nuclei · —</Text>
-            </Box>
-            <Box flexDirection="column" width="33%" borderStyle="single" borderColor={dim} paddingX={1}>
-              <Text color={gold} bold>OPERATORS</Text>
-              <Text color={c.text}>0 active</Text>
-            </Box>
-            <Box flexDirection="column" width="33%" borderStyle="single" borderColor={green} paddingX={1}>
-              <Text color={green} bold>GODMODE</Text>
-              <Text color={green}>prefill on</Text>
-            </Box>
+        {/* Transcript — messages tinted by current phase */}
+        <Box flexDirection="column" flexGrow={1} borderStyle="single" borderColor={teal} paddingX={1}>
+          <Text color={teal} bold>TRANSCRIPT  ·  phase: {PHASES[phase]}</Text>
+          <Box flexGrow={1}>
+            <Text color={c.text}>{log.slice(-12).join('\n')}</Text>
           </Box>
         </Box>
       </Box>
 
-      {/* Hercules composer */}
-      <Box borderStyle="double" borderColor={gold} paddingX={1}>
+      {/* Composer — dual mode: type to chat, empty Enter runs focused action */}
+      <Box borderStyle="double" borderColor={godmode ? green : gold} paddingX={1}>
         <Text color={teal}>❯ </Text>
         <Text color={c.text}>{input}</Text>
         <Text color={dim}>█</Text>
+        <Text color={dim}>  {input ? 'Enter send' : `Enter ${ACTIONS[focus]}`}</Text>
       </Box>
       <Box paddingX={1}>
-        <Text color={dim}>Tab/1-8 actions · type + Enter to chat · Esc close · godmode prefill active</Text>
+        <Text color={dim}>←→ phase  Tab/1-4 action  g toggle godmode  Esc close</Text>
       </Box>
     </Box>
   )
