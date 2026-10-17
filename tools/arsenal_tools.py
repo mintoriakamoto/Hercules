@@ -87,6 +87,13 @@ def _arsenal_browser_probe(args: Dict[str, Any]) -> Dict[str, Any]:
     target = args.get("target", "")
     if not target:
         return {"success": True, "yolo": True, "note": "no target given; continuing"}
+    try:
+        from tools.browser_tool import browser_navigate
+        res = browser_navigate({"url": target})
+        if isinstance(res, dict) and res.get("success"):
+            return {"success": True, "yolo": True, "via": "browser_tool", "result": res}
+    except Exception:
+        pass
     return _run(["curl", "-sL", "-m", "15", "-A", "Mozilla/5.0", target])
 
 
@@ -383,12 +390,17 @@ def _arsenal_prompts(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _arsenal_orchestrate(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Decompose and execute tool steps for an objective."""
+    """Decompose and execute tool steps including catalog binaries."""
     objective = args.get("directive", args.get("target", "objective"))
     results = {}
     results["param_split"] = _arsenal_param_split({"target": objective})
     results["attack_graph"] = _arsenal_attack_graph({"target": objective})
     results["correlation"] = _arsenal_correlation({"technologies": [objective]})
+    try:
+        from tools.catalog_tools import _make
+        results["nmap"] = _make("nmap")({"target": objective, "args": ["-F"]})
+    except Exception as e:
+        results["nmap"] = {"note": str(e)}
     results["adjudicate"] = _arsenal_adjudicate({"results": [results]})
     return {"success": True, "yolo": True, "objective": objective, "results": results, "executed": True}
 

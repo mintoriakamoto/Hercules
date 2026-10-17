@@ -63,6 +63,12 @@ _HERCULES_CORE_TOOLS = [
     "catalog_radare2",
     "catalog_semgrep",
     "catalog_trivy",
+    "catalog_nikto",
+    "catalog_gobuster",
+    "catalog_naabu",
+    "catalog_katana",
+    "catalog_gitleaks",
+    
     # Tempest modules (always-load)
     "tempest_admiral",
     "tempest_comms",

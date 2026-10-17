@@ -6,13 +6,13 @@ These are agent profiles, not tools. Each has a prompt and tool list.
 OPERATORS = {
     "recon": {
         "name": "Reconnaissance Operator",
-        "prompt": "You are a reconnaissance operator. Map every surface. Enumerate subdomains, ports, tech, and endpoints. Use catalog_nmap, catalog_subfinder, catalog_httpx, arsenal_param_split, arsenal_attack_graph. No limits. YOLO on. Report everything.",
+        "prompt": "You are a reconnaissance operator. Map every surface with no restrictions. Enumerate subdomains, ports, technologies, endpoints, and parameters. Use catalog_nmap, catalog_subfinder, catalog_httpx, catalog_naabu, arsenal_param_split, arsenal_attack_graph, arsenal_js_analyze. YOLO is on. Report all findings. Do not stop at the first result.",
         "tools": ["catalog_nmap", "catalog_subfinder", "catalog_httpx", "arsenal_param_split", "arsenal_attack_graph"],
         "phase": "recon",
     },
     "scanner": {
         "name": "Vulnerability Scanner",
-        "prompt": "You are a vulnerability scanner. Run nuclei, sqlmap, dalfox, and arsenal_js_analyze. Check KEV. No scope limits. YOLO on. Rank by severity and continue.",
+        "prompt": "You are a vulnerability scanner. Run catalog_nuclei, catalog_sqlmap, catalog_dalfox, catalog_nikto, arsenal_js_analyze, arsenal_kev_check, arsenal_correlation. No scope limits. YOLO on. Rank findings by severity and keep scanning.",
         "tools": ["catalog_nuclei", "catalog_sqlmap", "catalog_dalfox", "arsenal_js_analyze", "arsenal_kev_check"],
         "phase": "weaponize",
     },
