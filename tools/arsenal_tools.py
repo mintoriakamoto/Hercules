@@ -108,26 +108,49 @@ def _arsenal_username_search(args: Dict[str, Any]) -> Dict[str, Any]:
     user = args.get("target", "")
     if not user:
         return {"success": True, "yolo": True, "note": "no username given; continuing"}
-    return _run(["curl", "-s", "-m", "10", f"https://api.github.com/users/{user}"])
+    gh = _run(["curl", "-s", "-m", "10", f"https://api.github.com/users/{user}"])
+    import json
+    data = {}
+    try:
+        data = json.loads(gh.get("stdout") or "{}")
+    except Exception:
+        pass
+    return {"success": True, "yolo": True, "user": user, "github": {"login": data.get("login"), "name": data.get("name"), "public_repos": data.get("public_repos"), "created": data.get("created_at")}, "raw": gh}
 
 
 def _arsenal_telegram_lookup(args: Dict[str, Any]) -> Dict[str, Any]:
     user = args.get("target", "")
-    return {"success": True, "tool": "telegram_lookup", "target": user}
+    if not user:
+        return {"success": True, "yolo": True, "note": "no username given; continuing"}
+    url = f"https://t.me/{user}"
+    res = _run(["curl", "-sI", "-m", "10", url])
+    exists = "200" in (res.get("stdout") or "") or "301" in (res.get("stdout") or "")
+    return {"success": True, "yolo": True, "user": user, "url": url, "likely_exists": exists, "raw": res}
 
 
 def _arsenal_email_format(args: Dict[str, Any]) -> Dict[str, Any]:
     domain = args.get("target", "")
     if not domain:
         return {"success": True, "yolo": True, "note": "no domain given; continuing"}
-    return {"success": True, "formats": [f"first.last@{domain}", f"flast@{domain}", f"first@{domain}"]}
+    patterns = [
+        "first.last", "flast", "first", "firstl", "f.last", "last", "last.first",
+    ]
+    formats = [f"{p}@{domain}" for p in patterns]
+    return {"success": True, "yolo": True, "domain": domain, "formats": formats, "count": len(formats)}
 
 
 def _arsenal_ip_info(args: Dict[str, Any]) -> Dict[str, Any]:
     ip = args.get("target", "")
     if not ip:
         return {"success": True, "yolo": True, "note": "no ip given; continuing"}
-    return _run(["curl", "-s", "-m", "10", f"https://ipinfo.io/{ip}/json"])
+    res = _run(["curl", "-s", "-m", "10", f"https://ipinfo.io/{ip}/json"])
+    import json
+    data = {}
+    try:
+        data = json.loads(res.get("stdout") or "{}")
+    except Exception:
+        pass
+    return {"success": True, "yolo": True, "ip": ip, "city": data.get("city"), "region": data.get("region"), "country": data.get("country"), "org": data.get("org"), "raw": res}
 
 
 def _arsenal_takeover(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -357,14 +380,16 @@ def _arsenal_prompts(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _arsenal_orchestrate(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Decompose an objective into steps. Pure planner."""
+    """Decompose an objective into concrete tool steps."""
     objective = args.get("directive", args.get("target", "objective"))
     steps = [
-        {"step": 1, "action": "recon", "query": f"map surface of {objective}"},
-        {"step": 2, "action": "analyze", "query": f"identify vectors in {objective}"},
-        {"step": 3, "action": "synthesize", "query": f"produce plan for {objective}"},
+        {"step": 1, "tool": "arsenal_param_split", "action": "split parameters", "input": objective},
+        {"step": 2, "tool": "arsenal_attack_graph", "action": "scaffold graph", "input": objective},
+        {"step": 3, "tool": "arsenal_js_analyze", "action": "extract endpoints", "input": objective},
+        {"step": 4, "tool": "arsenal_correlation", "action": "match tech to cve", "input": objective},
+        {"step": 5, "tool": "arsenal_adjudicate", "action": "verdict", "input": "results"},
     ]
-    return {"success": True, "yolo": True, "objective": objective, "steps": steps}
+    return {"success": True, "yolo": True, "objective": objective, "steps": steps, "count": len(steps)}
 
 def _arsenal_context_pack(args: Dict[str, Any]) -> Dict[str, Any]:
     """Pack a list of files into a budgeted context summary."""
