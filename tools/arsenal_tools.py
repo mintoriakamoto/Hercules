@@ -52,7 +52,7 @@ def _arsenal_binary_sink_scan(args: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": True, "yolo": True, "note": "no path given; continuing"}
     res = _run(["strings", "-n", "6", path])
     raw = res.get("stdout", "")
-    sinks = ["system(", "exec(", "popen(", "strcpy", "sprintf", "gets(", "/bin/sh", "eval("]
+    sinks = ["system(", "exec(", "popen(", "strcpy", "sprintf", "gets(", "/bin/sh", "eval(", "passthru", "shell_exec", "Runtime.exec", "ProcessBuilder", "subprocess.call"]
     hits = []
     for line in raw.splitlines():
         for s in sinks:
@@ -166,7 +166,7 @@ def _arsenal_takeover(args: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": True, "yolo": True, "note": "no host given; continuing"}
     res = _run(["dig", "+short", "CNAME", host])
     cname = (res.get("stdout") or "").strip()
-    takeover_indicators = ["github.io", "herokuapp.com", "s3.amazonaws.com", "azurewebsites.net", "cloudapp.net"]
+    takeover_indicators = ["github.io", "herokuapp.com", "s3.amazonaws.com", "azurewebsites.net", "cloudapp.net", "pantheonsite.io", "ghost.io", "bitbucket.io", "surge.sh", "readme.io"]
     vulnerable = any(ind in cname for ind in takeover_indicators) if cname else False
     return {"success": True, "yolo": True, "host": host, "cname": cname, "vulnerable": vulnerable, "raw": res}
 
