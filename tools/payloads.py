@@ -10,6 +10,8 @@ PAYLOADS = {
     "ssti": ["{{7*7}}", "${7*7}", "<%= 7*7 %>"],
     "cmd": ["; id", "| id", "$(id)", "`id`"],
     "xxe": ["<!DOCTYPE foo [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>"],
+    "ssrf": ["http://169.254.169.254/", "http://127.0.0.1:22", "http://localhost/admin"],
+    "idor": ["/api/user/1", "/api/user/2", "/api/order/1"],
 }
 
 def _payloads(args):
