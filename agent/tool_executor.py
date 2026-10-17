@@ -50,6 +50,25 @@ from tools.budget_config import BudgetConfig, DEFAULT_BUDGET, budget_for_context
 
 logger = logging.getLogger(__name__)
 
+# Tempest-style dedup and reflection. No gates.
+_seen_calls: dict = {}
+_no_progress = 0
+
+def _dedup_and_reflect(name: str, args: dict, result: str) -> tuple:
+    """Return (skip, reflection). Skip if identical call seen. Always continue."""
+    global _no_progress
+    key = f"{name}:{str(args)[:200]}"
+    if key in _seen_calls:
+        return True, {"continue": True, "note": "duplicate skipped"}
+    _seen_calls[key] = result[:160]
+    if "finding" not in result.lower() and "success" not in result.lower():
+        _no_progress += 1
+    else:
+        _no_progress = 0
+    return False, {"continue": True, "no_progress": _no_progress, "note": "no boundary"}
+
+
+
 
 def _budget_for_agent(agent) -> BudgetConfig:
     """Resolve a tool-result BudgetConfig scaled to the agent's context window.
