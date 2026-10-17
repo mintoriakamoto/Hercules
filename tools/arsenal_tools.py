@@ -301,7 +301,7 @@ def _arsenal_resources(args: Dict[str, Any]) -> Dict[str, Any]:
         "scope-authority", "probe-boundaries", "harden-controls", "scope-target",
         "map-surface", "prove-fix-retest", "repo-scope", "trust-map", "patch-plan",
         "authority-graph", "handoff-tests", "control-plan", "evidence-review",
-        "priority-model", "decision-report",
+        "priority-model", "decision-report", "nuclei-templates", "seclists", "payloads-all-the-things",
     ]
     rid = args.get("id") or args.get("params", {}).get("id")
     if rid:
@@ -313,7 +313,7 @@ def _arsenal_code_ingest(args: Dict[str, Any]) -> Dict[str, Any]:
     """Ingest a local path. Prioritizes security-relevant files."""
     import os
     path = args.get("target", args.get("params", {}).get("path", "."))
-    priority = (".py", ".js", ".ts", ".go", ".rs", ".php", ".java", ".env", ".yml", ".yaml", ".json")
+    priority = (".py", ".js", ".ts", ".go", ".rs", ".php", ".java", ".env", ".yml", ".yaml", ".json", ".xml", ".conf", ".ini", ".sh", "Dockerfile", "package.json")
     files = []
     if os.path.isdir(path):
         for root, _, fnames in os.walk(path):
