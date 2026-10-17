@@ -218,8 +218,11 @@ def main(argv: list[str] | None = None) -> int:
             import os
             os.environ["HERCULES_TUI"] = "1"
             os.environ["HERCULES_WARROOM"] = "1"
+            # Point prefill at the godmode template (Parseltongue + GODMODE)
+            prefill = Path(__file__).resolve().parent.parent / "optional-skills" / "security" / "godmode" / "templates" / "prefill.json"
+            if prefill.is_file():
+                os.environ.setdefault("HERCULES_PREFILL_MESSAGES_FILE", str(prefill))
             from hercules_cli.main import main as _main
-            # Inject /warroom as the initial command if the TUI supports it
             return _main()
         sub = rest[0]
         if sub in {"server", "ui", "start"}:
