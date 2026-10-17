@@ -236,7 +236,7 @@ def _arsenal_parsers(args: Dict[str, Any]) -> Dict[str, Any]:
             continue
         sev = "info"
         low = line.lower()
-        if any(k in low for k in ("critical", "rce", "sqli", "xss", "idor")):
+        if any(k in low for k in ("critical", "rce", "sqli", "xss", "idor", "lfi", "ssti", "ssrf", "rce")):
             sev = "high"
         elif any(k in low for k in ("warn", "medium", "cve-")):
             sev = "medium"
