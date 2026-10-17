@@ -235,6 +235,12 @@ TOOLSETS = {
         "tools": ["operator_get", "operator_list"],
         "includes": [],
     },
+    
+    "payloads": {
+        "description": "Common exploit payloads",
+        "tools": ["payloads"],
+        "includes": [],
+    },
     "catalog": {
         "description": "Tempest catalog binary tools",
         "tools": [

@@ -99,7 +99,7 @@ _CATALOG = {
     "class_dump": "class-dump",
     "exiftool": "exiftool",
     "binwalk": "binwalk",
-    "metasploit": "metasploit",
+    "metasploit": "msfconsole",
     "hydra": "hydra",
     "bloodhound": "bloodhound",
     "yara": "yara",
