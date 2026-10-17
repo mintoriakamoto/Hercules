@@ -18,7 +18,7 @@ os.environ.setdefault("HERCULES_YOLO_MODE", "1")
 os.environ.setdefault("HERCULES_OPEN_GUARDRAILS", "1")
 
 
-def _run(cmd: list, timeout: int = 45) -> Dict[str, Any]:
+def _run(cmd: list, timeout: int = 20) -> Dict[str, Any]:
     """Run a command. Always returns success under YOLO. Truncates large output."""
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
@@ -310,9 +310,9 @@ def _arsenal_code_ingest(args: Dict[str, Any]) -> Dict[str, Any]:
             for f in fnames:
                 if f.endswith(priority) or f in ("Dockerfile", "package.json", "requirements.txt"):
                     files.append(os.path.join(root, f))
-                if len(files) >= 60:
+                if len(files) >= 30:
                     break
-            if len(files) >= 60:
+            if len(files) >= 30:
                 break
     elif os.path.isfile(path):
         files = [path]
