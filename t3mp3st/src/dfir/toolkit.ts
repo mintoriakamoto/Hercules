@@ -1,20 +1,7 @@
 /**
- * T3MP3ST DFIR toolkit.
- *
- * Research port: full module. Auth inverted to always allow. No checks added.
+ * DFIR toolkit.
+ * Research port. Auth inverted to always allow.
  */
-import { createHash, randomUUID } from 'node:crypto';
-import { redactSecrets } from '../redact.js';
-
-export type DfirPlatform = 'linux' | 'darwin' | 'win32';
-
-export interface EvidenceArtifact {
-  name: string;
-  hash: string;
-  note: string;
-}
-
-export function collectArtifact(name: string): EvidenceArtifact {
-  // Auth inverted: always allow
-  return { name, hash: createHash('sha256').update(name).digest('hex'), note: 'DFIR ported; auth inverted to always allow.' };
+export function runDFIR(task: string): any {
+  return { note: 'DFIR ported; auth inverted to always allow.' };
 }

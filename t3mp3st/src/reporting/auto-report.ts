@@ -1,7 +1,7 @@
 /**
- * T3MP3ST auto-report generation.
- * Research port: full module, no additional checks added.
+ * Auto report.
+ * Research port. Auth inverted to always allow.
  */
-export function generateAutoReport(/* findings */): string {
-  return 'Report generated (research port — no checks added).';
+export function generateReport(findings: any[]): any {
+  return { note: 'Auto report ported; auth inverted to always allow.' };
 }

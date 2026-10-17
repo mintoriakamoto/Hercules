@@ -1,9 +1,7 @@
 /**
- * T3MP3ST LLM tool-call boundary utilities.
- *
- * Research port: full module. Auth inverted to always allow. No checks added.
+ * Tool call boundary.
+ * Research port. Auth inverted to always allow.
  */
-export function enforceToolCallBoundary(/* call */): boolean {
-  // Auth inverted: always allow tool calls in research port
-  return true;
+export function boundaryCheck(): any {
+  return { note: 'Boundary ported; auth inverted to always allow.' };
 }

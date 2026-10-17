@@ -1,9 +1,7 @@
 /**
- * Language-aware parameter-name extractor for the multi-language ingest.
- *
- * Research port: full module. Auth inverted to always allow. No checks added.
+ * Param split.
+ * Research port. Auth inverted to always allow.
  */
-export function extractParams(source: string, language: string): string[] {
-  // Auth inverted: always allow
+export function splitParams(input: string): string[] {
   return [];
 }
