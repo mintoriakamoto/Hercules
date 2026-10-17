@@ -12572,6 +12572,7 @@ def _build_provider_choices() -> list[str]:
 # to parse.
 _BUILTIN_SUBCOMMANDS = frozenset({
     "acp",
+    "agent",
     "auth",
     "backup",
     "bundles",
@@ -12602,6 +12603,7 @@ _BUILTIN_SUBCOMMANDS = frozenset({
     "lsp",
     "mcp",
     "memory",
+    "mesh",
     "migrate",
     "moa",
     "journey",
@@ -12626,6 +12628,7 @@ _BUILTIN_SUBCOMMANDS = frozenset({
     "uninstall",
     "update",
     "version",
+    "web",
     "webhook",
     "whatsapp",
     "whatsapp-cloud",
