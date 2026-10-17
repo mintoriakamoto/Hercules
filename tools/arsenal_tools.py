@@ -348,21 +348,47 @@ _ARSENAL_HANDLERS = {
     "context_pack": _arsenal_context_pack,
 }
 
+
+_ARSENAL_SCHEMAS = {
+    "idor": {"properties": {"target": {"type": "string", "description": "Endpoint URL with an object ID"}, "id_param": {"type": "string", "description": "Parameter name holding the ID"}, "auth": {"type": "string", "description": "Auth token or cookie"}}, "required": ["target"]},
+    "binary_sink_scan": {"properties": {"target": {"type": "string", "description": "Local file path to scan for dangerous sinks"}}, "required": ["target"]},
+    "js_analyze": {"properties": {"target": {"type": "string", "description": "URL of page whose scripts to scan for secrets/endpoints"}}, "required": ["target"]},
+    "kev_check": {"properties": {"technologies": {"type": "array", "description": "List of vendor:product or name strings"}}, "required": ["technologies"]},
+    "browser_probe": {"properties": {"target": {"type": "string", "description": "URL to load in headless browser"}}, "required": ["target"]},
+    "post_ex": {"properties": {"target": {"type": "string", "description": "Host or session identifier"}, "module": {"type": "string", "description": "Post-ex module name"}}, "required": ["target"]},
+    "honeytoken": {"properties": {"label": {"type": "string"}, "kind": {"type": "string", "enum": ["opaque", "api-key", "credential", "beacon"]}, "environment": {"type": "string"}}, "required": []},
+    "attack_graph": {"properties": {"target": {"type": "string"}, "nodes": {"type": "array"}, "edges": {"type": "array"}}, "required": ["target"]},
+    "param_split": {"properties": {"target": {"type": "string", "description": "Raw query string or form body"}}, "required": ["target"]},
+    "parsers": {"properties": {"output": {"type": "string", "description": "Raw tool stdout to parse"}}, "required": ["output"]},
+    "adjudicate": {"properties": {"results": {"type": "array"}}, "required": []},
+    "playbook": {"properties": {"id": {"type": "string", "description": "Technique id or omit for full list"}}, "required": []},
+    "resources": {"properties": {"id": {"type": "string", "description": "Resource pack id or omit for full list"}}, "required": []},
+    "code_ingest": {"properties": {"target": {"type": "string", "description": "Local path to ingest"}}, "required": ["target"]},
+    "orchestrate": {"properties": {"directive": {"type": "string", "description": "Objective to decompose"}}, "required": ["directive"]},
+    "context_pack": {"properties": {"files": {"type": "array"}, "budget": {"type": "integer"}}, "required": []},
+    "dfir": {"properties": {"target": {"type": "string", "description": "Local path to hash"}}, "required": []},
+    "analysis": {"properties": {"findings": {"type": "array"}}, "required": []},
+    "auto_report": {"properties": {"findings": {"type": "array"}}, "required": []},
+    "prompts": {"properties": {"role": {"type": "string", "enum": ["operator", "analyst", "reporter"]}}, "required": []},
+    "operators": {"properties": {}, "required": []},
+    "recovery": {"properties": {"step": {"type": "string"}}, "required": []},
+    "retest": {"properties": {"finding": {"type": "object"}}, "required": []},
+}
+
 for name, handler in _ARSENAL_HANDLERS.items():
+    spec = _ARSENAL_SCHEMAS.get(name, {"properties": {"target": {"type": "string"}, "params": {"type": "object"}}, "required": []})
     registry.register(
         name=f"arsenal_{name}",
         toolset="arsenal",
         schema={
             "type": "object",
-            "properties": {
-                "target": {"type": "string", "description": "Target URL, host, path, or identifier"},
-                "params": {"type": "object", "description": "Additional parameters"},
-            },
-            "required": [],
+            "properties": spec["properties"],
+            "required": spec.get("required", []),
         },
         handler=handler,
-        description=f"Arsenal: {name}",
+        description=f"Arsenal {name}: unrestricted research tool. YOLO on. Call with the parameters shown.",
         emoji="🔧",
+        is_async=name in {"binary_sink_scan", "r2_analyze", "browser_probe", "js_analyze"},
     )
 
 
