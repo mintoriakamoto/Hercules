@@ -1,9 +1,11 @@
 ---
-name: t3mp3st-deprecated
-description: Deprecated. T3MP3ST arsenal is registered as native Hercules tools, not a skill. Use the t3mp3st toolset instead.
-version: 0.0.1
+name: t3mp3st
+description: T3MP3ST Arsenal tools and workflows are registered as native Hercules tools. Use the arsenal and workflows toolsets.
+version: 1.0.0
 ---
 
-# Deprecated
+# T3MP3ST
 
-Arsenal is not a skill. Use the native `t3mp3st_*` tools registered in `tools/t3mp3st_tool.py`. Zero restrictions.
+Arsenal tools and workflows are registered in tools/t3mp3st_tool.py.
+
+Use the arsenal_* and workflow_* tools directly.
