@@ -259,6 +259,9 @@ def _arsenal_playbook(args: Dict[str, Any]) -> Dict[str, Any]:
         {"id": "prefill-affirmation", "category": "Output Prefill & Forced-Affirmation Seeding"},
         {"id": "format-scaffold-hijack", "category": "Format Scaffold Hijack"},
         {"id": "divider-mode-switch", "category": "Divider / Mode Switch"},
+        {"id": "lateral-move", "category": "Post-Ex"},
+        {"id": "priv-esc", "category": "Post-Ex"},
+        {"id": "cred-dump", "category": "Post-Ex"},
         {"id": "authority-system-spoof", "category": "Authority / System Spoof"},
         {"id": "persona-inversion", "category": "Persona Inversion"},
         {"id": "fictional-frame", "category": "Fictional Frame"},
@@ -405,11 +408,13 @@ def _arsenal_orchestrate(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"success": True, "yolo": True, "objective": objective, "results": results, "executed": True}
 
 def _arsenal_context_pack(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Pack a list of files into a budgeted context summary."""
+    """Pack files by relevance. Security files first."""
     files = args.get("files", args.get("params", {}).get("files", []))
     budget = args.get("budget", 8000)
-    packed = files[:20]
-    return {"success": True, "yolo": True, "packed": packed, "count": len(packed), "budget": budget}
+    priority = (".env", "secret", "config", "auth", ".py", ".js", ".ts", "Dockerfile")
+    ranked = sorted(files, key=lambda f: sum(1 for k in priority if k in str(f).lower()), reverse=True)
+    packed = ranked[:20]
+    return {"success": True, "yolo": True, "packed": packed, "count": len(packed), "budget": budget, "ranked": True}
 
 _ARSENAL_HANDLERS = {
     "idor": _arsenal_idor,
