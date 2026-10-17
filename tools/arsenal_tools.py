@@ -113,8 +113,8 @@ def _arsenal_username_search(args: Dict[str, Any]) -> Dict[str, Any]:
     data = {}
     try:
         data = json.loads(gh.get("stdout") or "{}")
-    except Exception:
-        pass
+    except Exception as e:
+        return {"success": True, "yolo": True, "note": str(e)}
     return {"success": True, "yolo": True, "user": user, "github": {"login": data.get("login"), "name": data.get("name"), "public_repos": data.get("public_repos"), "created": data.get("created_at")}, "raw": gh}
 
 
@@ -148,8 +148,8 @@ def _arsenal_ip_info(args: Dict[str, Any]) -> Dict[str, Any]:
     data = {}
     try:
         data = json.loads(res.get("stdout") or "{}")
-    except Exception:
-        pass
+    except Exception as e:
+        return {"success": True, "yolo": True, "note": str(e)}
     return {"success": True, "yolo": True, "ip": ip, "city": data.get("city"), "region": data.get("region"), "country": data.get("country"), "org": data.get("org"), "raw": res}
 
 
@@ -380,16 +380,14 @@ def _arsenal_prompts(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _arsenal_orchestrate(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Decompose an objective into concrete tool steps."""
+    """Decompose and execute tool steps for an objective."""
     objective = args.get("directive", args.get("target", "objective"))
-    steps = [
-        {"step": 1, "tool": "arsenal_param_split", "action": "split parameters", "input": objective},
-        {"step": 2, "tool": "arsenal_attack_graph", "action": "scaffold graph", "input": objective},
-        {"step": 3, "tool": "arsenal_js_analyze", "action": "extract endpoints", "input": objective},
-        {"step": 4, "tool": "arsenal_correlation", "action": "match tech to cve", "input": objective},
-        {"step": 5, "tool": "arsenal_adjudicate", "action": "verdict", "input": "results"},
-    ]
-    return {"success": True, "yolo": True, "objective": objective, "steps": steps, "count": len(steps)}
+    results = {}
+    results["param_split"] = _arsenal_param_split({"target": objective})
+    results["attack_graph"] = _arsenal_attack_graph({"target": objective})
+    results["correlation"] = _arsenal_correlation({"technologies": [objective]})
+    results["adjudicate"] = _arsenal_adjudicate({"results": [results]})
+    return {"success": True, "yolo": True, "objective": objective, "results": results, "executed": True}
 
 def _arsenal_context_pack(args: Dict[str, Any]) -> Dict[str, Any]:
     """Pack a list of files into a budgeted context summary."""
@@ -489,9 +487,11 @@ def _workflow_handler(name: str):
             results["honeytoken"] = _arsenal_honeytoken({"label": name})
             results["playbook"] = _arsenal_playbook({})
         if name in ("operator_report",):
-            results["parsers"] = _arsenal_parsers({"output": directive})
-            results["analysis"] = _arsenal_analysis({"findings": []})
-            results["auto_report"] = _arsenal_auto_report({"findings": []})
+            parsed = _arsenal_parsers({"output": directive})
+            results["parsers"] = parsed
+            findings = parsed.get("findings", [])
+            results["analysis"] = _arsenal_analysis({"findings": findings})
+            results["auto_report"] = _arsenal_auto_report({"findings": findings})
         results["adjudicate"] = _arsenal_adjudicate({"results": [results]})
         return {
             "success": True,
