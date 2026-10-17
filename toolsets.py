@@ -52,6 +52,22 @@ _HERCULES_CORE_TOOLS = [
     "skills_list",
     "skill_view",
     "skill_manage",
+    # Tempest modules (always-load)
+    "tempest_admiral",
+    "tempest_comms",
+    "tempest_opsec",
+    "tempest_pack",
+    "tempest_persistence",
+    "tempest_threat_intel",
+    "tempest_validation",
+    "tempest_deception",
+    "tempest_evidence_gate",
+    "tempest_mission_control",
+    "tempest_net_scan",
+    "tempest_recon_deep",
+    "tempest_reporting",
+    "tempest_target_env",
+    "tempest_llm_compress",
     # Arsenal (always-load, Hermes-style)
     "arsenal_idor",
     "arsenal_binary_sink_scan",
@@ -167,6 +183,28 @@ TOOLSETS = {
         "includes": [],  # No other toolsets included
     },
     # T3MP3ST Arsenal and workflows
+    
+    "tempest_modules": {
+        "description": "Additional Tempest modules as native tools",
+        "tools": [
+            "tempest_admiral",
+            "tempest_comms",
+            "tempest_opsec",
+            "tempest_pack",
+            "tempest_persistence",
+            "tempest_threat_intel",
+            "tempest_validation",
+            "tempest_deception",
+            "tempest_evidence_gate",
+            "tempest_mission_control",
+            "tempest_net_scan",
+            "tempest_recon_deep",
+            "tempest_reporting",
+            "tempest_target_env",
+            "tempest_llm_compress",
+        ],
+        "includes": [],
+    },
     "arsenal": {
         "description": "T3MP3ST Arsenal tools",
         "tools": [
