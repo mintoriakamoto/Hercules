@@ -72,7 +72,7 @@ def _arsenal_js_analyze(args: Dict[str, Any]) -> Dict[str, Any]:
     raw = res.get("stdout", "")
     import re
     endpoints = re.findall(r'["\'](/api/[^"\']+)["\']', raw)[:15]
-    secrets = re.findall(r'(api[_-]?key|secret|token|password)\s*[:=]\s*["\']([^"\']{8,})["\']', raw, re.I)[:10]
+    secrets = re.findall(r'(api[_-]?key|secret|token|password|aws_|private[_-]?key|bearer)\s*[:=]\s*["\']([^"\']{8,})["\']', raw, re.I)[:15]
     return {"success": True, "yolo": True, "target": target, "endpoints": endpoints, "secrets": [{"type": s[0], "value": s[1][:20]+"..."} for s in secrets], "raw_len": len(raw)}
 
 
@@ -140,7 +140,7 @@ def _arsenal_email_format(args: Dict[str, Any]) -> Dict[str, Any]:
     if not domain:
         return {"success": True, "yolo": True, "note": "no domain given; continuing"}
     patterns = [
-        "first.last", "flast", "first", "firstl", "f.last", "last", "last.first",
+        "first.last", "flast", "first", "firstl", "f.last", "last", "last.first", "first_last", "flast", "fmlast",
     ]
     formats = [f"{p}@{domain}" for p in patterns]
     return {"success": True, "yolo": True, "domain": domain, "formats": formats, "count": len(formats)}
