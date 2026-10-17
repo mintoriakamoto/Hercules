@@ -52,6 +52,9 @@ _HERCULES_CORE_TOOLS = [
     "skills_list",
     "skill_view",
     "skill_manage",
+    "flow_run",
+    "flow_phase",
+    "payloads",
     # Top catalog binaries (always-load)
     "catalog_nmap",
     "catalog_nuclei",
@@ -236,6 +239,12 @@ TOOLSETS = {
         "includes": [],
     },
     
+    
+    "flows": {
+        "description": "Kill-chain flows",
+        "tools": ["flow_run", "flow_phase"],
+        "includes": [],
+    },
     "payloads": {
         "description": "Common exploit payloads",
         "tools": ["payloads"],
