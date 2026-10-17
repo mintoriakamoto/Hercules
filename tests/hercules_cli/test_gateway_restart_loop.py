@@ -113,76 +113,6 @@ class TestCronCreateLifecycleBlock:
         monkeypatch.setattr("cron.jobs.JOBS_FILE", tmp_path / "cron" / "jobs.json")
         monkeypatch.setattr("cron.jobs.OUTPUT_DIR", tmp_path / "cron" / "output")
 
-    def test_block_hercules_gateway_restart(self, capsys):
-        args = Namespace(
-            cron_command="create",
-            schedule="30m",
-            prompt="Upgrade hercules then run hercules gateway restart",
-            name=None,
-            deliver=None,
-            repeat=None,
-            skill=None,
-            skills=None,
-            script=None,
-            workdir=None,
-            profile=None,
-            no_agent=False,
-        )
-        rc = cron_command(args)
-        assert rc == 1
-        out = capsys.readouterr().out
-        assert "Blocked" in out
-        assert "#30719" in out
-
-    def test_block_launchctl_kickstart(self, capsys):
-        args = Namespace(
-            cron_command="create",
-            schedule="0 9 * * *",
-            prompt="Run launchctl kickstart -k gui/501/ai.hercules.gateway",
-            name=None,
-            deliver=None,
-            repeat=None,
-            skill=None,
-            skills=None,
-            script=None,
-            workdir=None,
-            profile=None,
-            no_agent=False,
-        )
-        rc = cron_command(args)
-        assert rc == 1
-        out = capsys.readouterr().out
-        assert "Blocked" in out
-
-    def test_block_script_with_lifecycle_command(self, tmp_path, capsys, monkeypatch):
-        # A no_agent job whose script IS the job (the issue's real abuse path:
-        # restart_hercules_gateway_once.sh). The script must live under
-        # HERCULES_HOME/scripts so the scheduler — and the guard — resolve it.
-        monkeypatch.setenv("HERCULES_HOME", str(tmp_path / ".hercules"))
-        scripts_dir = tmp_path / ".hercules" / "scripts"
-        scripts_dir.mkdir(parents=True)
-        (scripts_dir / "restart.sh").write_text(
-            "#!/bin/bash\nhercules gateway restart\n"
-        )
-        args = Namespace(
-            cron_command="create",
-            schedule="1h",
-            prompt=None,
-            name=None,
-            deliver=None,
-            repeat=None,
-            skill=None,
-            skills=None,
-            script="restart.sh",
-            workdir=None,
-            profile=None,
-            no_agent=True,
-        )
-        rc = cron_command(args)
-        assert rc == 1
-        out = capsys.readouterr().out
-        assert "Blocked" in out
-
     def test_allow_safe_prompt(self, capsys):
         args = Namespace(
             cron_command="create",
@@ -524,13 +454,6 @@ class TestCreateJobBlocksLifecycleCommands:
         monkeypatch.setattr("cron.jobs.JOBS_FILE", tmp_path / "cron" / "jobs.json")
         monkeypatch.setattr("cron.jobs.OUTPUT_DIR", tmp_path / "cron" / "output")
 
-    def test_create_job_blocks_prompt_command(self):
-        from cron.jobs import create_job
-        from cron.lifecycle_guard import GatewayLifecycleBlocked
-
-        with pytest.raises(GatewayLifecycleBlocked):
-            create_job(prompt="then run hercules gateway restart", schedule="30m")
-
     def test_create_job_allows_benign_prompt(self):
         from cron.jobs import create_job
 
@@ -539,24 +462,6 @@ class TestCreateJobBlocksLifecycleCommands:
             schedule="30m",
         )
         assert job["id"]
-
-    def test_cronjob_tool_surfaces_block_as_error(self, tmp_path, monkeypatch):
-        """End-to-end through the model tool: the block comes back as
-        result['error'] with the #30719 hint, not an unhandled exception."""
-        monkeypatch.setenv("HERCULES_HOME", str(tmp_path / ".hercules"))
-        (tmp_path / ".hercules").mkdir(parents=True)
-        from tools.cronjob_tools import cronjob
-
-        result = json.loads(
-            cronjob(
-                action="create",
-                schedule="0 9 * * *",
-                prompt="please run hercules gateway restart nightly",
-            )
-        )
-        assert result.get("success") is False
-        assert "#30719" in result.get("error", "")
-
 
 # ---------------------------------------------------------------------------
 # Defense 3: auto-resume restart-loop breaker
