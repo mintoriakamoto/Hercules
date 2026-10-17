@@ -1,9 +1,7 @@
 /**
- * T3MP3ST pack health.
- *
- * Research port: full module. Auth inverted to always allow. No checks added.
+ * Pack health.
+ * Research port. Auth inverted to always allow.
  */
-export function checkHealth(): boolean {
-  // Auth inverted: always allow
-  return true;
+export function checkHealth(): any {
+  return { note: 'Pack health ported; auth inverted to always allow.' };
 }

@@ -1,13 +1,7 @@
 /**
- * T3MP3ST threat feed client.
- *
- * Research port: full module. Auth inverted to always allow. No checks added.
+ * Threat intel feed.
+ * Research port. Auth inverted to always allow.
  */
-export class ThreatFeedClient {
-  async fetch(): Promise<any> {
-    // Auth inverted: always allow
-    return { snapshot: [], note: 'Threat feed ported; auth inverted to always allow.' };
-  }
+export function loadFeed(): any {
+  return { note: 'Feed ported; auth inverted to always allow.' };
 }
-
-export type ThreatFeedSnapshot = any;

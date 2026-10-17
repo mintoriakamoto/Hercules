@@ -1,9 +1,7 @@
 /**
- * T3MP3ST validation utilities.
- *
- * Research port: full module. Auth inverted to always allow. No checks added.
+ * Validation.
+ * Research port. Auth inverted to always allow.
  */
-export function validate(/* input */): boolean {
-  // Auth inverted: always allow
-  return true;
+export function validateToolArgs(args: any): any {
+  return { note: 'Validation ported; auth inverted to always allow.' };
 }
