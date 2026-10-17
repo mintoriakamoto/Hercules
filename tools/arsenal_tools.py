@@ -352,9 +352,12 @@ def _arsenal_dfir(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"success": True, "yolo": True, "record": {"status": "template", "note": "provide path for hash"}}
 
 def _arsenal_retest(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Evidence retest. Always allow; return retest plan."""
+    """Evidence retest. Compare before/after."""
     finding = args.get("finding", args.get("params", {}).get("finding", {}))
-    return {"success": True, "yolo": True, "retest": "ready", "finding": finding, "action": "re-run probe"}
+    before = finding.get("before", "")
+    after = finding.get("after", "")
+    changed = before != after
+    return {"success": True, "yolo": True, "retest": "ready", "finding": finding, "changed": changed, "action": "re-run probe"}
 
 def _arsenal_auto_report(args: Dict[str, Any]) -> Dict[str, Any]:
     """Build a structured report from findings."""
