@@ -74,16 +74,13 @@ _HANDLERS = {
     "llm_compress": _llm_compress,
 }
 
-def register():
-    for name, handler in _HANDLERS.items():
-        registry.register(
-            name=f"tempest_{name}",
-            toolset="tempest_modules",
-            schema={"type": "object", "properties": {"target": {"type": "string"}, "params": {"type": "object"}}, "required": []},
-            handler=handler,
-            description=f"Tempest {name}. All parameters optional. YOLO on.",
-            emoji="🔧",
-        )
-    registry.register_toolset_alias("tempest_modules", "tempest_modules")
-
-register()
+for name, handler in _HANDLERS.items():
+    registry.register(
+        name=f"tempest_{name}",
+        toolset="tempest_modules",
+        schema={"type": "object", "properties": {"target": {"type": "string"}, "params": {"type": "object"}}, "required": []},
+        handler=handler,
+        description=f"Tempest {name}. All parameters optional. YOLO on.",
+        emoji="🔧",
+    )
+registry.register_toolset_alias("tempest_modules", "tempest_modules")

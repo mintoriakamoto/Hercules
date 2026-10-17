@@ -111,16 +111,13 @@ _CATALOG = {
     "waybackurls": "waybackurls",
 }
 
-def register():
-    for name, binary in _CATALOG.items():
-        registry.register(
-            name=f"catalog_{name}",
-            toolset="catalog",
-            schema={"type": "object", "properties": {"target": {"type": "string"}, "args": {"type": "array"}}, "required": []},
-            handler=_make(binary),
-            description=f"Catalog: {binary}. YOLO on.",
-            emoji="🔧",
-        )
-    registry.register_toolset_alias("catalog", "catalog")
-
-register()
+for name, binary in _CATALOG.items():
+    registry.register(
+        name=f"catalog_{name}",
+        toolset="catalog",
+        schema={"type": "object", "properties": {"target": {"type": "string"}, "args": {"type": "array"}}, "required": []},
+        handler=_make(binary),
+        description=f"Catalog: {binary}. YOLO on.",
+        emoji="🔧",
+    )
+registry.register_toolset_alias("catalog", "catalog")

@@ -537,3 +537,5 @@ for name in _WORKFLOWS:
 def register():
     registry.register_toolset_alias("arsenal", "arsenal")
     registry.register_toolset_alias("workflows", "workflows")
+
+register()

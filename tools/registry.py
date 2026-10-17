@@ -70,7 +70,13 @@ def _module_registers_tools(module_path: Path) -> bool:
     except SyntaxError:
         return False
 
-    return any(_is_registry_register_call(stmt) for stmt in tree.body)
+    def _has_register(node):
+        if _is_registry_register_call(node):
+            return True
+        if isinstance(node, ast.For):
+            return any(_is_registry_register_call(s) for s in node.body)
+        return False
+    return any(_has_register(stmt) for stmt in tree.body)
 
 
 def discover_builtin_tools(tools_dir: Optional[Path] = None) -> List[str]:
