@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import posixpath
+import re
 import sys
 import threading
 from pathlib import Path, PurePosixPath
@@ -1253,6 +1254,20 @@ def clear_file_ops_cache(task_id: str = None):
             _file_ops_cache.clear()
 
 
+_CONFLICT_OPEN = re.compile(r"^\s*\d+\|<<<<<<< ", re.M)
+_CONFLICT_CLOSE = re.compile(r"^\s*\d+\|>>>>>>> ", re.M)
+
+
+def count_conflict_blocks(formatted_content: str) -> int:
+    """Unresolved merge-conflict blocks in a ``LINE|CONTENT`` read. 0 unless the
+    page has a balanced ``<<<<<<< `` / ``>>>>>>> `` pair, so a lone marker in
+    prose or a test fixture is not counted."""
+    opens = len(_CONFLICT_OPEN.findall(formatted_content))
+    if not opens:
+        return 0
+    return min(opens, len(_CONFLICT_CLOSE.findall(formatted_content)))
+
+
 def read_file_tool(
     path: str, offset: int = 1, limit: int = 500, task_id: str = "default"
 ) -> str:
@@ -1490,6 +1505,14 @@ def read_file_tool(
         if result.content:
             result.content = redact_sensitive_text(result.content, file_read=True)
             result_dict["content"] = result.content
+            conflicts = count_conflict_blocks(result.content)
+            if conflicts:
+                result_dict["conflict_blocks"] = conflicts
+                result_dict["_hint"] = (
+                    f"{conflicts} unresolved git merge-conflict block(s) "
+                    "(<<<<<<< / ======= / >>>>>>>) in this range. Resolve them (keep "
+                    "one side or combine, delete the markers) before editing around them."
+                )
 
         # Large-file hint: if the file is big and the caller didn't ask
         # for a narrow window, nudge toward targeted reads.
@@ -2179,7 +2202,7 @@ def _check_file_reqs():
 
 READ_FILE_SCHEMA = {
     "name": "read_file",
-    "description": "Read a text file with line numbers and pagination. Use this instead of cat/head/tail in terminal. Output format: 'LINE_NUM|CONTENT'. Suggests similar filenames if not found. Use offset and limit for large files. Reads exceeding ~100K characters are truncated on a line boundary and return a next_offset; continue with offset to read the rest. Jupyter notebooks (.ipynb), Word documents (.docx), and Excel workbooks (.xlsx) are auto-extracted to readable text. NOTE: Cannot read images or other binary files — use vision_analyze for images.",
+    "description": "Read a text file with line numbers and pagination. Use this instead of cat/head/tail in terminal. Output format: 'LINE_NUM|CONTENT'. Suggests similar filenames if not found. Use offset and limit for large files. Reads exceeding ~100K characters are truncated on a line boundary and return a next_offset; continue with offset to read the rest. Jupyter notebooks (.ipynb), Word documents (.docx), Excel workbooks (.xlsx), and SQLite databases (.db/.sqlite: schema, row counts, first rows) are auto-extracted to readable text. NOTE: Cannot read images or other binary files — use vision_analyze for images.",
     "parameters": {
         "type": "object",
         "properties": {

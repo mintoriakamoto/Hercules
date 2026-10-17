@@ -677,9 +677,22 @@ def build_stacked_skill_invocation_message(
     return ("\n\n".join([header, *skill_blocks]), loaded_names, missing)
 
 
+_PRELOAD_ACTIVATION_NOTE = (
+    '[IMPORTANT: The user launched this CLI session with the "{name}" skill '
+    "preloaded. Treat its instructions as active guidance for the duration of this "
+    "session unless the user overrides them.]"
+)
+_AUTO_LOAD_ACTIVATION_NOTE = (
+    '[IMPORTANT: The "{name}" skill is auto-loaded via config (skills.auto_load). '
+    "Treat its instructions as active guidance for the duration of this session "
+    "unless the user overrides them.]"
+)
+
+
 def build_preloaded_skills_prompt(
     skill_identifiers: list[str],
     task_id: str | None = None,
+    activation_note_template: str = _PRELOAD_ACTIVATION_NOTE,
 ) -> tuple[str, list[str], list[str]]:
     """Load one or more skills for session-wide CLI/TUI preloading.
 
@@ -729,11 +742,7 @@ def build_preloaded_skills_prompt(
         except Exception:
             pass  # Non-critical
 
-        activation_note = (
-            f'[IMPORTANT: The user launched this CLI session with the "{skill_name}" skill '
-            "preloaded. Treat its instructions as active guidance for the duration of this "
-            "session unless the user overrides them.]"
-        )
+        activation_note = activation_note_template.format(name=skill_name)
         prompt_parts.append(
             _build_skill_message(
                 loaded_skill,
@@ -745,3 +754,38 @@ def build_preloaded_skills_prompt(
         loaded_names.append(skill_name)
 
     return "\n\n".join(prompt_parts), loaded_names, missing
+
+
+def resolve_auto_load_skills(user_config: dict | None = None) -> list[str]:
+    """``skills.auto_load`` from *user_config* (else the active config),
+    deduplicated; empty when unset, malformed, or the config is unreadable."""
+    if user_config is None:
+        try:
+            from hercules_cli.config import load_config_readonly
+
+            user_config = load_config_readonly()
+        except Exception:
+            return []
+    skills_block = user_config.get("skills") if isinstance(user_config, dict) else None
+    auto_load = (
+        skills_block.get("auto_load") if isinstance(skills_block, dict) else None
+    )
+    if not isinstance(auto_load, list):
+        return []
+    names = [e.strip() for e in auto_load if isinstance(e, str) and e.strip()]
+    return list(dict.fromkeys(names))
+
+
+def build_auto_load_prompt(
+    task_id: str | None = None, user_config: dict | None = None
+) -> tuple[str, list[str], list[str]]:
+    """Render ``skills.auto_load`` as fully loaded skill blocks for a new
+    session; returns ``(prompt_text, loaded_names, missing)``. Missing and
+    disabled names are reported, never raised: a typo in config must not
+    block session start."""
+    names = resolve_auto_load_skills(user_config)
+    if not names:
+        return "", [], []
+    return build_preloaded_skills_prompt(
+        names, task_id=task_id, activation_note_template=_AUTO_LOAD_ACTIVATION_NOTE
+    )

@@ -246,6 +246,31 @@ def _detect_image_mime_type_from_bytes(data: bytes) -> Optional[str]:
         return "image/bmp"
     if len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WEBP":
         return "image/webp"
+    # HEIF/HEIC/AVIF: ISO-BMFF container. Bytes 0-4 are the box size, 4-8 the
+    # box type 'ftyp', 8-12 the major brand, and every 4 bytes from 16 a
+    # compatible brand. iPhone photos are HEIC (often mislabeled .jpg). AVIF
+    # often carries generic 'mif1' as major and names AV1 only among the
+    # compatible brands, so all brands are checked.
+    if len(header) >= 12 and header[4:8] == b"ftyp":
+        major = header[8:12]
+        # Bound the scan by the declared box size so brands are never read from
+        # a following box; a size < 16 scans no compatible brands.
+        box_size = int.from_bytes(header[:4], "big")
+        limit = 16 if box_size < 16 else min(box_size, len(header))
+        brands = {major} | {header[i : i + 4] for i in range(16, limit - 3, 4)}
+        if brands & {b"avif", b"avis", b"av01"}:
+            return "image/avif"
+        if brands & {
+            b"heic",
+            b"heix",
+            b"heim",
+            b"heis",
+            b"hevc",
+            b"hevx",
+            b"mif1",
+            b"msf1",
+        }:
+            return "image/heic"
     return None
 
 
@@ -357,6 +382,18 @@ def _normalize_to_supported_image(
             "(`pip install cairosvg`) — then re-run vision_analyze on the PNG.",
         )
 
+    # HEIC needs the optional pillow-heif plugin; AVIF is native in newer
+    # Pillow. Register whatever is available and let the decode decide.
+    if detected_mime in ("image/heic", "image/avif"):
+        try:
+            import pillow_heif  # type: ignore
+
+            pillow_heif.register_heif_opener()
+        except Exception:
+            logger.debug(
+                "pillow-heif unavailable; relying on Pillow for %s", detected_mime
+            )
+
     # Other non-supported raster formats (BMP, TIFF, ...): re-encode via Pillow.
     try:
         from PIL import Image as _PILImage
@@ -369,6 +406,24 @@ def _normalize_to_supported_image(
             return out_path, "image/png", None
     except Exception as _exc:
         logger.warning("Failed to normalize %s image to PNG: %s", detected_mime, _exc)
+        if detected_mime == "image/heic":
+            return (
+                None,
+                None,
+                "This is a HEIC/HEIF image (common for iPhone photos), which vision "
+                "models cannot read directly, and no HEIF decoder is available. "
+                "Install one (`pip install pillow-heif`) and re-run vision_analyze, "
+                "or convert the image to PNG/JPEG first.",
+            )
+        if detected_mime == "image/avif":
+            return (
+                None,
+                None,
+                "This is an AVIF image, which vision models cannot read directly, and "
+                "no AV1 decoder is available. Upgrade Pillow (>= 11.3 bundles AVIF) "
+                "or install a pillow-heif build with an AV1 codec, then re-run "
+                "vision_analyze, or convert the image to PNG/JPEG first.",
+            )
     return (
         None,
         None,

@@ -2672,7 +2672,7 @@ def _format_gateway_process_notification(evt: dict) -> "str | None":
         text += "]"
         return text
 
-    if evt_type == "async_delegation":
+    if evt_type in ("async_delegation", "heartbeat"):
         # Reuse the shared rich formatter (self-contained task-source block).
         from tools.process_registry import format_process_notification
 
@@ -2699,7 +2699,7 @@ def _drain_gateway_watch_events(completion_queue) -> "list[dict]":
         except Exception:
             break
         evt_type = evt.get("type", "completion")
-        if evt_type in {"watch_match", "watch_disabled"}:
+        if evt_type in {"watch_match", "watch_disabled", "heartbeat"}:
             watch_events.append(evt)
         elif evt_type == "async_delegation":
             requeue.append(evt)

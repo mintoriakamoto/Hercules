@@ -28,7 +28,10 @@ from typing import Any, Dict, Iterator, List, Optional
 import httpx
 
 from agent.bounded_response import read_streaming_error_body
-from agent.gemini_schema import sanitize_gemini_tool_parameters
+from agent.gemini_schema import (
+    prepare_gemini_tool_parameters,
+    sanitize_gemini_tool_parameters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +53,12 @@ def bare_gemini_model_id(model: str) -> str:
         if lowered.startswith(prefix):
             return name[len(prefix) :].strip() or name
     return name
+
+
+def gemini_accepts_parameters_json_schema(base_url: str) -> bool:
+    """``FunctionDeclaration.parametersJsonSchema`` exists only on generativelanguage's
+    ``v1beta`` surface; other versions and unknown proxies keep the ``parameters`` subset."""
+    return str(base_url or "").strip().rstrip("/").lower().endswith("/v1beta")
 
 
 def is_native_gemini_base_url(base_url: str) -> bool:
@@ -363,7 +372,9 @@ def _build_gemini_contents(
     return contents, system_instruction
 
 
-def _translate_tools_to_gemini(tools: Any) -> List[Dict[str, Any]]:
+def _translate_tools_to_gemini(
+    tools: Any, *, json_schema: bool = False
+) -> List[Dict[str, Any]]:
     if not isinstance(tools, list):
         return []
     declarations: List[Dict[str, Any]] = []
@@ -382,7 +393,14 @@ def _translate_tools_to_gemini(tools: Any) -> List[Dict[str, Any]]:
             decl["description"] = description
         parameters = fn.get("parameters")
         if isinstance(parameters, dict):
-            decl["parameters"] = sanitize_gemini_tool_parameters(parameters)
+            # Full JSON Schema where the API version has the field (unions, bare
+            # arrays and $ref survive); the lossy OpenAPI subset elsewhere.
+            if json_schema:
+                decl["parametersJsonSchema"] = prepare_gemini_tool_parameters(
+                    parameters
+                )
+            else:
+                decl["parameters"] = sanitize_gemini_tool_parameters(parameters)
         declarations.append(decl)
     return [{"functionDeclarations": declarations}] if declarations else []
 
@@ -433,13 +451,14 @@ def build_gemini_request(
     top_p: Optional[float] = None,
     stop: Any = None,
     thinking_config: Any = None,
+    tools_as_json_schema: bool = False,
 ) -> Dict[str, Any]:
     contents, system_instruction = _build_gemini_contents(messages)
     request: Dict[str, Any] = {"contents": contents}
     if system_instruction:
         request["systemInstruction"] = system_instruction
 
-    gemini_tools = _translate_tools_to_gemini(tools)
+    gemini_tools = _translate_tools_to_gemini(tools, json_schema=tools_as_json_schema)
     if gemini_tools:
         request["tools"] = gemini_tools
 
@@ -975,6 +994,7 @@ class GeminiNativeClient:
             top_p=top_p,
             stop=stop,
             thinking_config=thinking_config,
+            tools_as_json_schema=gemini_accepts_parameters_json_schema(self.base_url),
         )
 
         model = bare_gemini_model_id(model)

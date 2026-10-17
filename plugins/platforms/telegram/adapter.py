@@ -650,6 +650,13 @@ class TelegramAdapter(BasePlatformAdapter):
         self._status_offline_text: str = str(
             self.config.extra.get("status_offline", "Offline")
         )
+        # Cold-boot queue: drop server-side pending updates on first boot (default
+        # True, historical behaviour). Set extra.drop_pending_on_cold_boot: false to
+        # receive messages sent while the gateway was offline (nightly-off hosts).
+        # Watcher reconnects always preserve the queue regardless of this setting.
+        self._drop_pending_on_cold_boot: bool = self._coerce_bool_extra(
+            "drop_pending_on_cold_boot", True
+        )
         # DM Topics config from extra.dm_topics
         self._dm_topics_config: List[Dict[str, Any]] = self.config.extra.get(
             "dm_topics", []
@@ -3572,7 +3579,9 @@ class TelegramAdapter(BasePlatformAdapter):
                     # server-side getUpdates queue, so this flag is a no-op
                     # in practice. Mirror the polling path's reconnect
                     # semantics for consistency.
-                    drop_pending_updates=not is_reconnect,
+                    drop_pending_updates=(
+                        self._drop_pending_on_cold_boot if not is_reconnect else False
+                    ),
                 )
                 self._webhook_mode = True
                 logger.info(
@@ -3639,7 +3648,9 @@ class TelegramAdapter(BasePlatformAdapter):
                     # On a cold first boot drop the stale Bot API queue; on a
                     # watcher reconnect after an outage preserve it so messages
                     # sent while the bot was offline are delivered (#46621).
-                    drop_pending_updates=not is_reconnect,
+                    drop_pending_updates=(
+                        self._drop_pending_on_cold_boot if not is_reconnect else False
+                    ),
                     error_callback=_polling_error_callback,
                 )
                 if not polling_started:

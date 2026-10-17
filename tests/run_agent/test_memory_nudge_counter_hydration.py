@@ -149,7 +149,11 @@ def test_production_code_contains_hydration_block():
         "Hydration comment missing from the turn subsystem "
         "(conversation_loop.py / turn_context.py)"
     )
+    # Whitespace-insensitive: the formatter may wrap this assignment across lines.
+    normalized = "".join(turn_src.split())
     assert (
-        "agent._turns_since_memory = prior_user_turns % agent._memory_nudge_interval"
-        in turn_src
+        "agent._turns_since_memory=(prior_user_turns%agent._memory_nudge_interval)"
+        in normalized
+        or "agent._turns_since_memory=prior_user_turns%agent._memory_nudge_interval"
+        in normalized
     ), "Hydration modulo assignment missing from the turn subsystem"

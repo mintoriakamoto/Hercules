@@ -1119,6 +1119,10 @@ DEFAULT_CONFIG = {
         # on flaky primaries; raise it if you prefer to tolerate longer
         # provider hiccups on a single provider.
         "api_max_retries": 3,
+        # After retries and every fallback are spent on a transient outage
+        # (5xx/overloaded/timeout), wait-and-retry this many more times on a
+        # 15/30/60/60/60s schedule before failing the turn. 0 disables.
+        "auto_recovery_cycles": 5,
         "service_tier": "",
         # Tool-use enforcement: injects system prompt guidance that tells the
         # model to actually call tools instead of describing intended actions.
@@ -2377,6 +2381,9 @@ DEFAULT_CONFIG = {
         # content with the absolute skill directory and the active session id
         # before the agent sees it.  Lets skill authors reference bundled
         # scripts without the agent having to join paths.
+        # Skill names pinned as fully loaded in every new session (CLI, TUI,
+        # gateway, cron, API). Missing/disabled names warn and are skipped.
+        "auto_load": [],
         "template_vars": True,
         # Pre-execute inline shell snippets written as !`cmd` in SKILL.md
         # body.  Their stdout is inlined into the skill message before the
@@ -2480,6 +2487,9 @@ DEFAULT_CONFIG = {
         "free_response_channels": "",  # Comma-separated channel IDs where bot responds without mention
         "allowed_channels": "",  # If set, bot ONLY responds in these channel IDs (whitelist)
         "auto_thread": True,  # Auto-create threads on @mention in channels (like Slack)
+        # Free-response channels reply inline by default; true also gives each
+        # top-level message in them its own thread (still mention-free).
+        "free_response_auto_thread": False,
         "thread_require_mention": False,  # If True, require @mention in threads too (multi-bot threads)
         "bots_require_inline_mention": False,  # Multi-bot rooms: if True, another bot must type @thisbot in its message to trigger a reply; a Discord reply/quote alone won't. Prevents two bots auto-replying to each other forever. Does not affect humans.
         "history_backfill": True,  # If True, prepend recent channel scrollback when bot is triggered (recovers messages missed while require_mention gated them out)

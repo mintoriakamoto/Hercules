@@ -166,3 +166,57 @@ class _AsyncTrue:
 
     async def __call__(self, *a, **k):
         return True
+
+
+class TestBinaryPayloadRefusal:
+    def test_signatures_detected_but_prose_with_short_prefixes_passes(self):
+        # Backends drop NUL bytes, so the SQLite magic arrives without its trailing NUL.
+        assert wt._binary_payload_kind("SQLite format 3\x10\x01xx") == "SQLite database"
+        assert wt._binary_payload_kind("PK\x03\x04abc") == "ZIP archive"
+        assert wt._binary_payload_kind("\x89PNG\r\n\x1a\n....") == "PNG image"
+        for prose in (
+            "BMW reviews are fine",
+            "MZ is a prefix too",
+            "# hi",
+            "<html>",
+            "",
+        ):
+            assert wt._binary_payload_kind(prose) == ""
+
+    def test_web_extract_turns_binary_body_into_typed_error(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.setenv("HERCULES_HOME", str(tmp_path / ".hercules"))
+        body = "SQLite format 3\x10\x01" + "x" * 5000
+
+        class FakeProvider:
+            name = "fake"
+            display_name = "Fake"
+
+            def supports_extract(self):
+                return True
+
+            async def extract(self, urls, **kwargs):
+                return [
+                    {"url": urls[0], "title": "", "content": body, "raw_content": body}
+                ]
+
+        with (
+            patch("tools.web_tools._ensure_web_plugins_loaded"),
+            patch("tools.web_tools._get_extract_backend", return_value="fake"),
+            patch("tools.web_tools.async_is_safe_url", new=_AsyncTrue()),
+            patch(
+                "agent.web_search_registry.get_provider", return_value=FakeProvider()
+            ),
+        ):
+            result = json.loads(
+                asyncio.new_event_loop().run_until_complete(
+                    wt.web_extract_tool(
+                        ["https://example.com/x.sqlite"], char_limit=5000
+                    )
+                )
+            )
+
+        entry = result["results"][0]
+        assert entry["content"] == ""
+        assert "binary content (SQLite database)" in entry["error"]
