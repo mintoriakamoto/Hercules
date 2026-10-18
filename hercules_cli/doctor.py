@@ -643,6 +643,67 @@ def managed_scope_check() -> None:
         check_info(f"managed dir set via HERCULES_MANAGED_DIR={managed_dir}")
 
 
+def check_tenselerate(issues: list[str]) -> None:
+    """Probe Cooklabs llama-server. No API key required.
+
+    Fail only when TENSELERATE (or custom pointed at :8080/v1) is the
+    configured provider and the server does not answer. Otherwise warn,
+    because the GPU box is often off.
+    """
+    from hercules_cli.cooklabs_gateway import TENSELERATE_BASE
+
+    _section("TENSELERATE")
+    base = (os.getenv("TENSELERATE_BASE_URL") or TENSELERATE_BASE).strip().rstrip("/")
+    if base.endswith("/models"):
+        models_url = base
+        base = base[: -len("/models")]
+    else:
+        models_url = base + "/models"
+
+    configured = False
+    try:
+        from hercules_cli.config import load_config
+
+        model = load_config().get("model") or {}
+        if isinstance(model, dict):
+            provider = str(model.get("provider") or "").strip().lower()
+            cfg_base = str(model.get("base_url") or "").strip().rstrip("/")
+            configured = provider in {"tenselerate", "svmi"} or (
+                provider == "custom" and cfg_base in {base, TENSELERATE_BASE.rstrip("/")}
+            )
+    except Exception:
+        configured = False
+
+    detail = ""
+    ok = False
+    try:
+        import urllib.request
+
+        req = urllib.request.Request(models_url, headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            ok = 200 <= int(resp.status) < 300
+            if not ok:
+                detail = f"HTTP {resp.status}"
+    except Exception as exc:
+        detail = exc.__class__.__name__
+
+    if ok:
+        check_ok("llama-server", f"({models_url})")
+        return
+    if configured:
+        _fail_and_issue(
+            "llama-server not reachable",
+            f"({models_url}: {detail})",
+            "Start TENSELERATE: llama-server --port 8080",
+            issues,
+        )
+        return
+    check_warn(
+        "llama-server not reachable",
+        f"({models_url}: {detail}) — expected if the GPU box is off",
+    )
+
+
 def run_doctor(args):
     """Run diagnostic checks."""
     should_fix = getattr(args, "fix", False)
@@ -854,6 +915,8 @@ def run_doctor(args):
             check_ok(name, "(optional)")
         except ImportError:
             check_warn(name, "(optional, not installed)")
+
+    check_tenselerate(issues)
 
     _section("Configuration Files")
     # Managed scope (administrator-pinned config/env), when present.
