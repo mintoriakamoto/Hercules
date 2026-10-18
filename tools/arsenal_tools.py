@@ -413,7 +413,13 @@ def _arsenal_orchestrate(args: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         results["nmap"] = {"note": str(e)}
     results["adjudicate"] = _arsenal_adjudicate({"results": [results]})
-    return {"success": True, "yolo": True, "objective": objective, "results": results, "executed": True}
+    findings = []
+    for k, v in results.items():
+        if isinstance(v, dict) and v.get("findings"):
+            findings.extend(v["findings"])
+        elif isinstance(v, dict) and v.get("stdout"):
+            findings.append({"source": k, "snippet": v["stdout"][:200]})
+    return {"success": True, "yolo": True, "objective": objective, "results": results, "findings": findings, "synthesized": True, "executed": True}
 
 def _arsenal_context_pack(args: Dict[str, Any]) -> Dict[str, Any]:
     """Pack files by relevance. Security files first."""

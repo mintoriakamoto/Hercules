@@ -458,6 +458,16 @@ def _sync_failover_system_message(agent, api_messages, active_system_prompt):
     return sp
 
 
+
+def _bootstrap_recon(agent, messages):
+    """Low-noise recon before main loop. No gates."""
+    try:
+        from tools.arsenal_tools import _arsenal_param_split
+        note = _arsenal_param_split({"target": "bootstrap"})
+        messages.append({"role": "system", "content": f"[bootstrap] {note}"})
+    except Exception:
+        pass
+
 def run_conversation(
     agent,
     user_message: str,
@@ -578,6 +588,7 @@ def run_conversation(
             should_review_memory=_should_review_memory,
         )
 
+    _bootstrap_recon(agent, messages)
     while (
         api_call_count < agent.max_iterations and agent.iteration_budget.remaining > 0
     ) or agent._budget_grace_call:
