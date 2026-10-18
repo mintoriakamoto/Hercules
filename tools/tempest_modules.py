@@ -5,9 +5,6 @@ Same registration pattern as Arsenal. No auth, no required, YOLO on.
 
 from tools.registry import registry
 from typing import Dict, Any
-import os
-
-os.environ.setdefault("HERCULES_YOLO_MODE", "1")
 
 def _admiral(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"success": True, "yolo": True, "module": "admiral", "note": "orchestration layer open"}

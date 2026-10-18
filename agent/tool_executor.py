@@ -50,22 +50,27 @@ from tools.budget_config import BudgetConfig, DEFAULT_BUDGET, budget_for_context
 
 logger = logging.getLogger(__name__)
 
-# Tempest-style dedup and reflection. No gates.
-_seen_calls: dict = {}
-_no_progress = 0
+def _batch_call_key(name: str, args: dict) -> str:
+    """Stable key for one tool invocation. Bounded so a huge arg blob can't grow the map."""
+    try:
+        payload = json.dumps(args or {}, sort_keys=True, default=str, ensure_ascii=False)
+    except Exception:
+        payload = str(args)
+    return f"{name}:{payload[:400]}"
 
-def _dedup_and_reflect(name: str, args: dict, result: str) -> tuple:
-    """Return (skip, reflection). Skip if identical call seen. Always continue."""
-    global _no_progress
-    key = f"{name}:{str(args)[:200]}"
-    if key in _seen_calls:
-        return True, {"continue": True, "note": "duplicate skipped"}
-    _seen_calls[key] = result[:160]
-    if "finding" not in result.lower() and "success" not in result.lower():
-        _no_progress += 1
-    else:
-        _no_progress = 0
-    return False, {"continue": True, "no_progress": _no_progress, "note": "no boundary"}
+
+def _duplicate_in_batch(seen: dict, name: str, args: dict) -> bool:
+    """True when this exact call already ran in the current assistant batch.
+
+    Dedup is batch-scoped on purpose. A process-global set never reset, so a
+    later turn that repeated read_file, terminal, or memory was skipped for
+    the life of the process.
+    """
+    key = _batch_call_key(name, args)
+    if key in seen:
+        return True
+    seen[key] = True
+    return False
 
 
 
@@ -365,6 +370,7 @@ def execute_tool_calls_concurrent(
     """
     tool_calls = assistant_message.tool_calls
     num_tools = len(tool_calls)
+    seen_in_batch: dict = {}
 
     # Resolve the context-scaled tool-output budget once per turn (cheap, but
     # avoids rebuilding it per result inside the loop below).
@@ -407,6 +413,17 @@ def execute_tool_calls_concurrent(
                 function_args,
                 [],
                 malformed_args_result,
+                False,
+            ))
+            continue
+
+        if _duplicate_in_batch(seen_in_batch, function_name, function_args or {}):
+            parsed_calls.append((
+                tool_call,
+                function_name,
+                function_args,
+                [],
+                "[duplicate skipped; continue]",
                 False,
             ))
             continue
@@ -1244,6 +1261,7 @@ def execute_tool_calls_sequential(
     """Execute tool calls sequentially (original behavior). Used for single calls or interactive tools."""
     # Resolve the context-scaled tool-output budget once per turn.
     _tool_budget = _budget_for_agent(agent)
+    seen_in_batch: dict = {}
     for i, tool_call in enumerate(assistant_message.tool_calls, 1):
         # SAFETY: check interrupt BEFORE starting each tool.
         # If the user sent "stop" during a previous tool's execution,
@@ -1293,10 +1311,14 @@ def execute_tool_calls_sequential(
             agent._apply_pending_steer_to_tool_results(messages, 1)
             continue
 
-        # Tempest-style dedup. Skip identical. Always continue.
-        skip, _refl = _dedup_and_reflect(function_name, function_args or {}, "")
-        if skip:
-            messages.append(make_tool_result_message(function_name, "[duplicate skipped; continue]", tool_call.id))
+        if _duplicate_in_batch(seen_in_batch, function_name, function_args or {}):
+            messages.append(
+                make_tool_result_message(
+                    function_name,
+                    "[duplicate skipped; continue]",
+                    tool_call.id,
+                )
+            )
             continue
 
         # Tool Search unwrap — see execute_tool_calls_concurrent for full

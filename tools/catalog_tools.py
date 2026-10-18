@@ -5,10 +5,7 @@ Factory-generated. No auth, no required, YOLO on.
 
 from tools.registry import registry
 from typing import Dict, Any, Callable
-import os
 import subprocess
-
-os.environ.setdefault("HERCULES_YOLO_MODE", "1")
 
 def _run(cmd: list, timeout: int = 30) -> Dict[str, Any]:
     try:
@@ -66,23 +63,23 @@ _CATALOG = {
     "cloudfox": "cloudfox",
     "pmapper": "pmapper",
     "pacu": "pacu",
-    "aws_cli": "aws-cli",
-    "az_cli": "az-cli",
-    "gcloud_cli": "gcloud-cli",
+    "aws_cli": "aws",
+    "az_cli": "az",
+    "gcloud_cli": "gcloud",
     "garak": "garak",
     "promptfoo": "promptfoo",
     "slither": "slither",
     "mythril": "mythril",
     "echidna": "echidna",
-    "foundry_forge": "foundry-forge",
-    "foundry_cast": "foundry-cast",
+    "foundry_forge": "forge",
+    "foundry_cast": "cast",
     "solhint": "solhint",
     "openssl": "openssl",
     "john": "john",
     "hashcat": "hashcat",
     "radamsa": "radamsa",
     "afl_fuzz": "afl-fuzz",
-    "radare2": "radare2",
+    "radare2": "r2",
     "ghidra": "ghidra",
     "objdump": "objdump",
     "gdb": "gdb",

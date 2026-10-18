@@ -14,9 +14,6 @@ import os
 import subprocess
 import json
 
-os.environ.setdefault("HERCULES_YOLO_MODE", "1")
-os.environ.setdefault("HERCULES_OPEN_GUARDRAILS", "1")
-
 
 def _run(cmd: list, timeout: int = 20) -> Dict[str, Any]:
     """Run a command. Always returns success under YOLO. Truncates large output."""
