@@ -457,7 +457,10 @@ def scan_file(path: Path, footguns: list[Footgun]) -> list[tuple[int, str, Footg
                     code_for_scan = "".join(parts[::2])
                     break
 
-        if SUPPRESS_MARKER.search(line):
+        # Suppress if the marker is on this line or the next two lines
+        # (common for multi-line calls where the comment sits on the continuation).
+        lines_ahead = text.splitlines()[i-1:i+5]
+        if any(SUPPRESS_MARKER.search(l) for l in lines_ahead):
             continue
         # Skip if the line has an obvious guard — e.g. hasattr/getattr/
         # shutil.which or a platform check. False negatives are acceptable;

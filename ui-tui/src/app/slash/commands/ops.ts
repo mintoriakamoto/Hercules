@@ -63,6 +63,15 @@ interface SkillsReloadResponse {
 
 export const opsCommands: SlashCommand[] = [
   {
+    name: 'warroom',
+    help: 'open the combined War Room overlay (T3MP3ST + Hercules TUI)',
+    run: () => {
+      patchOverlayState({ warroom: true })
+      return { text: 'war room open — Tab/1-4 focus, Enter act, q/Esc close' }
+    }
+  },
+
+  {
     help: 'stop background processes',
     name: 'stop',
     run: (_arg, ctx) => {

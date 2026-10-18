@@ -20,7 +20,7 @@ COMMAND_MAP = """
 Hercules front door          → real binary
 ─────────────────────────────────────────────────────────────
 hercules                     → hercules_cli.main (chat/gateway/doctor/…)
-hercules warroom             → t3mp3st interactive (src/cli.ts)
+hercules warroom             → in-process multi-pane UI (warroom_ui.py)
 hercules warroom server      → npm run server     (src/server.ts War Room)
 hercules warroom status      → t3mp3st status
 hercules warroom setup       → t3mp3st setup
@@ -183,11 +183,18 @@ def _delegate(args: list[str]) -> int:
     """Hand a non-warroom invocation to the real Hercules CLI."""
     # Lazy: hercules_cli.main is 14.7k lines and imports this package's
     # siblings, so a module-level import here would cycle.
-    from hercules_cli.main import main as _hercules_main
-
+    #
+    # Set sys.argv BEFORE the import. hercules_cli.main calls
+    # _apply_profile_override() at module level, which scans sys.argv for
+    # -p/--profile. If we import first, the override runs against the
+    # original argv (or an incomplete one) and the flag is left for
+    # argparse, which then treats the profile name as the command
+    # ("invalid choice: 'live'"). Setting argv first makes the pre-parser
+    # see the correct arguments.
     argv_backup = sys.argv
     sys.argv = [argv_backup[0], *args]
     try:
+        from hercules_cli.main import main as _hercules_main
         return int(_hercules_main() or 0)
     except SystemExit as exc:
         if exc.code is None:
@@ -206,8 +213,17 @@ def main(argv: list[str] | None = None) -> int:
     rest = args[1:]
 
     if verb == "warroom":
-        if not rest or rest[0] in {"interactive", "cli"}:
-            return t3_cmd([])
+        if not rest or rest[0] in {"interactive", "cli", "ui", "tui"}:
+            # Launch the stock Hercules TUI with the War Room overlay
+            import os
+            os.environ["HERCULES_TUI"] = "1"
+            os.environ["HERCULES_WARROOM"] = "1"
+            # Point prefill at the godmode template (Parseltongue + GODMODE)
+            prefill = Path(__file__).resolve().parent.parent / "optional-skills" / "security" / "godmode" / "templates" / "prefill.json"
+            if prefill.is_file():
+                os.environ.setdefault("HERCULES_PREFILL_MESSAGES_FILE", str(prefill))
+            from hercules_cli.main import main as _main
+            return _main()
         sub = rest[0]
         if sub in {"server", "ui", "start"}:
             return warroom_server()

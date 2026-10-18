@@ -16,6 +16,7 @@ import { PetPicker } from './petPicker.js'
 import { PluginsHub } from './pluginsHub.js'
 import { ApprovalPrompt, ClarifyPrompt, ConfirmPrompt } from './prompts.js'
 import { SkillsHub } from './skillsHub.js'
+import { WarroomOverlay } from './warroomOverlay.js'
 
 const COMPLETION_WINDOW = 16
 
@@ -145,6 +146,7 @@ export function FloatingOverlays({
     overlay.sessions ||
     overlay.skillsHub ||
     overlay.pluginsHub ||
+    overlay.warroom ||
     completions.length
 
   if (!hasAny) {
@@ -204,6 +206,12 @@ export function FloatingOverlays({
       {overlay.pluginsHub && (
         <FloatBox color={theme.color.border}>
           <PluginsHub gw={gw} onClose={() => patchOverlayState({ pluginsHub: false })} t={theme} />
+        </FloatBox>
+      )}
+
+      {overlay.warroom && (
+        <FloatBox color={theme.color.border}>
+          <WarroomOverlay t={theme} />
         </FloatBox>
       )}
 

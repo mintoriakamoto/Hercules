@@ -17,7 +17,8 @@ const buildOverlayState = (): OverlayState => ({
   secret: null,
   sessions: false,
   skillsHub: false,
-  sudo: null
+  sudo: null,
+  warroom: false
 })
 
 export const $overlayState = atom<OverlayState>(buildOverlayState())

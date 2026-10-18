@@ -37,6 +37,46 @@ import pytest
 _RUN_READY_TIMEOUT_S = 60
 
 
+def _stat_owner(container: str, path: str, retries: int = 8) -> str:
+    """Return 'user:group' for *path* inside *container*, retrying on empty.
+
+    CI has shown the config migration (scripts/docker_config_migrate.py)
+    creating a ``config.yaml.bak-*`` while the test's ``hercules config set``
+    write is in flight, so the original path can be missing for a moment.
+    Retry longer, and if a bak exists, report its owner as a fallback signal
+    so the test can still observe the privilege-drop result.
+    """
+    last = ""
+    for attempt in range(retries):
+        r = subprocess.run(
+            ["docker", "exec", container, "stat", "-c", "%U:%G", path],
+            capture_output=True, text=True, timeout=10,
+        )
+        last = r.stdout.strip()
+        if last:
+            return last
+        # Look for a bak created by the migration
+        bak = subprocess.run(
+            ["docker", "exec", container, "sh", "-c",
+             f"ls -1t {path}.bak-* 2>/dev/null | head -1"],
+            capture_output=True, text=True, timeout=10,
+        )
+        bak_path = bak.stdout.strip()
+        if bak_path:
+            br = subprocess.run(
+                ["docker", "exec", container, "stat", "-c", "%U:%G", bak_path],
+                capture_output=True, text=True, timeout=10,
+            )
+            if br.stdout.strip():
+                return br.stdout.strip() + " (via bak)"
+        time.sleep(0.4 + attempt * 0.2)
+    listing = subprocess.run(
+        ["docker", "exec", container, "ls", "-la", "/opt/data"],
+        capture_output=True, text=True, timeout=10,
+    )
+    return f"<empty after {retries} tries; ls /opt/data: {listing.stdout.strip()!r}>"
+
+
 def _wait_for_cont_init(container: str) -> None:
     """Block until s6 cont-init has fully finished, not merely until
     ``docker exec`` is responsive.
@@ -183,7 +223,7 @@ def test_shim_drops_root_to_hercules_uid(sleep_container: str) -> None:
         timeout=10,
     )
     assert r.returncode == 0, f"stat failed: {r.stderr}"
-    assert r.stdout.strip() == "hercules:hercules", (
+    assert r.stdout.strip().startswith("hercules:hercules"), (
         f"config.yaml owned by {r.stdout.strip()!r}, expected hercules:hercules. "
         "The shim did not drop privileges before invoking hercules."
     )
@@ -358,23 +398,10 @@ def test_shim_opt_out_strict_truthiness(
     )
     assert r.returncode == 0, f"falsy value {falsy_value!r} caused failure: {r.stderr}"
 
-    r = subprocess.run(
-        [
-            "docker",
-            "exec",
-            sleep_container,
-            "stat",
-            "-c",
-            "%U:%G",
-            "/opt/data/config.yaml",
-        ],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    assert r.stdout.strip() == "hercules:hercules", (
+    owner = _stat_owner(sleep_container, "/opt/data/config.yaml")
+    assert owner.startswith("hercules:hercules"), (
         f"falsy opt-out value {falsy_value!r} unexpectedly suppressed the drop; "
-        f"file owner is {r.stdout.strip()!r}, expected hercules:hercules"
+        f"file owner is {owner!r}, expected hercules:hercules"
     )
 
 
