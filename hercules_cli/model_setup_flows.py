@@ -2642,6 +2642,19 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
             model_list = []
         if model_list:
             print(f"  Found {len(model_list)} model(s) from LM Studio")
+    elif provider_id == "tenselerate":
+        from hercules_cli.models import fetch_api_models
+
+        live_models = fetch_api_models(existing_key or "local", effective_base) or []
+        if live_models:
+            model_list = live_models
+            print(f"  Found {len(model_list)} model(s) from TENSELERATE")
+        else:
+            model_list = ["tenselerate"]
+            print(
+                "  llama-server did not list models — using preset 'tenselerate' "
+                f"at {effective_base}"
+            )
     elif provider_id == "ollama-cloud":
         from hercules_cli.models import fetch_ollama_cloud_models
 

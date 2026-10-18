@@ -196,6 +196,7 @@ def _xai_curated_models() -> list[str]:
 
 _PROVIDER_MODELS: dict[str, list[str]] = {
     "moa": ["default"],
+    "tenselerate": ["tenselerate"],
     # Native OpenAI Chat Completions (api.openai.com). Used by /model counts and
     # provider_model_ids fallback when /v1/models is unavailable.
     "openai": [
@@ -536,6 +537,11 @@ class ProviderEntry(NamedTuple):
 
 
 CANONICAL_PROVIDERS: list[ProviderEntry] = [
+    ProviderEntry(
+        "tenselerate",
+        "TENSELERATE",
+        "TENSELERATE (Cooklabs local llama-server, OpenAI-compatible :8080)",
+    ),
     ProviderEntry(
         "openrouter", "OpenRouter", "OpenRouter (Pay-per-use API aggregator)"
     ),

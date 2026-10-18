@@ -3252,6 +3252,7 @@ def select_provider_and_model(args=None):
         "ollama-cloud",
         "tencent-tokenhub",
         "lmstudio",
+        "tenselerate",
     } or _is_profile_api_key_provider(selected_provider):
         _model_flow_api_key_provider(config, selected_provider, current_model)
 
@@ -4093,15 +4094,24 @@ def _prompt_api_key(pconfig, existing_key: str, provider_id: str = "") -> tuple:
     ``return`` immediately — the user cancelled entry, declined to replace, or
     cleared the key and is now unconfigured.
     """
-    from hercules_cli.auth import LMSTUDIO_NOAUTH_PLACEHOLDER
+    from hercules_cli.auth import (
+        LMSTUDIO_NOAUTH_PLACEHOLDER,
+        TENSELERATE_NOAUTH_PLACEHOLDER,
+    )
     from hercules_cli.config import save_env_value
     from hercules_cli.secret_prompt import masked_secret_prompt
 
     key_env = pconfig.api_key_env_vars[0] if pconfig.api_key_env_vars else ""
 
     def _prompt_new_key(*, allow_lmstudio_default: bool) -> str:
-        if provider_id == "lmstudio" and allow_lmstudio_default:
-            prompt = f"{key_env} (Enter for no-auth default {LMSTUDIO_NOAUTH_PLACEHOLDER!r}): "
+        noauth = {
+            "lmstudio": LMSTUDIO_NOAUTH_PLACEHOLDER,
+            "tenselerate": TENSELERATE_NOAUTH_PLACEHOLDER,
+        }
+        if provider_id in noauth and allow_lmstudio_default:
+            prompt = (
+                f"{key_env} (Enter for no-auth default {noauth[provider_id]!r}): "
+            )
         else:
             prompt = f"{key_env} (or Enter to cancel): "
         try:
@@ -4109,8 +4119,8 @@ def _prompt_api_key(pconfig, existing_key: str, provider_id: str = "") -> tuple:
         except (KeyboardInterrupt, EOFError):
             print()
             return ""
-        if not entered and provider_id == "lmstudio" and allow_lmstudio_default:
-            return LMSTUDIO_NOAUTH_PLACEHOLDER
+        if not entered and provider_id in noauth and allow_lmstudio_default:
+            return noauth[provider_id]
         return entered
 
     # First-time entry ────────────────────────────────────────────────────
