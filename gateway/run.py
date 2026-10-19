@@ -2249,7 +2249,12 @@ async def _probe_audio_duration(path: str) -> Optional[str]:
 
             secs = await asyncio.to_thread(_wav_duration)
             return _format_duration(secs)
-        except Exception:
+        except (ImportError, OSError, TypeError, ValueError, ZeroDivisionError):
+            # ImportError: wave module not available
+            # OSError: file not found or read error
+            # TypeError: float() conversion failed
+            # ValueError: invalid wave file format
+            # ZeroDivisionError: edge case in duration calculation
             pass
 
     if ext in (".ogg", ".opus", ".oga"):
@@ -2262,7 +2267,12 @@ async def _probe_audio_duration(path: str) -> Optional[str]:
 
             secs = await asyncio.to_thread(_ogg_duration)
             return _format_duration(secs)
-        except Exception:
+        except (ImportError, FileNotFoundError, OSError, TypeError, ValueError):
+            # ImportError: mutagen module not available
+            # FileNotFoundError: ogg file not found
+            # OSError: file read error
+            # TypeError: float() conversion failed
+            # ValueError: invalid ogg file format
             pass
 
     try:
