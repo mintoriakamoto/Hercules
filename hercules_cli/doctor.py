@@ -58,6 +58,7 @@ _PROVIDER_ENV_HINTS = (
 
 
 from hercules_constants import is_termux as _is_termux
+import json
 
 
 def _python_install_cmd() -> str:

@@ -19,6 +19,8 @@ from typing import Any, NamedTuple, Optional
 
 from hercules_cli import __version__ as _HERCULES_VERSION
 from hercules_cli.urllib_security import open_credentialed_url
+import logging
+import re
 
 # Identify ourselves so endpoints fronted by Cloudflare's Browser Integrity
 # Check (error 1010) don't reject the default ``Python-urllib/*`` signature.

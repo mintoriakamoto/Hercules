@@ -31,6 +31,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
+import subprocess
 
 logger = logging.getLogger(__name__)
 

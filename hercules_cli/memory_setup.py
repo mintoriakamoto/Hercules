@@ -8,8 +8,9 @@ the provider's config schema. Writes config to config.yaml + .env.
 from __future__ import annotations
 
 import os
-import sys
 import shlex
+import subprocess
+import sys
 from pathlib import Path
 
 from hercules_constants import get_hercules_home

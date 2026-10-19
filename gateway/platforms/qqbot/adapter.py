@@ -43,6 +43,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
+import re
+import shutil
+import tempfile
 
 try:
     import aiohttp

@@ -20,6 +20,7 @@ Differences from Claude Code:
 
 from __future__ import annotations
 
+import json
 import os
 from collections import Counter
 from typing import Any, Iterable, List, Mapping, Optional, Sequence, Tuple

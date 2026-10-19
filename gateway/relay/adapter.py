@@ -27,6 +27,7 @@ from gateway.platforms.base import BasePlatformAdapter, MessageEvent, SendResult
 from gateway.relay.descriptor import CapabilityDescriptor
 from gateway.relay.transport import RelayTransport
 from gateway.session import SessionSource
+import json
 
 logger = logging.getLogger(__name__)
 

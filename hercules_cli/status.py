@@ -4,6 +4,8 @@ Status command for hercules CLI.
 Shows the status of all Hercules Agent components.
 """
 
+import datetime
+import json
 import os
 import sys
 import subprocess  # noqa: F401 — re-exported for tests that monkeypatch status.subprocess to guard against regressions
@@ -47,7 +49,7 @@ def _format_iso_timestamp(value) -> str:
     """Format ISO timestamps for status output, converting to local timezone."""
     if not value or not isinstance(value, str):
         return "(unknown)"
-    from datetime import datetime, timezone
+    from datetime import timezone
 
     text = value.strip()
     if not text:

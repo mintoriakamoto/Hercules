@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Optional
 
 from hercules_cli._subprocess_compat import IS_WINDOWS, windows_hide_flags
+import re
 
 logger = logging.getLogger(__name__)
 

@@ -12,6 +12,7 @@ that the main retry loop in run_agent.py consults for every API failure.
 from __future__ import annotations
 
 import enum
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional

@@ -31,6 +31,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Optional
+import os
 
 
 _USAGE_EXIT = 2

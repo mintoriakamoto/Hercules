@@ -78,6 +78,7 @@ import sysconfig
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
+import tempfile
 
 logger = logging.getLogger(__name__)
 

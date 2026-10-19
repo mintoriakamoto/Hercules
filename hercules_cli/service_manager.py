@@ -20,6 +20,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import Literal, Protocol, runtime_checkable
+import json
+import os
+import shutil
+import subprocess
 
 ServiceManagerKind = Literal["systemd", "launchd", "windows", "s6", "none"]
 

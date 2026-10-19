@@ -6,7 +6,7 @@ import copy
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, Callable, Iterable
 
 # Headers safe to forward to a different origin. Everything else is dropped:
 # custom provider headers routinely carry credentials under arbitrary names.

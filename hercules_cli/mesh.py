@@ -13,6 +13,7 @@ import shutil
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import subprocess
 
 HOME = Path.home()
 OFFICIAL = "https://github.com/mintoriakamoto/Hercules"

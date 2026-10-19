@@ -19,6 +19,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
+import tempfile
 
 logger = logging.getLogger(__name__)
 

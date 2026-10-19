@@ -26,6 +26,7 @@ from typing import Any, Optional
 
 from hercules_cli import kanban_db as kb
 from hercules_cli import kanban_swarm as ks
+import shutil
 
 
 # ---------------------------------------------------------------------------

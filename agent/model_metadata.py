@@ -20,6 +20,7 @@ import yaml
 from utils import atomic_json_write, base_url_host_matches, base_url_hostname
 
 from hercules_constants import OPENROUTER_MODELS_URL
+import asyncio
 
 logger = logging.getLogger(__name__)
 

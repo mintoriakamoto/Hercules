@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from hercules_constants import get_hercules_home
+import shutil
 
 logger = logging.getLogger(__name__)
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import json
 
 
 def register_subparser(subparsers: argparse._SubParsersAction) -> None:

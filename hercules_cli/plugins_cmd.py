@@ -23,6 +23,7 @@ from typing import Any, Optional
 from hercules_constants import get_hercules_home
 from hercules_cli.config import cfg_get
 from hercules_cli.secret_prompt import masked_secret_prompt
+import tempfile
 
 logger = logging.getLogger(__name__)
 

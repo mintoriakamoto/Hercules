@@ -11,8 +11,12 @@ layout, and the (ported-from-desktop) palette all live in
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from functools import lru_cache
 from typing import Any, Optional

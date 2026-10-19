@@ -10,6 +10,7 @@ import logging
 from collections import deque
 from hashlib import sha1
 from typing import Any, Awaitable, Callable, Dict, Optional
+import re
 
 try:
     from aiohttp import web

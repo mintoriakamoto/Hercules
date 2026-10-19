@@ -36,6 +36,7 @@ needs to replace the import + call site:
     platform = get_session_env("HERCULES_SESSION_PLATFORM", "")
 """
 
+import os
 from contextvars import ContextVar
 from typing import Any
 

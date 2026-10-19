@@ -30,6 +30,7 @@ sort it out.  Python doesn't get that luxury.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 
 __all__ = ["configure_windows_stdio", "is_windows"]

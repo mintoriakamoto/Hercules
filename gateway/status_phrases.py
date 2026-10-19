@@ -30,7 +30,7 @@ from __future__ import annotations
 import random as _random
 from collections.abc import Mapping, MutableSequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import yaml
 

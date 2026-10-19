@@ -62,7 +62,9 @@ except ModuleNotFoundError:
     pass
 
 import os
+import re
 import sys
+import tempfile
 
 
 def _set_process_title() -> None:

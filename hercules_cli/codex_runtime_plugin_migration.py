@@ -41,6 +41,8 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
+import sys
+import tempfile
 
 logger = logging.getLogger(__name__)
 

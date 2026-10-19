@@ -91,6 +91,7 @@ from typing import Any, Iterable, Optional
 
 from hercules_cli.sqlite_util import add_column_if_missing as _add_column_if_missing
 from toolsets import get_toolset_names
+import datetime
 
 _log = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ import subprocess
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable, Mapping
 
 from utils import is_truthy_value
 

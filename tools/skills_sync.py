@@ -26,6 +26,7 @@ import json
 import logging
 import os
 import shutil
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from hercules_constants import (
@@ -160,8 +161,6 @@ def _write_manifest(entries: Dict[str, str]):
     Uses a temp file + os.replace() to avoid corruption if the process
     crashes or is interrupted mid-write.
     """
-    import tempfile
-
     MANIFEST_FILE.parent.mkdir(parents=True, exist_ok=True)
     data = (
         "\n".join(f"{name}:{hash_val}" for name, hash_val in sorted(entries.items()))

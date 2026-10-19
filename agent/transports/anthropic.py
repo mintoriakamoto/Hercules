@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from agent.transports.base import ProviderTransport
 from agent.transports.types import NormalizedResponse
+import json
 
 
 class AnthropicTransport(ProviderTransport):

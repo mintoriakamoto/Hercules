@@ -11,6 +11,7 @@ probing, no conda guards, no multi-location resolution chains.
 from __future__ import annotations
 
 import logging
+import shutil
 import os
 import platform
 import subprocess
