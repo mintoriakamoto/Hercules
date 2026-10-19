@@ -2113,12 +2113,17 @@ def _try_resolve_fallback_provider() -> dict | None:
                     "credential_pool": runtime.get("credential_pool"),
                     "model": entry.get("model"),
                 }
-            except Exception as fb_exc:
+            except (KeyError, AttributeError, TypeError, ValueError) as fb_exc:
+                # KeyError: entry missing expected fields
+                # AttributeError: entry has unexpected structure
+                # TypeError: type conversion failed
+                # ValueError: value validation failed
                 logger.debug(
                     "Fallback entry %s failed: %s", entry.get("provider"), fb_exc
                 )
                 continue
     except Exception:
+        # Catch any unexpected exception from fallback chain
         pass
     return None
 
