@@ -375,10 +375,12 @@ _UDS_TRANSPORT_HEADER = (
 import json, os, socket, shlex, threading, time
 
 _sock = None
-# The RPC server handles a single client connection serially and has no
-# request-id in the protocol, so concurrent _call() invocations from multiple
-# threads (e.g. ThreadPoolExecutor) would race on the shared socket and get
-# each other's responses. Serialize the entire send+recv round-trip.
+# Lock protecting socket creation/initialization (BUG FIX #2 & #3)
+_sock_lock = threading.Lock()
+# Lock for serializing send+recv round-trip (required because the RPC server
+# handles a single client connection serially and has no request-id in the
+# protocol, so concurrent _call() invocations from multiple threads would race
+# on the shared socket and get each other's responses).
 _call_lock = threading.Lock()
 '''
     + _COMMON_HELPERS
@@ -395,18 +397,45 @@ def _connect():
     """
     global _sock
     if _sock is None:
-        endpoint = os.environ["HERCULES_RPC_SOCKET"]
-        if endpoint.startswith("tcp://"):
-            # tcp://host:port  (host is always 127.0.0.1 in practice — we
-            # only bind loopback server-side)
-            _host_port = endpoint[len("tcp://"):]
-            _host, _, _port = _host_port.rpartition(":")
-            _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            _sock.connect((_host or "127.0.0.1", int(_port)))
-        else:
-            _sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            _sock.connect(endpoint)
-        _sock.settimeout(300)
+        with _sock_lock:
+            # Double-check pattern: another thread may have connected while
+            # we were waiting for the lock.
+            if _sock is None:
+                endpoint = os.environ["HERCULES_RPC_SOCKET"]
+                try:
+                    if endpoint.startswith("tcp://"):
+                        # tcp://host:port  (host is always 127.0.0.1 in practice —
+                        # we only bind loopback server-side)
+                        _host_port = endpoint[len("tcp://"):]
+                        _host, _, _port = _host_port.rpartition(":")
+                        _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        try:
+                            _sock.connect((_host or "127.0.0.1", int(_port)))
+                        except Exception:
+                            # BUG FIX #1: Close socket on connection failure to
+                            # prevent resource leak.
+                            try:
+                                _sock.close()
+                            except OSError:
+                                pass
+                            _sock = None
+                            raise
+                    else:
+                        _sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                        try:
+                            _sock.connect(endpoint)
+                        except Exception:
+                            # BUG FIX #1: Close socket on connection failure to
+                            # prevent resource leak.
+                            try:
+                                _sock.close()
+                            except OSError:
+                                pass
+                            _sock = None
+                            raise
+                    _sock.settimeout(300)
+                except Exception:
+                    raise
     return _sock
 
 def _call(tool_name, args):
@@ -416,8 +445,12 @@ def _call(tool_name, args):
         "args": args,
         "token": os.environ.get("HERCULES_RPC_TOKEN", ""),
     }) + "\\n"
+    # BUG FIX #3: Minimize lock scope. Call _connect() outside the lock
+    # since it may block on socket I/O. _connect() now protects global
+    # state internally with _sock_lock. Only hold _call_lock during actual
+    # I/O (sendall/recv) to serialize the round-trip.
+    conn = _connect()
     with _call_lock:
-        conn = _connect()
         conn.sendall(request.encode())
         buf = b""
         while True:
@@ -1538,8 +1571,10 @@ def execute_code(
             from tools.environments.base import touch_activity_if_due
         except Exception:
             touch_activity_if_due = None
-        poll_interval = 0.005
-        while proc.poll() is None:
+
+        try:
+            poll_interval = 0.005
+            while proc.poll() is None:
             if _is_interrupted():
                 _kill_process_group(proc)
                 status = "interrupted"
@@ -1562,90 +1597,107 @@ def execute_code(
                 pass
             poll_interval = min(0.2, poll_interval * 1.5)
 
-        # Wait for readers to finish draining
-        stdout_reader.join(timeout=3)
-        stderr_reader.join(timeout=3)
+            # Wait for readers to finish draining
+            stdout_reader.join(timeout=3)
+            stderr_reader.join(timeout=3)
 
-        stdout_head = b"".join(stdout_head_chunks).decode("utf-8", errors="replace")
-        stdout_tail = b"".join(stdout_tail_chunks).decode("utf-8", errors="replace")
-        stderr_text = b"".join(stderr_chunks).decode("utf-8", errors="replace")
+            stdout_head = b"".join(stdout_head_chunks).decode("utf-8", errors="replace")
+            stdout_tail = b"".join(stdout_tail_chunks).decode("utf-8", errors="replace")
+            stderr_text = b"".join(stderr_chunks).decode("utf-8", errors="replace")
 
-        # Assemble stdout with head+tail truncation
-        total_stdout = stdout_total_bytes[0]
-        if total_stdout > MAX_STDOUT_BYTES and stdout_tail:
-            omitted = total_stdout - len(stdout_head) - len(stdout_tail)
-            truncated_notice = (
-                f"\n\n... [OUTPUT TRUNCATED - {omitted:,} chars omitted "
-                f"out of {total_stdout:,} total] ...\n\n"
-            )
-            stdout_text = stdout_head + truncated_notice + stdout_tail
-        else:
-            stdout_text = stdout_head + stdout_tail
-
-        exit_code = proc.returncode if proc.returncode is not None else -1
-        duration = round(time.monotonic() - exec_start, 2)
-
-        # Wait for RPC thread to finish
-        stop_event.set()
-        server_sock.close()  # break accept() so thread exits promptly
-        server_sock = None  # prevent double close in finally
-        rpc_thread.join(timeout=3)
-
-        # Strip ANSI escape sequences so the model never sees terminal
-        # formatting — prevents it from copying escapes into file writes.
-        from tools.ansi_strip import strip_ansi
-
-        stdout_text = strip_ansi(stdout_text)
-        stderr_text = strip_ansi(stderr_text)
-
-        # Redact secrets (API keys, tokens, etc.) from sandbox output.
-        # The sandbox env-var filter (lines 434-454) blocks os.environ access,
-        # but scripts can still read secrets from disk (e.g. open('~/.hercules/.env')).
-        # This ensures leaked secrets never enter the model context.
-        # code_file=True: this is code-execution output — skip false-positive
-        # ENV/JSON/f-string-template redaction; real credentials still masked.
-        from agent.redact import redact_sensitive_text
-
-        stdout_text = redact_sensitive_text(stdout_text, code_file=True)
-        stderr_text = redact_sensitive_text(stderr_text, code_file=True)
-
-        # Build response
-        result: Dict[str, Any] = {
-            "status": status,
-            "output": stdout_text,
-            "tool_calls_made": tool_call_counter[0],
-            "duration_seconds": duration,
-        }
-
-        if status == "timeout":
-            timeout_msg = f"Script timed out after {timeout}s and was killed."
-            result["error"] = timeout_msg
-            # Include timeout message in output so the LLM always surfaces it
-            # to the user.  When output is empty, models often treat the result
-            # as "nothing happened" and produce an empty response, which the
-            # gateway stream consumer silently drops (#10807).
-            if stdout_text:
-                result["output"] = stdout_text + f"\n\n⏰ {timeout_msg}"
+            # Assemble stdout with head+tail truncation
+            total_stdout = stdout_total_bytes[0]
+            if total_stdout > MAX_STDOUT_BYTES and stdout_tail:
+                omitted = total_stdout - len(stdout_head) - len(stdout_tail)
+                truncated_notice = (
+                    f"\n\n... [OUTPUT TRUNCATED - {omitted:,} chars omitted "
+                    f"out of {total_stdout:,} total] ...\n\n"
+                )
+                stdout_text = stdout_head + truncated_notice + stdout_tail
             else:
-                result["output"] = f"⏰ {timeout_msg}"
-            logger.warning(
-                "execute_code timed out after %ss (limit %ss) with %d tool calls",
-                duration,
-                timeout,
-                tool_call_counter[0],
-            )
-        elif status == "interrupted":
-            result["output"] = (
-                stdout_text + "\n[execution interrupted — user sent a new message]"
-            )
-        elif exit_code != 0:
-            result["status"] = "error"
-            result["error"] = stderr_text or f"Script exited with code {exit_code}"
-            # Include stderr in output so the LLM sees the traceback
-            if stderr_text:
-                result["output"] = stdout_text + "\n--- stderr ---\n" + stderr_text
+                stdout_text = stdout_head + stdout_tail
 
-        return json.dumps(result, ensure_ascii=False)
+            exit_code = proc.returncode if proc.returncode is not None else -1
+            duration = round(time.monotonic() - exec_start, 2)
+
+            # Wait for RPC thread to finish
+            stop_event.set()
+            server_sock.close()  # break accept() so thread exits promptly
+            server_sock = None  # prevent double close in finally
+            rpc_thread.join(timeout=3)
+
+            # Strip ANSI escape sequences so the model never sees terminal
+            # formatting — prevents it from copying escapes into file writes.
+            from tools.ansi_strip import strip_ansi
+
+            stdout_text = strip_ansi(stdout_text)
+            stderr_text = strip_ansi(stderr_text)
+
+            # Redact secrets (API keys, tokens, etc.) from sandbox output.
+            # The sandbox env-var filter (lines 434-454) blocks os.environ access,
+            # but scripts can still read secrets from disk (e.g. open('~/.hercules/.env')).
+            # This ensures leaked secrets never enter the model context.
+            # code_file=True: this is code-execution output — skip false-positive
+            # ENV/JSON/f-string-template redaction; real credentials still masked.
+            from agent.redact import redact_sensitive_text
+
+            stdout_text = redact_sensitive_text(stdout_text, code_file=True)
+            stderr_text = redact_sensitive_text(stderr_text, code_file=True)
+
+            # Build response
+            result: Dict[str, Any] = {
+                "status": status,
+                "output": stdout_text,
+                "tool_calls_made": tool_call_counter[0],
+                "duration_seconds": duration,
+            }
+
+            if status == "timeout":
+                timeout_msg = f"Script timed out after {timeout}s and was killed."
+                result["error"] = timeout_msg
+                # Include timeout message in output so the LLM always surfaces it
+                # to the user.  When output is empty, models often treat the result
+                # as "nothing happened" and produce an empty response, which the
+                # gateway stream consumer silently drops (#10807).
+                if stdout_text:
+                    result["output"] = stdout_text + f"\n\n⏰ {timeout_msg}"
+                else:
+                    result["output"] = f"⏰ {timeout_msg}"
+                logger.warning(
+                    "execute_code timed out after %ss (limit %ss) with %d tool calls",
+                    duration,
+                    timeout,
+                    tool_call_counter[0],
+                )
+            elif status == "interrupted":
+                result["output"] = (
+                    stdout_text + "\n[execution interrupted — user sent a new message]"
+                )
+            elif exit_code != 0:
+                result["status"] = "error"
+                result["error"] = stderr_text or f"Script exited with code {exit_code}"
+                # Include stderr in output so the LLM sees the traceback
+                if stderr_text:
+                    result["output"] = stdout_text + "\n--- stderr ---\n" + stderr_text
+
+            return json.dumps(result, ensure_ascii=False)
+        finally:
+            # Ensure subprocess pipes are closed to prevent file descriptor leaks
+            if proc.stdout:
+                try:
+                    proc.stdout.close()
+                except Exception:
+                    pass
+            if proc.stderr:
+                try:
+                    proc.stderr.close()
+                except Exception:
+                    pass
+            # Ensure process is terminated
+            try:
+                proc.terminate()
+            except Exception:
+                pass
 
     except Exception as exc:
         duration = round(time.monotonic() - exec_start, 2)
@@ -1693,16 +1745,20 @@ def _kill_process_group(proc, escalate: bool = False):
     try:
         parent = psutil.Process(proc.pid)
         children = parent.children(recursive=True)
+        # Terminate all children and parent in individual try/except blocks
         for child in children:
             try:
                 child.terminate()
             except psutil.NoSuchProcess:
+                # Process already exited, continue with next
                 pass
         try:
             parent.terminate()
         except psutil.NoSuchProcess:
+            # Parent process already exited
             pass
     except psutil.NoSuchProcess:
+        # Process group doesn't exist
         pass
     except (PermissionError, OSError) as e:
         logger.debug("Could not terminate process tree: %s", e, exc_info=True)
@@ -1718,14 +1774,17 @@ def _kill_process_group(proc, escalate: bool = False):
         except subprocess.TimeoutExpired:
             try:
                 parent = psutil.Process(proc.pid)
+                # Kill all children and parent after timeout
                 for child in parent.children(recursive=True):
                     try:
                         child.kill()
                     except psutil.NoSuchProcess:
+                        # Process already exited
                         pass
                 try:
                     parent.kill()
                 except psutil.NoSuchProcess:
+                    # Parent process already exited
                     pass
             except psutil.NoSuchProcess:
                 pass
