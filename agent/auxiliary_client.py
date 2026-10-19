@@ -153,7 +153,12 @@ def _resolve_aux_verify(base_url: Optional[str]) -> Any:
             ssl_verify=tls.get("ssl_verify"),
             base_url=str(base_url or ""),
         )
-    except Exception:
+    except (ImportError, AttributeError, ValueError, TypeError):
+        # ImportError: ssl_verify module not available
+        # AttributeError: functions not found
+        # ValueError: config parsing fails
+        # TypeError: type conversion fails
+        # Fall back to httpx/certifi default (True)
         return True
 
 
@@ -458,7 +463,11 @@ def _get_aux_model_for_provider(provider_id: str) -> str:
         _p = get_provider_profile(provider_id)
         if _p and _p.default_aux_model:
             return _p.default_aux_model
-    except Exception:
+    except (ImportError, AttributeError, ValueError, TypeError):
+        # ImportError: providers module not available
+        # AttributeError: get_provider_profile not found
+        # ValueError: invalid provider_id
+        # TypeError: function call failed
         pass
     return _API_KEY_PROVIDER_AUX_MODELS_FALLBACK.get(provider_id, "")
 
@@ -553,7 +562,12 @@ def _apply_user_default_headers(headers: dict | None) -> dict | None:
                 merged_user.update(user_headers)
             merged_user.update(alias_headers)
             user_headers = merged_user
-    except Exception:
+    except (ImportError, AttributeError, ValueError, TypeError, KeyError):
+        # ImportError: config module not available
+        # AttributeError: functions not found
+        # ValueError: config parsing fails
+        # TypeError: cfg_get fails
+        # KeyError: missing config sections
         return headers
     if not isinstance(user_headers, dict) or not user_headers:
         return headers
