@@ -645,7 +645,7 @@ class ChatCompletionsTransport(ProviderTransport):
                 from agent.gemini_native_adapter import is_native_gemini_base_url
 
                 _native_gemini = is_native_gemini_base_url(params.get("base_url"))
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 _native_gemini = False
             if _native_gemini:
                 extra_body = {

@@ -40,7 +40,7 @@ def _primary_hex() -> str:
         return skin.get_color("ui_primary", "") or skin.get_color(
             "banner_title", "#F7B23B"
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "#F7B23B"
 
 

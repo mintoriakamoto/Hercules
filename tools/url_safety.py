@@ -250,7 +250,7 @@ def _global_allow_private_urls() -> bool:
         ):
             _cached_allow_private = True
             return _cached_allow_private
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Config unavailable (e.g. tests, early import) — keep default
         pass
 

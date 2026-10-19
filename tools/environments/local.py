@@ -348,7 +348,7 @@ def _inject_context_hercules_home(env: dict) -> None:
         value = get_hercules_home_override()
         if value:
             env["HERCULES_HOME"] = value
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
 
@@ -384,7 +384,7 @@ def _inject_session_context_env(env: dict) -> None:
             _VAR_MAP,
             session_context_engaged,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
 
     _engaged = session_context_engaged()
@@ -405,7 +405,7 @@ def _sanitize_subprocess_env(
     """Filter Hercules-managed secrets from a subprocess environment."""
     try:
         from tools.env_passthrough import is_env_passthrough as _is_passthrough
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _is_passthrough = lambda _: False
 
     sanitized: dict[str, str] = {}
@@ -871,7 +871,7 @@ def _make_run_env(env: dict) -> dict:
     """Build a run environment with a sane PATH and provider-var stripping."""
     try:
         from tools.env_passthrough import is_env_passthrough as _is_passthrough
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _is_passthrough = lambda _: False
 
     merged = dict(os.environ | env)
@@ -929,7 +929,7 @@ def _read_terminal_shell_init_config() -> tuple[list[str], bool]:
             files = []
         auto_bashrc = bool(terminal_cfg.get("auto_source_bashrc", True))
         return [str(f) for f in files if f], auto_bashrc
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return [], True
 
 
@@ -1039,7 +1039,7 @@ class LocalEnvironment(BaseEnvironment):
                 from hercules_constants import get_hercules_home
 
                 cache_dir = get_hercules_home() / "cache" / "terminal"
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 cache_dir = Path(tempfile.gettempdir()) / "hercules_terminal"
             cache_dir.mkdir(parents=True, exist_ok=True)
             # Force forward slashes so the same string serves both contexts.
@@ -1179,7 +1179,7 @@ class LocalEnvironment(BaseEnvironment):
                     from gateway.status import terminate_pid
 
                     terminate_pid(proc.pid, force=True)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     proc.kill()
                 try:
                     proc.wait(timeout=2.0)

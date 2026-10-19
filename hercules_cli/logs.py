@@ -356,7 +356,7 @@ def _read_last_n_lines(path: Path, n: int) -> list:
                     decoded.append(raw.decode("latin-1") + "\n")
             return decoded[-n:]
 
-    except Exception:
+    except (IndexError, KeyError):
         # Fallback: read entire file
         with open(path, "r", encoding="utf-8", errors="replace") as f:
             all_lines = f.readlines()

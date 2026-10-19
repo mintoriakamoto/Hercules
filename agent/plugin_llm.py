@@ -213,7 +213,7 @@ def _resolve_trust_policy(plugin_id: str) -> _TrustPolicy:
         from hercules_cli.config import load_config
 
         config = load_config() or {}
-    except Exception:  # pragma: no cover — config IO failure
+    except (ImportError, ModuleNotFoundError):
         return _TrustPolicy(plugin_id=plugin_id)
 
     plugins_cfg = config.get("plugins")
@@ -537,7 +537,7 @@ def _resolve_attribution(
             from agent.auxiliary_client import _read_main_provider
 
             provider = (_read_main_provider() or "").strip() or "auto"
-        except Exception:  # pragma: no cover — defensive
+        except (ImportError, ModuleNotFoundError):
             provider = "auto"
 
     response_model = getattr(response, "model", None)
@@ -550,7 +550,7 @@ def _resolve_attribution(
             from agent.auxiliary_client import _read_main_model
 
             model = (_read_main_model() or "").strip() or "default"
-        except Exception:  # pragma: no cover — defensive
+        except (ImportError, ModuleNotFoundError):
             model = "default"
 
     return provider, model

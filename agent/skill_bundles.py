@@ -294,7 +294,7 @@ def build_bundle_invocation_message(
         from agent.skill_utils import get_disabled_skill_names
 
         disabled_names = get_disabled_skill_names(platform=platform)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         disabled_names = set()
 
     loaded_names: List[str] = []
@@ -329,7 +329,7 @@ def build_bundle_invocation_message(
             from tools.skill_usage import bump_use
 
             bump_use(skill_name)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         activation_note = f'[Loaded as part of the "{bundle_name}" skill bundle.]'

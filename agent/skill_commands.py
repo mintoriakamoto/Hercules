@@ -130,7 +130,7 @@ def _resolve_skill_commands_platform() -> Optional[str]:
         resolved_platform = os.getenv("HERCULES_PLATFORM") or get_session_env(
             "HERCULES_SESSION_PLATFORM"
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         resolved_platform = os.getenv("HERCULES_PLATFORM")
     return resolved_platform or None
 
@@ -152,7 +152,7 @@ def _load_skill_payload(
         loaded_skill = json.loads(
             skill_view(normalized, task_id=task_id, preprocess=False)
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     if not loaded_skill.get("success"):
@@ -214,7 +214,7 @@ def _inject_skill_config(loaded_skill: dict[str, Any], parts: list[str]) -> None
             lines.append(f"  {key} = {display_val}")
         lines.append("]")
         parts.extend(lines)
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass  # Non-critical — skill still loads without config injection
 
 
@@ -390,9 +390,9 @@ def scan_skill_commands() -> Dict[str, Dict[str, Any]]:
                         "skill_md_path": str(skill_md),
                         "skill_dir": str(skill_md.parent),
                     }
-                except Exception:
+                except (ValueError):
                     continue
-    except Exception:
+    except (ValueError):
         pass
     return _skill_commands
 
@@ -528,7 +528,7 @@ def build_skill_invocation_message(
         from tools.skill_usage import bump_use
 
         bump_use(skill_name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass  # Non-critical — skill invocation proceeds regardless
 
     activation_note = (
@@ -637,7 +637,7 @@ def build_stacked_skill_invocation_message(
             from tools.skill_usage import bump_use
 
             bump_use(skill_name)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # Non-critical
 
         # NOTE: must start with "[Loaded as part of the " — that prefix is
@@ -700,7 +700,7 @@ def build_preloaded_skills_prompt(
         from agent.skill_utils import get_disabled_skill_names
 
         disabled_names = get_disabled_skill_names()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         disabled_names = set()
 
     seen: set[str] = set()
@@ -726,7 +726,7 @@ def build_preloaded_skills_prompt(
             from tools.skill_usage import bump_use
 
             bump_use(skill_name)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # Non-critical
 
         activation_note = (

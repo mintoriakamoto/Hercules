@@ -72,7 +72,7 @@ def _load_x_search_config() -> Dict[str, Any]:
         from hercules_cli.config import load_config
 
         return load_config().get("x_search", {}) or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -86,7 +86,7 @@ def _get_x_search_timeout_seconds() -> int:
     raw_value = cfg.get("timeout_seconds", DEFAULT_X_SEARCH_TIMEOUT_SECONDS)
     try:
         return max(30, int(raw_value))
-    except Exception:
+    except (ValueError):
         return DEFAULT_X_SEARCH_TIMEOUT_SECONDS
 
 
@@ -95,7 +95,7 @@ def _get_x_search_retries() -> int:
     raw_value = cfg.get("retries", DEFAULT_X_SEARCH_RETRIES)
     try:
         return max(0, int(raw_value))
-    except Exception:
+    except (ValueError):
         return DEFAULT_X_SEARCH_RETRIES
 
 
@@ -137,7 +137,7 @@ def check_x_search_requirements() -> bool:
     try:
         creds = resolve_xai_http_credentials()
         return bool(str(creds.get("api_key") or "").strip())
-    except Exception:
+    except (ValueError):
         return False
 
 
@@ -249,7 +249,7 @@ def _http_error_message(exc: requests.HTTPError) -> str:
 
     try:
         payload = response.json()
-    except Exception:
+    except (ValueError):
         payload = None
 
     if isinstance(payload, dict):

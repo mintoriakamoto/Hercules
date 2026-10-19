@@ -392,7 +392,7 @@ class CodexAppServerClient:
                     # Bound memory: keep last 500 lines.
                     if len(self._stderr_lines) > 500:
                         self._stderr_lines = self._stderr_lines[-500:]
-        except Exception:  # pragma: no cover
+        except (IndexError, KeyError):
             pass
 
 

@@ -1723,7 +1723,7 @@ def _active_image_capabilities() -> Dict[str, Any]:
                 if caps.get("max_reference_images"):
                     info["max_reference_images"] = int(caps["max_reference_images"])
                 return info
-        except Exception:
+        except (ValueError):
             pass
 
     # In-tree FAL path (provider unset or == "fal").
@@ -1737,7 +1737,7 @@ def _active_image_capabilities() -> Dict[str, Any]:
         else:
             info["modalities"] = ["text"]
             info["max_reference_images"] = 0
-    except Exception:
+    except (ValueError):
         pass
 
     return info

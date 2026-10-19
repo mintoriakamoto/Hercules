@@ -27,7 +27,7 @@ import time
 from concurrent.futures import (
     TimeoutError as FuturesTimeoutError,
 )
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from toolsets import TOOLSETS
 
@@ -95,7 +95,7 @@ def _subagent_auto_approve(command: str, description: str, **kwargs) -> str:
     return "once"
 
 
-def _get_subagent_approval_callback():
+def _get_subagent_approval_callback() -> Callable[[str, str], str]:
     """Return the callback to install into subagent worker threads.
 
     Config key: delegation.subagent_auto_approve (bool, default True).
@@ -109,7 +109,7 @@ def _get_subagent_approval_callback():
     return _subagent_auto_deny
 
 
-def _create_delegation_executor(max_workers: int):
+def _create_delegation_executor(max_workers: int) -> Any:
     """Create executor for parallel subagent execution.
 
     Returns appropriate executor based on HERCULES_DELEGATION_EXECUTOR mode:
@@ -539,7 +539,7 @@ def _get_max_child_retries() -> int:
 DEFAULT_PROOF_TIMEOUT_SECONDS = 600
 
 
-def _proof_runner(parent_agent):
+def _proof_runner(parent_agent) -> Callable[[str], Any]:
     """A ProofRunner backed by the sandboxed terminal tool."""
     from agent.consensus.proofs import Observation, output_hash
     from tools.terminal_tool import terminal_tool
@@ -1728,7 +1728,7 @@ def _build_child_agent(
         # ImportError: hook module not available
         # AttributeError: invoke_hook not found
         pass
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError):
         # Hook invocation failed (hooks are optional, so we silently fail)
         logger.debug("subagent_start hook invocation failed", exc_info=True)
 
@@ -2327,7 +2327,7 @@ def _run_single_child(
             try:
                 _summary = child.get_activity_summary()
                 child_api_calls = int(_summary.get("api_call_count", 0) or 0)
-            except Exception:
+            except (ValueError):
                 pass
             if is_timeout and child_api_calls == 0:
                 diagnostic_path = _dump_subagent_timeout_diagnostic(
@@ -2360,7 +2360,7 @@ def _run_single_child(
                         duration_seconds=duration,
                         summary="",
                     )
-                except Exception:
+                except (ValueError):
                     pass
 
             if is_timeout:
@@ -2558,13 +2558,13 @@ def _run_single_child(
         _reasoning_tokens = getattr(child, "session_reasoning_tokens", 0)
         try:
             _files_read = list(file_state.known_reads(child_task_id))[:40]
-        except Exception:
+        except (IndexError, KeyError):
             _files_read = []
         try:
             _files_written_map = file_state.writes_since(
                 "", wall_start, []
             )  # all writes since wall_start
-        except Exception:
+        except (IndexError, KeyError):
             _files_written_map = {}
         _files_written = sorted({
             p
@@ -3331,7 +3331,7 @@ def _load_operator_persona(name: str) -> dict:
     try:
         from tools.operators import get_operator
         return get_operator(name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {"name": name, "prompt": "YOLO on. No limits.", "tools": []}
 
 def delegate_task(
@@ -3890,7 +3890,7 @@ def delegate_task(
                             else ""
                         ),
                     )
-                except Exception:
+                except (AttributeError):
                     pass
 
         # Fire subagent_stop hooks once per child, serialised on the parent thread.
@@ -3902,7 +3902,7 @@ def delegate_task(
         _parent_session_id = getattr(parent_agent, "session_id", None)
         try:
             from hercules_cli.plugins import invoke_hook as _invoke_hook
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _invoke_hook = None
         # Aggregate child spend here so the parent's footer/UI reflect the true
         # cost of a subagent-heavy turn.  Port of Kilo-Org/kilocode#9448.  Each
@@ -3941,7 +3941,7 @@ def delegate_task(
                     child_status=entry.get("status"),
                     duration_ms=int((entry.get("duration_seconds") or 0) * 1000),
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("subagent_stop hook invocation failed", exc_info=True)
 
         # Fold the aggregated child cost into the parent's session total.  This is
@@ -3973,7 +3973,7 @@ def delegate_task(
                     "unknown",
                 }:
                     parent_agent.session_cost_status = "estimated"
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("Subagent cost rollup failed", exc_info=True)
 
         total_duration = round(time.monotonic() - overall_start, 2)
@@ -4006,7 +4006,7 @@ def delegate_task(
             from gateway.session_context import async_delivery_supported
 
             _async_ok = async_delivery_supported()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _async_ok = True
         if not _async_ok:
             logger.info(
@@ -4041,7 +4041,7 @@ def delegate_task(
                 _agent_session_id = str(getattr(parent_agent, "session_id", "") or "")
                 if _agent_session_id:
                     _session_key = _agent_session_id
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
             _origin_ui_session_id = ""
         _parent_session_id = getattr(parent_agent, "session_id", None)
         _child_agents = [c for (_, _, c) in children]
@@ -4428,14 +4428,14 @@ def _load_config() -> dict:
             cfg = full.get("delegation") or {}
             if isinstance(cfg, dict):
                 return cfg
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
     try:
         from cli import CLI_CONFIG
 
         cfg = CLI_CONFIG.get("delegation") or {}
         return cfg if isinstance(cfg, dict) else {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 

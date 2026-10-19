@@ -128,7 +128,7 @@ async def resolve_image_source(src: str, ctx: ResolveContext) -> ResolvedImage:
         # a real block always propagates.
         try:
             from agent.file_safety import raise_if_read_blocked
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             raise_if_read_blocked = None
         if raise_if_read_blocked is not None:
             try:
@@ -270,7 +270,7 @@ def _get_active_env(task_id: Optional[str]):
         from tools.terminal_tool import get_active_env
 
         return get_active_env(task_id)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 

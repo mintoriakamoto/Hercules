@@ -755,7 +755,7 @@ def migrate(
             with os.fdopen(tmp_fd, "w", encoding="utf-8") as fh:
                 fh.write(new_text)
             tmp_path.replace(target)
-        except Exception:
+        except (OSError):
             # Clean up the temp file if the rename didn't happen.
             try:
                 if tmp_path.exists():

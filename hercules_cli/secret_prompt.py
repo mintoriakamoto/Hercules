@@ -84,7 +84,7 @@ def masked_secret_prompt(prompt: str, *, mask: str = "*") -> str:
 def _stream_is_tty(stream) -> bool:
     try:
         return bool(stream.isatty())
-    except Exception:
+    except (ValueError):
         return False
 
 

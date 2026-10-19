@@ -79,7 +79,7 @@ def _termux_api_app_installed() -> bool:
             stdin=subprocess.DEVNULL,
         )
         return "package:com.termux.api" in (result.stdout or "")
-    except Exception:
+    except (IndexError, KeyError, subprocess.CalledProcessError):
         return False
 
 
@@ -1085,7 +1085,7 @@ def _split_wav_for_transcription(wav_path: str, *, max_file_size: int) -> List[s
                     chunk.setcomptype(params.comptype, params.compname)
                     chunk.writeframes(frames)
                 chunk_paths.append(chunk_path)
-            except Exception:
+            except (OSError):
                 try:
                     os.unlink(chunk_path)
                 except OSError:

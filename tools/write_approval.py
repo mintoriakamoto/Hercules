@@ -87,7 +87,7 @@ def write_approval_enabled(subsystem: str) -> bool:
 
         cfg = load_config()
         raw = cfg_get(cfg, subsystem, CONFIG_KEY, default=False)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
     return _normalize_enabled(raw)
 
@@ -226,7 +226,7 @@ def current_origin() -> str:
         from tools.skill_provenance import get_current_write_origin
 
         return get_current_write_origin()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "foreground"
 
 
@@ -344,7 +344,7 @@ def _interactive_approval_available() -> bool:
         from tools.terminal_tool import _get_approval_callback
 
         return _get_approval_callback() is not None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -363,7 +363,7 @@ def _prompt_inline_memory_approval(summary: str, detail: str) -> Optional[bool]:
     """
     try:
         from tools.terminal_tool import _get_approval_callback
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     callback = _get_approval_callback()
@@ -472,7 +472,7 @@ def skill_pending_diff(record: Dict[str, Any]) -> str:
     # Resolve current on-disk content for diffable actions.
     try:
         from tools.skill_manager_tool import _find_skill
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _find_skill = None  # type: ignore
 
     current = ""

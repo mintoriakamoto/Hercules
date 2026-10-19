@@ -713,7 +713,7 @@ def save_allowlist(data: Dict[str, Any]) -> None:
             with os.fdopen(fd, "w") as fh:
                 fh.write(json.dumps(data, indent=2, sort_keys=True))
             atomic_replace(tmp_path, p)
-        except Exception:
+        except (OSError):
             try:
                 os.unlink(tmp_path)
             except OSError:

@@ -170,7 +170,7 @@ def _load_config() -> dict:
         from hercules_cli.config import load_config
 
         return load_config() or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -349,7 +349,7 @@ def decompose_task(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except Exception:
+    except (IndexError, KeyError):
         raw = ""
 
     parsed = _extract_json_blob(raw)

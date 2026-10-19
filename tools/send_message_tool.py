@@ -306,7 +306,7 @@ def _handle_react(args, remove=False):
                 from gateway.channel_directory import resolve_channel_name
 
                 resolved = resolve_channel_name(platform_name, target_ref)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 resolved = None
             # Opaque platform-native ids (e.g. photon space GUIDs like
             # 'any;-;+1555...') match no parser pattern and no directory
@@ -338,7 +338,7 @@ def _handle_react(args, remove=False):
         from gateway.run import _gateway_runner_ref
 
         runner = _gateway_runner_ref()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         runner = None
     adapter = runner.adapters.get(platform) if runner is not None else None
     if adapter is None:
@@ -400,7 +400,7 @@ def _handle_send(args):
                     "error": f"Could not resolve '{target_ref}' on {platform_name}. "
                     f"Use send_message(action='list') to see available targets."
                 })
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return json.dumps({
                 "error": f"Could not resolve '{target_ref}' on {platform_name}. "
                 f"Try using a numeric channel ID instead."
@@ -563,7 +563,7 @@ def _handle_send(args):
                     user_id=user_id,
                 ):
                     result["mirrored"] = True
-            except Exception:
+            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                 pass
 
         if isinstance(result, dict) and "error" in result:
@@ -762,7 +762,7 @@ async def _send_via_adapter(
         from gateway.run import _gateway_runner_ref
 
         runner = _gateway_runner_ref()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         runner = None
 
     if runner is not None:
@@ -795,7 +795,7 @@ async def _send_via_adapter(
         from gateway.platform_registry import platform_registry
 
         entry = platform_registry.get(platform_name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         entry = None
 
     if entry is not None and entry.standalone_sender_fn is not None:
@@ -899,7 +899,7 @@ async def _send_to_platform(
             entry = platform_registry.get(platform.value)
             if entry and entry.max_message_length > 0:
                 _MAX_LENGTHS[platform] = entry.max_message_length
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     # Smart-chunk the message to fit within platform limits.
@@ -1247,7 +1247,7 @@ async def _send_telegram(
 
                 _adapter = TelegramAdapter.__new__(TelegramAdapter)
                 formatted = _adapter.format_message(message)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 # Fallback: send as-is if formatting unavailable
                 formatted = message
             send_parse_mode = ParseMode.MARKDOWN_V2
@@ -1263,7 +1263,7 @@ async def _send_telegram(
             _tg_proxy = resolve_proxy_url(
                 "TELEGRAM_PROXY", target_hosts=["api.telegram.org"]
             )
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
             _tg_proxy = None
         if _tg_proxy:
             try:
@@ -1310,7 +1310,7 @@ async def _send_telegram(
                 effective_thread_id = TelegramAdapter._message_thread_id_for_send(
                     str(thread_id)
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 # Fallback: explicit mapping in case the adapter import
                 # fails (e.g. python-telegram-bot missing in this venv).
                 effective_thread_id = None if str(thread_id) == "1" else int(thread_id)
@@ -1402,7 +1402,7 @@ async def _send_telegram(
                                 )
 
                                 plain = _strip_mdv2(chunk)
-                            except Exception:
+                            except (ImportError, ModuleNotFoundError):
                                 plain = chunk
                         else:
                             plain = chunk
@@ -1530,7 +1530,7 @@ async def _send_telegram(
                                     media_kwargs["caption"] = _strip_mdv2(
                                         media_kwargs["caption"]
                                     )
-                                except Exception:
+                                except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                                     pass
                             if ext in _IMAGE_EXTS and not force_document:
                                 last_msg = await bot.send_photo(
@@ -1862,14 +1862,14 @@ async def _send_matrix_via_adapter(
         from gateway.run import _gateway_runner_ref
 
         runner = _gateway_runner_ref()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         runner = None
     if runner is not None:
         try:
             from gateway.config import Platform
 
             live_adapter = runner.adapters.get(Platform.MATRIX)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning(
                 "Matrix: live gateway adapter lookup failed; falling back to an "
                 "ephemeral connect (may re-init E2EE per send, see #46310)",
@@ -2061,7 +2061,7 @@ def _check_send_message():
         from gateway.status import is_gateway_running
 
         return is_gateway_running()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 

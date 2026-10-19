@@ -142,7 +142,7 @@ def _env_value(name: str) -> str:
         from hercules_cli.config import get_env_value
 
         val = get_env_value(name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         val = None
     if val is None:
         val = os.getenv(name, "")
@@ -371,7 +371,7 @@ def _is_backend_available(backend: str) -> bool:
             from tools.xai_http import has_xai_credentials
 
             return has_xai_credentials()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
     return False
 

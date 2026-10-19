@@ -264,7 +264,7 @@ def describe_profile(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except Exception:
+    except (IndexError, KeyError):
         raw = ""
 
     parsed = _extract_json_blob(raw)

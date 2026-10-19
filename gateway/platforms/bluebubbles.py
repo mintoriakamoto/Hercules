@@ -189,7 +189,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
             text = raw.strip()
             try:
                 loaded = json.loads(text) if text else []
-            except Exception:
+            except (IndexError, KeyError):
                 loaded = None
             patterns = (
                 loaded
@@ -647,7 +647,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
 
             local_path = await cache_image_from_url(image_url)
             return await self._send_attachment(chat_id, local_path, caption=caption)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return await super().send_image(chat_id, image_url, caption, reply_to)
 
     async def send_image_file(

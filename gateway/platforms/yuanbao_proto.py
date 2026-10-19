@@ -1446,5 +1446,5 @@ def decode_get_group_member_list_rsp(data: bytes) -> Optional[dict]:
             "next_offset": _get_varint(fdict, 4),
             "is_complete": bool(_get_varint(fdict, 5)),
         }
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         return None

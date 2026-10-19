@@ -39,7 +39,7 @@ def install_shift_enter_alias() -> int:
     try:
         from prompt_toolkit.input.ansi_escape_sequences import ANSI_SEQUENCES
         from prompt_toolkit.keys import Keys
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return 0
 
     alt_enter = (Keys.Escape, Keys.ControlM)
@@ -71,7 +71,7 @@ def install_ctrl_enter_alias() -> int:
     try:
         from prompt_toolkit.input.ansi_escape_sequences import ANSI_SEQUENCES
         from prompt_toolkit.keys import Keys
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return 0
 
     alt_enter = (Keys.Escape, Keys.ControlM)
@@ -109,7 +109,7 @@ def install_ignored_terminal_sequences() -> int:
     try:
         from prompt_toolkit.input.ansi_escape_sequences import ANSI_SEQUENCES
         from prompt_toolkit.keys import Keys
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return 0
 
     changed = 0

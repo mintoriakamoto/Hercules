@@ -64,7 +64,7 @@ def record(chat_id, message_id, text: Optional[str]) -> None:
         with open(tmp, "w", encoding="utf-8") as fh:
             json.dump(data, fh, ensure_ascii=False)
         os.replace(tmp, path)  # atomic; tolerates concurrent writers racing
-    except Exception:
+    except (OSError, ValueError):
         return
 
 

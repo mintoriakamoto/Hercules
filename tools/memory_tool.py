@@ -839,7 +839,7 @@ def load_on_disk_store() -> "MemoryStore":
         mem_cfg = (load_config() or {}).get("memory", {}) or {}
         memory_char_limit = int(mem_cfg.get("memory_char_limit", memory_char_limit))
         user_char_limit = int(mem_cfg.get("user_char_limit", user_char_limit))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass  # config optional — fall back to defaults rather than break /memory
 
     store = MemoryStore(
@@ -864,7 +864,7 @@ def _apply_write_gate(
 
     try:
         from tools import write_approval as wa
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # If the gate module can't load, fail open (current behaviour) rather
         # than blocking all memory writes.
         return None
@@ -924,7 +924,7 @@ def _apply_batch_write_gate(
     """
     try:
         from tools import write_approval as wa
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     label = "user profile" if target == "user" else "memory"

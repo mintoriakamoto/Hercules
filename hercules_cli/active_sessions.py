@@ -129,14 +129,14 @@ class _FileLock:
 
                 self._fh.seek(0)
                 msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
         else:
             try:
                 import fcntl
 
                 fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
         try:
             self._fh.close()
@@ -150,7 +150,7 @@ def _read_entries(path: Path) -> list[dict[str, Any]]:
             data = json.load(fh)
     except FileNotFoundError:
         return []
-    except Exception:
+    except (IndexError, KeyError, OSError):
         logger.warning("Ignoring corrupt active session registry at %s", path)
         return []
     entries = data.get("entries") if isinstance(data, dict) else data
@@ -174,7 +174,7 @@ def _process_start_time(pid: int) -> Optional[float]:
         import psutil  # type: ignore
 
         return float(psutil.Process(pid).create_time())
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return None
 
 
@@ -198,7 +198,7 @@ def _pid_alive(pid: Any, process_start_time: Any = None) -> bool:
         from gateway.status import _pid_exists
 
         exists = bool(_pid_exists(pid_int))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
     if not exists:
         return False

@@ -759,7 +759,7 @@ def _terminate_command_tts_process_tree(proc: subprocess.Popen) -> None:
                 timeout=5,
                 stdin=subprocess.DEVNULL,
             )
-        except Exception:
+        except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
             proc.kill()
         return
 
@@ -1507,7 +1507,7 @@ def _generate_minimax_tts(
                 raise RuntimeError(
                     f"MiniMax TTS API error (code {status_code}): {status_msg}"
                 )
-        except Exception:
+        except (ValueError):
             response.raise_for_status()
             raise RuntimeError(
                 f"MiniMax TTS returned unexpected Content-Type '{content_type}' "
@@ -1622,7 +1622,7 @@ def _resolve_gemini_persona_prompt_path(
             from hercules_constants import get_hercules_home
 
             path = get_hercules_home() / path
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             path = Path.cwd() / path
     return path
 
@@ -1683,7 +1683,7 @@ def _extract_auxiliary_message_content(response: Any) -> str:
         if isinstance(message, dict):
             return str(message.get("content") or "")
         return str(getattr(message, "content", "") or "")
-    except Exception:
+    except (AttributeError, ValueError):
         return ""
 
 
@@ -1858,7 +1858,7 @@ def _generate_gemini_tts(
         try:
             err = response.json().get("error", {})
             detail = err.get("message") or response.text[:300]
-        except Exception:
+        except (ValueError):
             detail = response.text[:300]
         raise RuntimeError(
             f"Gemini TTS API error (HTTP {response.status_code}): {detail}"
@@ -1959,7 +1959,7 @@ def _check_neutts_available() -> bool:
         import importlib.util
 
         return importlib.util.find_spec("neutts") is not None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -1969,7 +1969,7 @@ def _check_kittentts_available() -> bool:
         import importlib.util
 
         return importlib.util.find_spec("kittentts") is not None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -2069,7 +2069,7 @@ def _check_piper_available() -> bool:
         import importlib.util
 
         return importlib.util.find_spec("piper") is not None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -2731,7 +2731,7 @@ def check_tts_requirements() -> bool:
 
         if resolve_xai_http_credentials().get("api_key"):
             return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     if get_env_value("GEMINI_API_KEY") or get_env_value("GOOGLE_API_KEY"):
         return True

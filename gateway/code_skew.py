@@ -34,7 +34,7 @@ def _fingerprint() -> str | None:
         from hercules_cli.main import _read_git_revision_fingerprint
 
         return _read_git_revision_fingerprint(_PROJECT_ROOT)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 

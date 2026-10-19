@@ -215,7 +215,7 @@ def _remux_aac_to_m4a(aac_data: bytes) -> Optional[Tuple[bytes, str]]:
     except subprocess.TimeoutExpired:
         logger.warning("Signal: AAC→M4A remux timed out (>10s)")
         return None
-    except Exception:
+    except (subprocess.CalledProcessError):
         logger.exception("Signal: AAC→M4A remux error")
         return None
 
@@ -508,7 +508,7 @@ class SignalAdapter(BasePlatformAdapter):
                                     logger.debug(
                                         "Signal SSE: invalid JSON: %s", data_str[:100]
                                     )
-                                except Exception:
+                                except (IndexError, KeyError):
                                     logger.exception("Signal SSE: error handling event")
 
             except asyncio.CancelledError:
@@ -1708,7 +1708,7 @@ class SignalAdapter(BasePlatformAdapter):
                 rpc_id="typing-stop",
                 log_failures=False,
             )
-        except Exception:
+        except (IndexError, KeyError):
             # Best-effort: any RPC failure (or recipient-resolution failure)
             # must not prevent backoff cleanup.
             pass

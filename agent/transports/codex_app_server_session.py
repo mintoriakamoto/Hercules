@@ -1086,5 +1086,5 @@ def _get_hercules_version() -> str:
         from importlib.metadata import version
 
         return version("hercules-agent")
-    except Exception:  # pragma: no cover
+    except (ImportError, ModuleNotFoundError):
         return "0.0.0"

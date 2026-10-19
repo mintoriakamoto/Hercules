@@ -1870,7 +1870,7 @@ class ExtractContentMiddleware(InboundMiddleware):
             query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
             ids = query.get("resourceId") or query.get("resourceid") or []
             return str(ids[0]).strip() if ids else ""
-        except Exception:
+        except (ValueError):
             return ""
 
     @classmethod
@@ -3724,7 +3724,7 @@ class ConnectionManager:
         if callable(open_attr):
             try:
                 return bool(open_attr())
-            except Exception:
+            except (ValueError):
                 return False
         return False
 
@@ -3763,7 +3763,7 @@ class ConnectionManager:
                         "[%s] Already connected, skipping connect()", adapter.name
                     )
                     return True
-            except Exception:
+            except (AttributeError, IndexError, KeyError):
                 pass
 
         # Acquire platform-scoped lock to prevent duplicate connections
@@ -4416,7 +4416,7 @@ class ConnectionManager:
                     self._adapter.name,
                     WS_CLOSE_TIMEOUT_S,
                 )
-            except Exception:
+            except (IndexError, KeyError):
                 pass
 
 

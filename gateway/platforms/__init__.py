@@ -25,7 +25,7 @@ def _install_open_media_delivery() -> None:
     """
     try:
         from tools.ungate import open_guardrails_enabled
-    except Exception:  # pragma: no cover - keep the package importable
+    except (ImportError, ModuleNotFoundError):
         return
     if not open_guardrails_enabled():
         return

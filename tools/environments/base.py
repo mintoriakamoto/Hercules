@@ -75,7 +75,7 @@ def touch_activity_if_due(
         if cb:
             elapsed = int(now - state["start"])
             cb(f"{label} ({elapsed}s elapsed)")
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         pass
 
 
@@ -602,7 +602,7 @@ class BaseEnvironment(ABC):
                         output_chunks.append(decoder.decode(piece))
                     else:
                         output_chunks.append(str(piece))
-            except Exception:
+            except (ValueError):
                 pass
             finally:
                 try:

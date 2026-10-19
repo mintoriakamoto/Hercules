@@ -89,7 +89,7 @@ def _budget_for_agent(agent) -> BudgetConfig:
             getattr(agent, "context_compressor", None), "context_length", None
         )
         return budget_for_context_window(int(ctx)) if ctx else DEFAULT_BUDGET
-    except Exception:
+    except (AttributeError, ValueError):
         return DEFAULT_BUDGET
 
 
@@ -202,7 +202,7 @@ def _emit_terminal_post_tool_call(
             error_message=error_message,
             middleware_trace=list(middleware_trace or []),
         )
-    except Exception:
+    except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
 
@@ -264,7 +264,7 @@ def _tool_search_scoped_names(agent) -> frozenset:
         import model_tools
         from tools import tool_search as _ts
         from tools.registry import registry as _registry
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return frozenset()
 
     enabled = getattr(agent, "enabled_toolsets", None)
@@ -288,7 +288,7 @@ def _tool_search_scoped_names(agent) -> frozenset:
             or []
         )
         names = _ts.scoped_deferrable_names(scoped_defs)
-    except Exception:
+    except (IndexError, KeyError):
         names = frozenset()
     try:
         agent._tool_search_scope_cache = (cache_key, names)
@@ -486,7 +486,7 @@ def execute_tool_calls_concurrent(
                             },
                             ensure_ascii=False,
                         )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         function_args, middleware_trace = _apply_tool_request_middleware_for_agent(
@@ -531,7 +531,7 @@ def execute_tool_calls_concurrent(
                     api_request_id=getattr(agent, "_current_api_request_id", "") or "",
                     middleware_trace=list(middleware_trace),
                 )
-            except Exception:
+            except (AttributeError, ImportError, ModuleNotFoundError):
                 block_message = None
 
             if block_message is not None:
@@ -723,7 +723,7 @@ def execute_tool_calls_concurrent(
             from tools.environments.base import set_activity_callback
 
             set_activity_callback(agent._touch_activity)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         # Approval/sudo callbacks (thread-local) and the agent turn's
         # ContextVars are propagated by propagate_context_to_thread() at the
@@ -1341,7 +1341,7 @@ def execute_tool_calls_sequential(
                             f"'{_underlying}' is not available in this session. "
                             "Use tool_search to find tools you can call."
                         )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         function_args, middleware_trace = _apply_tool_request_middleware_for_agent(
@@ -1372,7 +1372,7 @@ def execute_tool_calls_sequential(
                     api_request_id=getattr(agent, "_current_api_request_id", "") or "",
                     middleware_trace=list(middleware_trace),
                 )
-            except Exception:
+            except (AttributeError, ImportError, ModuleNotFoundError):
                 pass
 
         _guardrail_block_decision: ToolGuardrailDecision | None = None
@@ -1437,7 +1437,7 @@ def execute_tool_calls_sequential(
                 from tools.environments.base import set_activity_callback
 
                 set_activity_callback(agent._touch_activity)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
         if not _execution_blocked and agent.tool_progress_callback:

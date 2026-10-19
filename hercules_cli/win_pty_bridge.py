@@ -111,7 +111,7 @@ class WinPtyBridge:
             return False
         try:
             return bool(self._proc.isalive())
-        except Exception:
+        except (ValueError):
             return False
 
     # -- I/O --------------------------------------------------------------
@@ -128,7 +128,7 @@ class WinPtyBridge:
             data = self._proc.read(65536)  # pywinpty returns str
         except EOFError:
             return None
-        except Exception:
+        except (OSError):
             return None
         if not data:
             # No fd to select on; poll politely so the executor thread

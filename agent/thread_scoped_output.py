@@ -92,7 +92,7 @@ class _ThreadRoutingStream:
     def isatty(self) -> bool:
         try:
             return bool(self._target().isatty())
-        except Exception:
+        except (ValueError):
             return False
 
     def fileno(self):  # type: ignore[no-untyped-def]

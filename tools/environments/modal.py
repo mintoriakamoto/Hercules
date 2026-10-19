@@ -287,7 +287,7 @@ class ModalEnvironment(BaseEnvironment):
             else:
                 if restored_snapshot_id and restored_from_legacy_key:
                     _store_direct_snapshot(self._task_id, restored_snapshot_id)
-        except Exception:
+        except (IndexError, KeyError):
             self._worker.stop()
             raise
 

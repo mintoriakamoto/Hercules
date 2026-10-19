@@ -229,7 +229,7 @@ def set_session_vars(
         from agent.runtime_cwd import set_session_cwd
 
         set_session_cwd(cwd)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return tokens
 
@@ -269,7 +269,7 @@ def clear_session_vars(tokens: list) -> None:
         from agent.runtime_cwd import clear_session_cwd
 
         clear_session_cwd()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -317,7 +317,7 @@ def reset_session_vars() -> None:
         from agent.runtime_cwd import clear_session_cwd
 
         clear_session_cwd()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 

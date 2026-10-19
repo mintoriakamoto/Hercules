@@ -79,13 +79,13 @@ def _hercules_version() -> str:
         from importlib.metadata import version
 
         return version("hercules-agent")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     try:
         from hercules_cli import __version__
 
         return __version__
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "dev"
 
 
@@ -191,7 +191,7 @@ def _normalize_chat_content(
                             part = str(text)[:MAX_NORMALIZED_TEXT_LENGTH]
                             parts.append(part)
                             total_len += len(part)
-                        except Exception:
+                        except (IndexError, KeyError, ValueError):
                             pass
                 # Silently skip image_url / other non-text parts
             elif isinstance(item, list):
@@ -219,7 +219,7 @@ def _normalize_chat_content(
             if len(result) > MAX_NORMALIZED_TEXT_LENGTH
             else result
         )
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         return ""
 
 
@@ -432,7 +432,7 @@ class ResponseStore:
                 from hercules_cli.config import get_hercules_home
 
                 db_path = str(get_hercules_home() / "response_store.db")
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 db_path = ":memory:"
         self._db_path: Optional[str] = db_path if db_path != ":memory:" else None
         try:
@@ -880,7 +880,7 @@ def _notify_cron_provider_jobs_changed() -> None:
         from cron.scheduler import _notify_provider_jobs_changed
 
         _notify_provider_jobs_changed()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -894,7 +894,7 @@ def _notify_cron_provider_jobs_changed() -> None:
 # must not disable the cron REST API.
 try:
     from tools.cronjob_tools import _scan_cron_prompt as _scan_cron_prompt
-except Exception:  # pragma: no cover - scanner is optional hardening
+except (ImportError, ModuleNotFoundError):
     _scan_cron_prompt = None
 
 
@@ -995,13 +995,13 @@ class APIServerAdapter(BasePlatformAdapter):
             from tools.process_registry import process_registry
 
             process_depth = process_registry.completion_queue.qsize()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         try:
             from tools.async_delegation import active_count
 
             active_delegations = active_count()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         return active_api_runs, process_depth, active_delegations
 
@@ -1040,7 +1040,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 default=default,
             )
             value = int(raw)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             return default
         return max(0, value)
 
@@ -1061,7 +1061,7 @@ class APIServerAdapter(BasePlatformAdapter):
             profile = get_active_profile_name()
             if profile and profile not in {"default", "custom"}:
                 return profile
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         return "hercules-agent"
 
@@ -1114,7 +1114,7 @@ class APIServerAdapter(BasePlatformAdapter):
             )
             if isinstance(peer, (tuple, list)) and peer:
                 peer_ip = str(peer[0])
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             peer_ip = ""
 
         return {
@@ -1369,7 +1369,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 return None
             override = runner._session_model_overrides.get(session_key)
             return dict(override) if isinstance(override, dict) else None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return None
 
     def _create_agent(
@@ -1451,7 +1451,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     )
                     provider_kwargs.pop("model", None)
                     runtime_kwargs.update(provider_kwargs)
-                except Exception:
+                except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                     # Fall back to just switching the provider name; explicit
                     # per-route api_key/base_url below can still complete auth.
                     runtime_kwargs["provider"] = route["provider"]
@@ -1732,7 +1732,7 @@ class APIServerAdapter(BasePlatformAdapter):
             from tools.skills_tool import _find_all_skills, _sort_skills
 
             skills = _sort_skills(_find_all_skills(skip_disabled=False))
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.exception("GET /v1/skills failed")
             return web.json_response(
                 _openai_error("Failed to enumerate skills", err_type="server_error"),
@@ -1787,7 +1787,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     "configured": _toolset_has_keys(name, config),
                     "tools": tools,
                 })
-        except Exception:
+        except (IndexError, KeyError):
             logger.exception("GET /v1/toolsets failed")
             return web.json_response(
                 _openai_error("Failed to enumerate toolsets", err_type="server_error"),
@@ -1871,7 +1871,7 @@ class APIServerAdapter(BasePlatformAdapter):
     ) -> tuple[Dict[str, Any], Optional["web.Response"]]:
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError):
             return {}, web.json_response(
                 _openai_error("Invalid JSON in request body"), status=400
             )
@@ -3117,7 +3117,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 }
                 await response.write(f"data: {json.dumps(error_chunk)}\n\n".encode())
                 await response.write(b"data: [DONE]\n\n")
-            except Exception:
+            except (IndexError, KeyError):
                 pass
 
         return response
@@ -3660,7 +3660,7 @@ class APIServerAdapter(BasePlatformAdapter):
                                         + " chars — truncated for response.completed]"
                                     )
                             _item["arguments"] = json.dumps(_args)
-                    except Exception:
+                    except (ValueError):
                         pass
                 elif _item.get("type") == "function_call_output":
                     _output = _item.get("output", [])
@@ -4522,7 +4522,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError):
             body = {}
         job_id = (body or {}).get("job_id")
         if not job_id:
@@ -4934,7 +4934,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError):
             return web.json_response(_openai_error("Invalid JSON"), status=400)
 
         raw_input = body.get("input")
@@ -5270,7 +5270,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     from tools.approval import unregister_gateway_notify
 
                     unregister_gateway_notify(approval_session_key)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
                 # Sentinel: signal SSE stream to close
                 try:
@@ -5387,7 +5387,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError):
             return web.json_response(_openai_error("Invalid JSON"), status=400)
 
         raw_choice = str(body.get("choice", "")).strip().lower()
@@ -5514,7 +5514,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     approval_session_key = self._run_approval_sessions.get(run_id)
                     if approval_session_key:
                         unregister_gateway_notify(approval_session_key)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
             # The transport TTL always bounds buffering. Live control state is
             # independent and survives until the executor-backed task returns.
@@ -5710,7 +5710,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     _backend = ((_load_cfg() or {}).get("terminal") or {}).get(
                         "backend", "local"
                     )
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     _backend = "local"
                 if str(_backend).lower() == "local":
                     logger.warning(

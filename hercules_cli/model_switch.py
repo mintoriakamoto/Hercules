@@ -303,7 +303,7 @@ def _load_direct_aliases() -> dict[str, DirectAlias]:
                         provider=provider.strip() or current_provider,
                         base_url="",
                     )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return merged
 
@@ -441,7 +441,7 @@ def resolve_persist_behavior(is_global: bool, is_session: bool) -> bool:
         model_cfg = load_config().get("model")
         if isinstance(model_cfg, dict):
             return bool(model_cfg.get("persist_switch_by_default", True))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     return True
 
@@ -613,7 +613,7 @@ def resolve_alias(
             for m in static:
                 if m.lower() not in seen:
                     catalog.append(m)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # For aggregators, models are vendor/model-name format
@@ -653,7 +653,7 @@ def get_authenticated_provider_slugs(
             max_models=0,
         )
         return [p["slug"] for p in providers]
-    except Exception:
+    except (IndexError, KeyError):
         return []
 
 
@@ -713,7 +713,7 @@ def resolve_display_context_length(
         )
         if ctx:
             return int(ctx)
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     if model_info is not None and model_info.context_window:
         return int(model_info.context_window)
@@ -882,7 +882,7 @@ def switch_model(
                     _switch_err += "\n\nRun 'hercules doctor' — config issues detected:"
                     for _ci in _cfg_issues[:3]:
                         _switch_err += f"\n  • {_ci.message}"
-            except Exception:
+            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                 pass
             return ModelSwitchResult(
                 success=False,
@@ -899,7 +899,7 @@ def switch_model(
                 new_model = normalize_moa_config(load_config().get("moa") or {})[
                     "default_preset"
                 ]
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 new_model = "default"
 
         # Guard against silent aggregator hops. A vendor name like bare
@@ -1002,7 +1002,7 @@ def switch_model(
                 alias_result = None
             else:
                 alias_result = resolve_alias(raw_input, current_provider)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             alias_result = resolve_alias(raw_input, current_provider)
 
         # --- Step a: Try alias resolution on current provider ---
@@ -1443,7 +1443,7 @@ def _credential_pool_is_usable(
         pool = load_pool(provider)
         if pool.has_credentials():
             return pool.has_available()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return raw_pool_present
 
@@ -1494,7 +1494,7 @@ def prewarm_picker_cache_async() -> Optional["_threading.Thread"]:
                 user_providers=ctx.user_providers,
                 custom_providers=ctx.custom_providers,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # Best-effort warmup — never surface errors into the session.
             logger.debug("picker cache prewarm failed", exc_info=True)
 
@@ -1610,7 +1610,7 @@ def list_authenticated_providers(
         that URL into custom_providers would actually hit."""
         try:
             from hercules_cli.auth import PROVIDER_REGISTRY as _reg
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return
         pcfg = _reg.get(slug)
         if not pcfg:
@@ -1661,7 +1661,7 @@ def list_authenticated_providers(
             from agent.bedrock_adapter import has_aws_credentials
 
             return bool(has_aws_credentials())
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             return False
 
     data = fetch_models_dev()
@@ -1771,7 +1771,7 @@ def list_authenticated_providers(
                     has_creds = _credential_pool_is_usable(
                         hercules_id, raw_pool_present=True
                     )
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 pass
         if not has_creds:
             continue
@@ -1980,7 +1980,7 @@ def list_authenticated_providers(
                 _cp_providers_store = _cp_store.get("providers", {})
                 if _cp_store and _cp.slug in _cp_providers_store:
                     _cp_has_creds = True
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
         if not _cp_has_creds:
             try:
@@ -2128,7 +2128,7 @@ def list_authenticated_providers(
                     )
                     if live_models:
                         models_list = live_models
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
 
             results.append({
@@ -2182,7 +2182,7 @@ def list_authenticated_providers(
                 )
                 if _live_models:
                     _models = _live_models
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 pass
         results.append({
             "slug": "custom",
@@ -2415,7 +2415,7 @@ def list_authenticated_providers(
                     if live_models:
                         grp["models"] = live_models
                         grp["total_models"] = len(live_models)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
             results.append({
                 "slug": slug,
@@ -2474,7 +2474,7 @@ def _prepend_moa_picker_provider(
         return [moa_row] + [
             p for p in providers if str(p.get("slug", "")).lower() != "moa"
         ]
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return providers
 
 
@@ -2528,7 +2528,7 @@ def list_picker_providers(
             try:
                 live = fetch_openrouter_models()
                 live_ids = [mid for mid, _ in live]
-            except Exception:
+            except (IndexError, KeyError):
                 live_ids = list(provider.get("models", []))
             p = dict(provider)
             p["models"] = live_ids[:max_models] if max_models is not None else live_ids

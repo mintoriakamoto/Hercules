@@ -901,7 +901,7 @@ class GatewayStreamConsumer:
                             is_turn_final=False,
                         )
                     )
-                except Exception:
+                except (ValueError):
                     pass
             # Only confirm final delivery if the best-effort send above
             # actually succeeded OR if the final response was already
@@ -1422,7 +1422,7 @@ class GatewayStreamConsumer:
             )
             if getattr(result, "success", False):
                 self._last_sent_text = prefix
-        except Exception:
+        except (AttributeError):
             pass  # best-effort — don't let this block the fallback path
 
     async def _send_commentary(self, text: str) -> bool:

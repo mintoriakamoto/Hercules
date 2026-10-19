@@ -223,7 +223,7 @@ def show_status(args):
         codex_status = get_codex_auth_status()
         qwen_status = get_qwen_auth_status()
         minimax_status = get_minimax_oauth_auth_status()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         codex_status = {}
         qwen_status = {}
         minimax_status = {}
@@ -280,7 +280,7 @@ def show_status(args):
         from hercules_cli.auth import get_xai_oauth_auth_status
 
         xai_oauth_status = get_xai_oauth_auth_status() or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         xai_oauth_status = {}
 
     xai_oauth_logged_in = bool(xai_oauth_status.get("logged_in"))
@@ -428,7 +428,7 @@ def show_status(args):
             status_str = "configured" if configured else "not configured"
             label = entry.label
             print(f"  {label:<12}  {check_mark(configured)} {status_str} (plugin)")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # =========================================================================
@@ -462,7 +462,7 @@ def show_status(args):
             )
         elif snapshot.service_installed and not snapshot.service_running:
             print("  Service:      installed but stopped")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         if _is_termux():
             print(f"  Status:       {color('unknown', Colors.DIM)}")
             print("  Manager:      Termux / manual process")
@@ -492,7 +492,7 @@ def show_status(args):
                 jobs = data.get("jobs", [])
                 enabled_jobs = [j for j in jobs if j.get("enabled", True)]
                 print(f"  Jobs:         {len(enabled_jobs)} active, {len(jobs)} total")
-        except Exception:
+        except (OSError):
             print("  Jobs:         (error reading jobs file)")
     else:
         print("  Jobs:         0")
@@ -516,7 +516,7 @@ def show_status(args):
                 _session_count = len(_lister(active_only=True))
         finally:
             _db.close()
-    except Exception:
+    except (AttributeError):
         _session_count = None
 
     if _session_count is not None and _session_count > 0:
@@ -535,7 +535,7 @@ def show_status(args):
                         else {}
                     )
                     print(f"  Active:       {len(_entries)} session(s)")
-            except Exception:
+            except (OSError, ValueError):
                 print("  Active:       (error reading sessions file)")
         else:
             print(

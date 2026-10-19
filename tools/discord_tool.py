@@ -200,7 +200,7 @@ def _load_caps_from_disk(token: str) -> Optional[Dict[str, Any]]:
         caps = entry.get("caps")
         if isinstance(caps, dict) and "has_members_intent" in caps:
             return caps
-    except Exception:
+    except (OSError, ValueError):
         pass
     return None
 
@@ -216,14 +216,14 @@ def _save_caps_to_disk(token: str, caps: Dict[str, Any]) -> None:
                 data = json.load(f)
             if not isinstance(data, dict):
                 data = {}
-        except Exception:
+        except (OSError):
             data = {}
         data[_token_cache_key(token)] = {"caps": caps, "ts": time.time()}
         tmp = path.with_suffix(".json.tmp")
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(data, f)
         tmp.replace(path)
-    except Exception:
+    except (IndexError, KeyError, OSError):
         logger.debug("discord capability disk-cache write failed", exc_info=True)
 
 

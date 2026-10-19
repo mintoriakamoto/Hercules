@@ -107,7 +107,7 @@ def _build_browser_env() -> dict:
 
 try:
     from tools.website_policy import check_website_access
-except Exception:
+except (ImportError, ModuleNotFoundError):
     check_website_access = lambda url: None  # fail-open if policy module unavailable
 
 try:
@@ -117,7 +117,7 @@ try:
         normalize_url_for_request as _normalize_url_for_request,
         sensitive_query_param_name as _sensitive_query_param_name,
     )
-except Exception:
+except (ImportError, ModuleNotFoundError):
     _is_safe_url = lambda url: (
         False
     )  # fail-closed: block all if safety module unavailable
@@ -554,7 +554,7 @@ def _get_dialog_policy_config() -> Tuple[str, float]:
         except (TypeError, ValueError):
             timeout_s = DEFAULT_DIALOG_TIMEOUT_S
         return policy, timeout_s
-    except Exception:
+    except (ValueError):
         return DEFAULT_DIALOG_POLICY, DEFAULT_DIALOG_TIMEOUT_S
 
 
@@ -1252,7 +1252,7 @@ def _run_chrome_fallback_command(
         # 5. Tear down the temporary Chrome session.
         try:
             _run_tmp("close", [])
-        except Exception:
+        except (IndexError, KeyError):
             pass
         # Clean up socket directory
         import shutil as _shutil
@@ -2395,7 +2395,7 @@ def _find_agent_browser(*, validate: bool = True) -> str:
                     _cached_agent_browser = recheck
                     _agent_browser_resolved = True
                     return recheck
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
         pass
 
     _agent_browser_resolved = True
@@ -2837,7 +2837,7 @@ def _extract_relevant_content(
         ).strip() or _truncate_snapshot(snapshot_text)
         # Redact any secrets the auxiliary LLM may have echoed back.
         return redact_sensitive_text(extracted)
-    except Exception:
+    except (IndexError, KeyError):
         return _truncate_snapshot(snapshot_text)
 
 
@@ -4466,7 +4466,7 @@ def browser_vision(
             _vtemp = _vision_cfg.get("temperature")
             if _vtemp is not None:
                 vision_temperature = float(_vtemp)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
 
         call_kwargs = {
@@ -4745,7 +4745,7 @@ def cleanup_all_browsers() -> None:
         from tools.browser_supervisor import SUPERVISOR_REGISTRY  # type: ignore[import-not-found]
 
         SUPERVISOR_REGISTRY.stop_all()
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
     # Reset cached lookups so they are re-evaluated on next use.

@@ -54,7 +54,7 @@ def _estimate_tokens(agent: Any, messages: Optional[List[dict]]) -> Optional[int
                     tools=tools or None,
                 )
             )
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
             pass
 
     last = int(getattr(cc, "last_prompt_tokens", 0) or 0)
@@ -150,7 +150,7 @@ def enrich_model_switch_warnings_for_gateway(
                 and model_cfg.get("context_length") is not None
             ):
                 cfg_ctx = int(model_cfg["context_length"])
-        except Exception:
+        except (ValueError):
             pass
 
     messages = None

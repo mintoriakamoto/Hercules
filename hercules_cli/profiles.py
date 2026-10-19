@@ -740,7 +740,7 @@ def _read_distribution_meta(profile_dir: Path) -> tuple:
             data.get("version"),
             data.get("source"),
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         return None, None, None
 
 
@@ -762,7 +762,7 @@ def _read_config_model(profile_dir: Path) -> tuple:
                 "provider"
             )
         return None, None
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         return None, None
 
 
@@ -787,7 +787,7 @@ def _check_gateway_running(profile_dir: Path) -> bool:
             is not None
         ):
             return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     try:
         from gateway.status import (
@@ -800,7 +800,7 @@ def _check_gateway_running(profile_dir: Path) -> bool:
             get_runtime_status_running_pid(runtime, expected_home=profile_dir)
             is not None
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -903,7 +903,7 @@ def read_profile_meta(profile_dir: Path) -> dict:
 
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         return {"description": "", "description_auto": False}
     if not isinstance(data, dict):
         return {"description": "", "description_auto": False}
@@ -937,7 +937,7 @@ def write_profile_meta(
                 loaded = yaml.safe_load(f) or {}
             if isinstance(loaded, dict):
                 existing = loaded
-        except Exception:
+        except (OSError):
             existing = {}
     if description is not None:
         existing["description"] = description.strip()
@@ -1225,7 +1225,7 @@ def create_profile(
             from hercules_cli.default_soul import DEFAULT_SOUL_MD
 
             soul_path.write_text(DEFAULT_SOUL_MD, encoding="utf-8")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # best-effort — don't fail profile creation over this
 
     # Write the opt-out marker so seed_profile_skills() and `hercules update`'s
@@ -1395,7 +1395,7 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
     """
     try:
         import psutil  # type: ignore
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
     try:
@@ -1502,7 +1502,7 @@ def _stop_profile_backends(canon: str, profile_dir: Path) -> None:
 
     try:
         from gateway.status import _pid_exists, terminate_pid as _terminate_pid
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
 
     for pid in pids:
@@ -1758,7 +1758,7 @@ def _maybe_register_gateway_service(profile_name: str) -> None:
         mgr = get_service_manager()
     except RuntimeError:
         return  # no backend on this host — nothing to do
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Defensive: detect_service_manager failed for some other
         # reason. Stay silent on host rather than printing a confusing
         # s6 warning to users who have never touched the container.
@@ -1795,7 +1795,7 @@ def _maybe_unregister_gateway_service(profile_name: str) -> None:
         mgr = get_service_manager()
     except RuntimeError:
         return
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
     if not mgr.supports_runtime_registration():
         return

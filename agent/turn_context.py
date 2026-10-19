@@ -162,7 +162,7 @@ def build_turn_context(
             api_key=getattr(agent, "api_key", "") or "",
             api_mode=getattr(agent, "api_mode", "") or "",
         )
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError):
         pass
 
     # Tag log records on this thread with the session ID for ``hercules logs``.
@@ -204,7 +204,7 @@ def build_turn_context(
 
                 if has_registered_mcp_tools():
                     refresh_agent_mcp_tools(agent, quiet_mode=True)
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError):
         logger.debug("between-turns MCP tool refresh skipped", exc_info=True)
 
     # Sanitize surrogate characters from user input.
@@ -349,7 +349,7 @@ def build_turn_context(
             kind = detect_reaction(original_user_message)
             if kind:
                 reaction_callback(kind)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     if not agent.quiet_mode:
@@ -522,7 +522,7 @@ def build_turn_context(
             )
 
             _spill_config_cached = _spill_cfg()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _spill_if_oversized = None  # type: ignore[assignment]
             _spill_config_cached = None
         for r in _pre_results:

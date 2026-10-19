@@ -126,7 +126,7 @@ def _cua_telemetry_disabled() -> bool:
         cu = cfg.get("computer_use") or {}
         # opt-in flag: True => user wants telemetry => do NOT disable.
         return not bool(cu.get("cua_telemetry", False))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         # Config unreadable — default to disabling telemetry (fail safe).
         return True
 
@@ -178,7 +178,7 @@ def _resolve_mcp_invocation(
             # fallback spawns below; #53503/#55709/#58889 lineage).
             env=_sanitize_subprocess_env(cua_driver_child_env()),
         )
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, subprocess.CalledProcessError):
         return driver_cmd, list(_CUA_DRIVER_ARGS)
     out = (proc.stdout or "").strip()
     if proc.returncode != 0 or not out:
@@ -276,7 +276,7 @@ def cua_driver_update_check(*, timeout: float = 8.0) -> Optional[Dict[str, Any]]
             # binary, no inherited provider keys (#53503/#55709/#58889).
             env=_sanitize_subprocess_env(cua_driver_child_env()),
         )
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, subprocess.CalledProcessError):
         return None
     out = (proc.stdout or "").strip()
     if not out:

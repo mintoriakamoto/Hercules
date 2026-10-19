@@ -143,7 +143,7 @@ def _load_stt_config() -> dict:
         from hercules_cli.config import load_config
 
         return load_config().get("stt") or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -519,7 +519,7 @@ def _terminate_command_stt_process_tree(proc: subprocess.Popen) -> None:
                 timeout=5,
                 stdin=subprocess.DEVNULL,
             )
-        except Exception:
+        except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
             proc.kill()
         return
 
@@ -887,7 +887,7 @@ def _get_provider(stt_config: dict) -> str:
         if resolve_xai_http_credentials().get("api_key"):
             logger.info("No local STT available, using xAI Grok STT API")
             return "xai"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     if get_env_value("ELEVENLABS_API_KEY"):
         logger.info("No local STT available, using ElevenLabs Scribe STT API")
@@ -1677,7 +1677,7 @@ def _transcribe_xai(file_path: str, model_name: str) -> Dict[str, Any]:
                 detail = (
                     err_body.get("error", {}).get("message", "") or response.text[:300]
                 )
-            except Exception:
+            except (ValueError):
                 detail = response.text[:300]
             return {
                 "success": False,
@@ -1781,7 +1781,7 @@ def _transcribe_elevenlabs(file_path: str, model_name: str) -> Dict[str, Any]:
                     detail = str(error_value)
                 else:
                     detail = response.text[:300]
-            except Exception:
+            except (ValueError):
                 detail = response.text[:300]
             return {
                 "success": False,

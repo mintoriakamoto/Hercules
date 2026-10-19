@@ -206,21 +206,21 @@ class GatewaySlashCommandsMixin:
                 parent_session_id=str(getattr(old_entry, "session_id", "") or ""),
                 reason="session_reset",
             )
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
             pass
 
         try:
             from tools.env_passthrough import clear_env_passthrough
 
             clear_env_passthrough()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         try:
             from tools.credential_files import clear_credential_files
 
             clear_credential_files()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         # Reset the session
@@ -259,7 +259,7 @@ class GatewaySlashCommandsMixin:
                 old_session_id=_old_sid,
                 new_session_id=new_entry.session_id if new_entry else None,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         # Emit session:end hook (session is ending)
@@ -324,7 +324,7 @@ class GatewaySlashCommandsMixin:
                     header = t("gateway.reset.header_titled", title=sanitized)
                 except ValueError as e:
                     _title_note = t("gateway.reset.title_error_untitled", error=str(e))
-                except Exception:
+                except (ValueError):
                     pass
             elif not _title_note:
                 # sanitize_title returned empty (whitespace-only / unprintable)
@@ -362,7 +362,7 @@ class GatewaySlashCommandsMixin:
                 old_session_id=_old_sid,
                 new_session_id=_new_sid,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         # Append a random tip to the reset message
@@ -370,7 +370,7 @@ class GatewaySlashCommandsMixin:
             from hercules_cli.tips import get_random_tip
 
             _tip_line = t("gateway.reset.tip", tip=get_random_tip())
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _tip_line = ""
 
         if session_info:
@@ -903,7 +903,7 @@ class GatewaySlashCommandsMixin:
             policy = policy_for_source(self.config, source)
             uid = getattr(source, "user_id", None)
             return bool(policy.enabled and uid and policy.is_admin(uid))
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
             return False
 
     async def _resume_target_allowed(
@@ -1387,7 +1387,7 @@ class GatewaySlashCommandsMixin:
                         if event.message_id is not None
                         else event.source.message_id,
                     )
-                except Exception:
+                except (ValueError):
                     self._restart_command_source = event.source
             atomic_json_write(
                 _hercules_home / ".restart_notify.json",
@@ -1475,7 +1475,7 @@ class GatewaySlashCommandsMixin:
                     lines.append(
                         t("gateway.help.more_use_commands", count=len(sorted_cmds) - 10)
                     )
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
             pass
         return _telegramize_command_mentions(
             "\n".join(lines),
@@ -1509,7 +1509,7 @@ class GatewaySlashCommandsMixin:
                         "gateway.commands.default_desc"
                     )
                     entries.append(f"`{cmd}` — {desc}")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         if not entries:
@@ -1589,7 +1589,7 @@ class GatewaySlashCommandsMixin:
                 from hercules_cli.models import clear_provider_models_cache
 
                 clear_provider_models_cache()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
         # Read current model/provider from config
@@ -1613,9 +1613,9 @@ class GatewaySlashCommandsMixin:
                     from hercules_cli.config import get_compatible_custom_providers
 
                     custom_provs = get_compatible_custom_providers(cfg)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     custom_provs = cfg.get("custom_providers")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         # Check for session override
@@ -1794,7 +1794,7 @@ class GatewaySlashCommandsMixin:
                                 _session_key,
                                 _self._session_model_overrides[_session_key],
                             )
-                        except Exception:
+                        except (IndexError, KeyError):
                             logger.debug(
                                 "Failed to persist session model override",
                                 exc_info=True,
@@ -1858,7 +1858,7 @@ class GatewaySlashCommandsMixin:
                                 _sw_raw = _sw_model_cfg.get("context_length")
                                 if _sw_raw is not None:
                                     _sw_config_ctx = int(_sw_raw)
-                        except Exception:
+                        except (ValueError):
                             pass
                         ctx = resolve_display_context_length(
                             result.new_model,
@@ -2087,7 +2087,7 @@ class GatewaySlashCommandsMixin:
                     session_key,
                     self._session_model_overrides[session_key],
                 )
-            except Exception:
+            except (IndexError, KeyError):
                 logger.debug("Failed to persist session model override", exc_info=True)
 
             # Evict cached agent so the next turn creates a fresh agent from the
@@ -2147,7 +2147,7 @@ class GatewaySlashCommandsMixin:
                     _sw2_raw = _sw2_model_cfg.get("context_length")
                     if _sw2_raw is not None:
                         _sw2_config_ctx = int(_sw2_raw)
-            except Exception:
+            except (ValueError):
                 pass
             ctx = resolve_display_context_length(
                 result.new_model,
@@ -2210,7 +2210,7 @@ class GatewaySlashCommandsMixin:
                 api_key=result.api_key or current_api_key or "",
                 model_info=result.model_info,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _cost_warning = None
         if _cost_warning is not None:
 
@@ -2803,7 +2803,7 @@ class GatewaySlashCommandsMixin:
                 cp_cfg = _data.get("checkpoints", {})
                 if isinstance(cp_cfg, bool):
                     cp_cfg = {"enabled": cp_cfg}
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError):
             pass
 
         if not cp_cfg.get("enabled", False):
@@ -3318,7 +3318,7 @@ class GatewaySlashCommandsMixin:
                 parts = text.split(None, 1)
                 if len(parts) > 1:
                     arg = parts[1].strip().lower()
-        except Exception:
+        except (AttributeError, IndexError, KeyError):
             arg = ""
 
         # --- load config ----------------------------------------------------
@@ -3760,7 +3760,7 @@ class GatewaySlashCommandsMixin:
                     chat_id=str(source.chat_id),
                     thread_id=str(source.thread_id),
                 )
-            except Exception:
+            except (ValueError):
                 logger.debug("Failed to read Telegram topic binding", exc_info=True)
                 binding = None
             if binding:
@@ -4273,7 +4273,7 @@ class GatewaySlashCommandsMixin:
             try:
                 entry = self.session_store.get_or_create_session(source)
                 history = self.session_store.load_transcript(entry.session_id) or []
-            except Exception:
+            except (IndexError, KeyError):
                 history = []
 
             payload = compute_session_context_breakdown(agent, history)
@@ -4303,7 +4303,7 @@ class GatewaySlashCommandsMixin:
                     )
                 )
             return out if len(out) > 1 else []
-        except Exception:
+        except (ValueError):
             return []
 
     async def _handle_usage_command(self, event: MessageEvent) -> str:
@@ -4960,7 +4960,7 @@ class GatewaySlashCommandsMixin:
                 entry = platform_registry.get(platform.value)
                 if not entry or not entry.allow_update_command:
                     return t("gateway.update.platform_not_messaging")
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 return t("gateway.update.platform_not_messaging")
 
         if is_managed():

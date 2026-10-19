@@ -47,7 +47,7 @@ def has_xai_credentials() -> bool:
         tokens = xai_state.get("tokens") if isinstance(xai_state, dict) else None
         access_token = tokens.get("access_token") if isinstance(tokens, dict) else None
         return bool(str(access_token or "").strip())
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -64,7 +64,7 @@ def get_env_value(name: str, default=None):
         value = _hercules_get_env_value(name)
         if value is not None:
             return value
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return os.environ.get(name, default)
 
@@ -73,7 +73,7 @@ def hercules_xai_user_agent() -> str:
     """Return a stable Hercules-specific User-Agent for xAI HTTP calls."""
     try:
         from hercules_cli import __version__
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         __version__ = "unknown"
     return f"Hercules-Agent/{__version__}"
 
@@ -86,7 +86,7 @@ def _load_config_section(section_name: str) -> Dict[str, Any]:
         cfg = load_config()
         section = cfg.get(section_name) if isinstance(cfg, dict) else None
         return section if isinstance(section, dict) else {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -217,7 +217,7 @@ def maybe_mark_xai_storage_notice_seen(section_name: str) -> Optional[str]:
             return None
         marker.write_text(datetime.datetime.now(datetime.UTC).isoformat() + "\n")
         return notice
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return notice
 
 
@@ -249,7 +249,7 @@ def resolve_xai_http_credentials(*, force_refresh: bool = False) -> Dict[str, st
                 "api_key": access_token,
                 "base_url": base_url or "https://api.x.ai/v1",
             }
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
     if not force_refresh:
@@ -265,7 +265,7 @@ def resolve_xai_http_credentials(*, force_refresh: bool = False) -> Dict[str, st
                     "api_key": access_token,
                     "base_url": base_url or "https://api.x.ai/v1",
                 }
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
 
     api_key = str(get_env_value("XAI_API_KEY") or "").strip()

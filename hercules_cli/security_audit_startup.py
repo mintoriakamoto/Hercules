@@ -197,7 +197,7 @@ def _network_listener_without_auth(config: Optional[dict]) -> list[str]:
     findings: list[str] = []
     try:
         from gateway.platforms.base import is_network_accessible
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return findings
 
     cfg = config or {}
@@ -217,7 +217,7 @@ def _network_listener_without_auth(config: Optional[dict]) -> list[str]:
                     "work — an unauthenticated network endpoint is remote code "
                     "execution. Set a strong API_SERVER_KEY."
                 )
-    except Exception:
+    except (ValueError):
         pass
 
     return findings

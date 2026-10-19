@@ -444,7 +444,7 @@ def _check_yuanbao():
 
         if get_session_env("HERCULES_SESSION_PLATFORM", "") == "yuanbao":
             return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return _get_active_adapter() is not None
 
@@ -479,7 +479,7 @@ async def _handle_yb_send_dm(args, **kw):
             # chat_id format: "group:<code>" → extract the code part
             if chat_id.startswith("group:"):
                 group_code = chat_id.split(":", 1)[1]
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
             pass
 
     # Parse media_files: list of {{"path": str, "is_voice": bool}} → List[Tuple[str, bool]]

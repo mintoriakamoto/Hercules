@@ -108,7 +108,7 @@ def _preserve_hercules_home_path(path: str | Path) -> str:
         if os.path.commonpath([home_key, candidate_key]) == home_key:
             rel = os.path.relpath(str(resolved_candidate), str(resolved_home))
             return str(home / rel)
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
         pass
     return str(candidate)
 
@@ -198,7 +198,7 @@ def _is_running_as_admin() -> bool:
     _assert_windows()
     try:
         return bool(ctypes.windll.shell32.IsUserAnAdmin())
-    except Exception:
+    except (ValueError):
         return False
 
 
@@ -395,7 +395,7 @@ def _stable_gateway_working_dir(project_root: Path) -> str:
             home_path = Path(home)
             if home_path.is_dir():
                 return str(home_path)
-    except Exception:
+    except (ValueError):
         pass
     return str(project_root)
 
@@ -919,7 +919,7 @@ def windowless_gateway_restart_spec(
     project_root = str(PROJECT_ROOT)
     try:
         hercules_home = str(Path(get_hercules_home()).resolve())
-    except Exception:
+    except (ValueError):
         hercules_home = ""
 
     env_overlay: dict[str, str] = {
@@ -1504,7 +1504,7 @@ def _print_deep_probes() -> None:
                     now = datetime.now(timezone.utc)
                     age_seconds = int((now - updated_dt).total_seconds())
                     age_str = f" (updated {age_seconds}s ago)"
-                except Exception:
+                except (ValueError):
                     pass
             ok = gateway_state == "running"
             print(
@@ -1669,7 +1669,7 @@ def _windows_stop_drain_timeout() -> float:
         from hercules_cli.gateway import _get_restart_drain_timeout
 
         configured = float(_get_restart_drain_timeout() or 30.0)
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         configured = 30.0
     # Windows CLI stop must not wedge forever. Give the gateway a real
     # graceful-drain window, then escalate to the known PID.

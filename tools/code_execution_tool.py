@@ -187,7 +187,7 @@ def _scrub_child_env(source_env, is_passthrough=None, is_windows=None):
     if is_passthrough is None:
         try:
             from tools.env_passthrough import is_env_passthrough as _ep
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _ep = lambda _: False
         is_passthrough = _ep
     if is_windows is None:
@@ -412,7 +412,7 @@ def _connect():
                         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                         try:
                             _sock.connect((_host or "127.0.0.1", int(_port)))
-                        except Exception:
+                        except (ValueError):
                             # BUG FIX #1: Close socket on connection failure to
                             # prevent resource leak.
                             try:
@@ -1570,7 +1570,7 @@ def execute_code(
         }
         try:
             from tools.environments.base import touch_activity_if_due
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             touch_activity_if_due = None
 
         try:
@@ -1812,7 +1812,7 @@ def _load_config() -> dict:
 
         cfg = read_raw_config().get("code_execution", {})
         return cfg if isinstance(cfg, dict) else {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 

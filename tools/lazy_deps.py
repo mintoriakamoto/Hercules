@@ -393,7 +393,7 @@ def _activate_target_on_syspath(target: Path) -> None:
         import importlib
 
         importlib.invalidate_caches()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -438,7 +438,7 @@ def _allow_lazy_installs() -> bool:
         from hercules_cli.config import load_config
 
         cfg = load_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         cfg = None
     if cfg is not None:
         sec = cfg.get("security") or {}
@@ -802,7 +802,7 @@ def ensure(feature: str, *, prompt: bool = True) -> None:
 
             _app = get_app_or_none()
             _pt_active = _app is not None and getattr(_app, "is_running", False)
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError):
             _pt_active = False
 
     if prompt and not _pt_active and sys.stdin.isatty() and sys.stdout.isatty():
@@ -843,7 +843,7 @@ def ensure(feature: str, *, prompt: bool = True) -> None:
 
         if hasattr(_md, "_cache_clear"):
             _md._cache_clear()  # type: ignore[attr-defined]
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
     still_missing = feature_missing(feature)

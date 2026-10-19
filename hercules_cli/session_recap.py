@@ -95,7 +95,7 @@ def _tool_call_name_and_args(tool_call: Any) -> Tuple[str, Mapping[str, Any]]:
             parsed = json.loads(raw_args)
             if isinstance(parsed, Mapping):
                 return name, parsed
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return name, {}
     return name, {}
 
@@ -198,7 +198,7 @@ def _shortened_path(path: str) -> str:
         if abs_path.startswith(home + os.sep):
             return "~/" + abs_path[len(home) + 1 :]
         return abs_path
-    except Exception:
+    except (IndexError, KeyError):
         return path
 
 

@@ -1711,7 +1711,7 @@ def build_skills_system_prompt(
             _cfg_cap = cfg_get(load_config_readonly(), "skills", "index_max_chars")
             if _cfg_cap is not None:
                 _index_cap = int(_cfg_cap)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
         if _index_cap > 0:
             _running = 0

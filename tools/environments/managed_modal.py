@@ -230,7 +230,7 @@ class ManagedModalEnvironment(BaseModalExecutionEnvironment):
         """Managed Modal does not sync or mount host credential files."""
         try:
             from tools.credential_files import get_credential_file_mounts
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return
 
         mounts = get_credential_file_mounts()
@@ -300,7 +300,7 @@ class ManagedModalEnvironment(BaseModalExecutionEnvironment):
                 if isinstance(message, str) and message:
                     return f"{prefix}: {message}"
                 return f"{prefix}: {json.dumps(payload, ensure_ascii=False)}"
-        except Exception:
+        except (ValueError):
             pass
 
         text = response.text.strip()

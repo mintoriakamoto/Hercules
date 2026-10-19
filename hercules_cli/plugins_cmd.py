@@ -723,7 +723,7 @@ def _get_disabled_set() -> set:
         config = load_config()
         disabled = cfg_get(config, "plugins", "disabled", default=[])
         return set(disabled) if isinstance(disabled, list) else set()
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         return set()
 
 
@@ -753,7 +753,7 @@ def _get_enabled_set() -> set:
             return set()
         enabled = plugins_cfg.get("enabled", [])
         return set(enabled) if isinstance(enabled, list) else set()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return set()
 
 
@@ -998,7 +998,7 @@ def _read_manifest_info(d: Path, prefix: str):
             name = manifest.get("name", d.name)
             version = manifest.get("version", "")
             description = manifest.get("description", "")
-        except Exception:
+        except (OSError):
             pass
     key = f"{prefix}/{d.name}" if prefix else name
     return name, version, description, key
@@ -1203,7 +1203,7 @@ def _discover_memory_providers() -> list[tuple[str, str]]:
         from plugins.memory import discover_memory_providers
 
         return [(name, desc) for name, desc, _avail in discover_memory_providers()]
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         return []
 
 
@@ -1225,7 +1225,7 @@ def _discover_context_engines() -> list[tuple[str, str]]:
             if name not in seen:
                 engines.append((name, desc))
                 seen.add(name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     try:
@@ -1239,7 +1239,7 @@ def _discover_context_engines() -> list[tuple[str, str]]:
             and plugin_engine.name not in seen
         ):
             engines.append((plugin_engine.name, "installed plugin"))
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError):
         pass
 
     return engines
@@ -1252,7 +1252,7 @@ def _get_current_memory_provider() -> str:
 
         config = load_config()
         return cfg_get(config, "memory", "provider", default="") or ""
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return ""
 
 
@@ -1265,7 +1265,7 @@ def _get_current_context_engine() -> str:
         return (
             cfg_get(config, "context", "engine", default="compressor") or "compressor"
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "compressor"
 
 
@@ -1865,7 +1865,7 @@ def _get_plugin_toolset_key(name: str) -> Optional[str]:
     """
     try:
         from tools.registry import registry
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     # Check the plugin manager for tools this plugin registered
@@ -1881,7 +1881,7 @@ def _get_plugin_toolset_key(name: str) -> Optional[str]:
                     if entry and entry.toolset:
                         return entry.toolset
                 break
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Fallback: read provides_tools from manifest on disk and query registry
@@ -1898,7 +1898,7 @@ def _get_plugin_toolset_key(name: str) -> Optional[str]:
                     entry = registry.get_entry(tool_name)
                     if entry and entry.toolset:
                         return entry.toolset
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     return None

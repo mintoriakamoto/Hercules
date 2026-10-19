@@ -170,7 +170,7 @@ def slack_manifest_command(args) -> int:
                 from hercules_constants import get_hercules_home
 
                 target = Path(get_hercules_home()) / "slack-manifest.json"
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 target = (
                     Path(
                         os.environ.get("HERCULES_HOME")

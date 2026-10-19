@@ -79,7 +79,7 @@ def open_guardrails_enabled() -> bool:
             from utils import is_truthy_value
 
             opted_in = is_truthy_value(raw)
-        except Exception:  # pragma: no cover - utils must not be a hard dep here
+        except (ImportError, ModuleNotFoundError):
             opted_in = str(raw).strip().lower() not in {"0", "false", "no", "off"}
         if not opted_in:
             return False
@@ -119,7 +119,7 @@ def apply() -> None:
         ap._get_cron_approval_mode = lambda: "approve"
         ap._get_approval_mode = lambda: "off"
         ap._match_user_deny_rule = lambda command: None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     try:
@@ -127,7 +127,7 @@ def apply() -> None:
 
         wa.write_approval_enabled = lambda subsystem: False
         wa.evaluate_gate = lambda subsystem, **kwargs: wa.GateDecision(allow=True)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     try:
@@ -135,7 +135,7 @@ def apply() -> None:
 
         sg.scan_file = lambda *args, **kwargs: []
         sg.should_allow_install = lambda result, force=False: (True, "allowed")
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
     try:
@@ -143,7 +143,7 @@ def apply() -> None:
 
         ft._is_blocked_device_path = lambda path: False
         ft._is_blocked_device = lambda *args, **kwargs: False
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     try:
@@ -154,7 +154,7 @@ def apply() -> None:
             mt.MemoryStore._sanitize_entries_for_snapshot = staticmethod(
                 lambda entries, filename="": list(entries or [])
             )
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
     try:
@@ -162,7 +162,7 @@ def apply() -> None:
 
         dt._get_subagent_approval_callback = lambda: dt._subagent_auto_approve
         dt._subagent_auto_deny = dt._subagent_auto_approve
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     _applied = True

@@ -95,7 +95,7 @@ CODEX_OAUTH_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 CODEX_OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token"
 try:  # Version tag for the Codex token-endpoint User-Agent; fall back if unavailable.
     from hercules_cli import __version__ as _HERCULES_CLI_VERSION
-except Exception:  # pragma: no cover - version import should always succeed
+except (ImportError, ModuleNotFoundError):
     _HERCULES_CLI_VERSION = "unknown"
 CODEX_OAUTH_USER_AGENT = f"hercules-cli/{_HERCULES_CLI_VERSION}"
 CODEX_ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 120
@@ -515,7 +515,7 @@ try:
         for _alias in _pp.aliases:
             if _alias not in PROVIDER_REGISTRY:
                 PROVIDER_REGISTRY[_alias] = PROVIDER_REGISTRY[_pp.name]
-except Exception:
+except (ImportError, IndexError, KeyError, ModuleNotFoundError):
     pass
 
 
@@ -623,7 +623,7 @@ def _resolve_api_key_provider_secret(
                 return api_token, source
         except ValueError as exc:
             logger.warning("Copilot token validation failed: %s", exc)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         return "", ""
 
@@ -651,7 +651,7 @@ def _resolve_api_key_provider_secret(
                 key = str(key).strip()
                 if has_usable_secret(key):
                     return key, f"credential_pool:{provider_id}"
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
         pass
 
     return "", ""
@@ -984,7 +984,7 @@ def _global_auth_file_path() -> Optional[Path]:
         from hercules_constants import get_default_hercules_root
 
         global_root = get_default_hercules_root()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
     profile_home = get_hercules_home()
     try:
@@ -1142,7 +1142,7 @@ def _load_auth_store(auth_file: Optional[Path] = None) -> Dict[str, Any]:
             import shutil
 
             shutil.copy2(auth_file, corrupt_path)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         logger.warning(
             "auth: failed to parse %s (%s) — starting with empty store. "
@@ -1571,7 +1571,7 @@ def is_provider_explicitly_configured(provider_id: str) -> bool:
             cfg_provider = (model_cfg.get("provider") or "").strip().lower()
             if cfg_provider == normalized:
                 return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # 3. Check provider-specific env vars
@@ -1612,7 +1612,7 @@ def is_provider_explicitly_configured(provider_id: str) -> bool:
                 "manual",
             } or source.startswith("manual:"):
                 return True
-    except Exception:
+    except (ValueError):
         pass
 
     return False
@@ -1697,7 +1697,7 @@ def _get_config_hint_for_unknown_provider(provider_name: str) -> str:
             if first_hint:
                 lines.append(f"    → {first_hint}")
         return "\n".join(lines)
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         return ""
 
 
@@ -1819,7 +1819,7 @@ def resolve_provider(
             for _alias in _pp.aliases:
                 if _alias not in _PROVIDER_ALIASES:
                     _PROVIDER_ALIASES[_alias] = _pp.name
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
     normalized = _PROVIDER_ALIASES.get(normalized, normalized)
 
@@ -2007,7 +2007,7 @@ def _is_expiring(expires_at_iso: Any, skew_seconds: int) -> bool:
 def _coerce_ttl_seconds(expires_in: Any) -> int:
     try:
         ttl = int(expires_in)
-    except Exception:
+    except (ValueError):
         ttl = 0
     return max(0, ttl)
 
@@ -2123,7 +2123,7 @@ def _qwen_access_token_is_expiring(
 ) -> bool:
     try:
         expiry_ms = int(expiry_date_ms)
-    except Exception:
+    except (ValueError):
         return True
     return (time.time() + max(0, int(skew_seconds))) * 1000 >= expiry_ms
 
@@ -2191,7 +2191,7 @@ def _refresh_qwen_cli_tokens(
     expires_in = payload.get("expires_in")
     try:
         expires_in_seconds = int(expires_in)
-    except Exception:
+    except (ValueError):
         expires_in_seconds = 6 * 60 * 60
 
     refreshed = {
@@ -2814,7 +2814,7 @@ def kimi_oauth_device_code_login(
         ):
             try:
                 opened = webbrowser.open(verification_url)
-            except Exception:
+            except (OSError):
                 opened = False
             print(
                 "  (Opened browser for verification)"
@@ -2930,7 +2930,7 @@ def _fetch_published_gemini_client_secret(timeout_seconds: float = 15.0) -> str:
         if not _re.fullmatch(r"GOCSPX-[A-Za-z0-9_-]{10,64}", secret):
             return ""
         return secret
-    except Exception:
+    except (httpx.HTTPStatusError, httpx.RequestError):
         return ""
 
 
@@ -3347,7 +3347,7 @@ def _gemini_google_loopback_login(
         print(f"  {url}")
         try:
             opened = webbrowser.open(url)
-        except Exception:
+        except (OSError):
             opened = False
         print(
             "  (Opened your browser)"
@@ -4016,7 +4016,7 @@ def _spotify_interactive_setup(redirect_uri_hint: str) -> str:
     if not _is_remote_session():
         try:
             webbrowser.open(SPOTIFY_DASHBOARD_URL)
-        except Exception:
+        except (OSError):
             pass
 
     try:
@@ -4098,7 +4098,7 @@ def login_spotify_command(args) -> None:
     if open_browser and not _is_remote_session() and _can_open_graphical_browser():
         try:
             opened = webbrowser.open(authorize_url)
-        except Exception:
+        except (OSError):
             opened = False
         if opened:
             print("Browser opened for Spotify authorization.")
@@ -4598,7 +4598,7 @@ def refresh_codex_oauth_pure(
                     err_desc = err.get("error_description") or err.get("message")
                     if isinstance(err_desc, str) and err_desc.strip():
                         message = f"Codex token refresh failed: {err_desc.strip()}"
-        except Exception:
+        except (ValueError):
             pass
         if code in {"invalid_grant", "invalid_token", "invalid_request"}:
             relogin_required = True
@@ -4929,7 +4929,7 @@ def _codex_pool_rate_limit_status() -> Optional[Dict[str, Any]]:
                 "reason": entry.get("last_error_reason"),
                 "message": entry.get("last_error_message"),
             }
-    except Exception:
+    except (ValueError):
         logger.debug("Codex pool rate-limit lookup failed", exc_info=True)
     return None
 
@@ -4969,7 +4969,7 @@ def _pool_codex_access_token() -> str:
         for entry in entries:
             if _entry_usable(entry):
                 return str(entry.get("access_token", "")).strip()
-    except Exception:
+    except (ValueError):
         logger.debug("Codex pool fallback lookup failed", exc_info=True)
     return ""
 
@@ -5177,7 +5177,7 @@ def _xai_access_token_is_expiring(access_token: str, skew_seconds: int = 0) -> b
         if not isinstance(exp, (int, float)):
             return False
         return float(exp) <= (time.time() + max(0, int(skew_seconds)))
-    except Exception:
+    except (ValueError):
         return False
 
 
@@ -5213,7 +5213,7 @@ def _xai_proactive_refresh_skew_seconds(access_token: str) -> int:
         if remaining <= 45 * 60:
             return min(120, max_skew)
         return max_skew
-    except Exception:
+    except (ValueError):
         return max_skew
 
 
@@ -5485,7 +5485,7 @@ def _refresh_xai_oauth_tokens(
     try:
         state = _load_provider_state(_load_auth_store(), "xai-oauth") or {}
         auth_mode = str(state.get("auth_mode") or "oauth_device_code")
-    except Exception:
+    except (ValueError):
         auth_mode = "oauth_device_code"
     refreshed = refresh_xai_oauth_pure(
         str(tokens.get("access_token", "") or ""),
@@ -5856,7 +5856,7 @@ def get_codex_auth_status() -> Dict[str, Any]:
                     ),
                     "reset_at": rate_limit.get("reset_at"),
                 }
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
         pass
 
     # Fall back to legacy provider state
@@ -5901,7 +5901,7 @@ def get_xai_oauth_auth_status() -> Dict[str, Any]:
                         "source": f"pool:{getattr(entry, 'label', 'unknown')}",
                         "api_key": api_key,
                     }
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
         pass
 
     try:
@@ -6049,7 +6049,7 @@ def _get_azure_foundry_auth_status() -> Dict[str, Any]:
         from hercules_cli.config import load_config, get_env_value_prefer_dotenv
 
         cfg = load_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         cfg = {}
 
     model_cfg = cfg.get("model") if isinstance(cfg, dict) else None
@@ -6385,7 +6385,7 @@ def _confirm_expensive_model_selection(
             base_url=base_url,
             api_key=api_key,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         warning = None
     if warning is None:
         return True
@@ -6941,7 +6941,7 @@ def _xai_oauth_device_code_login(
         if open_browser and not _is_remote_session() and _can_open_graphical_browser():
             try:
                 opened = webbrowser.open(verification_url)
-            except Exception:
+            except (OSError):
                 opened = False
             if opened:
                 print("  (Opened browser for verification)")
@@ -7309,7 +7309,7 @@ def _minimax_poll_token(
         )
         try:
             payload = response.json() if response.text else {}
-        except Exception:
+        except (ValueError):
             payload = {}
 
         if response.status_code != 200:

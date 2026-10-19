@@ -187,7 +187,7 @@ def snapshot_shutdown_context(received_signal: Any = None) -> Dict[str, Any]:
                     ctx["planned_stop_marker"] = raw[:300]
                 except OSError:
                     pass
-    except Exception:  # never raise from a signal handler
+    except (IndexError, KeyError):
         pass
 
     return ctx

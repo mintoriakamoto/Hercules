@@ -490,7 +490,7 @@ class ProcessRegistry:
             from gateway.status import get_process_start_time
 
             return get_process_start_time(pid)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return None
 
     @classmethod
@@ -557,7 +557,7 @@ class ProcessRegistry:
             if not proc.is_running():
                 return False
             return proc.status() != psutil.STATUS_ZOMBIE
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
 
     @staticmethod
@@ -576,7 +576,7 @@ class ProcessRegistry:
             if val is None:
                 val = DEFAULT_CONFIG["terminal"]["daemon_term_grace_seconds"]
             return max(float(val), 0.0)
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
             return 2.0
 
     @classmethod
@@ -846,7 +846,7 @@ class ProcessRegistry:
                 self._running[session.id] = session
 
             self._write_checkpoint()
-        except Exception:
+        except (IndexError, KeyError):
             # Post-Popen setup failed — kill the orphaned subprocess (and any
             # descendants spawned via setsid) before re-raising so they do not
             # leak as untracked background processes.
@@ -861,7 +861,7 @@ class ProcessRegistry:
                         proc.kill()
                 else:
                     proc.kill()
-            except Exception:
+            except (AttributeError):
                 pass
             try:
                 proc.wait(timeout=5)
@@ -1086,7 +1086,7 @@ class ProcessRegistry:
                     self._move_to_finished(session)
                     return
 
-            except Exception:
+            except (IndexError, KeyError, ValueError):
                 # Environment might be gone (sandbox reaped, etc.)
                 session.exited = True
                 session.exit_code = -1
@@ -1119,7 +1119,7 @@ class ProcessRegistry:
                         self._emit_output(session, text)
                 except EOFError:
                     break
-                except Exception:
+                except (IndexError, KeyError, OSError):
                     break
         except Exception as e:
             logger.debug("PTY stdout reader ended: %s", e)
@@ -1271,7 +1271,7 @@ class ProcessRegistry:
                 if owns_event is not None:
                     try:
                         owned = bool(owns_event(evt))
-                    except Exception:
+                    except (ValueError):
                         owned = False  # fail closed — never leak on a broken check
                     if not owned:
                         requeue.append(evt)
@@ -2362,7 +2362,7 @@ def _handle_process(args, **kw):
             from tools.approval import get_current_session_key
 
             session_key = get_current_session_key(default="") or ""
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             session_key = ""
         return json.dumps(
             {

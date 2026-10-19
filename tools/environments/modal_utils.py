@@ -146,7 +146,7 @@ class BaseModalExecutionEnvironment(BaseEnvironment):
                 from tools.environments.base import touch_activity_if_due
 
                 touch_activity_if_due(_activity_state, "modal command running")
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
             time.sleep(self._poll_interval_seconds)

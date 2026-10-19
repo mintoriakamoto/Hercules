@@ -867,7 +867,7 @@ def do_install(
                     "[dim]You can still schedule it any time by asking the agent "
                     "or via[/] [bold]hercules cron add[/][dim].[/]\n"
                 )
-    except Exception:  # pragma: no cover - blueprint detection is best-effort
+    except (IndexError, KeyError):
         pass
 
     if invalidate_cache:
@@ -876,7 +876,7 @@ def do_install(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
     else:
         c.print("[dim]Skill will be available in your next session.[/]")
@@ -1313,7 +1313,7 @@ def do_uninstall(
                 from agent.prompt_builder import clear_skills_system_prompt_cache
 
                 clear_skills_system_prompt_cache(clear_snapshot=True)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
         else:
             c.print("[dim]Change will take effect in your next session.[/]")
@@ -1368,7 +1368,7 @@ def do_reset(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
     else:
         c.print("[dim]Change will take effect in your next session.[/]")
@@ -1524,7 +1524,7 @@ def do_opt_out(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
 
@@ -1555,7 +1555,7 @@ def do_opt_in(
                 from agent.prompt_builder import clear_skills_system_prompt_cache
 
                 clear_skills_system_prompt_cache(clear_snapshot=True)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
     c.print()
 
@@ -1606,7 +1606,7 @@ def do_repair_official(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
 
@@ -1771,7 +1771,7 @@ def _github_publish(skill_path: Path, skill_name: str, target_repo: str, auth) -
             timeout=15,
         )
         default_branch = resp.json().get("default_branch", "main")
-    except Exception:
+    except (ValueError, httpx.HTTPStatusError, httpx.RequestError):
         default_branch = "main"
 
     # 3. Get the base tree SHA

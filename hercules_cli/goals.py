@@ -650,14 +650,14 @@ def _pid_alive(pid: int) -> bool:
         from gateway.status import _pid_exists
 
         return bool(_pid_exists(int(pid)))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     # Last-resort fallback if gateway.status is unavailable: psutil directly.
     try:
         import psutil  # type: ignore
 
         return bool(psutil.pid_exists(int(pid)))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -675,7 +675,7 @@ def _session_waiting(session_id: str) -> bool:
         from tools.process_registry import process_registry
 
         return bool(process_registry.is_session_waiting(session_id))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -701,7 +701,7 @@ def _goal_judge_max_tokens() -> int:
         value = int(value)
         if value > 0:
             return value
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     return DEFAULT_JUDGE_MAX_TOKENS
 
@@ -993,7 +993,7 @@ def judge_goal(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except Exception:
+    except (IndexError, KeyError):
         raw = ""
 
     verdict, reason, parse_failed, wait_directive = _parse_judge_response(raw)
@@ -1081,7 +1081,7 @@ def draft_contract(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except Exception:
+    except (IndexError, KeyError):
         raw = ""
 
     data = _extract_json_object(raw)

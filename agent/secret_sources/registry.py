@@ -171,7 +171,7 @@ def _ensure_builtin_sources() -> None:
         from agent.secret_sources.bitwarden import BitwardenSource
 
         register_source(BitwardenSource())
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.warning(
             "Failed to register bundled Bitwarden secret source", exc_info=True
         )
@@ -179,7 +179,7 @@ def _ensure_builtin_sources() -> None:
         from agent.secret_sources.onepassword import OnePasswordSource
 
         register_source(OnePasswordSource())
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.warning(
             "Failed to register bundled 1Password secret source", exc_info=True
         )

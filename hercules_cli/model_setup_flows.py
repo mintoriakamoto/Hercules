@@ -76,7 +76,7 @@ def _prune_replaced_custom_model_config_credentials(
                 retained.append(entry)
             if changed:
                 write_credential_pool(pool_key, retained, removed_ids=removed_ids)
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return
 
 
@@ -98,7 +98,7 @@ def _prompt_auth_credentials_choice(title: str) -> str:
         if idx >= 0:
             print()
             return ("use", "reauth", "cancel")[idx]
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
     print(title)
@@ -235,7 +235,7 @@ def _model_flow_moa(config, current_model=""):
         idx = _curses_prompt_choice(
             "Select a Mixture of Agents preset:", rows, default_idx
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         print("Select a Mixture of Agents preset:")
         for i, row in enumerate(rows, 1):
             marker = "→" if (i - 1) == default_idx else " "
@@ -352,7 +352,7 @@ def _model_flow_openai_codex(config, current_model=""):
 
             _codex_creds = resolve_codex_runtime_credentials()
             _codex_token = _codex_creds.get("api_key")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     codex_models = get_codex_model_ids(access_token=_codex_token)
@@ -492,7 +492,7 @@ def _model_flow_qwen_oauth(_config, current_model=""):
     try:
         creds = resolve_qwen_runtime_credentials(refresh_if_expiring=True)
         models = fetch_api_models(creds["api_key"], creds["base_url"])
-    except Exception:
+    except (IndexError, KeyError):
         pass
     if not models:
         models = list(_DEFAULT_QWEN_PORTAL_MODELS)
@@ -2528,7 +2528,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
     if provider_id == "gemini" and existing_key:
         try:
             from agent.gemini_native_adapter import probe_gemini_tier
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             probe_gemini_tier = None
         if probe_gemini_tier is not None:
             print("  Checking Gemini API tier...")
@@ -2592,7 +2592,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
             _m = load_config().get("model") or {}
             if str(_m.get("provider") or "").strip().lower() == provider_id:
                 current_base = str(_m.get("base_url") or "").strip()
-        except Exception:
+        except (ValueError):
             pass
     effective_base = current_base or pconfig.inference_base_url
 
@@ -2685,7 +2685,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
                 from agent.models_dev import list_agentic_models
 
                 mdev_models = list_agentic_models(provider_id)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             if mdev_models:
                 seen = {m.lower() for m in mdev_models}
@@ -2710,7 +2710,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
             from agent.models_dev import list_agentic_models
 
             mdev_models = list_agentic_models(provider_id)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         if mdev_models:
@@ -2828,7 +2828,7 @@ def _model_flow_anthropic(config, current_model=""):
         cc_creds = read_claude_code_credentials()
         if cc_creds and is_claude_code_token_valid(cc_creds):
             cc_available = True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Stale-OAuth guard: if the only existing cred is an expired OAuth token

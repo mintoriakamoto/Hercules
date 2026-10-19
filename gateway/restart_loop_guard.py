@@ -106,7 +106,7 @@ def is_restart_loop_tripped(
     cutoff = ts - max(1, window_seconds)
     try:
         recent = [t for t in _load_boots() if t >= cutoff]
-    except Exception:  # pragma: no cover — _load_boots already guards
+    except (IndexError, KeyError):
         return False
     return len(recent) >= max_restarts
 

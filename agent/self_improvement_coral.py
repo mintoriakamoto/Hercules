@@ -332,7 +332,7 @@ class SelfImprovementEngine:
                         continue
 
                     candidates.append(other_name)
-        except Exception:
+        except (OSError):
             pass
 
         return candidates[:10]  # Limit to top 10
@@ -380,7 +380,7 @@ class SelfImprovementEngine:
             if confidences:
                 stats["avg_confidence"] = sum(confidences) / len(confidences)
 
-        except Exception:
+        except (OSError):
             pass
 
         return stats
@@ -405,7 +405,7 @@ class SelfImprovementEngine:
                             profile = self._deserialize_profile(data)
                             self._profiles_cache[skill_name] = profile
                             return profile
-            except Exception:
+            except (OSError):
                 pass
 
         # Create new profile
@@ -433,7 +433,7 @@ class SelfImprovementEngine:
                         name = data.get("skill_name", "")
                         if name:
                             profiles[name] = data
-            except Exception:
+            except (OSError):
                 pass
 
         # Update with current profile
@@ -444,7 +444,7 @@ class SelfImprovementEngine:
             with open(profiles_path, "w", encoding="utf-8") as f:
                 for name, data in profiles.items():
                     f.write(json.dumps(data) + "\n")
-        except Exception:
+        except (OSError):
             pass
 
     def _serialize_profile(self, profile: SkillProfile) -> Dict[str, Any]:
@@ -537,7 +537,7 @@ class SelfImprovementEngine:
             if len(parts) >= 1:
                 minor = int(parts[-1]) + 1
                 return ".".join(parts[:-1]) + "." + str(minor)
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             pass
         return current + ".1"
 
@@ -550,7 +550,7 @@ class SelfImprovementEngine:
                 return ".".join(parts[:-1]) + "." + str(minor)
             elif len(parts) == 1 and current != "1.0":
                 return "1.0"
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             pass
         return current
 

@@ -187,13 +187,13 @@ def _locate_session_db(session_id: str):
     try:
         from hercules_cli import profiles as profiles_mod
         from hercules_state import SessionDB
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None, None
 
     targets = [("default", profiles_mod.get_profile_dir("default"))]
     try:
         targets += [(info.name, info.path) for info in profiles_mod.list_profiles()]
-    except Exception:
+    except (IndexError, KeyError):
         logging.debug("list_profiles failed during session locate", exc_info=True)
 
     seen: set = set()
@@ -703,7 +703,7 @@ def session_search(
             from hercules_state import SessionDB
 
             db = SessionDB()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logging.debug("SessionDB unavailable for session_search", exc_info=True)
             from hercules_state import format_session_db_unavailable
 

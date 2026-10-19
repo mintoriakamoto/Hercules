@@ -42,7 +42,7 @@ def _notify_provider_jobs_changed_safe() -> None:
         from cron.scheduler import _notify_provider_jobs_changed
 
         _notify_provider_jobs_changed()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -366,7 +366,7 @@ def _local_delivery_notice(
 
         if _resolve_delivery_targets(job):
             return None  # Will actually deliver somewhere — nothing to flag.
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # If resolution can't be evaluated, fall back to the origin signal.
         if job.get("origin"):
             return None
@@ -435,7 +435,7 @@ def _resolve_model_override(model_obj: Optional[Dict[str, Any]]) -> tuple:
 
             if not has_named_custom_provider("custom"):
                 provider_name = None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             provider_name = None
     if model_name and not provider_name:
         # Pin to the current main provider so the job is stable
@@ -446,7 +446,7 @@ def _resolve_model_override(model_obj: Optional[Dict[str, Any]]) -> tuple:
             model_cfg = cfg.get("model", {})
             if isinstance(model_cfg, dict):
                 provider_name = model_cfg.get("provider") or None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # Best-effort; provider stays None
     return (provider_name, model_name)
 
@@ -518,7 +518,7 @@ def _validate_cron_base_url(
         )
         from hercules_cli.auth import PROVIDER_REGISTRY
         from utils import base_url_host_matches, base_url_hostname
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Can't resolve provider metadata -> fail closed.
         return f"Unable to validate base_url override for provider {prov!r}; refused."
 
@@ -699,7 +699,7 @@ def _execute_job_now(job: Dict[str, Any]) -> Dict[str, Any]:
         logger.error("Failed to execute cron job %s immediately: %s", job_id, e)
         try:
             mark_job_run(job_id, False, str(e))
-        except Exception:
+        except (ValueError):
             pass
         return {"claimed": True, "success": False, "error": str(e)}
 

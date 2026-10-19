@@ -944,7 +944,7 @@ class Task:
                 parsed = json.loads(row["skills"])
                 if isinstance(parsed, list):
                     skills_value = [str(s) for s in parsed if s]
-            except Exception:
+            except (IndexError, KeyError, ValueError):
                 skills_value = None
         return cls(
             id=row["id"],
@@ -1060,7 +1060,7 @@ class Run:
     def from_row(cls, row: sqlite3.Row) -> "Run":
         try:
             meta = json.loads(row["metadata"]) if row["metadata"] else None
-        except Exception:
+        except (IndexError, KeyError):
             meta = None
         return cls(
             id=int(row["id"]),
@@ -1759,7 +1759,7 @@ def connect(
                 conn.execute("PRAGMA foreign_keys=ON")
                 conn.execute("PRAGMA secure_delete=ON")
                 conn.execute("PRAGMA cell_size_check=ON")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             conn.close()
             raise
         return conn
@@ -1808,7 +1808,7 @@ def connect(
                     conn.executescript(SCHEMA_SQL)
                     _migrate_add_optional_columns(conn)
                     _INITIALIZED_PATHS.add(resolved)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             conn.close()
             raise
     return conn
@@ -2253,7 +2253,7 @@ def _rebuild_drifted_tables(conn: sqlite3.Connection) -> None:
             for index_sql in index_sqls:
                 conn.execute(index_sql)
         conn.execute("COMMIT")
-    except Exception:
+    except (IndexError, KeyError):
         try:
             conn.execute("ROLLBACK")
         except sqlite3.OperationalError:
@@ -2296,7 +2296,7 @@ def _check_file_length_invariant(conn: sqlite3.Connection) -> None:
             )
     except sqlite3.DatabaseError:
         raise
-    except Exception:
+    except (IndexError, KeyError, OSError):
         pass  # I/O errors during check are non-fatal; let normal ops continue
 
 
@@ -2499,7 +2499,7 @@ def create_task(
 
             with _pdb.connect_closing() as _pconn:
                 project_obj = _pdb.get_project(_pconn, project_id)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             project_obj = None
         if project_obj is None:
             # A project id/slug that doesn't resolve must not crash task
@@ -3133,7 +3133,7 @@ def list_events(conn: sqlite3.Connection, task_id: str) -> list[Event]:
     for r in rows:
         try:
             payload = json.loads(r["payload"]) if r["payload"] else None
-        except Exception:
+        except (IndexError, KeyError):
             payload = None
         out.append(
             Event(
@@ -4515,7 +4515,7 @@ def _try_cleanup_parent_workspaces(conn: sqlite3.Connection, task_id: str) -> No
                     parent_id,
                     wp,
                 )
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass  # best-effort
 
 
@@ -4544,7 +4544,7 @@ def _cleanup_worker_tmux(conn: sqlite3.Connection, task_id: str) -> None:
                 timeout=5,
             )
             _log.debug("Killed stale tmux session: %s", session)
-    except Exception:
+    except (IndexError, KeyError, subprocess.CalledProcessError):
         pass  # best-effort — never block completion
 
 
@@ -5491,7 +5491,7 @@ def _git_toplevel(path: Path) -> Optional[Path]:
             timeout=30,
             check=False,
         )
-    except Exception:
+    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
         return None
     if result.returncode != 0:
         return None
@@ -5520,7 +5520,7 @@ def _git_branch_exists(repo_root: Path, branch_name: str) -> bool:
             timeout=30,
             check=False,
         )
-    except Exception:
+    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
         return False
     return result.returncode == 0
 
@@ -5541,7 +5541,7 @@ def _git_common_dir(path: Path) -> Optional[Path]:
             timeout=30,
             check=False,
         )
-    except Exception:
+    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
         return None
     if result.returncode != 0:
         return None
@@ -5567,7 +5567,7 @@ def _git_dir(path: Path) -> Optional[Path]:
             timeout=30,
             check=False,
         )
-    except Exception:
+    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
         return None
     if result.returncode != 0:
         return None
@@ -5586,7 +5586,7 @@ def _git_current_branch(path: Path) -> Optional[str]:
             timeout=30,
             check=False,
         )
-    except Exception:
+    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
         return None
     if result.returncode != 0:
         return None
@@ -7212,7 +7212,7 @@ def has_spawnable_ready(conn: sqlite3.Connection) -> bool:
         return False
     try:
         from hercules_cli.profiles import profile_exists  # local import: avoids cycle
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Can't introspect — assume spawnable, preserve legacy behavior.
         return True
     for row in rows:
@@ -7238,7 +7238,7 @@ def has_spawnable_review(conn: sqlite3.Connection) -> bool:
         return False
     try:
         from hercules_cli.profiles import profile_exists  # local import: avoids cycle
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return True
     for row in rows:
         if profile_exists(row["assignee"]):
@@ -7449,7 +7449,7 @@ def _dispatch_once_locked(
             from hercules_cli.profiles import profile_exists as _pe
 
             _default_assignee_resolved = bool(_pe(_default_assignee))
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             # Profiles module not importable (test stubs, exotic envs).
             # Trust the operator's config and try the assignment; the
             # downstream profile_exists check on the assigned row will
@@ -7492,7 +7492,7 @@ def _dispatch_once_locked(
                                     "source": "kanban.default_assignee",
                                 },
                             )
-                    except Exception:
+                    except (IndexError, KeyError):
                         _log.debug(
                             "kanban dispatch: failed to apply default_assignee=%r "
                             "to task %s",
@@ -7521,7 +7521,7 @@ def _dispatch_once_locked(
             from hercules_cli.profiles import (
                 profile_exists,
             )  # local import: avoids cycle
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             profile_exists = None  # type: ignore[assignment]
         if profile_exists is not None and not profile_exists(row_assignee):
             # Bucket separately from skipped_unassigned: the operator
@@ -7678,7 +7678,7 @@ def _dispatch_once_locked(
             continue
         try:
             from hercules_cli.profiles import profile_exists
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             profile_exists = None  # type: ignore[assignment]
         if profile_exists is not None and not profile_exists(row["assignee"]):
             result.skipped_nonspawnable.append(row["id"])
@@ -7772,7 +7772,7 @@ def worker_log_rotation_config(kanban_cfg: Optional[dict] = None) -> tuple[int, 
             from hercules_cli.config import load_config
 
             kanban_cfg = load_config().get("kanban") or {}
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             kanban_cfg = {}
     max_bytes = _positive_int(
         (kanban_cfg or {}).get("worker_log_rotate_bytes"),
@@ -8745,7 +8745,7 @@ def unseen_events_for_sub(
     for r in rows:
         try:
             payload = json.loads(r["payload"]) if r["payload"] else None
-        except Exception:
+        except (IndexError, KeyError):
             payload = None
         out.append(
             Event(
@@ -8992,7 +8992,7 @@ def list_profiles_on_disk() -> list[str]:
 
         default_root = get_default_hercules_root()
         profiles_dir = default_root / "profiles"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
     names: set[str] = set()

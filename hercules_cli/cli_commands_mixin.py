@@ -258,7 +258,7 @@ class CLICommandsMixin:
             from tools.async_delegation import active_count, interrupt_all
 
             n_async = active_count()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             n_async = 0
             interrupt_all = None
 
@@ -297,7 +297,7 @@ class CLICommandsMixin:
             from tools.async_delegation import list_async_delegations
 
             delegations = list_async_delegations()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             delegations = []
         running_d = [d for d in delegations if d.get("status") == "running"]
         if delegations:
@@ -634,7 +634,7 @@ class CLICommandsMixin:
                 from hercules_state import SessionDB
 
                 self._session_db = SessionDB()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
         if not self._session_db:
             _cprint(f"  {format_session_db_unavailable()}")
@@ -857,7 +857,7 @@ class CLICommandsMixin:
                     from tools.todo_tool import TodoStore
 
                     self.agent._todo_store = TodoStore()
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
             if hasattr(self.agent, "_invalidate_system_prompt"):
                 self.agent._invalidate_system_prompt()
@@ -875,7 +875,7 @@ class CLICommandsMixin:
                         reset=False,
                         reason="resume",
                     )
-            except Exception:
+            except (AttributeError):
                 pass
 
         title_part = f' "{session_meta["title"]}"' if session_meta.get("title") else ""
@@ -1046,7 +1046,7 @@ class CLICommandsMixin:
                     from tools.todo_tool import TodoStore
 
                     self.agent._todo_store = TodoStore()
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
             if hasattr(self.agent, "_invalidate_system_prompt"):
                 self.agent._invalidate_system_prompt()
@@ -1064,7 +1064,7 @@ class CLICommandsMixin:
                         reset=False,
                         reason="branch",
                     )
-            except Exception:
+            except (AttributeError):
                 pass
 
         msg_count = len([
@@ -1866,7 +1866,7 @@ class CLICommandsMixin:
                         _resp_text = _maybe_remap_for_light_mode(
                             _skin.get_color("banner_text", "#FFF8DC")
                         )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         label = "⚕ Hercules"
                         _resp_color = "#C73E3A"
                         _resp_text = "#FFF8DC"
@@ -2018,7 +2018,7 @@ class CLICommandsMixin:
                 from tools.browser_tool import cleanup_all_browsers
 
                 cleanup_all_browsers()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
             print()
@@ -2086,7 +2086,7 @@ class CLICommandsMixin:
                 from tools.browser_tool import _ensure_cdp_supervisor  # type: ignore[import-not-found]
 
                 _ensure_cdp_supervisor("default")
-            except Exception:
+            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                 pass
             print()
             print("🌐 Browser connected to live Chromium-family browser via CDP")
@@ -2119,7 +2119,7 @@ class CLICommandsMixin:
 
                     _stop_cdp_supervisor("default")
                     cleanup_all_browsers()
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
                 print()
                 print("🌐 Browser disconnected from live Chromium-family browser")
@@ -2166,7 +2166,7 @@ class CLICommandsMixin:
                     from tools.browser_tool import _get_cloud_provider
 
                     provider = _get_cloud_provider()
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     provider = None
 
                 if provider is not None:
@@ -2177,7 +2177,7 @@ class CLICommandsMixin:
                         from tools.browser_tool import _get_browser_engine
 
                         engine = _get_browser_engine()
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         engine = "auto"
                     if engine == "lightpanda":
                         print(
@@ -2549,7 +2549,7 @@ class CLICommandsMixin:
                     fh.write(initial_text)
             try:
                 subprocess.call([*shlex.split(editor), path])
-            except Exception:
+            except (IndexError, KeyError, subprocess.CalledProcessError):
                 # Fall back to a bare invocation (editor value may not be a
                 # simple argv-splittable string on some platforms).
                 subprocess.call(f"{editor} {shlex.quote(path)}", shell=True)
@@ -2611,7 +2611,7 @@ class CLICommandsMixin:
             parts = (cmd_original or "").strip().split(None, 1)
             if len(parts) > 1:
                 arg = parts[1].strip().lower()
-        except Exception:
+        except (IndexError, KeyError):
             arg = ""
 
         cfg = load_config() or {}
@@ -2667,7 +2667,7 @@ class CLICommandsMixin:
             parts = (cmd_original or "").strip().split(None, 1)
             if len(parts) > 1:
                 arg = parts[1].strip().lower()
-        except Exception:
+        except (IndexError, KeyError):
             arg = ""
 
         current = bool(getattr(self, "show_timestamps", False))
@@ -2877,7 +2877,7 @@ class CLICommandsMixin:
                 if _is_anthropic_fast_model(model)
                 else "Priority Processing"
             )
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError):
             feature_name = "Fast mode"
 
         parts = cmd.strip().split(maxsplit=1)

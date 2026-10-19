@@ -944,7 +944,7 @@ def run_conversation(
                                 ),
                             },
                         }
-                    except Exception:
+                    except (IndexError, KeyError):
                         tc["function"]["arguments"] = _repair_tool_call_arguments(
                             tc["function"]["arguments"],
                             tc["function"].get("name", "?"),

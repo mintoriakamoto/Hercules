@@ -514,7 +514,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
 
         _ensure_plugins_discovered()
         provider = get_provider(configured)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         provider = None
 
     if provider is None:
@@ -530,7 +530,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
         caps = {}
     try:
         models = provider.list_models() or []
-    except Exception:
+    except (IndexError, KeyError):
         models = []
 
     active_model = configured_model or provider.default_model()
@@ -589,7 +589,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
             from tools.xai_http import xai_storage_notice_text
 
             notice = xai_storage_notice_text("video_gen")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             notice = ""
         if notice:
             parts.append(f"- storage: {notice}")

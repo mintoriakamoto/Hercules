@@ -400,7 +400,7 @@ def classify_verification_command(
         from agent.coding_context import project_facts_for
 
         facts = project_facts_for(cwd)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         facts = None
     if not facts:
         return None
@@ -508,7 +508,7 @@ def mark_workspace_edited(
         from agent.coding_context import project_facts_for
 
         facts = project_facts_for(cwd)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         facts = None
     if not facts:
         return None
@@ -566,7 +566,7 @@ def verification_status(
         from agent.coding_context import project_facts_for
 
         facts = project_facts_for(cwd)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         facts = None
     if not facts:
         return {"status": "not_applicable", "evidence": None}

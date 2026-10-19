@@ -67,7 +67,7 @@ def _get_rss_mb() -> Optional[int]:
             return int(maxrss / _BYTES_TO_MB)
         # Linux / other unices: KB
         return int(maxrss / 1024)
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
     # Fallback: psutil (Windows, or unusual unix without resource).
@@ -76,7 +76,7 @@ def _get_rss_mb() -> Optional[int]:
 
         rss = psutil.Process(os.getpid()).memory_info().rss
         return int(rss / _BYTES_TO_MB)
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return None
 
 

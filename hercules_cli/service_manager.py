@@ -932,7 +932,7 @@ class S6ServiceManager:
                 from gateway.status import write_planned_stop_marker
 
                 write_planned_stop_marker(pid)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
         self._run_svc("-d", "stop", name)
         _write_gateway_desired_state(name, "stopped")

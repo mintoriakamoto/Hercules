@@ -235,14 +235,14 @@ def _load_hercules_env() -> None:
     # Step 1: dotenv
     try:
         from dotenv import load_dotenv
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         load_dotenv = None  # type: ignore[assignment]
 
     try:
         from hercules_cli.config import get_hercules_home
 
         home = get_hercules_home()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
 
     env_path = home / ".env"
@@ -252,9 +252,9 @@ def _load_hercules_env() -> None:
         except UnicodeDecodeError:
             try:
                 load_dotenv(str(env_path), override=True, encoding="latin-1")
-            except Exception:
+            except (ValueError):
                 pass
-        except Exception:
+        except (ValueError):
             pass
 
     # Step 2: bridge top-level config.yaml values into the environment so
@@ -268,20 +268,20 @@ def _load_hercules_env() -> None:
 
     try:
         import yaml  # type: ignore[import-not-found]
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         return
 
     try:
         with open(config_path, "r", encoding="utf-8") as fh:
             raw = yaml.safe_load(fh) or {}
-    except Exception:
+    except (OSError):
         return
 
     try:
         from hercules_cli.config import _expand_env_vars
 
         raw = _expand_env_vars(raw)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Managed scope: overlay administrator-pinned values before bridging to env,
@@ -290,7 +290,7 @@ def _load_hercules_env() -> None:
         from hercules_cli import managed_scope
 
         raw = managed_scope.apply_managed_overlay(raw if isinstance(raw, dict) else {})
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     if not isinstance(raw, dict):

@@ -254,7 +254,7 @@ def _beeps_enabled() -> bool:
         voice_cfg = load_config().get("voice", {})
         if isinstance(voice_cfg, dict):
             return bool(voice_cfg.get("beep_enabled", True))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     return True
 

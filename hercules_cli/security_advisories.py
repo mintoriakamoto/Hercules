@@ -210,7 +210,7 @@ def get_acked_ids() -> set[str]:
         from hercules_cli.config import load_config
 
         cfg = load_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug("Could not load config for advisory acks", exc_info=True)
         return set()
     sec = cfg.get("security") or {}
@@ -230,7 +230,7 @@ def ack_advisory(advisory_id: str) -> bool:
         return False
     try:
         from hercules_cli.config import load_config, save_config
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.warning("Could not import config module to persist ack")
         return False
     try:
@@ -335,7 +335,7 @@ def _banner_cache_path() -> Optional[Path]:
         cache_dir = Path(get_hercules_home()) / "cache"
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir / _BANNER_CACHE_FILE
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 
@@ -357,7 +357,7 @@ def _read_banner_cache() -> dict[str, float]:
                 out[advisory_id] = float(ts)
             except ValueError:
                 continue
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         return {}
     return out
 
@@ -369,7 +369,7 @@ def _write_banner_cache(seen: dict[str, float]) -> None:
     try:
         lines = [f"{aid} {ts}" for aid, ts in seen.items()]
         p.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    except Exception:
+    except (IndexError, KeyError):
         logger.debug("Could not write advisory banner cache", exc_info=True)
 
 

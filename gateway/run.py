@@ -1535,7 +1535,7 @@ if _config_path.exists():
             from hercules_cli import managed_scope
 
             _cfg = managed_scope.apply_managed_overlay(_cfg)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         # Top-level simple values (fallback only — don't override .env)
         for _key, _val in _cfg.items():
@@ -1628,7 +1628,7 @@ if _config_path.exists():
 
                 for _entry in get_plugin_auxiliary_tasks():
                     _aux_bridged_keys.add(_entry["key"])
-            except Exception:
+            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                 # Plugin discovery failure must not break gateway startup;
                 # built-in bridging stays intact.
                 pass
@@ -2124,7 +2124,7 @@ def _try_resolve_fallback_provider() -> dict | None:
                     "Fallback entry %s failed: %s", entry.get("provider"), fb_exc
                 )
                 continue
-    except Exception:
+    except (ValueError):
         # Catch any unexpected exception from fallback chain
         pass
     return None
@@ -2293,7 +2293,7 @@ async def _probe_audio_duration(path: str) -> Optional[str]:
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=5.0)
         if proc.returncode == 0:
             return _format_duration(float(stdout.decode().strip()))
-    except Exception:
+    except (ValueError, subprocess.CalledProcessError):
         pass
 
     return None
@@ -2446,7 +2446,7 @@ def _check_unavailable_skill(command_name: str) -> str | None:
                         f"The **{command_name}** skill is available but not installed.\n"
                         f"Install it with: `hercules skills install {install_path}`"
                     )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return None
 
@@ -2498,7 +2498,7 @@ def _load_gateway_config() -> dict:
         if config_path == get_config_path():
             raw = read_raw_config()
             used_canonical = True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     if not used_canonical:
@@ -2508,7 +2508,7 @@ def _load_gateway_config() -> dict:
 
                 with open(config_path, "r", encoding="utf-8") as f:
                     raw = yaml.safe_load(f) or {}
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError):
             logger.debug("Could not load gateway config from %s", config_path)
             raw = {}
 
@@ -2520,7 +2520,7 @@ def _load_gateway_config() -> dict:
         from hercules_cli import managed_scope
 
         raw = managed_scope.apply_managed_overlay(raw if isinstance(raw, dict) else {})
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     if not isinstance(raw, dict):
         return {}
@@ -2534,7 +2534,7 @@ def _load_gateway_config() -> dict:
         from hercules_cli.config import _normalize_root_model_keys
 
         raw = _normalize_root_model_keys(raw)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return raw
 
@@ -2649,7 +2649,7 @@ def _resolve_hercules_bin() -> Optional[list[str]]:
 
         if importlib.util.find_spec("hercules_cli") is not None:
             return [sys.executable, "-m", "hercules_cli.main"]
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
     return None
@@ -3240,7 +3240,7 @@ class GatewayRunner(
                     "them in chat. Enable security.tirith_enabled or configure "
                     "auxiliary.approval for unattended operation."
                 )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             logger.debug("approvals.mode startup check skipped", exc_info=True)
 
         # Initialize session database for session_search tool support
@@ -3396,7 +3396,7 @@ class GatewayRunner(
                 parsed = json.loads(raw_volumes)
                 if isinstance(parsed, list):
                     volumes = [str(v) for v in parsed if isinstance(v, str)]
-            except Exception:
+            except (IndexError, KeyError, ValueError):
                 logger.debug(
                     "Could not parse TERMINAL_DOCKER_VOLUMES for gateway media warning",
                     exc_info=True,
@@ -3430,7 +3430,7 @@ class GatewayRunner(
             from tools.skill_manager_tool import _find_skill
 
             return _find_skill("hercules-agent-setup") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
 
     # -- Voice mode persistence ------------------------------------------
@@ -3536,7 +3536,7 @@ class GatewayRunner(
             _auto_tts_default = bool(
                 (_full_cfg.get("voice") or {}).get("auto_tts", False)
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             _auto_tts_default = False
         if hasattr(adapter, "_auto_tts_default"):
             adapter._auto_tts_default = _auto_tts_default
@@ -3743,7 +3743,7 @@ class GatewayRunner(
                     from hercules_cli.profiles import get_active_profile_name
 
                     _profile = get_active_profile_name() or "default"
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     _profile = None
         return build_session_key(
             source,
@@ -3766,7 +3766,7 @@ class GatewayRunner(
                 chat_id=str(source.chat_id),
                 user_id=str(source.user_id),
             )
-        except Exception:
+        except (ValueError):
             logger.debug("Failed to read Telegram topic mode state", exc_info=True)
             return False
         # Only honor a real True from the SessionDB. Any other value
@@ -3937,7 +3937,7 @@ class GatewayRunner(
             bindings = session_db.list_telegram_topic_bindings_for_chat(
                 chat_id=str(source.chat_id),
             )
-        except Exception:
+        except (ValueError):
             logger.debug("topic-recover: read failed", exc_info=True)
             return None
         if not bindings:
@@ -4109,7 +4109,7 @@ class GatewayRunner(
                         model,
                         runtime_kwargs["provider"],
                     )
-            except Exception:
+            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                 pass
 
         # Final safety net (#35314): if resolution still produced an empty
@@ -4185,7 +4185,7 @@ class GatewayRunner(
 
         try:
             overrides = resolve_fast_mode_overrides(route["model"])
-        except Exception:
+        except (IndexError, KeyError):
             overrides = None
         route["request_overrides"] = overrides or {}
         return route
@@ -4366,7 +4366,7 @@ class GatewayRunner(
             from cron.scheduler import get_running_job_ids
 
             return len(get_running_job_ids())
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return 0
 
     # ── scale-to-zero idle detection / dormant-quiesce (Phase 0) ──────────────
@@ -4390,7 +4390,7 @@ class GatewayRunner(
 
             if active_count() > 0:
                 return True
-        except Exception:  # never let the idle check raise
+        except (ImportError, ModuleNotFoundError):
             logger.debug("scale-to-zero async-delegation check failed", exc_info=True)
         try:
             from tools.process_registry import process_registry
@@ -4399,7 +4399,7 @@ class GatewayRunner(
                 return True
             if process_registry.pending_watchers:
                 return True
-        except Exception:  # never let the idle check raise
+        except (ImportError, ModuleNotFoundError):
             logger.debug("scale-to-zero bg-work check failed", exc_info=True)
         return False
 
@@ -4471,7 +4471,7 @@ class GatewayRunner(
                 if self.config
                 else []
             )
-        except Exception:
+        except (AttributeError, IndexError, KeyError):
             platforms = []
         try:
             wake_url = relay_wake_url()
@@ -4511,7 +4511,7 @@ class GatewayRunner(
                     if self.config
                     else []
                 )
-            except Exception:
+            except (AttributeError, IndexError, KeyError):
                 active = []
             relay_only = messaging_is_relay_only_or_absent(active)
             try:
@@ -4562,7 +4562,7 @@ class GatewayRunner(
         """Return the connected RELAY adapter, if any (the one go_dormant targets)."""
         try:
             from gateway.platforms.base import Platform
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return None
         return self.adapters.get(Platform.RELAY)
 
@@ -4777,7 +4777,7 @@ class GatewayRunner(
                 restart_requested=self._restart_requested,
                 active_agents=self._running_agent_count(),
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     def _persist_active_agents(self) -> None:
@@ -4800,7 +4800,7 @@ class GatewayRunner(
             from gateway.status import write_runtime_status
 
             write_runtime_status(active_agents=self._running_agent_count())
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     # ------------------------------------------------------------------
@@ -4902,7 +4902,7 @@ class GatewayRunner(
                 error_code=error_code,
                 error_message=error_message,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     # ------------------------------------------------------------------
@@ -4938,7 +4938,7 @@ class GatewayRunner(
                 error_code=None,
                 error_message=info["pause_reason"],
             )
-        except Exception:
+        except (IndexError, KeyError):
             pass
         logger.warning(
             "%s paused after %d consecutive failures (%s) — "
@@ -5293,7 +5293,7 @@ class GatewayRunner(
                 with open(cfg_path, encoding="utf-8") as _f:
                     cfg = _y.safe_load(_f) or {}
                 return cfg.get("provider_routing", {}) or {}
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError):
             pass
         return {}
 
@@ -5315,7 +5315,7 @@ class GatewayRunner(
                 fb = get_fallback_chain(cfg)
                 if fb:
                     return fb
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError):
             pass
         return None
 
@@ -5342,7 +5342,7 @@ class GatewayRunner(
                 return self._fallback_model
             with open(cfg_path, encoding="utf-8") as _f:
                 cfg = _y.safe_load(_f) or {}
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError):
             # Transient failure — keep last known-good chain.
             logger.debug(
                 "fallback_providers refresh: config.yaml read failed; "
@@ -5402,7 +5402,7 @@ class GatewayRunner(
             from hercules_cli.active_sessions import resolve_max_concurrent_sessions
 
             return resolve_max_concurrent_sessions(getattr(self, "config", None))
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError):
             return None
 
     def _active_session_limit_message(self, session_key: str) -> Optional[str]:
@@ -5486,7 +5486,7 @@ class GatewayRunner(
                 with lock:
                     return bool(children)
             return bool(children)
-        except Exception:
+        except (ValueError):
             return False
 
     async def _session_has_compression_in_flight(self, session_key: str) -> bool:
@@ -5522,7 +5522,7 @@ class GatewayRunner(
                 raw_db.get_compression_lock_holder, str(session_id)
             )
             return bool(holder)
-        except Exception:
+        except (ValueError):
             return False
 
     @staticmethod
@@ -5928,7 +5928,7 @@ class GatewayRunner(
                     status_parts.append(f"iteration {iteration}/{max_iter}")
                 if current_tool:
                     status_parts.append(f"running: {current_tool}")
-            except Exception:
+            except (ValueError):
                 pass
 
         status_detail = f" ({', '.join(status_parts)})" if status_parts else ""
@@ -6166,7 +6166,7 @@ class GatewayRunner(
                             reply_to_message_id = getattr(
                                 restart_source, "message_id", None
                             )
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
                 metadata = self._thread_metadata_for_target(
@@ -6351,7 +6351,7 @@ class GatewayRunner(
                     platform="gateway",
                     reason="shutdown",
                 )
-            except Exception:
+            except (AttributeError, ImportError, ModuleNotFoundError):
                 pass
             # Off-loop + bounded: a wedged memory provider here used to hang
             # the whole shutdown so SIGTERM never completed (#53175).
@@ -6452,7 +6452,7 @@ class GatewayRunner(
                     agent.shutdown_memory_provider(session_messages)
                 else:
                     agent.shutdown_memory_provider()
-        except Exception:
+        except (AttributeError):
             pass
         # Close tool resources (terminal sandboxes, browser daemons,
         # background processes, httpx clients) to prevent zombie
@@ -6470,7 +6470,7 @@ class GatewayRunner(
             from agent.auxiliary_client import cleanup_stale_async_clients
 
             cleanup_stale_async_clients()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     _STUCK_LOOP_THRESHOLD = 3  # restarts while active before auto-suspend
@@ -6571,7 +6571,7 @@ class GatewayRunner(
                     atomic_json_write(path, counts, indent=None)
                 else:
                     path.unlink(missing_ok=True)
-        except Exception:
+        except (IndexError, KeyError):
             pass
 
     async def _launch_detached_restart_command(self) -> None:
@@ -6666,7 +6666,7 @@ class GatewayRunner(
                 watcher_python, _watcher_venv_dir, _watcher_site_packages = (
                     _resolve_detached_python(sys.executable)
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 watcher_python = sys.executable
             venv_dir = Path(watcher_env.get("VIRTUAL_ENV") or project_root / "venv")
             site_packages = venv_dir / "Lib" / "site-packages"
@@ -6749,7 +6749,7 @@ class GatewayRunner(
                 from hercules_cli.gateway import get_service_name
 
                 service_name = get_service_name()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 service_name = "hercules-gateway"
 
             current_pid = os.getpid()
@@ -6778,7 +6778,7 @@ class GatewayRunner(
                         timeout=2,
                     )
                     return (out.stdout or "").strip()
-                except Exception:
+                except (IndexError, KeyError, subprocess.CalledProcessError):
                     return ""
 
             system_pid = _query_pid([])
@@ -7188,7 +7188,7 @@ class GatewayRunner(
                 "or HERCULES_MAX_ITERATIONS from .env, or default 90)",
                 _effective_max_iter,
             )
-        except Exception:
+        except (ValueError):
             pass
         # Redaction status: ON by default (#17691). Surface a prominent
         # warning if an operator has explicitly opted out so they don't
@@ -7219,13 +7219,13 @@ class GatewayRunner(
             _profile = get_active_profile_name()
             if _profile and _profile != "default":
                 logger.info("Active profile: %s", _profile)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         try:
             from gateway.status import write_runtime_status
 
             write_runtime_status(gateway_state="starting", exit_reason=None)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         # Log any active supply-chain security advisories. Operators see this
@@ -7247,7 +7247,7 @@ class GatewayRunner(
                     "Run `hercules doctor` on the gateway host for full "
                     "remediation steps."
                 )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug(
                 "security advisory check failed at gateway startup",
                 exc_info=True,
@@ -7318,7 +7318,7 @@ class GatewayRunner(
                 for e in platform_registry.plugin_entries()
                 if e.allow_all_env
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         _any_allowlist = any(
             os.getenv(v) for v in _builtin_allowed_vars + _plugin_allowed_vars
@@ -7358,7 +7358,7 @@ class GatewayRunner(
                 from gateway.status import write_runtime_status
 
                 write_runtime_status(gateway_state="startup_failed", exit_reason=reason)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             self._request_clean_exit(reason)
             return True
@@ -7373,7 +7373,7 @@ class GatewayRunner(
             from hercules_cli.plugins import discover_plugins
 
             discover_plugins()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning(
                 "plugin discovery failed at gateway startup",
                 exc_info=True,
@@ -7406,7 +7406,7 @@ class GatewayRunner(
                 # behavior governs relay delivery (Phase 6 Unit ζ). Runs after
                 # the secret is resolved; never raises, never blocks boot.
                 send_relay_policy()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning(
                 "relay adapter registration failed at gateway startup",
                 exc_info=True,
@@ -7426,7 +7426,7 @@ class GatewayRunner(
             from agent.shell_hooks import register_from_config
 
             register_from_config(load_config(), accept_hooks=False)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug(
                 "shell-hook registration failed at gateway startup",
                 exc_info=True,
@@ -7645,7 +7645,7 @@ class GatewayRunner(
                 from gateway.status import write_runtime_status
 
                 write_runtime_status(gateway_state="startup_failed", exit_reason=reason)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             self._exit_code = GATEWAY_FATAL_CONFIG_EXIT_CODE
             self._request_clean_exit(reason)
@@ -7666,7 +7666,7 @@ class GatewayRunner(
                     write_runtime_status(
                         gateway_state="startup_failed", exit_reason=reason
                     )
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
                 self._exit_code = GATEWAY_FATAL_CONFIG_EXIT_CODE
                 self._request_clean_exit(reason)
@@ -7698,7 +7698,7 @@ class GatewayRunner(
                             gateway_state="degraded",
                             exit_reason=None,
                         )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
                     # Fall through to the normal "running" state — reconnect
                     # watcher takes it from here.
@@ -8206,7 +8206,7 @@ class GatewayRunner(
                                 platform=_platform,
                                 reason="session_expired",
                             )
-                        except Exception:
+                        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                             pass
                         # Shut down memory provider and close tool resources
                         # on the cached agent.  Idle agents live in
@@ -8367,7 +8367,7 @@ class GatewayRunner(
             from hercules_cli.profiles import get_active_profile_name
 
             return get_active_profile_name() or "default"
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return "default"
 
     # ── Kanban board watchers ───────────────────────────────────────────
@@ -8475,7 +8475,7 @@ class GatewayRunner(
                             )
 
                             await build_channel_directory(self.adapters)
-                        except Exception:
+                        except (ImportError, ModuleNotFoundError):
                             pass
 
                         # A platform that was offline at gateway startup never
@@ -9077,7 +9077,7 @@ class GatewayRunner(
 
         try:
             from hercules_cli.profiles import profiles_to_serve, get_active_profile_name
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return 0
 
         active = get_active_profile_name() or "default"
@@ -9125,7 +9125,7 @@ class GatewayRunner(
                 if name and name not in self.pairing_stores:
                     self.pairing_stores[name] = PairingStore(profile=name)
             write_runtime_status(served_profiles=served)
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
             logger.debug("could not record served_profiles", exc_info=True)
 
         return connected
@@ -9240,7 +9240,7 @@ class GatewayRunner(
                     and not event.source.profile
                 ):
                     event.source.profile = profile_name
-            except Exception:
+            except (AttributeError):
                 pass
             return await self._handle_message(event)
 
@@ -9483,7 +9483,7 @@ class GatewayRunner(
                 )
                 if getattr(result, "success", False):
                     return
-            except Exception:
+            except (AttributeError):
                 logger.debug(
                     "[%s] send_private_notice failed, falling back to public",
                     getattr(source, "platform", "?"),
@@ -9522,7 +9522,7 @@ class GatewayRunner(
             from gateway.session_context import reset_session_vars
 
             reset_session_vars()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug("reset_session_vars failed at handler entry", exc_info=True)
 
         if (
@@ -9673,7 +9673,7 @@ class GatewayRunner(
                         from hercules_cli.commands import (
                             resolve_command as _resolve_update_cmd,
                         )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         _resolve_update_cmd = None
                     if _resolve_update_cmd is not None:
                         try:
@@ -9743,7 +9743,7 @@ class GatewayRunner(
                 _quick_key,
                 include_choice_prompts=True,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _pending_clarify = None
         if _pending_clarify is not None and _clarify_mod is not None:
             _raw_clarify_reply = (event.text or "").strip()
@@ -9785,7 +9785,7 @@ class GatewayRunner(
             from tools.approval import has_blocking_approval
 
             _tool_approval_live = has_blocking_approval(_quick_key)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _tool_approval_live = False
         if _pending_confirm and not _tool_approval_live:
             _raw_reply = (event.text or "").strip()
@@ -9855,7 +9855,7 @@ class GatewayRunner(
                         f"({_stale_idle:.0f}s ago) "
                         f"| iteration={_sa.get('api_call_count', 0)}/{_sa.get('max_iterations', 0)}"
                     )
-                except Exception:
+                except (ValueError):
                     pass
             # Evict if: agent is idle beyond timeout, OR wall-clock age is
             # extreme (10x timeout or 2h, whichever is larger — catches
@@ -10488,7 +10488,7 @@ class GatewayRunner(
                 if adapter:
                     _ack_meta = self._thread_metadata_for_source(source)
                     await adapter.send(str(source.chat_id), _ack, metadata=_ack_meta)
-            except Exception:
+            except (ValueError):
                 logger.debug("learn ack send failed", exc_info=True)
             try:
                 event.text = build_learn_prompt(_learn_req)
@@ -10544,7 +10544,7 @@ class GatewayRunner(
                             await adapter.send(
                                 str(source.chat_id), _ack, metadata=_ack_meta
                             )
-                    except Exception:
+                    except (ValueError):
                         logger.debug("blueprint ack send failed", exc_info=True)
                 try:
                     event.text = _blueprint_seed
@@ -10874,7 +10874,7 @@ class GatewayRunner(
                         extra_keys, stacked_instruction = split_stacked_skill_commands(
                             user_instruction
                         )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         _build_stacked = None
                         extra_keys, stacked_instruction = [], user_instruction
                     if extra_keys and _plat:
@@ -11080,7 +11080,7 @@ class GatewayRunner(
             else:
                 self._session_model_overrides[quick_key] = _restore
             self._evict_cached_agent(quick_key)
-        except Exception:
+        except (AttributeError, IndexError, KeyError):
             pass
 
     async def _prepare_inbound_message_text(
@@ -11399,9 +11399,9 @@ class GatewayRunner(
                         _msg_custom_providers = get_compatible_custom_providers(
                             _msg_cfg
                         )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         _msg_custom_providers = _msg_cfg.get("custom_providers") or []
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
                 # Resolve the session's actual model/provider/base_url the
                 # same way the hygiene compression block does (~11080).
@@ -11439,7 +11439,7 @@ class GatewayRunner(
                         )
                         if _msg_custom_ctx:
                             _msg_config_ctx = _msg_custom_ctx
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
                 _msg_ctx_len = await get_model_context_length_async(
                     _msg_model,
@@ -11513,7 +11513,7 @@ class GatewayRunner(
             self._session_sources = cached_sources
         try:
             cached_sources[session_key] = dataclasses.replace(source)
-        except Exception:
+        except (IndexError, KeyError):
             logger.debug(
                 "Failed to cache live session source for %s", session_key, exc_info=True
             )
@@ -11524,7 +11524,7 @@ class GatewayRunner(
             max_size = getattr(self, "_session_sources_max", 512)
             while len(cached_sources) > max_size:
                 cached_sources.popitem(last=False)
-        except Exception:
+        except (AttributeError):
             pass
 
     @property
@@ -11653,7 +11653,7 @@ class GatewayRunner(
                     if self._session_db
                     else None
                 )
-            except Exception:
+            except (ValueError):
                 logger.debug("Failed to read Telegram topic binding", exc_info=True)
                 binding = None
             if binding:
@@ -11777,7 +11777,7 @@ class GatewayRunner(
         try:
             _pcfg = _load_gateway_config()
             _redact_pii = bool((_pcfg.get("privacy") or {}).get("redact_pii", False))
-        except Exception:
+        except (ValueError):
             pass
 
         # Build the context prompt to inject
@@ -12008,7 +12008,7 @@ class GatewayRunner(
                             )
 
                             _hyg_custom_providers = _gw_gcp(_hyg_data)
-                        except Exception:
+                        except (ImportError, ModuleNotFoundError):
                             _hyg_custom_providers = _hyg_data.get("custom_providers")
                             if not isinstance(_hyg_custom_providers, list):
                                 _hyg_custom_providers = []
@@ -12027,7 +12027,7 @@ class GatewayRunner(
                                 break
                     except (TypeError, ValueError):
                         pass
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 pass
 
             if _hyg_compression_enabled:
@@ -12581,7 +12581,7 @@ class GatewayRunner(
                     agent_result,
                     response,
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 _intentional_silence = False
 
             # Convert the agent's internal "(empty)" sentinel into a
@@ -12688,7 +12688,7 @@ class GatewayRunner(
                     platform=source.platform,
                     require_platform_override_for={Platform.MATTERMOST},
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 _show_reasoning_effective = (
                     False
                     if source.platform == Platform.MATTERMOST
@@ -12716,7 +12716,7 @@ class GatewayRunner(
                             "reasoning_style",
                             "code",
                         )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         _reasoning_style = "code"
                     if _reasoning_style == "subtext":
                         _quoted = "\n".join(
@@ -13214,7 +13214,7 @@ class GatewayRunner(
                             session_entry.session_id,
                             _user_entry,
                         )
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "Failed to persist inbound user message after agent exception",
                     exc_info=True,
@@ -13237,7 +13237,7 @@ class GatewayRunner(
                         _err_json = _err_body.json().get("error", {})
                         if not isinstance(_err_json, dict):
                             _err_json = {}
-                except Exception:
+                except (ValueError):
                     pass
                 if _err_json.get("type") == "usage_limit_reached":
                     _resets_in = _err_json.get("resets_in_seconds")
@@ -13331,9 +13331,9 @@ class GatewayRunner(
                     from hercules_cli.config import get_compatible_custom_providers
 
                     custom_provs = get_compatible_custom_providers(data)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     custom_provs = data.get("custom_providers")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         # Also check custom_providers for context_length when top-level model.context_length is not set
@@ -13370,7 +13370,7 @@ class GatewayRunner(
                                     break
                                 except (TypeError, ValueError):
                                     pass
-            except Exception:
+            except (ValueError):
                 pass
 
         # Resolve runtime credentials for probing
@@ -13557,7 +13557,7 @@ class GatewayRunner(
                     return True
                 return False
             data = json.loads(marker_path.read_text())
-        except Exception:
+        except (AttributeError):
             return False
 
         if data.get("platform") != platform_value:
@@ -13596,7 +13596,7 @@ class GatewayRunner(
                     "chat_name": getattr(source, "chat_name", None),
                     "thread_id": getattr(source, "thread_id", None),
                 }
-        except Exception:
+        except (AttributeError, ValueError):
             origin = None
         try:
             from hercules_cli.suggestions_cmd import handle_suggestions_command
@@ -13631,7 +13631,7 @@ class GatewayRunner(
                     "chat_name": getattr(source, "chat_name", None),
                     "thread_id": getattr(source, "thread_id", None),
                 }
-        except Exception:
+        except (AttributeError, ValueError):
             origin = None
         try:
             from hercules_cli.blueprint_cmd import handle_blueprint_command
@@ -13664,7 +13664,7 @@ class GatewayRunner(
 
                 goals_cfg = (load_config() or {}).get("goals") or {}
             return int(goals_cfg.get("max_turns", 20) or 20)
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
             return 20
 
     async def _get_goal_manager_for_event(self, event: "MessageEvent"):
@@ -13803,7 +13803,7 @@ class GatewayRunner(
             from hercules_cli.goals import gather_background_processes as _gather_bg
 
             _bg_procs = _gather_bg()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _bg_procs = None
 
         decision = mgr.evaluate_after_turn(
@@ -14059,7 +14059,7 @@ class GatewayRunner(
                     .replace("@here", "@\u200bhere")
                 )
                 await channel.send(f"**[Voice]** <@{user_id}>: {safe_text}")
-        except Exception:
+        except (IndexError, KeyError):
             pass
 
         # Build a synthetic MessageEvent and feed through the normal pipeline
@@ -14618,7 +14618,7 @@ class GatewayRunner(
         if callable(create_topic):
             try:
                 thread_id = await create_topic(int(source.chat_id), "System")
-            except Exception:
+            except (ValueError):
                 logger.debug("Failed to create Telegram System topic", exc_info=True)
         if not thread_id:
             return
@@ -14631,7 +14631,7 @@ class GatewayRunner(
                 metadata={"thread_id": str(thread_id)},
             )
             message_id = getattr(send_result, "message_id", None)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("Failed to send Telegram System topic intro", exc_info=True)
         if not message_id:
             return
@@ -14645,7 +14645,7 @@ class GatewayRunner(
                 message_id=int(message_id),
                 disable_notification=True,
             )
-        except Exception:
+        except (ValueError):
             logger.debug("Failed to pin Telegram System topic intro", exc_info=True)
 
     async def _send_telegram_topic_setup_image(self, source: SessionSource) -> None:
@@ -14673,7 +14673,7 @@ class GatewayRunner(
                 if source.thread_id
                 else None,
             )
-        except Exception:
+        except (ValueError):
             logger.debug("Failed to send Telegram topic setup image", exc_info=True)
 
     def _sanitize_telegram_topic_title(self, title: str) -> str:
@@ -14737,7 +14737,7 @@ class GatewayRunner(
                 thread_name,
                 only_if_current_name=getattr(source, "auto_thread_initial_name", None),
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "Failed to rename Discord auto-thread for generated session title",
                 exc_info=True,
@@ -14818,7 +14818,7 @@ class GatewayRunner(
                     operator_topic = get_info(
                         adapter, str(source.chat_id), str(source.thread_id)
                     )
-                except Exception:
+                except (ValueError):
                     operator_topic = None
                 # Only treat dict-shaped returns as operator-declared; a
                 # bare MagicMock or other sentinel shouldn't count.
@@ -14834,7 +14834,7 @@ class GatewayRunner(
                 )
                 if binding and str(binding.get("session_id") or "") != str(session_id):
                     return
-            except Exception:
+            except (ValueError):
                 logger.debug(
                     "Failed to verify Telegram topic binding before rename",
                     exc_info=True,
@@ -14876,7 +14876,7 @@ class GatewayRunner(
                     message_thread_id=source.thread_id,
                     name=topic_name,
                 )
-        except Exception:
+        except (ValueError):
             logger.debug(
                 "Failed to rename Telegram topic for auto-generated title",
                 exc_info=True,
@@ -15006,7 +15006,7 @@ class GatewayRunner(
                 chat_id=chat_id,
                 user_id=str(source.user_id or ""),
             )
-        except Exception:
+        except (ValueError):
             currently_enabled = False
         if not currently_enabled:
             return "Multi-session topic mode is not currently enabled for this chat."
@@ -15043,7 +15043,7 @@ class GatewayRunner(
                 user_id=str(source.user_id),
                 limit=10,
             )
-        except Exception:
+        except (ValueError):
             logger.debug("Failed to list unlinked Telegram sessions", exc_info=True)
             sessions = []
 
@@ -15124,7 +15124,7 @@ class GatewayRunner(
                 if message.get("role") == "assistant" and message.get("content"):
                     last_assistant = str(message.get("content"))
                     break
-        except Exception:
+        except (ValueError):
             last_assistant = None
 
         response = f"Session restored: {title}"
@@ -15212,7 +15212,7 @@ class GatewayRunner(
                                 _agent = (
                                     _entry[0] if isinstance(_entry, tuple) else _entry
                                 )
-                            except Exception:
+                            except (IndexError, KeyError):
                                 continue
                             if _agent is None:
                                 continue
@@ -15320,7 +15320,7 @@ class GatewayRunner(
                 confirm_required = bool(
                     approvals.get("destructive_slash_confirm", True)
                 )
-        except Exception:
+        except (ValueError):
             pass
 
         if not confirm_required:
@@ -15462,7 +15462,7 @@ class GatewayRunner(
 
             cfg = load_config()
             return cfg if isinstance(cfg, dict) else {}
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return {}
 
     def _thread_metadata_for_source(
@@ -15540,7 +15540,7 @@ class GatewayRunner(
                     topic_info = get_dm_topic_info(
                         adapter, str(chat_id), str(thread_id)
                     )
-                except Exception:
+                except (ValueError):
                     logger.debug(
                         "Failed to inspect Telegram DM topic metadata", exc_info=True
                     )
@@ -16614,7 +16614,7 @@ class GatewayRunner(
                         raise ValueError(platform_name)
                 except Exception as exc:
                     raise ValueError(platform_name) from exc
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning(
                 "Synthetic process event has invalid platform metadata: %r",
                 platform_name,
@@ -17036,7 +17036,7 @@ class GatewayRunner(
             }
             cls._HONCHO_CACHE_BUSTING_MEMO = {memo_key: values}
             return dict(values)
-        except Exception:
+        except (ValueError):
             return cls._empty_honcho_cache_busting_config()
 
     @classmethod
@@ -17065,7 +17065,7 @@ class GatewayRunner(
             from tools.registry import registry
 
             out["tools.registry_generation"] = getattr(registry, "_generation", None)
-        except Exception:
+        except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError):
             out["tools.registry_generation"] = None
 
         # Honcho identity-mapping keys live in honcho.json, not user_config.
@@ -17316,7 +17316,7 @@ class GatewayRunner(
 
         try:
             from tools import slash_confirm as _slash_confirm_mod
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _slash_confirm_mod = None
         if _slash_confirm_mod is not None:
             try:
@@ -17330,7 +17330,7 @@ class GatewayRunner(
 
         try:
             from tools.approval import clear_session as _clear_approval_session
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return
 
         try:
@@ -17394,7 +17394,7 @@ class GatewayRunner(
             interrupt_event = getattr(adapter, "_active_sessions", {}).get(session_key)
             if interrupt_event is not None:
                 setattr(interrupt_event, "_hercules_run_generation", int(generation))
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     async def _interrupt_and_clear_session(
@@ -17565,7 +17565,7 @@ class GatewayRunner(
                 daemon=True,
                 name=f"agent-evict-{str(session_key)[:24]}",
             ).start()
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             # If we can't spawn a thread (interpreter shutdown), release
             # inline as a best-effort fallback.
             try:
@@ -18361,7 +18361,7 @@ class GatewayRunner(
                 user_config, platform_key, "tool_preview_length", 0
             )
             set_tool_preview_max_len(int(_tpl) if _tpl else 0)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
 
         # Apply friendly tool labels config (default on) — per-platform aware
@@ -18372,7 +18372,7 @@ class GatewayRunner(
                 user_config, platform_key, "friendly_tool_labels", True
             )
             set_friendly_tool_labels(bool(_ftl))
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
 
         # Tool progress mode — resolved per-platform with env var fallback
@@ -18669,7 +18669,7 @@ class GatewayRunner(
                     _agent_for_interrupt, "is_interrupted", False
                 ):
                     return
-            except Exception:
+            except (AttributeError, IndexError, KeyError):
                 pass
 
             # "new" mode: only report when tool changes
@@ -18935,7 +18935,7 @@ class GatewayRunner(
                 _raw_progress_limit = int(
                     getattr(adapter, "MAX_MESSAGE_LENGTH", 4000) or 4000
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 _raw_progress_limit = 4000
             # Leave a little room for platform quirks / formatting.  For tiny
             # test adapters keep the limit usable instead of clamping to 500+.
@@ -19070,7 +19070,7 @@ class GatewayRunner(
                             # Drop this event and continue draining.
                             await asyncio.sleep(0)
                             continue
-                    except Exception:
+                    except (AttributeError, IndexError, KeyError):
                         pass
 
                     # Handle dedup messages: update last line with repeat counter
@@ -19243,7 +19243,7 @@ class GatewayRunner(
                             else:
                                 progress_lines.append(raw)
                                 await _roll_progress_overflow_if_needed()
-                        except Exception:
+                        except (IndexError, KeyError):
                             break
                     # Final edit with all remaining tools (only if editing works)
                     if can_edit and progress_lines and progress_msg_id:
@@ -19725,7 +19725,7 @@ class GatewayRunner(
                         daemon=True,
                         name=f"agent-xproc-evict-{str(session_key)[:24]}",
                     ).start()
-                except Exception:
+                except (IndexError, KeyError, ValueError):
                     # Interpreter shutdown or thread-spawn failure — release
                     # inline as a best-effort fallback.
                     try:
@@ -20403,7 +20403,7 @@ class GatewayRunner(
                     )
 
                     _clear_clarify_session(_approval_session_key)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
                 reset_current_session_key(_approval_session_token)
             result_holder[0] = result
@@ -20524,7 +20524,7 @@ class GatewayRunner(
                                 session_id,
                                 agent_session_id,
                             )
-                    except Exception:
+                    except (ValueError):
                         logger.debug(
                             "Failed to restore thread_id from binding after session split",
                             exc_info=True,
@@ -20970,7 +20970,7 @@ class GatewayRunner(
                             _parts.append(str(_action))
                         if _parts:
                             _status_detail = " — " + ", ".join(_parts)
-                    except Exception:
+                    except (ValueError):
                         pass
                 _heartbeat_text = (
                     _generic_status_phrase("status")
@@ -21024,7 +21024,7 @@ class GatewayRunner(
                 if callable(has_delivered_text):
                     try:
                         return bool(has_delivered_text(final_text))
-                    except Exception:
+                    except (ValueError):
                         return False
             return False
 
@@ -21260,7 +21260,7 @@ class GatewayRunner(
                         _cfg_model = normalize_model_for_provider(
                             _cfg_model, _agent_provider
                         )
-                except Exception:
+                except (AttributeError, ImportError, ModuleNotFoundError):
                     pass
                 if _agent.model != _cfg_model and not self._is_intentional_model_switch(
                     session_key, _agent.model
@@ -21400,7 +21400,7 @@ class GatewayRunner(
                             )
                             pending_event = None
                             pending = None
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
 
             if self._draining and (pending_event or pending):
@@ -22129,7 +22129,7 @@ async def start_gateway(
                     from gateway.status import clear_takeover_marker
 
                     clear_takeover_marker()
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
                 return False
             # Wait up to 10 seconds for the old process to exit.
@@ -22177,7 +22177,7 @@ async def start_gateway(
                         from gateway.status import clear_takeover_marker
 
                         clear_takeover_marker()
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
                     return False
             remove_pid_file()
@@ -22193,7 +22193,7 @@ async def start_gateway(
                 from gateway.status import clear_takeover_marker
 
                 clear_takeover_marker()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             # Also release all scoped locks left by the old process.
             # Stopped (Ctrl+Z) processes don't release locks on exit,
@@ -22209,7 +22209,7 @@ async def start_gateway(
                     logger.info(
                         "Released %d stale scoped lock(s) from old gateway.", _released
                     )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
         else:
             hercules_home = str(get_hercules_home())
@@ -22232,7 +22232,7 @@ async def start_gateway(
         from tools.skills_sync import sync_skills
 
         sync_skills(quiet=True)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Centralized logging — agent.log (INFO+), errors.log (WARNING+),
@@ -22254,7 +22254,7 @@ async def start_gateway(
             from hercules_cli.config import read_raw_config
 
             _audit_cfg = read_raw_config()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _audit_cfg = None
         log_startup_security_warnings(hercules_home=_hercules_home, config=_audit_cfg)
     except Exception as _audit_exc:
@@ -22524,7 +22524,7 @@ async def start_gateway(
             from tools.mcp_tool import shutdown_mcp_servers
 
             shutdown_mcp_servers()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         if runner.exit_code is not None:
             raise SystemExit(runner.exit_code)
@@ -22601,7 +22601,7 @@ async def start_gateway(
         from tools.mcp_tool import shutdown_mcp_servers
 
         shutdown_mcp_servers()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     if runner.exit_code is not None:
@@ -22642,7 +22642,7 @@ def main():
         from hercules_cli.stdio import configure_windows_stdio
 
         configure_windows_stdio()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     import argparse
@@ -22737,7 +22737,7 @@ def _exit_after_graceful_shutdown(exit_code: int) -> None:
 
         remove_pid_file()
         release_gateway_runtime_lock()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     # Drain the async log queue: os._exit bypasses atexit, so the listener's
     # atexit drain won't fire. Use drain_log_queue() (bounded, no restart), NOT
@@ -22749,7 +22749,7 @@ def _exit_after_graceful_shutdown(exit_code: int) -> None:
         from hercules_logging import drain_log_queue
 
         drain_log_queue(timeout=1.0)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     os._exit(exit_code)
 

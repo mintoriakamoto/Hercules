@@ -522,7 +522,7 @@ def _image_dimensions_from_b64(image_b64: str) -> Optional[Tuple[int, int]]:
         try:
             width, height = struct.unpack(">II", raw[16:24])
             return int(width), int(height)
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             return None
 
     # JPEG: scan for SOF markers that carry dimensions.
@@ -878,7 +878,7 @@ def _route_capture_through_aux_vision(
         if temp_image_path is not None:
             try:
                 _os.unlink(str(temp_image_path))
-            except Exception:
+            except (ValueError):
                 pass
 
     analysis_text = ""

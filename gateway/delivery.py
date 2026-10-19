@@ -125,7 +125,7 @@ def _classify_dead_from_error_text(error_text: Optional[str]) -> Optional[str]:
         return None
     try:
         from .platforms.base import classify_send_error, is_chat_level_not_found
-    except Exception:  # pragma: no cover - import guard
+    except (ImportError, ModuleNotFoundError):
         return None
     kind = classify_send_error(None, error_text=error_text)
     if not DeadTargetRegistry.is_dead_error_kind(kind):

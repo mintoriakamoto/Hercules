@@ -211,7 +211,7 @@ def _get_sudo_password_cache_scope() -> str:
         from gateway.session_context import get_session_env
 
         session_key = get_session_env("HERCULES_SESSION_KEY", "")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         session_key = os.getenv("HERCULES_SESSION_KEY", "")
     if session_key:
         return f"session:{session_key}"
@@ -458,7 +458,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
                 result["password"] = b"".join(chars).decode("utf-8", errors="replace")
         except (EOFError, KeyboardInterrupt, OSError):
             result["password"] = ""
-        except Exception:
+        except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError, OSError):
             result["password"] = ""
         finally:
             if tty_fd is not None and old_attrs is not None:
@@ -533,7 +533,7 @@ def _safe_command_preview(command: Any, limit: int = 200) -> str:
         return command[:limit]
     try:
         return repr(command)[:limit]
-    except Exception:
+    except (IndexError, KeyError):
         return f"<{type(command).__name__}>"
 
 
@@ -731,7 +731,7 @@ def _sudo_nopasswd_works() -> bool:
             check=False,
         )
         return probe.returncode == 0
-    except Exception:
+    except (IndexError, KeyError, subprocess.CalledProcessError):
         return False
 
 
@@ -1573,7 +1573,7 @@ def _create_environment(
                     in inspect.signature(modal.Sandbox.create).parameters
                 ):
                     sandbox_kwargs["ephemeral_disk"] = disk
-            except Exception:
+            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                 pass
 
         modal_state = _get_modal_backend_state(cc.get("modal_mode"))
@@ -2934,7 +2934,7 @@ def terminal_tool(
                     if isinstance(hook_result, str):
                         output = hook_result
                         break
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
             # Truncate output if too long, keeping both head and tail
@@ -3000,7 +3000,7 @@ def terminal_tool(
                         "scope": evidence.get("scope"),
                         "canonical_command": evidence.get("canonical_command"),
                     }
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug("verification evidence recording failed", exc_info=True)
             if approval_note:
                 # Treat rc=130 as an interrupt only when the executor's marker is

@@ -448,7 +448,7 @@ def _capture_required_environment_variables(
                 entry["prompt"],
                 metadata,
             )
-        except Exception:
+        except (IndexError, KeyError):
             logger.warning(
                 f"Secret capture callback failed for {entry['name']}", exc_info=True
             )
@@ -525,7 +525,7 @@ def _gateway_setup_hint() -> str:
         from gateway.platforms.base import GATEWAY_SECRET_CAPTURE_UNSUPPORTED_MESSAGE
 
         return GATEWAY_SECRET_CAPTURE_UNSUPPORTED_MESSAGE
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return f"Secure secret entry is not available. Load this skill in the local CLI to be prompted, or add the key to {display_hercules_home()}/.env manually."
 
 
@@ -573,7 +573,7 @@ def _get_category_from_path(skill_path: Path) -> Optional[str]:
         from agent.skill_utils import get_external_skills_dirs
 
         dirs_to_check.extend(get_external_skills_dirs())
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     for skills_dir in dirs_to_check:
         try:
@@ -638,7 +638,7 @@ def _get_session_platform() -> str:
         from gateway.session_context import get_session_env
 
         return get_session_env("HERCULES_SESSION_PLATFORM") or ""
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return ""
 
 
@@ -669,7 +669,7 @@ def _is_skill_disabled(name: str, platform: Optional[str] = None) -> bool:
                 # in sync with agent.skill_utils.get_disabled_skill_names.
                 return name in platform_disabled or name in global_disabled
         return name in global_disabled
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -1046,7 +1046,7 @@ def _serve_plugin_skill(
             banner = (
                 f"[Bundle context: This skill is part of the '{namespace}' plugin.]\n\n"
             )
-    except Exception:
+    except (IndexError, KeyError):
         banner = ""
 
     rendered_content = content
@@ -1059,7 +1059,7 @@ def _serve_plugin_skill(
                 skill_md.parent,
                 session_id=session_id,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug(
                 "Could not preprocess plugin skill %s:%s",
                 namespace,
@@ -1358,7 +1358,7 @@ def skill_view(
         _trusted_dirs = [active_skills_dir.resolve()]
         try:
             _trusted_dirs.extend(d.resolve() for d in all_dirs[1:])
-        except Exception:
+        except (IndexError, KeyError):
             pass
         for _td in _trusted_dirs:
             try:
@@ -1511,7 +1511,7 @@ def skill_view(
                 from tools.skill_manager_tool import mark_background_review_skill_read
 
                 mark_background_review_skill_read(target_file)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug(
                     "Could not record background-review skill read for %s",
                     target_file,
@@ -1647,7 +1647,7 @@ def skill_view(
                 from tools.env_passthrough import register_env_passthrough
 
                 register_env_passthrough(available_env_names)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug(
                     "Could not register env passthrough for skill %s",
                     skill_name,
@@ -1668,7 +1668,7 @@ def skill_view(
                 missing_cred_files = register_credential_files(required_cred_files_raw)
                 if missing_cred_files:
                     setup_needed = True
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug(
                     "Could not register credential files for skill %s",
                     skill_name,
@@ -1685,7 +1685,7 @@ def skill_view(
                     skill_dir,
                     session_id=task_id,
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug(
                     "Could not preprocess skill content for %s",
                     skill_name,
@@ -1728,7 +1728,7 @@ def skill_view(
             from tools.skill_manager_tool import mark_background_review_skill_read
 
             mark_background_review_skill_read(skill_md)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug(
                 "Could not record background-review skill read for %s",
                 skill_md,
@@ -1890,7 +1890,7 @@ def _skill_view_with_bump(args, **kw):
                 # to act on it — that counts as use, not just a browse/view.
                 # Curator's stale timer keys off last_used_at (see agent/curator.py).
                 bump_use(str(resolved))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     return result
 

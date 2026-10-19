@@ -217,7 +217,7 @@ def is_interactive_stdin() -> bool:
         return False
     try:
         return bool(stdin.isatty())
-    except Exception:
+    except (ValueError):
         return False
 
 
@@ -457,7 +457,7 @@ def _print_setup_summary(config: dict, hercules_home):
         from agent.auxiliary_client import get_available_vision_backends
 
         _vision_backends = get_available_vision_backends()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _vision_backends = []
 
     if _vision_backends:
@@ -638,7 +638,7 @@ def _print_setup_summary(config: dict, hercules_home):
         _spotify_state = get_provider_auth_state("spotify") or {}
         if _spotify_state.get("access_token") or _spotify_state.get("refresh_token"):
             tool_status.append(("Spotify (PKCE OAuth)", True, None))
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Skills Hub
@@ -965,7 +965,7 @@ def _xai_oauth_logged_in_for_setup() -> bool:
         from hercules_cli.auth import get_xai_oauth_auth_status
 
         return bool(get_xai_oauth_auth_status().get("logged_in"))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -2333,12 +2333,12 @@ def _model_section_has_credentials(config: dict) -> bool:
 
         if get_active_provider():
             return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     try:
         from hercules_cli.auth import PROVIDER_REGISTRY
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         PROVIDER_REGISTRY = {}  # type: ignore[assignment]
 
     def _has_key(pconfig) -> bool:
@@ -2789,7 +2789,7 @@ def run_setup_wizard(args):
             import shutil
 
             shutil.copy2(config_path, _backup_path)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _backup_path = None
     else:
         _backup_path = None

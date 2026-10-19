@@ -140,7 +140,7 @@ def _read_suppressed_names() -> set:
         from tools.skill_usage import read_suppressed_names
 
         return read_suppressed_names()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         path = SKILLS_DIR / ".curator_suppressed"
         if not path.exists():
             return set()
@@ -280,7 +280,7 @@ def _content_hash(directory: Path) -> str:
         from tools.skills_guard import content_hash
 
         return content_hash(directory)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Hashing is provenance metadata only; keep sync resilient if guard
         # dependencies are unavailable in a packaged/update context.
         return _dir_hash(directory)

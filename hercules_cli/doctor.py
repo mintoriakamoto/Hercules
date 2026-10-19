@@ -113,7 +113,7 @@ def _honcho_is_configured_for_doctor() -> bool:
 
         cfg = HonchoClientConfig.from_global_config()
         return bool(cfg.enabled and (cfg.api_key or cfg.base_url))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -174,14 +174,14 @@ def _has_healthy_oauth_fallback_for_apikey_provider(provider_label: str) -> bool
             from hercules_cli.auth import get_minimax_oauth_auth_status
 
             return bool((get_minimax_oauth_auth_status() or {}).get("logged_in"))
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             return False
     if normalized == "xai":
         try:
             from hercules_cli.auth import get_xai_oauth_auth_status
 
             return bool((get_xai_oauth_auth_status() or {}).get("logged_in"))
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             return False
     return False
 
@@ -232,7 +232,7 @@ def _enabled_cli_toolsets_for_doctor() -> set[str] | None:
         return {
             str(toolset) for toolset in _get_platform_tools(load_config() or {}, "cli")
         }
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return None
 
 
@@ -287,7 +287,7 @@ def _check_version_consistency(issues: list[str]) -> None:
     """
     try:
         from hercules_cli import __version__ as init_version
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
     pyproject_version = _read_pyproject_version()
     if pyproject_version is None:
@@ -323,7 +323,7 @@ def _check_s6_supervision(issues: list[str]) -> None:
             S6ServiceManager,
             detect_service_manager,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
 
     if detect_service_manager() != "s6":
@@ -568,7 +568,7 @@ def _build_apikey_providers_list() -> list:
 
         try:
             from hercules_cli.providers import normalize_provider as _normalize_provider
-        except Exception:  # pragma: no cover - normalization is best-effort
+        except (ImportError, ModuleNotFoundError):
 
             def _normalize_provider(_name: str) -> str:
                 return (_name or "").strip().lower()
@@ -613,7 +613,7 @@ def _build_apikey_providers_list() -> list:
             )
             _hc = getattr(_pp, "supports_health_check", True)
             _static.append((_label, _key_vars, _models_url, _base_var, _hc))
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError):
         pass
     return _static
 
@@ -630,7 +630,7 @@ def managed_scope_check() -> None:
         from hercules_cli import managed_scope
 
         managed_dir = managed_scope.get_managed_dir()
-    except Exception:  # diagnostics must never crash
+    except (ImportError, ModuleNotFoundError):
         return
     if managed_dir is None:
         return
@@ -672,7 +672,7 @@ def check_tenselerate(issues: list[str]) -> None:
             configured = provider in {"tenselerate", "svmi"} or (
                 provider == "custom" and cfg_base in {base, TENSELERATE_BASE.rstrip("/")}
             )
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         configured = False
 
     detail = ""
@@ -990,7 +990,7 @@ def run_doctor(args):
                     "custom",
                     "auto",
                 }
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 _resolve_auth_provider = None
                 pass
             try:
@@ -1001,7 +1001,7 @@ def run_doctor(args):
                     normalize_provider as _normalize_catalog_provider,
                     resolve_provider_full as _resolve_provider_full,
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 _compatible_custom_providers = None
                 _normalize_catalog_provider = None
                 _resolve_provider_full = None
@@ -1161,7 +1161,7 @@ def run_doctor(args):
                             ),
                             issues,
                         )
-                except Exception:
+                except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
                     pass
 
         except Exception as e:
@@ -1258,7 +1258,7 @@ def run_doctor(args):
                     issues.append(
                         "Stale root-level provider/base_url in config.yaml — run 'hercules doctor --fix'"
                     )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError):
             pass
 
         # Detect stale HERCULES_MAX_ITERATIONS ghost in .env shadowing
@@ -1314,7 +1314,7 @@ def run_doctor(args):
                         "Stale HERCULES_MAX_ITERATIONS in .env shadows config.yaml — "
                         "run 'hercules doctor --fix'"
                     )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError, ValueError):
             pass
 
         # Validate config structure (catches malformed custom_providers, etc.)
@@ -1333,7 +1333,7 @@ def run_doctor(args):
                     for hint_line in ci.hint.splitlines():
                         check_info(hint_line)
                     issues.append(ci.message)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     _section("xAI Model Retirement (May 15, 2026)")
@@ -1408,7 +1408,7 @@ def run_doctor(args):
             check_warn("xAI OAuth", "(not logged in)")
             if xai_oauth_status.get("error"):
                 check_info(xai_oauth_status["error"])
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     _section("Directory Structure")
@@ -1569,7 +1569,7 @@ def run_doctor(args):
                                 "SELECT COUNT(*) FROM sessions"
                             ).fetchone()[0]
                             conn.close()
-                        except Exception:
+                        except (IndexError, KeyError, ValueError):
                             count = "?"
                         backup_name = (
                             Path(report["backup_path"]).name
@@ -1631,7 +1631,7 @@ def run_doctor(args):
                 check_info(
                     f"WAL file is {wal_size // (1024 * 1024)} MB (normal for active sessions)"
                 )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
 
     _check_gateway_service_linger(issues)
@@ -1744,7 +1744,7 @@ def run_doctor(args):
         from hercules_constants import is_container as _is_container
 
         running_in_container = _is_container()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         running_in_container = False
 
     if running_in_container:
@@ -1905,7 +1905,7 @@ def run_doctor(args):
                     _get_cdp_override,
                     _using_lightpanda_engine,
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 # If browser_tool can't even import, that's a separate bug
                 # surfaced elsewhere; don't crash doctor.
                 pass
@@ -1964,7 +1964,7 @@ def run_doctor(args):
             from gateway.platforms.whatsapp_common import resolve_whatsapp_bridge_dir
 
             _whatsapp_bridge_dir = resolve_whatsapp_bridge_dir()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _whatsapp_bridge_dir = PROJECT_ROOT / "scripts" / "whatsapp-bridge"
         npm_audit_targets = [
             (PROJECT_ROOT, "Browser tools (agent-browser)", ["--workspaces=false"]),
@@ -2454,7 +2454,7 @@ def run_doctor(args):
             auth_mode = str(model_cfg.get("auth_mode") or "").strip().lower()
             if cfg_provider != "azure-foundry" or auth_mode != "entra_id":
                 return _ConnectivityResult("Azure Foundry (Entra ID)", [], [])
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             return _ConnectivityResult("Azure Foundry (Entra ID)", [], [])
 
         try:
@@ -2641,7 +2641,7 @@ def run_doctor(args):
                 lock_data = json.loads(lock_file.read_text())
                 count = len(lock_data.get("installed", {}))
                 check_ok(f"Lock file OK ({count} hub-installed skill(s))")
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 check_warn("Lock file", "(corrupted or unreadable)")
         quarantine = hub_dir / "quarantine"
         q_count = (
@@ -2697,10 +2697,10 @@ def run_doctor(args):
                 from hercules_cli import managed_scope
 
                 _raw_cfg = managed_scope.apply_managed_overlay(_raw_cfg)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             _active_memory_provider = (_raw_cfg.get("memory") or {}).get("provider", "")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     if not _active_memory_provider:

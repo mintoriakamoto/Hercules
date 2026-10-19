@@ -293,11 +293,11 @@ def _probe_anthropic_messages(
             if exc.code == 400 and ("messages" in lowered or "model" in lowered):
                 return True
             return False
-        except Exception:
+        except (OSError):
             return False
     except (URLError, TimeoutError, OSError):
         return False
-    except Exception:  # pragma: no cover
+    except (OSError):
         return False
 
 
@@ -393,7 +393,7 @@ def lookup_context_length(
             DEFAULT_FALLBACK_CONTEXT,
             get_model_context_length,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     # Resolve the credential once. For Entra mode this calls the token

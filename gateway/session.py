@@ -375,7 +375,7 @@ def _discord_tools_loaded() -> bool:
         cfg = load_config()
         enabled = _get_platform_tools(cfg, "discord", include_default_mcp_servers=False)
         return "discord" in enabled or "discord_admin" in enabled
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -422,7 +422,7 @@ def build_session_context_prompt(
             entry = platform_registry.get(context.source.platform.value)
             if entry and entry.pii_safe:
                 _is_pii_safe = True
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
     redact_pii = redact_pii and _is_pii_safe
     lines = [
@@ -1073,7 +1073,7 @@ class SessionStore:
         """
         try:
             return str(Path(self.sessions_dir).resolve())
-        except Exception:
+        except (ValueError):
             return str(self.sessions_dir)
 
     def _ensure_loaded_locked(self) -> None:
@@ -1360,7 +1360,7 @@ class SessionStore:
             from hercules_cli.profiles import get_active_profile_name
 
             return get_active_profile_name() or "default"
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return None
 
     @staticmethod
@@ -1380,7 +1380,7 @@ class SessionStore:
             from hercules_cli.profiles import get_active_profile_name
 
             return get_active_profile_name() or "default"
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return "default"
 
     def _recovered_row_allowed_for_active_profile(

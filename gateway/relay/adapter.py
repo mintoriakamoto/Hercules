@@ -296,7 +296,7 @@ class RelayAdapter(BasePlatformAdapter):
             user_id = getattr(src, "user_id", None)
             if user_id:
                 _remember_chat_hint(self._dm_user_by_chat, str(chat), str(user_id))
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def _with_scope(
@@ -391,7 +391,7 @@ class RelayAdapter(BasePlatformAdapter):
                 getattr(forward, "method", "?"),
                 getattr(forward, "path", "?"),
             )
-        except Exception:
+        except (AttributeError):
             logger.warning("relay passthrough_forward handling failed", exc_info=True)
 
     def _discord_interaction_to_event(self, forward):
@@ -410,7 +410,7 @@ class RelayAdapter(BasePlatformAdapter):
 
         try:
             payload = json.loads(bytes(getattr(forward, "body", b"")).decode("utf-8"))
-        except Exception:
+        except (AttributeError):
             return None
         if not isinstance(payload, dict):
             return None
@@ -503,7 +503,7 @@ class RelayAdapter(BasePlatformAdapter):
             if asyncio.iscoroutine(result):
                 return bool(await result)
             return bool(result)
-        except Exception:
+        except (ValueError):
             logger.debug("relay go_dormant failed", exc_info=True)
             return False
 

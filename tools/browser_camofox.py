@@ -107,7 +107,7 @@ def _config_cdp_url() -> str:
         browser_cfg = read_raw_config().get("browser", {})
         if isinstance(browser_cfg, dict):
             return str(browser_cfg.get("cdp_url", "") or "").strip()
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     return ""
 
@@ -153,7 +153,7 @@ def check_camofox_available() -> bool:
                 pass
             _vnc_url_checked = True
         return resp.status_code == 200
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -581,7 +581,7 @@ def camofox_navigate(url: str, task_id: Optional[str] = None) -> str:
                 snapshot_text = _truncate_snapshot(snapshot_text)
             result["snapshot"] = snapshot_text
             result["element_count"] = snap_data.get("refsCount", 0)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # Navigation succeeded; snapshot is a bonus
 
         return json.dumps(result)
@@ -954,7 +954,7 @@ def camofox_vision(
             _vision_cfg = cfg_get(_cfg, "auxiliary", "vision", default={})
             _vision_timeout = float(_vision_cfg.get("timeout", 120))
             _vision_temperature = float(_vision_cfg.get("temperature", 0.1))
-        except Exception:
+        except (ValueError):
             _vision_timeout = 120.0
             _vision_temperature = 0.1
 

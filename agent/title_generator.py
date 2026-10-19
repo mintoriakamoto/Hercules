@@ -44,7 +44,7 @@ def _title_language() -> str:
             .get("title_generation", {})
             .get("language", "")
         ).strip()
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return ""
 
 

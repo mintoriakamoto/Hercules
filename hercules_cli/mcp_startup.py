@@ -18,7 +18,7 @@ def _has_configured_mcp_servers() -> bool:
 
         mcp_servers = (read_raw_config() or {}).get("mcp_servers")
         return isinstance(mcp_servers, dict) and len(mcp_servers) > 0
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Be conservative: if config probing fails, try discovery in the
         # background so startup still can't block.
         return True
@@ -67,7 +67,7 @@ def _resolve_discovery_timeout(explicit: "float | None") -> float:
         raw = (load_config() or {}).get("mcp_discovery_timeout", default)
         val = float(raw)
         return val if val > 0 else default
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return 1.5
 
 
@@ -75,7 +75,7 @@ def _discover_mcp_tools_without_interactive_oauth() -> None:
     """Run MCP discovery without letting OAuth read from the user's stdin."""
     try:
         from tools.mcp_oauth import suppress_interactive_oauth
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         suppress_interactive_oauth = nullcontext
 
     with suppress_interactive_oauth():

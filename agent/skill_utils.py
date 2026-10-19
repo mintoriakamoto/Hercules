@@ -246,14 +246,14 @@ def _detect_environment(env: str) -> bool:
                 from tools.kanban_tools import _profile_has_kanban_toolset
 
                 result = bool(_profile_has_kanban_toolset())
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 result = False
     elif env == "docker":
         try:
             from hercules_constants import is_container
 
             result = is_container()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             result = False
     elif env == "s6":
         # The Hercules Docker image runs s6-overlay as PID 1 (/init). s6 plants
@@ -536,7 +536,7 @@ def normalize_skill_lookup_name(identifier: str) -> str:
         from tools import skills_tool as _skills_tool
 
         primary_root = Path(_skills_tool.SKILLS_DIR)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         primary_root = get_skills_dir()
 
     trusted_roots = [primary_root]
@@ -558,7 +558,7 @@ def normalize_skill_lookup_name(identifier: str) -> str:
 
     try:
         return str(identifier_path.resolve().relative_to(primary_root.resolve()))
-    except Exception:
+    except (ValueError):
         logger.debug(
             "Skill identifier %r is an absolute path outside trusted skills "
             "roots — passing through unchanged (skill_view will reject it)",

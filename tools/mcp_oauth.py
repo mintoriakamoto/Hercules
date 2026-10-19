@@ -620,7 +620,7 @@ async def _redirect_handler(authorization_url: str) -> None:
                     "  (Could not open browser — please open the URL manually.)\n",
                     file=sys.stderr,
                 )
-        except Exception:
+        except (OSError):
             print(
                 "  (Could not open browser — please open the URL manually.)\n",
                 file=sys.stderr,

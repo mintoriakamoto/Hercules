@@ -100,7 +100,7 @@ def _allowlist_env_for_platform(platform: str) -> Optional[str]:
         entry = platform_registry.get(platform)
         if entry and entry.allowed_users_env:
             return entry.allowed_users_env
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return None
 
@@ -132,7 +132,7 @@ def _sync_allowlist_add(platform: str, user_id: str) -> None:
         from hercules_cli.config import save_env_value
 
         save_env_value(env_var, ",".join(ids))
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Best-effort: the pairing store grant still authorizes via the union,
         # so a failure here degrades to "grant recorded but not mirrored".
         pass
@@ -157,7 +157,7 @@ def _sync_allowlist_remove(platform: str, user_id: str) -> None:
             save_env_value(env_var, ",".join(remaining))
         else:
             remove_env_value(env_var)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 

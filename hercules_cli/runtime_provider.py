@@ -93,7 +93,7 @@ def _config_base_url_trustworthy_for_bare_custom(
 
         if _resolve_provider(cfg_provider_norm) == "custom":
             return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     if base_url_host_matches(bu, "openrouter.ai"):
         return False
@@ -344,7 +344,7 @@ def _copilot_runtime_api_mode(model_cfg: Dict[str, Any], api_key: str) -> str:
         from hercules_cli.models import copilot_model_api_mode
 
         return copilot_model_api_mode(model_name, api_key=api_key)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "chat_completions"
 
 
@@ -494,7 +494,7 @@ def _resolve_runtime_from_pool_entry(
                 from hercules_cli.models import azure_foundry_model_api_mode
 
                 inferred = azure_foundry_model_api_mode(effective_model)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 inferred = None
             if inferred:
                 api_mode = inferred
@@ -618,7 +618,7 @@ def _try_resolve_from_custom_pool(
             "source": f"pool:{pool_key}",
             "credential_pool": pool,
         }
-    except Exception:
+    except (AttributeError):
         return None
 
 
@@ -937,7 +937,7 @@ def canonical_custom_identity(
     if not candidate:
         try:
             candidate = str(_get_model_config().get("provider") or "").strip()
-        except Exception:
+        except (ValueError):
             candidate = ""
     if not candidate:
         candidate = os.environ.get("HERCULES_INFERENCE_PROVIDER", "").strip()
@@ -992,7 +992,7 @@ def _resolve_named_custom_runtime(
 
             if _resolve_provider(requested_norm) == "custom":
                 requested_norm = "custom"
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
     if requested_norm == "custom" and explicit_base_url:
         base_url = explicit_base_url.strip().rstrip("/")
@@ -1149,7 +1149,7 @@ def _resolve_openrouter_runtime(
 
             if _resolve_provider(requested_norm) == "custom":
                 requested_norm = "custom"
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     env_openrouter_base_url = _getenv("OPENROUTER_BASE_URL", "").strip()
@@ -1325,7 +1325,7 @@ def _resolve_azure_foundry_runtime(
             from hercules_cli.models import azure_foundry_model_api_mode
 
             inferred = azure_foundry_model_api_mode(effective_model)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             inferred = None
         if inferred:
             cfg_api_mode = inferred
@@ -1414,7 +1414,7 @@ def _resolve_azure_foundry_runtime(
             from hercules_cli.config import get_env_value
 
             api_key = get_env_value("AZURE_FOUNDRY_API_KEY") or ""
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             api_key = ""
     if not api_key:
         api_key = _getenv("AZURE_FOUNDRY_API_KEY", "").strip()
@@ -1610,7 +1610,7 @@ def local_only_mode_enabled() -> bool:
         return _config_truthy(
             cfg_get(load_config(), "providers", "local_only", default=False)
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 

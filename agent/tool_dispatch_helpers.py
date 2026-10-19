@@ -99,7 +99,7 @@ def _is_mcp_tool_parallel_safe(tool_name: str) -> bool:
         from tools.mcp_tool import is_mcp_tool_parallel_safe
 
         return is_mcp_tool_parallel_safe(tool_name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -320,7 +320,7 @@ def _extract_error_preview(result: Any, max_len: int = 180) -> str:
     if not isinstance(text, str):
         try:
             text = str(text)
-        except Exception:
+        except (ValueError):
             return ""
     # Try to parse JSON and pull the ``error`` field — tool handlers return
     # ``{"success": false, "error": "..."}``; raw string wins if parse fails.

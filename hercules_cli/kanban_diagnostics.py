@@ -139,7 +139,7 @@ def _task_field(task, name, default=None):
         # dicts return default via .get. Handle both.
         if hasattr(task, "keys") and name in task.keys():
             return task[name]
-    except Exception:
+    except (IndexError, KeyError):
         pass
     if isinstance(task, dict):
         return task.get(name, default)

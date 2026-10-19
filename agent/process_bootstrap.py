@@ -204,7 +204,7 @@ def build_keepalive_http_client(
             mounts=mounts or None,
             verify=verify,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError, httpx.HTTPStatusError, httpx.RequestError):
         return None
 
 

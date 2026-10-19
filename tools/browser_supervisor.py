@@ -49,7 +49,7 @@ def _redact_cdp_error_text(exc: object) -> str:
         from agent.redact import redact_cdp_url
 
         return redact_cdp_url(str(exc))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return "<error redacted>"
 
 
@@ -384,7 +384,7 @@ class CDPSupervisor:
                 from agent.redact import redact_cdp_url
 
                 _safe_url = redact_cdp_url(self.cdp_url)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 _safe_url = "<cdp_url redacted>"
             raise TimeoutError(
                 f"CDP supervisor did not attach within {timeout}s "
@@ -655,7 +655,7 @@ class CDPSupervisor:
                     loop.run_until_complete(
                         asyncio.gather(*pending, return_exceptions=True)
                     )
-            except Exception:
+            except (IndexError, KeyError):
                 pass
             try:
                 loop.close()

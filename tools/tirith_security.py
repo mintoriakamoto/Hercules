@@ -80,7 +80,7 @@ def _load_security_config() -> dict:
         from hercules_cli.config import load_config
 
         cfg = load_config().get("security", {}) or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         cfg = {}
 
     return {

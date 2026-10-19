@@ -207,7 +207,7 @@ def _check_fn_cached(fn: Callable) -> bool:
     raised = False
     try:
         value = bool(fn())
-    except Exception:
+    except (ValueError):
         value = False
         raised = True
 
@@ -653,7 +653,7 @@ class ToolRegistry:
                 from model_tools import _sanitize_tool_error
 
                 sanitized = _sanitize_tool_error(raw)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 sanitized = (
                     raw  # defensive: never let the sanitizer block error propagation
                 )
