@@ -1508,7 +1508,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
 
         try:
             payload = _json.loads(raw)
-        except Exception:
+        except (ValueError):
             logger.warning("[whatsapp_cloud] webhook body is not valid JSON")
             return web.Response(status=400)
 

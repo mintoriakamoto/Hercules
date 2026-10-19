@@ -740,13 +740,13 @@ def _parse_judge_response(raw: str) -> Tuple[str, str, bool, Optional[Dict[str, 
     data: Optional[Dict[str, Any]] = None
     try:
         data = json.loads(text)
-    except Exception:
+    except (ValueError):
         # Second try: pull the first JSON object out.
         match = _JSON_OBJECT_RE.search(text)
         if match:
             try:
                 data = json.loads(match.group(0))
-            except Exception:
+            except (ValueError):
                 data = None
 
     if not isinstance(data, dict):
@@ -1108,13 +1108,13 @@ def _extract_json_object(raw: str) -> Optional[Dict[str, Any]]:
             text = text[nl + 1 :]
     try:
         data = json.loads(text)
-    except Exception:
+    except (ValueError):
         match = _JSON_OBJECT_RE.search(text)
         if not match:
             return None
         try:
             data = json.loads(match.group(0))
-        except Exception:
+        except (ValueError):
             return None
     return data if isinstance(data, dict) else None
 

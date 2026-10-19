@@ -352,7 +352,7 @@ def stop_and_transcribe() -> Optional[str]:
         try:
             if os.path.isfile(wav_path):
                 os.unlink(wav_path)
-        except Exception:
+        except (OSError):
             pass
 
     # transcribe_recording returns {"success": bool, "transcript": str, ...}
@@ -641,7 +641,7 @@ def _continuous_on_silence() -> None:
             try:
                 if os.path.isfile(wav_path):
                     os.unlink(wav_path)
-            except Exception:
+            except (OSError):
                 pass
 
     with _continuous_lock:

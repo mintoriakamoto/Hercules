@@ -640,7 +640,7 @@ def _github_token() -> Optional[str]:
                 tok = gh.get("token") or gh.get("access_token")
                 if isinstance(tok, str) and tok.strip():
                     return tok.strip()
-    except Exception:
+    except (ValueError, ZeroDivisionError):
         pass
     return None
 

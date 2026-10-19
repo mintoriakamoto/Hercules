@@ -912,7 +912,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
             body = raw.decode("utf-8", errors="replace")
             try:
                 payload = json.loads(body)
-            except Exception:
+            except (ValueError):
                 from urllib.parse import parse_qs
 
                 form = parse_qs(body)

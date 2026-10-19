@@ -90,7 +90,7 @@ def _load_usage() -> dict[str, dict[str, Any]]:
         path = get_hercules_home() / "skills" / ".usage.json"
         try:
             return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+        except (ValueError):
             return {}
 
 

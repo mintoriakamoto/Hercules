@@ -94,7 +94,7 @@ def _relay_bot_ids_map() -> dict:
     try:
         parsed = json.loads(raw)
         return parsed if isinstance(parsed, dict) else {}
-    except Exception:
+    except (ValueError):
         logging.getLogger("gateway.relay").warning(
             "GATEWAY_RELAY_BOT_IDS is not valid JSON; treating as empty"
         )
@@ -585,7 +585,7 @@ def self_provision_relay() -> bool:
 
     try:
         host = socket.gethostname().strip()
-    except Exception:
+    except (OSError, httpx.HTTPStatusError, httpx.RequestError):
         host = ""
     gateway_id = (
         os.environ.get("GATEWAY_RELAY_ID", "").strip() or f"gw-{host or 'hercules'}"

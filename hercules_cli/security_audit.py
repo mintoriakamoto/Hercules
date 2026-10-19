@@ -144,7 +144,7 @@ def _parse_pyproject_pins(text: str) -> list[tuple[str, str]]:
         return []
     try:
         data = tomllib.loads(text)
-    except Exception:
+    except (ValueError):
         return []
     deps: list[str] = []
     project = data.get("project") or {}

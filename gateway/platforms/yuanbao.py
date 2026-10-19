@@ -1161,7 +1161,7 @@ class DecodeMiddleware(InboundMiddleware):
             if isinstance(msg_content, str):
                 try:
                     msg_content = json.loads(msg_content)
-                except Exception:
+                except (ValueError):
                     msg_content = {"text": msg_content}
             result.append({"msg_type": msg_type, "msg_content": msg_content or {}})
         return result

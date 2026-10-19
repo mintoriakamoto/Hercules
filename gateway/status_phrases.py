@@ -91,7 +91,7 @@ def _merge_phrase_file(
 ) -> None:
     try:
         loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (yaml.YAMLError):
         return
     if isinstance(loaded, Mapping):
         _merge_phrase_mapping(catalog, loaded, inherited_mode=inherited_mode)

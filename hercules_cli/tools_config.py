@@ -756,7 +756,7 @@ def _cua_install_target_writable() -> bool:
         if not os.path.isdir(applications_dir):
             return True
         return os.access(applications_dir, os.W_OK)
-    except Exception:
+    except (OSError):
         return True
 
 

@@ -1060,7 +1060,7 @@ async def _vision_analyze_native(
             if should_cleanup and temp_image_path.exists():
                 try:
                     temp_image_path.unlink()
-                except Exception:
+                except (OSError):
                     pass
             temp_image_path = normalized_path
             should_cleanup = True
@@ -1124,7 +1124,7 @@ async def _vision_analyze_native(
             try:
                 if temp_image_path.exists():
                     temp_image_path.unlink()
-            except Exception:
+            except (OSError):
                 pass
 
 
@@ -1240,7 +1240,7 @@ async def vision_analyze_tool(
             if should_cleanup and temp_image_path.exists():
                 try:
                     temp_image_path.unlink()
-                except Exception:
+                except (OSError):
                     pass
             temp_image_path = normalized_path
             should_cleanup = True

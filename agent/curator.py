@@ -731,7 +731,7 @@ def _classify_removed_skills(
         elif isinstance(raw, str):
             try:
                 args = json.loads(raw)
-            except Exception:
+            except (ValueError):
                 # Truncated or malformed — fall back to substring match on
                 # the raw string so we still catch the common case.
                 args = {"_raw": raw}
@@ -928,7 +928,7 @@ def _extract_absorbed_into_declarations(
         elif isinstance(raw, str):
             try:
                 args = json.loads(raw)
-            except Exception:
+            except (ValueError):
                 continue
         if not isinstance(args, dict):
             continue

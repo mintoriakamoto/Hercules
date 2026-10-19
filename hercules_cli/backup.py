@@ -175,7 +175,7 @@ def _collect_memory_provider_external_paths() -> List[Path]:
     for raw in declared:
         try:
             p = Path(raw).expanduser()
-        except Exception:
+        except (OSError):
             continue
         if not p.exists():
             continue

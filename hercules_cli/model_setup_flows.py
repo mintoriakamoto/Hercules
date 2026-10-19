@@ -443,7 +443,7 @@ def _model_flow_xai_oauth(_config, current_model="", *, args=None):
     try:
         creds = resolve_xai_oauth_runtime_credentials()
         base_url = (creds.get("base_url") or "").strip().rstrip("/") or base_url
-    except Exception:
+    except (ZeroDivisionError):
         pass
 
     models = list(

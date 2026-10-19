@@ -49,7 +49,7 @@ def _default_gateway_id() -> str:
     host = ""
     try:
         host = socket.gethostname().strip()
-    except Exception:
+    except (OSError, httpx.HTTPStatusError, httpx.RequestError):
         host = ""
     return f"gw-{host or 'hercules'}"
 

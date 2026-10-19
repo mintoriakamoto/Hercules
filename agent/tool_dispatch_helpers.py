@@ -117,7 +117,7 @@ def _should_parallelize_tool_batch(tool_calls) -> bool:
         tool_name = tool_call.function.name
         try:
             function_args = json.loads(tool_call.function.arguments)
-        except Exception:
+        except (ValueError):
             logging.debug(
                 "Could not parse args for %s — defaulting to sequential; raw=%s",
                 tool_name,
@@ -214,7 +214,7 @@ def _multimodal_text_summary(value: Any) -> str:
         return value
     try:
         return json.dumps(value, default=str)
-    except Exception:
+    except (ValueError):
         return str(value)
 
 
@@ -296,7 +296,7 @@ def _extract_landed_file_mutation_paths(
         return targets
     try:
         data = json.loads(result.strip())
-    except Exception:
+    except (ValueError):
         return targets
     if not isinstance(data, dict):
         return targets

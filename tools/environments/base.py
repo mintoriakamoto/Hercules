@@ -161,7 +161,7 @@ def _load_json_store(path: Path) -> dict:
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+        except (ValueError):
             pass
     return {}
 

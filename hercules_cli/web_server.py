@@ -2727,7 +2727,7 @@ def _collect_profile_gateway_topology() -> Dict[str, Any]:
             continue
         try:
             runtime = read_runtime_status(home / "gateway_state.json")
-        except Exception:
+        except (ZeroDivisionError):
             runtime = None
         served = [str(p) for p in ((runtime or {}).get("served_profiles") or [])]
         if name == "default" and len(served) > 1:
@@ -5019,7 +5019,7 @@ def _read_json_file(path: Path) -> Dict[str, Any]:
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         _log.debug("Failed to read JSON config from %s", path, exc_info=True)
         return {}
     return data if isinstance(data, dict) else {}
@@ -7272,7 +7272,7 @@ def _whatsapp_linked_account_from_session(
     creds_path = session_path / "creds.json"
     try:
         payload = json.loads(creds_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         return None, None, None
 
     account_id: str | None = None
@@ -16666,7 +16666,7 @@ def _discover_user_themes() -> list:
     for f in sorted(themes_dir.glob("*.yaml")):
         try:
             data = yaml.safe_load(f.read_text(encoding="utf-8"))
-        except Exception:
+        except (yaml.YAMLError):
             continue
         normalised = _normalise_theme_definition(data)
         if normalised is not None:
@@ -17548,7 +17548,7 @@ def _write_dashboard_ready_file(actual_port: int) -> None:
         if tmp_name:
             try:
                 Path(tmp_name).unlink(missing_ok=True)
-            except Exception:
+            except (OSError):
                 pass
         _log.warning("Failed to write dashboard ready file %r: %s", target, exc)
 

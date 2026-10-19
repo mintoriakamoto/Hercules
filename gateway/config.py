@@ -306,7 +306,7 @@ class Platform(Enum):
                         )
                     ):
                         names.add(child.name.lower())
-        except Exception:
+        except (OSError, ZeroDivisionError, yaml.YAMLError):
             pass
         return names
 
@@ -2131,7 +2131,7 @@ def _apply_env_overrides(config: GatewayConfig) -> None:
         if bluebubbles_mention_patterns:
             try:
                 parsed_patterns = json.loads(bluebubbles_mention_patterns)
-            except Exception:
+            except (ValueError):
                 parsed_patterns = [
                     part.strip()
                     for part in bluebubbles_mention_patterns.replace("\n", ",").split(

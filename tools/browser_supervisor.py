@@ -888,7 +888,7 @@ class CDPSupervisor:
                     break
                 try:
                     msg = json.loads(raw)
-                except Exception:
+                except (ValueError):
                     logger.debug("CDP supervisor: non-JSON frame dropped")
                     continue
                 if "id" in msg:

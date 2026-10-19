@@ -968,7 +968,7 @@ def _resolve_shell_init_files() -> list[str]:
     for raw in candidates:
         try:
             path = os.path.expandvars(os.path.expanduser(raw))
-        except Exception:
+        except (OSError):
             continue
         if path and os.path.isfile(path):
             resolved.append(path)
@@ -1293,5 +1293,5 @@ class LocalEnvironment(BaseEnvironment):
                     os.unlink(tmp)
                 except OSError:
                     pass
-        except Exception:
+        except (OSError):
             pass

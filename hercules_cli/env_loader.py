@@ -215,7 +215,7 @@ def _sanitize_env_file_if_needed(path: Path) -> None:
                 except OSError:
                     pass
                 raise
-    except Exception:
+    except (OSError):
         pass  # best-effort — don't block gateway startup
 
 

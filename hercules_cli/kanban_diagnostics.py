@@ -156,7 +156,7 @@ def _parse_payload(ev) -> dict:
     if isinstance(p, str):
         try:
             return json.loads(p) or {}
-        except Exception:
+        except (ValueError):
             return {}
     return {}
 

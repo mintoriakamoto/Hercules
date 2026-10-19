@@ -103,7 +103,7 @@ def log_memory_usage(prefix: str = "") -> None:
     # Thread count is a handy correlate when diagnosing thread leaks.
     try:
         thread_count = threading.active_count()
-    except Exception:
+    except (RuntimeError):
         thread_count = 0
 
     tag = f"{prefix} " if prefix else ""

@@ -907,7 +907,7 @@ def _postprocess_image_generate_result(raw: str, task_id: str | None = None) -> 
     """
     try:
         payload = json.loads(raw) if isinstance(raw, str) else raw
-    except Exception:
+    except (ValueError):
         return raw
 
     if not isinstance(payload, dict) or not payload.get("success"):

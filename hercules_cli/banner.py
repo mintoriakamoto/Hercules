@@ -463,7 +463,7 @@ def check_for_updates() -> Optional[int]:
                 and cached.get("ver") == VERSION
             ):
                 return cached.get("behind")
-    except Exception:
+    except (ValueError):
         pass
 
     if embedded_rev:
@@ -492,7 +492,7 @@ def check_for_updates() -> Optional[int]:
                 "ver": VERSION,
             })
         )
-    except Exception:
+    except (ValueError):
         pass
 
     return behind

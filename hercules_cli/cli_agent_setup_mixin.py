@@ -76,7 +76,7 @@ class CLIAgentSetupMixin:
                         self.model = _fb_model
                         _primary_exc = None
                         break
-                    except Exception:
+                    except (ZeroDivisionError):
                         continue
 
         if runtime is None:

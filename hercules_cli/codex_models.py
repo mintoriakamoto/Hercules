@@ -147,7 +147,7 @@ def _read_default_model(codex_home: Path) -> Optional[str]:
         return None
     try:
         payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         return None
     model = payload.get("model") if isinstance(payload, dict) else None
     if isinstance(model, str) and model.strip():
@@ -161,7 +161,7 @@ def _read_cache_models(codex_home: Path) -> List[str]:
         return []
     try:
         raw = json.loads(cache_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         return []
 
     entries = raw.get("models") if isinstance(raw, dict) else None

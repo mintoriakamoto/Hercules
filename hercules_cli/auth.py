@@ -4284,7 +4284,7 @@ def _print_loopback_ssh_hint(redirect_uri: str, *, docs_url: str | None = None) 
         return
     try:
         parsed = urlparse(redirect_uri)
-    except Exception:
+    except (ValueError):
         return
     host = parsed.hostname or ""
     port = parsed.port
@@ -4727,7 +4727,7 @@ def _import_codex_cli_tokens() -> Optional[Dict[str, str]]:
             )
             return None
         return dict(tokens)
-    except Exception:
+    except (ValueError, ZeroDivisionError):
         return None
 
 
@@ -5282,7 +5282,7 @@ def _xai_validate_inference_base_url(value: str, *, fallback: str) -> str:
         return fallback
     try:
         parsed = urlparse(candidate)
-    except Exception:
+    except (ValueError):
         logger.warning(
             "Ignoring malformed xAI base_url override %r; using %s instead.",
             candidate,

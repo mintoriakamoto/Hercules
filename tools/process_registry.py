@@ -1965,7 +1965,7 @@ class ProcessRegistry:
 
         try:
             entries = json.loads(CHECKPOINT_PATH.read_text(encoding="utf-8"))
-        except Exception:
+        except (ValueError):
             return 0
 
         recovered = 0

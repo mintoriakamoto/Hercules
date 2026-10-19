@@ -3195,7 +3195,7 @@ def _iter_pool_sockets(client: Any):
                 if callable(get_extra_info):
                     try:
                         sock = get_extra_info("socket")
-                    except Exception:
+                    except (OSError, httpx.HTTPStatusError, httpx.RequestError):
                         sock = None
             if sock is None:
                 wrapped = getattr(stream, "stream", None)

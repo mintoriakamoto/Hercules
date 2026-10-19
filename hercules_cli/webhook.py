@@ -45,7 +45,7 @@ def _load_subscriptions() -> Dict[str, dict]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}
-    except Exception:
+    except (ValueError):
         return {}
 
 

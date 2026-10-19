@@ -171,7 +171,7 @@ def _load_skill_payload(
     elif skill_path:
         try:
             skill_dir = SKILLS_DIR / Path(skill_path).parent
-        except Exception:
+        except (OSError, ZeroDivisionError):
             skill_dir = None
 
     return loaded_skill, skill_dir, skill_name

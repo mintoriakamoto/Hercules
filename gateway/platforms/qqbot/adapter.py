@@ -918,7 +918,7 @@ class QQAdapter(BasePlatformAdapter):
     def _parse_json(raw: Any) -> Optional[Dict[str, Any]]:
         try:
             payload = json.loads(raw)
-        except Exception:
+        except (ValueError):
             logger.warning("[QQBot] Failed to parse JSON: %r", raw)
             return None
         return payload if isinstance(payload, dict) else None

@@ -998,7 +998,7 @@ class MemoryManager:
         if isinstance(result, str):
             try:
                 result = json.loads(result)
-            except Exception:
+            except (ValueError):
                 return False
         if not isinstance(result, dict):
             return False

@@ -1732,7 +1732,7 @@ def _setup_telegram_auto_result():
     profile_name: str | None = None
     try:
         profile_name = _profile_name_from_hercules_home(Path(get_hercules_home()))
-    except Exception:
+    except (OSError):
         pass
 
     return auto_setup_telegram_bot_result(profile_name=profile_name)

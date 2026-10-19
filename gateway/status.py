@@ -549,11 +549,11 @@ def _cleanup_invalid_pid_path(pid_path: Path, *, cleanup_stale: bool) -> None:
     _clear_running_pid_cache()
     try:
         pid_path.unlink(missing_ok=True)
-    except Exception:
+    except (OSError):
         pass
     try:
         _get_gateway_lock_path(pid_path).unlink(missing_ok=True)
-    except Exception:
+    except (OSError):
         pass
 
 

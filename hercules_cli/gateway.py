@@ -647,7 +647,7 @@ def find_profile_gateway_processes(
     for profile in list_profiles():
         try:
             pid = get_running_pid(profile.path / "gateway.pid", cleanup_stale=False)
-        except Exception:
+        except (ZeroDivisionError):
             continue
         if pid is None or pid <= 0 or pid in _exclude or pid in seen:
             continue

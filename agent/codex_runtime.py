@@ -681,7 +681,7 @@ def _consume_codex_event_stream(
                 # Control-flow signals from watchdog/cancellation hooks must
                 # propagate, not get swallowed as "debug noise".
                 raise
-            except Exception:
+            except (ZeroDivisionError):
                 # Genuine bugs in third-party debug/log hooks shouldn't break
                 # stream consumption.
                 logger.debug("Codex stream on_event hook raised", exc_info=True)

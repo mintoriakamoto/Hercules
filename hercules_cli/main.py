@@ -7156,7 +7156,7 @@ def _invalidate_update_cache():
             cache_file = home / ".update_check"
             if cache_file.exists():
                 cache_file.unlink()
-        except Exception:
+        except (OSError, ZeroDivisionError):
             pass
 
 
@@ -7320,7 +7320,7 @@ def _recover_from_interrupted_install() -> None:
                             except OSError:
                                 pass
                             return
-                except Exception:
+                except (OSError):
                     pass  # psutil is best-effort; fall through to install
 
     saved_stdout_fd = None

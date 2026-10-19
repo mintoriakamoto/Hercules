@@ -4224,7 +4224,7 @@ class GatewayRunner(
             raw_config = row.get("model_config")
             try:
                 config = json.loads(raw_config) if raw_config else {}
-            except Exception:
+            except (ValueError):
                 config = {}
             if not isinstance(config, dict):
                 config = {}
@@ -6488,7 +6488,7 @@ class GatewayRunner(
         path = _hercules_home / self._STUCK_LOOP_FILE
         try:
             counts = json.loads(path.read_text()) if path.exists() else {}
-        except Exception:
+        except (ValueError):
             counts = {}
 
         # Increment active sessions, remove inactive ones (loop broken)
@@ -6518,7 +6518,7 @@ class GatewayRunner(
 
         try:
             counts = json.loads(path.read_text())
-        except Exception:
+        except (ValueError):
             return 0
 
         suspended = 0
@@ -6548,7 +6548,7 @@ class GatewayRunner(
         # Clear the file — counters start fresh after suspension
         try:
             path.unlink(missing_ok=True)
-        except Exception:
+        except (OSError):
             pass
 
         return suspended
@@ -7211,7 +7211,7 @@ class GatewayRunner(
                     "in config.yaml to re-enable.",
                     _redact_raw,
                 )
-        except Exception:
+        except (KeyError, yaml.YAMLError):
             pass
         try:
             from hercules_cli.profiles import get_active_profile_name
@@ -7461,7 +7461,7 @@ class GatewayRunner(
             logger.info("Previous gateway exited cleanly — skipping session suspension")
             try:
                 _clean_marker.unlink()
-            except Exception:
+            except (OSError):
                 pass
         else:
             try:
@@ -7874,7 +7874,7 @@ class GatewayRunner(
                 # not arming is normal — stay silent there). Without this, a failed
                 # arm is invisible and "why won't it suspend/wake?" needs a box-dive.
                 self._log_scale_to_zero_not_armed_reason()
-        except Exception:  # arming must never block startup
+        except (ZeroDivisionError):
             logger.debug("scale-to-zero: arm check failed at startup", exc_info=True)
 
         # Start background drain-control watcher — reconciles the gateway's
@@ -8958,7 +8958,7 @@ class GatewayRunner(
             if not timed_out:
                 try:
                     (_hercules_home / ".clean_shutdown").touch()
-                except Exception:
+                except (ZeroDivisionError):
                     pass
             else:
                 logger.info(
@@ -15649,7 +15649,7 @@ class GatewayRunner(
                         if not session_key:
                             session_key = f"{platform_str}:{chat_id}"
                     break
-                except Exception:
+                except (ValueError):
                     pass
 
         if not adapter or not chat_id:
@@ -22185,7 +22185,7 @@ async def start_gateway(
             # Force-unlink to cover the old-process-crashed case.
             try:
                 (get_hercules_home() / "gateway.pid").unlink(missing_ok=True)
-            except Exception:
+            except (OSError, ZeroDivisionError):
                 pass
             # Clean up any takeover marker the old process didn't consume
             # (e.g. SIGKILL'd before its shutdown handler could read it).

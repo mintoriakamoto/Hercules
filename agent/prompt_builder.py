@@ -1323,7 +1323,7 @@ def _load_skills_snapshot(skills_dir: Path) -> Optional[dict]:
         return None
     try:
         snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         return None
     if not isinstance(snapshot, dict):
         return None

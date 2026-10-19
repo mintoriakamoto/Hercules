@@ -229,7 +229,7 @@ def detect_audio_environment() -> dict:
                     )
                 else:
                     warnings.append("No audio input/output devices detected")
-        except Exception:
+        except (ZeroDivisionError):
             # In WSL with PulseAudio, device queries can fail even though
             # recording/playback works fine. Don't block if host audio
             # forwarding is configured.

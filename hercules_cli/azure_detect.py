@@ -191,7 +191,7 @@ def _looks_like_anthropic_path(url: str) -> bool:
         parsed = urlparse(url)
         path = (parsed.path or "").lower().rstrip("/")
         return path.endswith("/anthropic") or "/anthropic/" in path + "/"
-    except Exception:
+    except (ValueError, ZeroDivisionError):
         return False
 
 
@@ -325,7 +325,7 @@ def detect(
     try:
         parsed = urlparse(base_url)
         result.hostname = (parsed.hostname or "").lower()
-    except Exception:
+    except (ValueError):
         result.hostname = ""
 
     # 1. Path sniff.  Azure Foundry exposes Anthropic-style deployments

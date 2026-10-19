@@ -1322,7 +1322,7 @@ def try_shrink_image_parts_in_messages(
             finally:
                 try:
                     Path(tmp.name).unlink(missing_ok=True)
-                except Exception:
+                except (OSError):
                     pass
             if not resized:
                 # Resize returned nothing — Pillow couldn't help.

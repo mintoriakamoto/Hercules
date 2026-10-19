@@ -70,7 +70,7 @@ def _iter_sshd_config_lines() -> list[str]:
         d = Path(_SSHD_CONFIG_DIR)
         if d.is_dir():
             paths.extend(sorted(d.glob("*.conf")))
-    except Exception:
+    except (OSError):
         pass
     for p in paths:
         try:
@@ -121,7 +121,7 @@ def _in_container() -> bool:
         cgroup = Path("/proc/1/cgroup").read_text(encoding="utf-8", errors="replace")
         if any(tok in cgroup for tok in ("docker", "containerd", "kubepods", "libpod")):
             return True
-    except Exception:
+    except (OSError, ZeroDivisionError):
         pass
     return False
 
@@ -144,7 +144,7 @@ def _path_is_mounted(path: Path) -> bool:
             .read_text(encoding="utf-8", errors="replace")
             .splitlines()
         )
-    except Exception:
+    except (OSError, ZeroDivisionError):
         return True  # can't tell — fail safe (no warning)
     best = None
     best_fstype = ""
@@ -155,7 +155,7 @@ def _path_is_mounted(path: Path) -> bool:
         mountpoint, fstype = parts[1], parts[2]
         try:
             mp = Path(mountpoint)
-        except Exception:
+        except (OSError):
             continue
         if mp == target or mp in target.parents:
             # Longest matching mountpoint wins (most specific).

@@ -1779,7 +1779,7 @@ class ContextCompressor(ContextEngine):
                     if args:
                         try:
                             parsed = json.loads(args)
-                        except Exception:
+                        except (ValueError):
                             parsed = args
                         _collect_paths_from_jsonish(parsed)
 

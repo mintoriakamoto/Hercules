@@ -561,7 +561,7 @@ def remove_wrapper_script(name: str) -> bool:
                 if "hercules -p" in content:
                     wrapper_path.unlink()
                     return True
-            except Exception:
+            except (OSError):
                 pass
     return False
 
@@ -1472,7 +1472,7 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
                     env_home = (proc.environ() or {}).get("HERCULES_HOME", "")
                     if env_home and Path(env_home).resolve() == resolved_dir:
                         bound = True
-                except Exception:
+                except (OSError):
                     # environ() can raise AccessDenied even same-user on some
                     # platforms; fall back to the argv signal only.
                     pass
@@ -1481,7 +1481,7 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
                 pids.append(pid)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
-        except Exception:
+        except (OSError):
             continue
 
     return pids

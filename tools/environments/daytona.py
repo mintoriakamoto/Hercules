@@ -146,7 +146,7 @@ class DaytonaEnvironment(BaseEnvironment):
                 self._remote_home = home
                 if requested_cwd in {"~", "/home/daytona"}:
                     self.cwd = home
-        except Exception:
+        except (ZeroDivisionError):
             pass
         logger.info(
             "Daytona: resolved home to %s, cwd to %s", self._remote_home, self.cwd

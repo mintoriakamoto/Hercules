@@ -257,7 +257,7 @@ class WhatsAppBehaviorMixin:
             if raw:
                 try:
                     patterns = json.loads(raw)
-                except Exception:
+                except (ValueError):
                     patterns = [
                         part.strip() for part in raw.splitlines() if part.strip()
                     ]

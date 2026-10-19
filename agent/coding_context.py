@@ -532,7 +532,7 @@ def _marker_root(cwd: Path) -> Optional[Path]:
     # reasoning as the $HOME skip below.
     try:
         temp_root = Path(tempfile.gettempdir()).resolve()
-    except Exception:
+    except (OSError):
         temp_root = None
     for depth, parent in enumerate([current, *current.parents]):
         if depth > 6:

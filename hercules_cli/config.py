@@ -5772,7 +5772,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                         print(
                             f"  ✓ Cleared {dead_var} from .env (no longer used — config.yaml is source of truth)"
                         )
-            except Exception:
+            except (yaml.YAMLError):
                 pass
 
     # ── Version 13 → 14: migrate legacy flat stt.model to provider section ──

@@ -169,7 +169,7 @@ def list_pending(subsystem: str) -> List[Dict[str, Any]]:
     for p in d.glob("*.json"):
         try:
             records.append(json.loads(p.read_text(encoding="utf-8")))
-        except Exception:
+        except (ValueError):
             logger.warning("Skipping unreadable pending record: %s", p)
     records.sort(key=lambda r: r.get("created_at", 0))
     return records
@@ -182,7 +182,7 @@ def get_pending(subsystem: str, pending_id: str) -> Optional[Dict[str, Any]]:
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         return None
 
 

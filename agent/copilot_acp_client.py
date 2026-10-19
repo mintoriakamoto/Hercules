@@ -315,7 +315,7 @@ def _extract_tool_calls_from_text(
     def _try_add_tool_call(raw_json: str) -> None:
         try:
             obj = json.loads(raw_json)
-        except Exception:
+        except (ValueError):
             return
         if not isinstance(obj, dict):
             return
@@ -549,7 +549,7 @@ class CopilotACPClient:
             for line in proc.stdout:
                 try:
                     inbox.put(json.loads(line))
-                except Exception:
+                except (ValueError):
                     inbox.put({"raw": line.rstrip("\n")})
 
         def _stderr_reader() -> None:

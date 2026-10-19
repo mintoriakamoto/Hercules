@@ -2396,7 +2396,7 @@ def _claimer_id() -> str:
 
     try:
         host = socket.gethostname() or "unknown"
-    except Exception:
+    except (OSError, httpx.HTTPStatusError, httpx.RequestError):
         host = "unknown"
     return f"{host}:{os.getpid()}"
 
@@ -5500,7 +5500,7 @@ def _git_toplevel(path: Path) -> Optional[Path]:
         return None
     try:
         return Path(out).expanduser().resolve()
-    except Exception:
+    except (OSError):
         return Path(out).expanduser()
 
 
@@ -8414,7 +8414,7 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
                         run.metadata, ensure_ascii=False, sort_keys=True
                     )
                     lines.append(f"_metadata_: `{_cap(meta_str)}`")
-                except Exception:
+                except (ValueError):
                     pass
             lines.append("")
 
@@ -8472,7 +8472,7 @@ def build_worker_context(conn: sqlite3.Connection, task_id: str) -> str:
                         run.metadata, ensure_ascii=False, sort_keys=True
                     )
                     body_lines.append(f"_metadata_: `{_cap(meta_str)}`")
-                except Exception:
+                except (ValueError):
                     pass
             lines.extend(body_lines)
             lines.append("")

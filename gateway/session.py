@@ -1564,7 +1564,7 @@ class SessionStore:
             origin_json = None
             try:
                 origin_json = json.dumps(source.to_dict())
-            except Exception:
+            except (ValueError):
                 pass
             recorder(
                 session_id,

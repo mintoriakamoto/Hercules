@@ -54,7 +54,7 @@ def _batch_call_key(name: str, args: dict) -> str:
     """Stable key for one tool invocation. Bounded so a huge arg blob can't grow the map."""
     try:
         payload = json.dumps(args or {}, sort_keys=True, default=str, ensure_ascii=False)
-    except Exception:
+    except (ValueError):
         payload = str(args)
     return f"{name}:{payload[:400]}"
 

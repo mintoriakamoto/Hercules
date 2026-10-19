@@ -151,7 +151,7 @@ def _credentials_configured(provider: str) -> bool:
         try:
             if has_usable_secret(os.getenv("OPENROUTER_API_KEY", "")):
                 return True
-        except Exception:
+        except (KeyError):
             pass
     try:
         status = get_auth_status(provider) or {}

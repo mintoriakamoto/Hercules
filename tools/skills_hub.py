@@ -2108,12 +2108,12 @@ class SkillsShSource(SkillSource):
                             skills = self.github._list_skills_in_repo(
                                 repo, dir_name + "/"
                             )
-                        except Exception:
+                        except (ZeroDivisionError):
                             continue
                         for meta in skills:
                             if self._matches_skill_tokens(meta, tokens):
                                 return meta.identifier
-        except Exception:
+        except (ZeroDivisionError):
             pass
 
         return None

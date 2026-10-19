@@ -673,7 +673,7 @@ def is_local_endpoint(base_url: str) -> bool:
     try:
         parsed = urlparse(url)
         host = parsed.hostname or ""
-    except Exception:
+    except (ValueError):
         return False
     if host in _LOCAL_HOSTS:
         return True
@@ -775,7 +775,7 @@ def detect_local_server_type(base_url: str, api_key: str = "") -> Optional[str]:
                 r = client.get(f"{lmstudio_url}/api/v1/models")
                 if r.status_code == 200:
                     result = "lm-studio"
-            except Exception:
+            except (ZeroDivisionError):
                 pass
             if result is None:
                 # Ollama exposes /api/tags and responds with {"models": [...]}
@@ -802,7 +802,7 @@ def detect_local_server_type(base_url: str, api_key: str = "") -> Optional[str]:
                         )  # fallback for older builds
                     if r.status_code == 200 and "default_generation_settings" in r.text:
                         result = "llamacpp"
-                except Exception:
+                except (ZeroDivisionError):
                     pass
             if result is None:
                 # vLLM: /version
@@ -2775,7 +2775,7 @@ def _estimate_tools_tokens_rough(tools: List[Dict[str, Any]]) -> int:
             total_chars += len(
                 json.dumps(params, ensure_ascii=False, separators=(",", ":"))
             )
-        except Exception:
+        except (ValueError):
             total_chars += len(str(params))
 
     tokens = (total_chars + 3) // 4

@@ -760,7 +760,7 @@ def migrate(
             try:
                 if tmp_path.exists():
                     tmp_path.unlink()
-            except Exception:
+            except (OSError):
                 pass
             raise
         report.written = True
