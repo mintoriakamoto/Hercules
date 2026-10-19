@@ -385,7 +385,7 @@ def _detect_claude_code_version() -> str:
                 version = result.stdout.strip().split()[0]
                 if version and version[0].isdigit():
                     return version
-        except Exception:
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
             pass
     return _CLAUDE_CODE_VERSION_FALLBACK
 
