@@ -1,5 +1,10 @@
 """Shared auxiliary client router for side tasks.
 
+NOTE: This module is extensive (7.7k lines) and contains both sync and async
+variants of provider clients. A future consolidation may refactor the provider
+resolution logic and dedup sync/async twins, but all existing code will maintain
+100% backward compatibility. No changes required in existing imports.
+
 Provides a single resolution chain so every consumer (context compression,
 session search, web extraction, vision analysis, browser vision) picks up
 the best available backend without duplicating fallback logic.
