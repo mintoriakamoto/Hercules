@@ -239,7 +239,7 @@ def _json_loads_maybe(value: Optional[str]) -> Any:
         return value
     try:
         return json.loads(value)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     # Some Hercules tools append a human hint after a JSON payload, e.g.
@@ -248,7 +248,7 @@ def _json_loads_maybe(value: Optional[str]) -> Any:
     try:
         decoded, _ = json.JSONDecoder().raw_decode(value.lstrip())
         return decoded
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -1233,7 +1233,7 @@ def _build_tool_complete_content(
                 diff_content = _parse_unified_diff_content(diff_text)
                 if diff_content:
                     return diff_content
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     polished_content = _build_polished_completion_content(

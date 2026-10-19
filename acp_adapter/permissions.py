@@ -33,7 +33,7 @@ def _permission_option_supports_kind(kind: str) -> bool:
     """Return whether the installed ACP SDK accepts a permission option kind."""
     try:
         PermissionOption(option_id="__probe__", kind=kind, name="probe")
-    except Exception:
+    except (AttributeError, ValueError):
         return False
     return True
 

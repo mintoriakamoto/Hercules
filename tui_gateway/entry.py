@@ -112,7 +112,7 @@ def _log_signal(signum: int, frame) -> None:
             for tid, th in _threading._active.items():
                 f.write(f"\n--- thread {th.name} (id={tid}) ---\n")
                 f.write("".join(traceback.format_stack(sys._current_frames().get(tid))))
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     print(f"[gateway-signal] {name}", file=sys.stderr, flush=True)
 
@@ -140,7 +140,7 @@ def _log_signal(signum: int, frame) -> None:
         from tui_gateway.server import _shutdown_sessions
 
         _shutdown_sessions()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     try:
@@ -200,7 +200,7 @@ def _log_exit(reason: str) -> None:
                 f"\n=== gateway exit · {time.strftime('%Y-%m-%d %H:%M:%S')} "
                 f"· reason={reason} ===\n"
             )
-    except Exception:
+    except (OSError, IOError):
         pass
     print(f"[gateway-exit] {reason}", file=sys.stderr, flush=True)
 
@@ -228,7 +228,7 @@ def wait_for_mcp_discovery(timeout: "float | None" = None) -> None:
         from hercules_cli.mcp_startup import _resolve_discovery_timeout
 
         bound = _resolve_discovery_timeout(timeout)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         bound = timeout if timeout is not None else 0.75
     thread.join(timeout=bound)
 
@@ -260,7 +260,7 @@ def mcp_discovery_in_flight() -> bool:
         )
 
         return _startup_in_flight()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -286,7 +286,7 @@ def join_mcp_discovery(timeout: float | None = None) -> bool:
         from hercules_cli.mcp_startup import join_mcp_discovery as _startup_join
 
         startup_done = _startup_join(timeout=timeout)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         startup_done = True
     return entry_done and startup_done
 
@@ -319,7 +319,7 @@ def main():
 
         _mcp_servers = (read_raw_config() or {}).get("mcp_servers")
         _has_mcp_servers = isinstance(_mcp_servers, dict) and len(_mcp_servers) > 0
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Be conservative: if we can't decide, fall back to attempting
         # discovery (still backgrounded, so it can't block startup).
         _has_mcp_servers = True
@@ -332,7 +332,7 @@ def main():
                 )
 
                 _discover_mcp_tools_without_interactive_oauth()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.warning("Background MCP tool discovery failed", exc_info=True)
 
         import threading as _mcp_threading

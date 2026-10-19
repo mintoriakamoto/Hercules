@@ -640,7 +640,7 @@ def _cron_mirror_delivery_enabled(job: dict, cfg: Optional[dict] = None) -> bool
         if cfg is None:
             cfg = load_config() or {}
         return bool((cfg.get("cron", {}) or {}).get("mirror_delivery", False))
-    except Exception:
+    except (requests.RequestException, OSError):
         return False
 
 
@@ -1027,7 +1027,7 @@ def _plugin_cron_env_var(platform_name: str) -> str:
         entry = platform_registry.get(platform_name.lower())
         if entry and entry.cron_deliver_env_var:
             return entry.cron_deliver_env_var
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return ""
 
@@ -1113,7 +1113,7 @@ def _iter_home_target_platforms():
         for entry in platform_registry.plugin_entries():
             if entry.cron_deliver_env_var and entry.name not in _HOME_TARGET_ENV_VARS:
                 yield entry.name
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -1137,7 +1137,7 @@ def cron_delivery_targets() -> list[dict]:
 
         gateway_config = load_gateway_config()
         connected = {p.value for p in gateway_config.get_connected_platforms()}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug("cron_delivery_targets: gateway config unavailable", exc_info=True)
         connected = set()
 
@@ -1217,7 +1217,7 @@ def _resolve_single_delivery_target(job: dict, deliver_value: str) -> Optional[d
                         thread_id = parsed_thread_id
                 else:
                     chat_id = resolved
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         return {
@@ -1478,7 +1478,7 @@ def _is_channel_dm_topic(
         # Lighter than a send (metadata-only Bot API call), so a shorter bound
         # than the 30s/60s send waits elsewhere in this file is intentional.
         info = future.result(timeout=10)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug(
             "Job '%s': get_chat_info probe failed for chat=%s — "
             "defaulting to message_thread_id routing",
@@ -1543,7 +1543,7 @@ def _deliver_result(job: dict, content: str, adapters=None, loop=None) -> Option
     try:
         user_cfg = load_config()
         wrap_response = user_cfg.get("cron", {}).get("wrap_response", True)
-    except Exception:
+    except (requests.RequestException, OSError):
         pass
 
     if wrap_response:
@@ -1573,7 +1573,7 @@ def _deliver_result(job: dict, content: str, adapters=None, loop=None) -> Option
     # Mirror the CLEAN, unwrapped output (not the cron header/footer).
     try:
         mirror_enabled = _cron_mirror_delivery_enabled(job, user_cfg)
-    except Exception:
+    except (AttributeError, ValueError):
         mirror_enabled = False
     mirror_text = ""
     if mirror_enabled:
@@ -1667,7 +1667,7 @@ def _deliver_result(job: dict, content: str, adapters=None, loop=None) -> Option
                 and str(surface_raw).strip().lower() == "in_channel"
             ):
                 surface_mode = "in_channel"
-        except Exception:
+        except (requests.RequestException, OSError):
             surface_mode = "thread"
         in_channel_surface = surface_mode == "in_channel"
         if (
@@ -2163,7 +2163,7 @@ def _get_script_timeout() -> int:
             timeout = int(float(_SCRIPT_TIMEOUT))
             if timeout > 0:
                 return timeout
-        except Exception:
+        except (ValueError, TypeError):
             logger.warning(
                 "Invalid patched _SCRIPT_TIMEOUT=%r; using env/config/default",
                 _SCRIPT_TIMEOUT,
@@ -2175,7 +2175,7 @@ def _get_script_timeout() -> int:
             timeout = int(float(env_value))
             if timeout > 0:
                 return timeout
-        except Exception:
+        except (ValueError, TypeError):
             logger.warning(
                 "Invalid HERCULES_CRON_SCRIPT_TIMEOUT=%r; using config/default",
                 env_value,
@@ -2548,7 +2548,7 @@ def _build_job_prompt(job: dict, prerun_script: Optional[tuple] = None) -> str:
         # Bump usage so the curator sees this skill as actively used.
         try:
             bump_use(skill_name)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "Cron job: failed to bump skill usage for '%s'",
                 skill_name,
@@ -3054,7 +3054,7 @@ def run_job(
                     from hercules_cli import managed_scope
 
                     _cfg = managed_scope.apply_managed_overlay(_cfg)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
                 _cfg = _expand_env_vars(_cfg)
                 # Coerce null/missing to {} so a falsy default never
@@ -3094,7 +3094,7 @@ def run_job(
             _net_cfg = _cfg.get("network", {})
             if isinstance(_net_cfg, dict) and _net_cfg.get("force_ipv4"):
                 apply_ipv4_preference(force=True)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         # Reasoning config from config.yaml (raw value — a YAML boolean False
@@ -3391,7 +3391,7 @@ def run_job(
             _last_claim_heartbeat = _mono
             try:
                 heartbeat_run_claim(job_id, expected_owner=_run_claim_owner)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "Job '%s': run_claim heartbeat failed", job_name, exc_info=True
                 )
@@ -3439,12 +3439,12 @@ def run_job(
                         try:
                             _act = agent.get_activity_summary()
                             _idle_secs = _act.get("seconds_since_activity", 0.0)
-                        except Exception:
+                        except (requests.RequestException, OSError):
                             pass
                     if _idle_secs >= _cron_inactivity_limit:
                         _inactivity_timeout = True
                         break
-        except Exception:
+        except (requests.RequestException, OSError):
             _cron_pool.shutdown(wait=False, cancel_futures=True)
             raise
         finally:
@@ -3456,7 +3456,7 @@ def run_job(
             if hasattr(agent, "get_activity_summary"):
                 try:
                     _activity = agent.get_activity_summary()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             _last_desc = _activity.get("last_activity_desc", "unknown")
             _secs_ago = _activity.get("seconds_since_activity", 0)
@@ -3536,7 +3536,7 @@ def run_job(
                 _explainer_text = AIAgent._format_turn_completion_explanation(
                     turn_exit_reason
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 _explainer_text = ""
             if _explainer_text and final_response.strip() == _explainer_text.strip():
                 logger.info(
@@ -3931,7 +3931,7 @@ def tick(verbose: bool = True, adapters=None, loop=None, sync: bool = True) -> i
                 ).get("max_parallel_jobs")
                 if _cfg_par is not None:
                     _max_workers = int(_cfg_par) or None
-            except Exception:
+            except (requests.RequestException, OSError):
                 pass
 
         if verbose:
@@ -4082,7 +4082,7 @@ def tick(verbose: bool = True, adapters=None, loop=None, sync: bool = True) -> i
                             _exc,
                             exc_info=(type(_exc), _exc, _exc.__traceback__),
                         )
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 if _remaining[0] <= 0:
                     _sweep_mcp_orphans()

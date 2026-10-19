@@ -42,7 +42,7 @@ def build_session_provenance(
     """
     try:
         row = db.get_session(current_hercules_session_id)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     if not row:
         return None
@@ -63,7 +63,7 @@ def build_session_provenance(
         seen.add(cursor_parent)
         try:
             prow = db.get_session(cursor_parent)
-        except Exception:
+        except (AttributeError, ValueError):
             prow = None
         if not prow:
             break
@@ -78,7 +78,7 @@ def build_session_provenance(
     if parent_id:
         try:
             immediate_parent = db.get_session(parent_id)
-        except Exception:
+        except (AttributeError, ValueError):
             immediate_parent = None
         if immediate_parent and immediate_parent.get("end_reason") == "compression":
             is_continuation = True

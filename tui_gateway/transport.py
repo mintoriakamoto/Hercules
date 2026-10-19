@@ -209,7 +209,7 @@ class TeeTransport:
         for sec in self._secondaries:
             try:
                 sec.write(obj)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         return ok
 
@@ -220,5 +220,5 @@ class TeeTransport:
             for sec in self._secondaries:
                 try:
                     sec.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass

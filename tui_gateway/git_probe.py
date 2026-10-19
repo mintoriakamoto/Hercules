@@ -61,7 +61,7 @@ def run_git(cwd: str, *args: str) -> str:
             **_popen_kwargs,
         )
         return result.stdout.strip() if result.returncode == 0 else ""
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
         return ""
 
 
