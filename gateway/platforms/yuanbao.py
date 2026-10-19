@@ -1236,7 +1236,7 @@ class DecodeMiddleware(InboundMiddleware):
         else:
             try:
                 push = decode_inbound_push(data)
-            except Exception:
+            except (AttributeError, ValueError):
                 push = None
             if push:
                 return push, "protobuf"
@@ -1487,7 +1487,7 @@ class RecallGuardMiddleware(InboundMiddleware):
                 sid = store.get_or_create_session(
                     cls._build_source(adapter, group_code, from_account),
                 ).session_id
-            except Exception:
+            except (AttributeError, ValueError):
                 return
             # Poll until the recalled content appears in transcript — the
             # interrupted turn hasn't finished writing yet when scheduled.
@@ -1495,7 +1495,7 @@ class RecallGuardMiddleware(InboundMiddleware):
                 await asyncio.sleep(0.5)
                 try:
                     transcript = store.load_transcript(sid)
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
                 for entry in transcript:
                     if (
@@ -4189,7 +4189,7 @@ class ConnectionManager:
             push = decode_inbound_push(raw_data)
             if push:
                 return f"{push.get('from_account', '')}:{push.get('group_code', '')}"
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
         # Fallback: unique key (no aggregation)
         return f"__unknown_{id(raw_data)}"

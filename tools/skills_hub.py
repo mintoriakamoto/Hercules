@@ -2065,7 +2065,7 @@ class SkillsShSource(SkillSource):
         for base_path in base_paths:
             try:
                 skills = self.github._list_skills_in_repo(repo, base_path)
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
             for meta in skills:
                 if self._matches_skill_tokens(meta, tokens):
@@ -3984,7 +3984,7 @@ def check_for_skill_updates(
         for src in candidate_sources:
             try:
                 bundle = src.fetch(identifier)
-            except Exception:
+            except (AttributeError, ValueError):
                 bundle = None
             if bundle:
                 break

@@ -259,7 +259,7 @@ def run_oneshot(
     finally:
         try:
             devnull.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     if failure is not None:

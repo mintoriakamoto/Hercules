@@ -695,7 +695,7 @@ class MemoryManager:
         try:
             fut.result(timeout=timeout)
             return True
-        except Exception:
+        except (AttributeError, ValueError):
             return False
 
     # -- Tools ---------------------------------------------------------------

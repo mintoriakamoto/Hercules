@@ -575,7 +575,7 @@ class ResponseStore:
         """Close the database connection."""
         try:
             self._conn.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def __len__(self) -> int:
@@ -679,7 +679,7 @@ def _resolve_media_to_data_urls(text: str) -> str:
 
     try:
         return MEDIA_TAG_CLEANUP_RE.sub(_repl, text)
-    except Exception:
+    except (AttributeError, ValueError):
         return text
 
 
@@ -1776,7 +1776,7 @@ class APIServerAdapter(BasePlatformAdapter):
             for name, label, desc in _get_effective_configurable_toolsets():
                 try:
                     tools = sorted(set(resolve_toolset(name)))
-                except Exception:
+                except (AttributeError, ValueError):
                     tools = []
                 is_enabled = name in enabled_toolsets
                 data.append({
@@ -2178,7 +2178,7 @@ class APIServerAdapter(BasePlatformAdapter):
             base = source.get("title") or "fork"
             try:
                 title = db.get_next_title_in_lineage(base)
-            except Exception:
+            except (AttributeError, ValueError):
                 title = f"{base} fork"
         try:
             db.set_session_title(fork_id, str(title))
@@ -3085,7 +3085,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE client disconnected")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -3759,7 +3759,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE client disconnected")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -3780,7 +3780,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE task cancelled")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -4876,7 +4876,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 return
             try:
                 loop.call_soon_threadsafe(q.put_nowait, event)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         def _callback(
@@ -5060,7 +5060,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "delta": delta,
                     },
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         self._set_run_status(
@@ -5124,7 +5124,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     )
                     try:
                         loop.call_soon_threadsafe(q.put_nowait, event)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
                 def _run_sync():
@@ -5160,12 +5160,12 @@ class APIServerAdapter(BasePlatformAdapter):
                             if approval_token is not None:
                                 try:
                                     reset_current_session_key(approval_token)
-                                except Exception:
+                                except (AttributeError, ValueError):
                                     pass
                             if session_tokens:
                                 try:
                                     clear_session_vars(session_tokens)
-                                except Exception:
+                                except (AttributeError, ValueError):
                                     pass
                     u = {
                         "input_tokens": getattr(agent, "session_prompt_tokens", 0) or 0,
@@ -5240,7 +5240,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "run_id": run_id,
                         "timestamp": time.time(),
                     })
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 raise
             except Exception as exc:
@@ -5258,7 +5258,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "timestamp": time.time(),
                         "error": _redact_api_error_text(exc),
                     })
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             finally:
                 # If the asyncio wrapper is cancelled (for example via
@@ -5275,7 +5275,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 # Sentinel: signal SSE stream to close
                 try:
                     _put_event_if_active(None)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 self._active_run_agents.pop(run_id, None)
                 self._active_run_tasks.pop(run_id, None)
@@ -5450,7 +5450,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     "choice": choice,
                     "resolved": resolved,
                 })
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         return web.json_response({
@@ -5482,7 +5482,7 @@ class APIServerAdapter(BasePlatformAdapter):
         if agent is not None:
             try:
                 agent.interrupt("Stop requested via API")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         return web.json_response({"run_id": run_id, "status": "stopping"})
@@ -5759,7 +5759,7 @@ class APIServerAdapter(BasePlatformAdapter):
         if self._response_store is not None:
             try:
                 self._response_store.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "Failed to close response store for %s",
                     self.name,

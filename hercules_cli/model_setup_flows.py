@@ -344,7 +344,7 @@ def _model_flow_openai_codex(config, current_model=""):
         _codex_status = get_codex_auth_status()
         if _codex_status.get("logged_in"):
             _codex_token = _codex_status.get("api_key")
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         pass
     if not _codex_token:
         try:
@@ -1748,7 +1748,7 @@ def _model_flow_copilot_acp(config, current_model=""):
     try:
         catalog_creds = resolve_api_key_provider_credentials("copilot")
         catalog_api_key = catalog_creds.get("api_key", "")
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         pass
 
     catalog = fetch_github_model_catalog(catalog_api_key)

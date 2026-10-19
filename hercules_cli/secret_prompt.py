@@ -70,14 +70,14 @@ def masked_secret_prompt(prompt: str, *, mask: str = "*") -> str:
             return _masked_secret_prompt_windows(prompt, mask=mask)
         except (KeyboardInterrupt, EOFError):
             raise
-        except Exception:
+        except (AttributeError, ValueError):
             return getpass.getpass(prompt)
 
     try:
         return _masked_secret_prompt_posix(prompt, mask=mask)
     except (KeyboardInterrupt, EOFError):
         raise
-    except Exception:
+    except (AttributeError, ValueError):
         return getpass.getpass(prompt)
 
 

@@ -484,7 +484,7 @@ class TermuxAudioRecorder:
             self._current_rms = 0
         try:
             self._stop_termux_recording()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         if path and os.path.isfile(path):
             try:
@@ -698,7 +698,7 @@ class AudioRecorder:
             if stream is not None:
                 try:
                     stream.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             raise RuntimeError(
                 f"Failed to open audio input stream: {e}. "
@@ -766,7 +766,7 @@ class AudioRecorder:
             try:
                 stream.stop()
                 stream.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         t = threading.Thread(target=_do_close, daemon=True)
@@ -1114,13 +1114,13 @@ def stop_playback() -> None:
         try:
             proc.terminate()
             logger.info("Audio playback interrupted")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     # Also stop sounddevice playback if active
     try:
         sd, _ = _import_audio()
         sd.stop()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 

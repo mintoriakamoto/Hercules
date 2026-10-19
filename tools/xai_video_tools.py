@@ -18,7 +18,7 @@ from tools.registry import registry, tool_error
 def _configured_for_xai_video() -> bool:
     try:
         cfg = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         return False
     section = cfg.get("video_gen") if isinstance(cfg, dict) else None
     return isinstance(section, dict) and section.get("provider") == "xai"

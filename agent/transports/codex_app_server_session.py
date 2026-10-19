@@ -305,7 +305,7 @@ class CodexAppServerSession:
         if self._client is not None:
             try:
                 self._client.close()
-            except Exception:  # pragma: no cover - best-effort cleanup
+            except (AttributeError, ValueError):
                 pass
             self._client = None
         self._thread_id = None
@@ -352,7 +352,7 @@ class CodexAppServerSession:
             return base
         try:
             tail = self._client.stderr_tail(tail_lines)
-        except Exception:  # pragma: no cover - diagnostic best-effort
+        except (AttributeError, ValueError):
             return base
         if not tail:
             return base
@@ -552,7 +552,7 @@ class CodexAppServerSession:
             if self._on_event is not None:
                 try:
                     self._on_event(note)
-                except Exception:  # pragma: no cover - display callback
+                except (AttributeError, ValueError):
                     logger.debug("on_event callback raised", exc_info=True)
 
             _apply_token_usage_notification(result, note)
@@ -742,7 +742,7 @@ class CodexAppServerSession:
             if self._on_event is not None:
                 try:
                     self._on_event(note)
-                except Exception:  # pragma: no cover - display callback
+                except (AttributeError, ValueError):
                     logger.debug("on_event callback raised", exc_info=True)
 
             _apply_token_usage_notification(result, note)
@@ -890,7 +890,7 @@ class CodexAppServerSession:
                     command, description, allow_permanent=False
                 )
                 return _approval_choice_to_codex_decision(choice)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.exception("approval_callback raised on exec request")
                 return "decline"
         return "decline"  # fail-closed when no callback wired
@@ -933,7 +933,7 @@ class CodexAppServerSession:
                     allow_permanent=False,
                 )
                 return _approval_choice_to_codex_decision(choice)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.exception("approval_callback raised on apply_patch")
                 return "decline"
         return "decline"

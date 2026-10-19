@@ -854,7 +854,7 @@ class WebhookAdapter(BasePlatformAdapter):
                 if hasattr(store, "_ensure_loaded"):
                     try:
                         store._ensure_loaded()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
                 entries = getattr(store, "_entries", {}) or {}
                 entry = entries.get(session_key)

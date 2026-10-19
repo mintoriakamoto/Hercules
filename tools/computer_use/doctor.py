@@ -145,7 +145,7 @@ def _drive_health_report(
     finally:
         try:
             proc.stdin.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         try:
             proc.wait(timeout=timeout)

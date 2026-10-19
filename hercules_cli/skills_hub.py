@@ -144,18 +144,18 @@ def _resolve_source_meta_and_bundle(identifier: str, sources):
                 meta = src.inspect(identifier)
                 if meta:
                     matched_source = src
-            except Exception:
+            except (AttributeError, ValueError):
                 meta = None
         try:
             bundle = src.fetch(identifier)
-        except Exception:
+        except (AttributeError, ValueError):
             bundle = None
         if bundle:
             matched_source = src
             if meta is None:
                 try:
                     meta = src.inspect(identifier)
-                except Exception:
+                except (AttributeError, ValueError):
                     meta = None
             break
 

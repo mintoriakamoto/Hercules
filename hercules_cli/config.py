@@ -89,7 +89,7 @@ def _backup_corrupt_config(config_path: Path) -> Optional[Path]:
             return None
         shutil.copy2(config_path, backup_path)
         return backup_path
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -5034,7 +5034,7 @@ def get_custom_provider_tls_settings(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except Exception:
+        except (AttributeError, ValueError):
             custom_providers = []
     if not base_url or not isinstance(custom_providers, list):
         return {}
@@ -5112,7 +5112,7 @@ def get_custom_provider_extra_headers(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except Exception:
+        except (AttributeError, ValueError):
             custom_providers = []
     if not base_url or not isinstance(custom_providers, list):
         return {}
@@ -5182,7 +5182,7 @@ def get_custom_provider_context_length(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except Exception:
+        except (AttributeError, ValueError):
             if config is None:
                 return None
             raw = config.get("custom_providers")
@@ -5335,7 +5335,7 @@ def validate_config_structure(
     if config is None:
         try:
             config = load_config()
-        except Exception:
+        except (AttributeError, ValueError):
             return [
                 ConfigIssue(
                     "error",
@@ -5515,7 +5515,7 @@ def print_config_warnings(config: Optional[Dict[str, Any]] = None) -> None:
     """
     try:
         issues = validate_config_structure(config)
-    except Exception:
+    except (AttributeError, ValueError):
         return
     if not issues:
         return
@@ -5540,7 +5540,7 @@ def warn_deprecated_cwd_env_vars(config: Optional[Dict[str, Any]] = None) -> Non
     if config is None:
         try:
             config = load_config()
-        except Exception:
+        except (AttributeError, ValueError):
             return
 
     terminal_cfg = config.get("terminal", {})
@@ -5614,7 +5614,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
         fixes = sanitize_env_file()
         if fixes and not quiet:
             print(f"  ✓ Repaired .env file ({fixes} corrupted entries fixed)")
-    except Exception:
+    except (ValueError, TypeError):
         pass  # best-effort; don't block migration on sanitize failure
 
     # Check config version
@@ -5676,7 +5676,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 save_env_value("ANTHROPIC_TOKEN", "")
                 if not quiet:
                     print("  ✓ Cleared ANTHROPIC_TOKEN from .env (no longer used)")
-        except Exception:
+        except (ValueError, TypeError):
             pass
 
     # ── Version 11 → 12: migrate custom_providers list → providers dict ──

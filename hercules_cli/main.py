@@ -103,7 +103,7 @@ def _set_process_title() -> None:
             libc = ctypes.CDLL("libc.dylib", use_errno=True)
             libc.pthread_setname_np(b"hercules")
         # Windows: the .exe name is already ``hercules.exe`` — nothing to do.
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
 
@@ -176,7 +176,7 @@ def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
     try:
         if not (sys.stdin.isatty() and sys.stdout.isatty()):
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         return False
     return _config_default_interface_early() == "tui"
 
@@ -894,7 +894,7 @@ def _has_any_provider_configured() -> bool:
             status = get_auth_status(provider_id)
             if status.get("logged_in"):
                 return True
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         pass
 
     # Check for stored provider OAuth credentials
@@ -1206,7 +1206,7 @@ def _resolve_last_session(source: str = "cli") -> Optional[str]:
         if db is not None:
             try:
                 db.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
     return None
 
@@ -1352,12 +1352,12 @@ def _resolve_session_by_name_or_id(name_or_id: str) -> Optional[str]:
             # the live tip instead of a dead compressed parent.
             try:
                 resolved_id = db.get_compression_tip(resolved_id) or resolved_id
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         db.close()
         return resolved_id
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return None
 
@@ -2194,7 +2194,7 @@ def _launch_tui(
         if wt_info:
             try:
                 _cleanup_worktree(wt_info)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     # Exit code 42 = TUI requested an update. Relaunch as `hercules update` so
@@ -2283,7 +2283,7 @@ def _resolve_use_tui(args) -> bool:
     try:
         if not (sys.stdin.isatty() and sys.stdout.isatty()):
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         return False
     if os.environ.get("HERCULES_TUI") == "1":
         return True
@@ -2434,7 +2434,7 @@ def cmd_chat(args):
     # Sync bundled skills on every CLI launch (fast -- skips unchanged skills)
     try:
         _sync_bundled_skills_for_startup()
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     # --yolo: bypass all dangerous command approvals.
@@ -3594,7 +3594,7 @@ def _aux_flow_provider_model(
     pricing: dict = {}
     try:
         pricing = get_pricing_for_provider(provider_slug) or {}
-    except Exception:
+    except (AttributeError, ValueError):
         pricing = {}
 
     model_list = list(curated_models)
@@ -4213,7 +4213,7 @@ def _run_anthropic_oauth_flow(save_env_value):
     def _activate_claude_code_credentials_if_available() -> bool:
         try:
             creds = read_claude_code_credentials()
-        except Exception:
+        except (AttributeError, ValueError):
             creds = None
         if creds and (
             is_claude_code_token_valid(creds) or bool(creds.get("refreshToken"))
@@ -5504,7 +5504,7 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
     for proc in proc_iter:
         try:
             info = proc.info
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             continue
         pid = info.get("pid")
         exe = info.get("exe")
@@ -5531,9 +5531,9 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
             for proc in alive:
                 try:
                     proc.kill()
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     return stopped
 
@@ -6158,14 +6158,14 @@ def _print_curator_first_run_notice() -> None:
         if not curator.is_enabled():
             return
         state = curator.load_state()
-    except Exception:
+    except (AttributeError, ValueError):
         return
     if state.get("last_run_at"):
         # Curator has run before (real or already seeded) — no notice needed.
         return
     try:
         hours = curator.get_interval_hours()
-    except Exception:
+    except (AttributeError, ValueError):
         hours = 24 * 7
     days = max(1, hours // 24)
     print()
@@ -6202,7 +6202,7 @@ def _print_curator_recent_run_notice() -> None:
         return
     try:
         state = curator.load_state()
-    except Exception:
+    except (AttributeError, ValueError):
         return
 
     last_run_at = state.get("last_run_at")
@@ -7542,12 +7542,12 @@ def _detect_concurrent_hercules_instances(
         seed = next(iter(exclude_pids))
         try:
             ancestors = psutil.Process(seed).parents()
-        except Exception:
+        except (AttributeError, ValueError):
             ancestors = []
         for ancestor in ancestors:
             try:
                 anc_exe = ancestor.exe()
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
             if not anc_exe:
                 continue
@@ -7572,7 +7572,7 @@ def _detect_concurrent_hercules_instances(
     for proc in proc_iter:
         try:
             info = proc.info
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             continue
         pid = info.get("pid")
         exe = info.get("exe")
@@ -8089,9 +8089,9 @@ def _verify_core_dependencies_installed(
             try:
                 req = Requirement(spec)
                 deps.append((req.name, req.marker))
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
-    except Exception:
+    except (AttributeError, ValueError):
         for spec in raw_deps:
             head = spec.split(";", 1)[0]
             for op in ("==", ">=", "<=", "~=", ">", "<", "!="):
@@ -8443,7 +8443,7 @@ class _UpdateOutputStream:
         if self._log is not None:
             try:
                 self._log.flush()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         if self._original_broken:
             return
@@ -8457,7 +8457,7 @@ class _UpdateOutputStream:
             return False
         try:
             return self._original.isatty()
-        except Exception:
+        except (AttributeError, ValueError):
             return False
 
     def fileno(self):
@@ -8601,18 +8601,18 @@ def _finalize_update_output(state):
     if state.get("installed"):
         try:
             sys.stdout = state.get("prev_stdout", sys.stdout)
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
         try:
             sys.stderr = state.get("prev_stderr", sys.stderr)
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
     log_file = state.get("log_file")
     if log_file is not None:
         try:
             log_file.flush()
             log_file.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 
@@ -9035,7 +9035,7 @@ def _wait_for_windows_update_gateway_exit(
             try:
                 if not _pid_exists(pid):
                     remaining.discard(pid)
-            except Exception:
+            except (AttributeError, ValueError):
                 remaining.discard(pid)
         if remaining:
             _time.sleep(0.25)
@@ -9045,7 +9045,7 @@ def _wait_for_windows_update_gateway_exit(
         try:
             if _pid_exists(pid):
                 survivors.add(pid)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     return survivors
 
@@ -9175,7 +9175,7 @@ def _detect_venv_python_processes(
     for proc in proc_iter:
         try:
             info = proc.info
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             continue
         pid = info.get("pid")
         exe = info.get("exe")
@@ -10795,7 +10795,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
             if supports_systemd_services():
                 try:
                     _ensure_user_systemd_env()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
                 for scope, scope_cmd in [
@@ -13155,7 +13155,7 @@ def main():
     # there's nothing to clean. See ``_quarantine_running_hercules_exe``.
     try:
         _cleanup_quarantined_exes()
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     # Self-heal a venv left half-built by an interrupted ``hercules update``

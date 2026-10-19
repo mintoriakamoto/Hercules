@@ -1640,7 +1640,7 @@ def valid_post_setup_keys() -> Set[str]:
                 ps = prov.get("post_setup")
                 if ps:
                     keys.add(ps)
-        except Exception:  # pragma: no cover — defensive; plugins optional
+        except (requests.RequestException, httpx.RequestError, OSError):
             continue
     return keys
 
@@ -2363,7 +2363,7 @@ def _plugin_image_gen_providers() -> list[dict]:
     for provider in providers:
         try:
             schema = provider.get_setup_schema()
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         if not isinstance(schema, dict):
             continue
@@ -2401,7 +2401,7 @@ def _plugin_video_gen_providers() -> list[dict]:
     for provider in providers:
         try:
             schema = provider.get_setup_schema()
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         if not isinstance(schema, dict):
             continue
@@ -2457,7 +2457,7 @@ def _plugin_web_search_providers() -> list[dict]:
             continue
         try:
             schema = provider.get_setup_schema()
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         if not isinstance(schema, dict):
             continue
@@ -2512,7 +2512,7 @@ def _plugin_browser_providers() -> list[dict]:
             continue
         try:
             schema = provider.get_setup_schema()
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         if not isinstance(schema, dict):
             continue
@@ -2566,7 +2566,7 @@ def _plugin_tts_providers() -> list[dict]:
             continue
         try:
             schema = provider.get_setup_schema()
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         if not isinstance(schema, dict):
             continue
@@ -2705,9 +2705,9 @@ def _toolset_needs_configuration_prompt(
                 try:
                     if provider.is_available():
                         return False
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         return True
     if ts_key == "video_gen":
@@ -2722,9 +2722,9 @@ def _toolset_needs_configuration_prompt(
                 try:
                     if provider.is_available():
                         return False
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         return True
 
@@ -3686,7 +3686,7 @@ def _toolset_enabled_for_reconfigure(ts_key: str, config: dict) -> bool:
                 platform,
                 include_default_mcp_servers=False,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         if ts_key in enabled:
             return True

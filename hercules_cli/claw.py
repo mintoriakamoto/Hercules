@@ -231,7 +231,7 @@ def _load_migration_module(script_path: Path):
     sys.modules[spec.name] = mod
     try:
         spec.loader.exec_module(mod)
-    except Exception:
+    except (AttributeError, ValueError):
         sys.modules.pop(spec.name, None)
         raise
     return mod

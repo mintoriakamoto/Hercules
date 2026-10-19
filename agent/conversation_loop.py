@@ -993,7 +993,7 @@ def run_conversation(
             agent._api_call_count = api_call_count
             try:
                 agent.iteration_budget.refund()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             break
 
@@ -2919,7 +2919,7 @@ def run_conversation(
                         agent._oauth_1m_beta_disabled = True
                         try:
                             agent._anthropic_client.close()
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                         agent._rebuild_anthropic_client()
                         agent._vprint(
@@ -4752,7 +4752,7 @@ def run_conversation(
                 if first_line and getattr(agent, "_delegate_depth", 0) > 0:
                     try:
                         agent.tool_progress_callback("_thinking", first_line)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
                 elif _think_text:
                     try:
@@ -5188,7 +5188,7 @@ def run_conversation(
                 if agent.stream_delta_callback:
                     try:
                         agent.stream_delta_callback(None)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
                 agent._execute_tool_calls(
@@ -5214,7 +5214,7 @@ def run_conversation(
                             try:
                                 agent.stream_delta_callback(final_response)
                                 agent.stream_delta_callback(None)
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 pass
                     break
 

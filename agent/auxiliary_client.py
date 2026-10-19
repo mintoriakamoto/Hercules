@@ -1035,7 +1035,7 @@ class _CodexCompletionsAdapter:
             if callable(close):
                 try:
                     close()
-                except Exception:
+                except (AttributeError, ValueError):
                     logger.debug(
                         "Codex auxiliary: client close during timeout failed",
                         exc_info=True,
@@ -1048,7 +1048,7 @@ class _CodexCompletionsAdapter:
             # and fails fast with a connection error.  See issue #23432.
             try:
                 _evict_cached_client_instance(self._client)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "Codex auxiliary: cache eviction on timeout failed", exc_info=True
                 )
@@ -1117,7 +1117,7 @@ class _CodexCompletionsAdapter:
                 if callable(close_fn):
                     try:
                         close_fn()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
             if final is None:
@@ -2383,7 +2383,7 @@ def _try_azure_foundry(
         model_cfg = cfg.get("model") if isinstance(cfg, dict) else {}
         if not isinstance(model_cfg, dict):
             model_cfg = {}
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         model_cfg = {}
 
     try:
@@ -3804,7 +3804,7 @@ def _try_main_agent_model_fallback(
             provider=main_provider,
             model=main_model,
         )
-    except Exception:
+    except (AttributeError, ValueError):
         client, resolved_model = None, None
 
     if client is None:
@@ -3945,7 +3945,7 @@ def _try_configured_fallback_chain(
 
         try:
             fb_client, resolved_model = _resolve_fallback_entry(entry)
-        except Exception:
+        except (AttributeError, ValueError):
             fb_client, resolved_model = None, None
 
         if fb_client is not None:
@@ -5388,7 +5388,7 @@ def _main_model_supports_vision(provider: str, model: Optional[str]) -> bool:
         return True
     try:
         supports = _lookup_supports_vision(provider, model, load_config())
-    except Exception:  # pragma: no cover - defensive
+    except (AttributeError, ValueError):
         return True
     if supports is None:
         # No capability data — keep current behaviour and let the call attempt
@@ -7191,7 +7191,7 @@ def call_llm(
         if _is_connection_error(first_err):
             try:
                 _evict_cached_client_instance(client)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "Auxiliary: cache eviction after connection error failed",
                     exc_info=True,
@@ -7695,7 +7695,7 @@ async def async_call_llm(
         if _is_connection_error(first_err):
             try:
                 _evict_cached_client_instance(client)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "Auxiliary (async): cache eviction after connection error failed",
                     exc_info=True,

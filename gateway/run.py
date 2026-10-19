@@ -2355,7 +2355,7 @@ def _skill_slug_from_frontmatter(skill_md: Path) -> tuple[str | None, str | None
     """
     try:
         content = skill_md.read_text(encoding="utf-8", errors="replace")
-    except Exception:
+    except (AttributeError, ValueError):
         return None, None
     if not content.startswith("---"):
         return None, None
@@ -2729,7 +2729,7 @@ def _drain_gateway_watch_events(completion_queue) -> "list[dict]":
     while not completion_queue.empty():
         try:
             evt = completion_queue.get_nowait()
-        except Exception:
+        except (AttributeError, ValueError):
             break
         evt_type = evt.get("type", "completion")
         if evt_type in {"watch_match", "watch_disabled"}:
@@ -3728,7 +3728,7 @@ class GatewayRunner(
                 session_key = self.session_store._generate_session_key(source)
                 if isinstance(session_key, str) and session_key:
                     return session_key
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         config = getattr(self, "config", None)
         # Mirror SessionStore._resolve_profile_for_key so this fallback path
@@ -3890,7 +3890,7 @@ class GatewayRunner(
             return
         try:
             self._record_telegram_topic_binding(source, session_entry)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "telegram topic binding refresh failed (%s)",
                 reason,
@@ -3973,7 +3973,7 @@ class GatewayRunner(
         """
         try:
             recovered = self._recover_telegram_topic_thread_id(source)
-        except Exception:
+        except (AttributeError, ValueError):
             return source
         if recovered is None:
             return source
@@ -3996,7 +3996,7 @@ class GatewayRunner(
         if not resolved_session_key and source is not None:
             try:
                 resolved_session_key = self._session_key_for_source(source)
-            except Exception:
+            except (AttributeError, ValueError):
                 resolved_session_key = None
 
         model = _resolve_gateway_model(user_config)
@@ -4413,7 +4413,7 @@ class GatewayRunner(
             stz = gw.get("scale_to_zero") if isinstance(gw, dict) else None
             if isinstance(stz, dict):
                 raw = stz.get("idle_timeout_minutes")
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             raw = None
         return parse_idle_timeout_seconds(raw)
 
@@ -4475,7 +4475,7 @@ class GatewayRunner(
             platforms = []
         try:
             wake_url = relay_wake_url()
-        except Exception:
+        except (AttributeError, ValueError):
             wake_url = None
         return should_arm(
             enabled=scale_to_zero_enabled(),
@@ -4516,7 +4516,7 @@ class GatewayRunner(
             relay_only = messaging_is_relay_only_or_absent(active)
             try:
                 wake_url = relay_wake_url()
-            except Exception:
+            except (AttributeError, ValueError):
                 wake_url = None
             logger.info(
                 "scale-to-zero: NOT armed despite opt-in — "
@@ -4526,7 +4526,7 @@ class GatewayRunner(
                 active or "none",
                 "set" if wake_url else "MISSING",
             )
-        except Exception:  # diagnostics must never block startup
+        except (AttributeError, ValueError):
             logger.debug(
                 "scale-to-zero: not-armed reason logging failed", exc_info=True
             )
@@ -4554,7 +4554,7 @@ class GatewayRunner(
         if getattr(self, "_scale_to_zero_cooldown_until", 0.0) > 0:
             try:
                 self._update_runtime_status("running")
-            except Exception:  # status restoration is best-effort
+            except (AttributeError, ValueError):
                 logger.debug("scale-to-zero: status restore failed", exc_info=True)
             self._scale_to_zero_cooldown_until = 0.0
 
@@ -4606,7 +4606,7 @@ class GatewayRunner(
                 )
                 try:
                     self._update_runtime_status("draining")
-                except Exception:  # status is best-effort
+                except (AttributeError, ValueError):
                     logger.debug("scale-to-zero: status mark failed", exc_info=True)
                 try:
                     result = go_dormant()
@@ -4971,7 +4971,7 @@ class GatewayRunner(
                 error_code=None,
                 error_message=None,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         logger.info("%s resumed — retrying on next watcher tick", platform.value)
         return True
@@ -5137,7 +5137,7 @@ class GatewayRunner(
         if not resolved_session_key and source is not None:
             try:
                 resolved_session_key = self._session_key_for_source(source)
-            except Exception:
+            except (AttributeError, ValueError):
                 resolved_session_key = None
 
         overrides = getattr(self, "_session_reasoning_overrides", {}) or {}
@@ -5841,7 +5841,7 @@ class GatewayRunner(
         ):
             try:
                 running_agent.interrupt(event.text)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass  # don't let interrupt failure block the ack
 
         # Check if busy ack is disabled — skip sending but still process the input.
@@ -6337,7 +6337,7 @@ class GatewayRunner(
                     if callable(_strip):
                         try:
                             _strip(_session_messages)
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                     _flush(_session_messages)
             except Exception as _e:
@@ -6407,7 +6407,7 @@ class GatewayRunner(
         if context.startswith("shutdown"):
             try:
                 agent._end_session_on_close = False
-            except Exception:
+            except (AttributeError, ValueError, KeyError, OSError):
                 pass
         try:
             await asyncio.wait_for(
@@ -6460,7 +6460,7 @@ class GatewayRunner(
         try:
             if hasattr(agent, "close"):
                 agent.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         # Auxiliary async clients (session_search/web/vision/etc.) live in a
         # process-global cache and are created inside worker threads. Clean up
@@ -6500,7 +6500,7 @@ class GatewayRunner(
 
         try:
             atomic_json_write(path, new_counts, indent=None)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def _suspend_stuck_loop_sessions(self) -> int:
@@ -6542,7 +6542,7 @@ class GatewayRunner(
         if suspended:
             try:
                 self.session_store._save()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         # Clear the file — counters start fresh after suspension
@@ -6923,7 +6923,7 @@ class GatewayRunner(
                 source.platform.value if source and source.platform else "unknown",
                 source.chat_id if source else "unknown",
             )
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     async def _drain_startup_restore_queue(self) -> int:
@@ -8486,7 +8486,7 @@ class GatewayRunner(
                         # doesn't silently wait for a manual user message.
                         try:
                             self._schedule_resume_pending_sessions(platform=platform)
-                        except Exception:
+                        except (AttributeError, ValueError):
                             logger.debug(
                                 "resume-pending reschedule after %s reconnect failed",
                                 platform.value,
@@ -9679,7 +9679,7 @@ class GatewayRunner(
                         try:
                             _cmd_def = _resolve_update_cmd(cmd)
                             _recognized_cmd = _cmd_def.name if _cmd_def else None
-                        except Exception:
+                        except (AttributeError, ValueError):
                             _recognized_cmd = None
                 if _recognized_cmd:
                     response_text = ""
@@ -10493,7 +10493,7 @@ class GatewayRunner(
             try:
                 event.text = build_learn_prompt(_learn_req)
                 # fall through to agent processing
-            except Exception:
+            except (AttributeError, ValueError):
                 return "Could not start /learn — please try again."
 
         if canonical == "fast":
@@ -10548,7 +10548,7 @@ class GatewayRunner(
                         logger.debug("blueprint ack send failed", exc_info=True)
                 try:
                     event.text = _blueprint_seed
-                except Exception:
+                except (AttributeError, ValueError, KeyError, OSError):
                     return getattr(_blueprint_result, "text", "") or None
             else:
                 return getattr(_blueprint_result, "text", "") or None
@@ -10644,7 +10644,7 @@ class GatewayRunner(
                 return "Usage: /steer <prompt>  (no agent is running; sending as a normal message)"
             try:
                 event.text = steer_payload
-            except Exception:
+            except (AttributeError, ValueError, KeyError, OSError):
                 pass
             # Do NOT return — fall through to _handle_message_with_agent
             # at the end of this function so the rewritten text is sent
@@ -10672,7 +10672,7 @@ class GatewayRunner(
                 moa_cfg = normalize_moa_config(
                     cfg.get("moa") if isinstance(cfg, dict) else {}
                 )
-            except Exception:
+            except (requests.RequestException, httpx.RequestError, OSError):
                 moa_cfg = normalize_moa_config({})
             preset = moa_cfg["default_preset"]
             try:
@@ -11546,7 +11546,7 @@ class GatewayRunner(
         if source is not None:
             try:
                 cached_sources.move_to_end(session_key)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         return source
 
@@ -11593,7 +11593,7 @@ class GatewayRunner(
             source = dataclasses.replace(source, thread_id=recovered)
             try:
                 event.source = source
-            except Exception:
+            except (AttributeError, ValueError, KeyError, OSError):
                 pass
 
         session_entry = await self.async_session_store.get_or_create_session(source)
@@ -11994,7 +11994,7 @@ class GatewayRunner(
                     _hyg_provider = _hyg_runtime.get("provider") or _hyg_provider
                     _hyg_base_url = _hyg_runtime.get("base_url") or _hyg_base_url
                     _hyg_api_key = _hyg_runtime.get("api_key") or _hyg_api_key
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     pass
 
                 # Check custom_providers per-model context_length
@@ -13379,7 +13379,7 @@ class GatewayRunner(
             provider = provider or runtime.get("provider")
             base_url = base_url or runtime.get("base_url")
             api_key = runtime.get("api_key")
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
 
         context_length = get_model_context_length(
@@ -13528,7 +13528,7 @@ class GatewayRunner(
         # so future platforms aren't accidentally gated by this check.
         try:
             platform_value = event.source.platform.value
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             return False
         if platform_value != "telegram":
             return False
@@ -13703,7 +13703,7 @@ class GatewayRunner(
 
         try:
             metadata = self._thread_metadata_for_source(source)
-        except Exception:
+        except (AttributeError, ValueError):
             metadata = None
 
         result = await adapter.send(source.chat_id, message, metadata=metadata)
@@ -13743,7 +13743,7 @@ class GatewayRunner(
 
         try:
             session_key = self._session_key_for_source(source)
-        except Exception:
+        except (AttributeError, ValueError):
             session_key = None
 
         if session_key and hasattr(adapter, "register_post_delivery_callback"):
@@ -14760,7 +14760,7 @@ class GatewayRunner(
             return
         try:
             copied_source = dataclasses.replace(source)
-        except Exception:
+        except (AttributeError, ValueError):
             copied_source = source
         future = safe_schedule_threadsafe(
             self._rename_discord_auto_thread_for_session_title(
@@ -14776,7 +14776,7 @@ class GatewayRunner(
         def _log_rename_failure(fut) -> None:
             try:
                 fut.result()
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("Discord semantic thread rename failed", exc_info=True)
 
         future.add_done_callback(_log_rename_failure)
@@ -14924,7 +14924,7 @@ class GatewayRunner(
             return
         try:
             copied_source = dataclasses.replace(source)
-        except Exception:
+        except (AttributeError, ValueError):
             copied_source = source
         future = safe_schedule_threadsafe(
             self._rename_telegram_topic_for_session_title(
@@ -14940,7 +14940,7 @@ class GatewayRunner(
         def _log_rename_failure(fut) -> None:
             try:
                 fut.result()
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("Telegram topic title rename failed", exc_info=True)
 
         future.add_done_callback(_log_rename_failure)
@@ -16726,7 +16726,7 @@ class GatewayRunner(
                 while not _pr.completion_queue.empty():
                     try:
                         evt = _pr.completion_queue.get_nowait()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         break
                     if evt.get("type") == "async_delegation":
                         async_events.append(evt)
@@ -17169,7 +17169,7 @@ class GatewayRunner(
             return
         try:
             persisted = store.get_model_override(session_key)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "Failed to read persisted session model override", exc_info=True
             )
@@ -17282,7 +17282,7 @@ class GatewayRunner(
         if lease is not None:
             try:
                 lease.release()
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("Failed to release active session slot", exc_info=True)
         self._running_agents.pop(session_key, None)
         self._running_agents_ts.pop(session_key, None)
@@ -17570,7 +17570,7 @@ class GatewayRunner(
             # inline as a best-effort fallback.
             try:
                 self._release_evicted_agent_soft(agent)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     @staticmethod
@@ -17685,7 +17685,7 @@ class GatewayRunner(
                 # Older agent instance (shouldn't happen in practice) —
                 # fall back to the legacy full-close path.
                 self._cleanup_agent_resources(agent)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         # Free conversation history memory — can be tens of MB with tool
         # outputs (file reads, terminal output, search results) on heavy
@@ -17843,7 +17843,7 @@ class GatewayRunner(
                         if _store is not None:
                             _store._ensure_loaded()
                             session_entry = _store._entries.get(key)
-                    except Exception:
+                    except (requests.RequestException, httpx.RequestError, OSError):
                         session_entry = None
                     if (
                         session_entry is not None
@@ -18281,7 +18281,7 @@ class GatewayRunner(
                 (source.profile or "").strip() or get_active_profile_name() or "default"
             )
             return get_profile_dir(name)
-        except Exception:
+        except (AttributeError, ValueError):
             from hercules_constants import get_hercules_home
 
             return get_hercules_home()
@@ -18699,7 +18699,7 @@ class GatewayRunner(
             _code_block_short = None
             try:
                 _progress_adapter = self._adapter_for_source(source)
-            except Exception:
+            except (AttributeError, ValueError):
                 _progress_adapter = None
             if (
                 getattr(_progress_adapter, "supports_code_blocks", False)
@@ -18890,13 +18890,13 @@ class GatewayRunner(
                         tool_logger.info("%s", log_queue.get_nowait())
                     except queue.Empty:
                         break
-                    except Exception:
+                    except (AttributeError, ValueError):
                         break
                 tool_logger.removeHandler(file_handler)
                 try:
                     file_handler.flush()
                     file_handler.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
         async def send_progress_messages():
@@ -18914,7 +18914,7 @@ class GatewayRunner(
                 while not progress_queue.empty():
                     try:
                         progress_queue.get_nowait()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         break
                 return
 
@@ -19051,7 +19051,7 @@ class GatewayRunner(
                         while not progress_queue.empty():
                             try:
                                 progress_queue.get_nowait()
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 break
                         return
 
@@ -19363,7 +19363,7 @@ class GatewayRunner(
                 def _track_status_id(fut) -> None:
                     try:
                         res = fut.result()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         return
                     mid = getattr(res, "message_id", None)
                     if getattr(res, "success", False) and mid:
@@ -19619,7 +19619,7 @@ class GatewayRunner(
                     _sess_row = self._session_db._db.get_session(session_id)
                     if _sess_row:
                         _current_msg_count = _sess_row.get("message_count", 0)
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     pass
 
             _xproc_evicted_agent = None
@@ -19730,7 +19730,7 @@ class GatewayRunner(
                     # inline as a best-effort fallback.
                     try:
                         self._release_evicted_agent_soft(_xproc_evicted_agent)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
             if agent is None:
@@ -19832,7 +19832,7 @@ class GatewayRunner(
                     return
                 try:
                     line = render_notice_line(notice)
-                except Exception:
+                except (AttributeError, ValueError):
                     logger.debug("render_notice_line failed", exc_info=True)
                     return
                 if not line:
@@ -19950,7 +19950,7 @@ class GatewayRunner(
                 # typing is active (Slack Assistant API).
                 try:
                     _status_adapter.pause_typing_for_chat(_status_chat_id)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
                 send_ok = False
@@ -20205,7 +20205,7 @@ class GatewayRunner(
             if session_key:
                 try:
                     _resume_entry = self.session_store._entries.get(session_key)
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     _resume_entry = None
 
             # resume_pending freshness uses a SECOND signal in addition to the
@@ -21103,7 +21103,7 @@ class GatewayRunner(
                         try:
                             _act = _agent_ref.get_activity_summary()
                             _idle_secs = _act.get("seconds_since_activity", 0.0)
-                        except Exception:
+                        except (requests.RequestException, httpx.RequestError, OSError):
                             pass
                     # Staged warning: fire once before escalating to full timeout.
                     if (
@@ -21166,7 +21166,7 @@ class GatewayRunner(
                 ):
                     try:
                         _activity = _timed_out_agent.get_activity_summary()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
                 _last_desc = _activity.get("last_activity_desc", "unknown")
@@ -21550,7 +21550,7 @@ class GatewayRunner(
                     # The write and consume keys must match or the images drop.
                     try:
                         next_session_key = self._session_key_for_source(next_source)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         logger.debug(
                             "Queued follow-up session-key resolution failed; reusing %s",
                             session_key or "?",
@@ -21789,7 +21789,7 @@ class GatewayRunner(
                         logger=logger,
                         log_message="Temp bubble cleanup scheduling error",
                     )
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
             try:
@@ -22726,7 +22726,7 @@ def _exit_after_graceful_shutdown(exit_code: int) -> None:
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.flush()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     # Release PID + runtime lock BEFORE the log drain: the drain is bounded but
     # could still take up to its timeout on a wedged disk, and these locks must

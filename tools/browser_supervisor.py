@@ -426,7 +426,7 @@ class CDPSupervisor:
                 if fut is not None:
                     try:
                         fut.result(timeout=2.0)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
             except RuntimeError:
                 pass  # loop already shutting down
@@ -659,7 +659,7 @@ class CDPSupervisor:
                 pass
             try:
                 loop.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             with self._state_lock:
                 self._active = False

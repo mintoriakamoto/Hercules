@@ -154,7 +154,7 @@ def _check_dispatcher_presence() -> tuple[bool, str]:
         return (True, "")  # can't probe — silent
     try:
         pid = get_running_pid()
-    except Exception:
+    except (AttributeError, ValueError):
         return (True, "")  # probe errored — silent
 
     # Even if the gateway is up, dispatch_in_gateway may be off.
@@ -1422,7 +1422,7 @@ def _cmd_init(args: argparse.Namespace) -> int:
     # through to `hercules -p <name>`.
     try:
         profiles = kb.list_profiles_on_disk()
-    except Exception:
+    except (AttributeError, ValueError):
         profiles = []
     if profiles:
         print(
@@ -1608,7 +1608,7 @@ def _cmd_list(args: argparse.Namespace) -> int:
     # never see this — the feature stays invisible until you opt in.
     try:
         all_boards = kb.list_boards(include_archived=False)
-    except Exception:
+    except (AttributeError, ValueError):
         all_boards = []
     if len(all_boards) > 1:
         current = kb.get_current_board()
@@ -2563,7 +2563,7 @@ def _cmd_daemon(args: argparse.Namespace) -> int:
         try:
             with kb.connect_closing() as conn:
                 return kb.has_spawnable_ready(conn)
-        except Exception:
+        except (AttributeError, ValueError):
             return False
 
     try:

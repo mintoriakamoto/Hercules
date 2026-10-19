@@ -98,7 +98,7 @@ def log_memory_usage(prefix: str = "") -> None:
     # is a cheap proxy for "how much garbage have we created".
     try:
         gc_counts = gc.get_count()  # (gen0, gen1, gen2)
-    except Exception:
+    except (AttributeError, ValueError):
         gc_counts = (0, 0, 0)
     # Thread count is a handy correlate when diagnosing thread leaks.
     try:
@@ -207,7 +207,7 @@ def stop_memory_monitoring(timeout: float = 2.0) -> None:
         # Final snapshot before teardown so "last RSS" is always in the log.
         try:
             log_memory_usage(prefix="shutdown")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
         _stop_event.set()
@@ -218,7 +218,7 @@ def stop_memory_monitoring(timeout: float = 2.0) -> None:
     # Join outside the lock so a stuck log call can't deadlock shutdown.
     try:
         thread.join(timeout=timeout)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     logger.info("[MEMORY] Periodic memory monitoring stopped")

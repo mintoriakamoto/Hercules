@@ -729,7 +729,7 @@ def _find_skill_in_other_profiles(name: str) -> List[Tuple[str, Path]]:
 
     try:
         root = get_default_hercules_root()
-    except Exception:
+    except (AttributeError, ValueError):
         return matches
 
     # Collect (profile_name, skills_dir) for every profile EXCEPT the

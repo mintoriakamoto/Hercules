@@ -1466,7 +1466,7 @@ def check_vision_requirements() -> bool:
         # provider can't be resolved.
         _provider, client, _model = resolve_vision_provider_client(provider="auto")
         return client is not None
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
 

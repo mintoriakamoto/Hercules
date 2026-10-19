@@ -273,7 +273,7 @@ def _detect_capabilities_nonblocking(token: str) -> Dict[str, Any]:
                     caps = _fetch_capabilities(token)
                     if caps.get("detected"):
                         _save_caps_to_disk(token, caps)
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     logger.debug(
                         "background discord capability detection failed", exc_info=True
                     )

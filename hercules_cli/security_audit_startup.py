@@ -43,7 +43,7 @@ def _is_root() -> bool:
         return False
     try:
         return getuid() == 0
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
 
@@ -78,7 +78,7 @@ def _iter_sshd_config_lines() -> list[str]:
                 stripped = raw.strip()
                 if stripped and not stripped.startswith("#"):
                     lines.append(stripped)
-        except Exception:
+        except (AttributeError, ValueError):
             continue
     return lines
 
@@ -136,7 +136,7 @@ def _path_is_mounted(path: Path) -> bool:
     """
     try:
         target = path.resolve()
-    except Exception:
+    except (AttributeError, ValueError):
         target = path
     try:
         mounts = (
@@ -177,7 +177,7 @@ def _container_no_volume_mount(hercules_home: Optional[Path]) -> Optional[str]:
     try:
         if _path_is_mounted(home):
             return None
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     return (
         f"Running in a container but the data dir ({home}) is NOT on a "
@@ -241,17 +241,17 @@ def run_security_audit(
             r = check()
             if r:
                 findings.append(r)
-        except Exception:
+        except (AttributeError, ValueError):
             continue
     try:
         r = _container_no_volume_mount(hercules_home)
         if r:
             findings.append(r)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     try:
         findings.extend(_network_listener_without_auth(config))
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return findings
 
@@ -273,7 +273,7 @@ def log_startup_security_warnings(
     _AUDIT_RAN = True
     try:
         findings = run_security_audit(hercules_home=hercules_home, config=config)
-    except Exception:
+    except (AttributeError, ValueError):
         return []
     if findings:
         logger.warning(

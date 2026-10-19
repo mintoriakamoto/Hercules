@@ -661,7 +661,7 @@ class GatewaySlashCommandsMixin:
         if not model_name or not provider_name or not context_total:
             try:
                 user_config = _load_gateway_config()
-            except Exception:
+            except (AttributeError, ValueError):
                 user_config = {}
         if not model_name:
             model_name = _resolve_gateway_model(user_config)
@@ -926,7 +926,7 @@ class GatewaySlashCommandsMixin:
         # silently allow/deny — fall through to the deterministic DB scoping.
         try:
             origin = self._gateway_session_origin_for_id(target_id)
-        except Exception:
+        except (AttributeError, ValueError):
             origin = None
         if isinstance(origin, SessionSource):
             return self._same_origin_chat(source, origin)
@@ -2278,7 +2278,7 @@ class GatewaySlashCommandsMixin:
             try:
                 session_key = self._session_key_for_source(event.source)
                 self._evict_cached_agent(session_key)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "could not evict cached agent after codex-runtime change",
                     exc_info=True,
@@ -2298,7 +2298,7 @@ class GatewaySlashCommandsMixin:
         try:
             config = _load_gateway_config()
             personalities = cfg_get(config, "agent", "personalities", default={})
-        except Exception:
+        except (AttributeError, ValueError):
             config = {}
             personalities = {}
 
@@ -3232,7 +3232,7 @@ class GatewaySlashCommandsMixin:
                 cfg_get(user_config, "display", "tool_progress_command"),
                 default=False,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             gate_enabled = False
 
         if not gate_enabled:
@@ -3707,7 +3707,7 @@ class GatewaySlashCommandsMixin:
             try:
                 if not auth_fn(source):
                     return t("gateway.topic.unauthorized")
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("Topic auth check failed", exc_info=True)
 
         args = event.get_command_args().strip()
@@ -4911,7 +4911,7 @@ class GatewaySlashCommandsMixin:
                     )
                     lines.append(t("gateway.debug.full_logs_hint"))
                     return "\n".join(lines)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass  # fall back to a local file
 
             share_dir = (

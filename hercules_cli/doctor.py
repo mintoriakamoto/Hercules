@@ -77,7 +77,7 @@ def _safe_which(cmd: str) -> str | None:
     """shutil.which wrapper resilient to platform monkeypatching in tests."""
     try:
         return shutil.which(cmd)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -1010,7 +1010,7 @@ def run_doctor(args):
             if _compatible_custom_providers is not None:
                 try:
                     custom_providers = _compatible_custom_providers(cfg)
-                except Exception:
+                except (AttributeError, ValueError):
                     custom_providers = []
 
             user_providers = cfg.get("providers")
@@ -1035,7 +1035,7 @@ def run_doctor(args):
                         valid_provider_ids.add(
                             _normalize_catalog_provider(known_provider)
                         )
-                    except Exception:
+                    except (AttributeError, ValueError):
                         continue
 
             runtime_provider = provider
@@ -1047,7 +1047,7 @@ def run_doctor(args):
                 try:
                     runtime_provider = _resolve_auth_provider(provider)
                     provider_ids_to_accept.add(runtime_provider)
-                except Exception:
+                except (AttributeError, ValueError):
                     runtime_provider = provider
 
             catalog_provider = provider
@@ -1212,7 +1212,7 @@ def run_doctor(args):
                     )
             else:
                 check_ok(f"Config version up to date (v{current_ver})")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
         # Detect stale root-level model keys (known bug source — PR #4329)
@@ -2857,11 +2857,11 @@ def run_doctor(args):
                                 check_warn(
                                     f"Orphan alias: {wrapper.name} → profile '{_m.group(1)}' no longer exists"
                                 )
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
     except ImportError:
         pass
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     print()

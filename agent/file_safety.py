@@ -141,7 +141,7 @@ def raise_if_read_blocked(path: str) -> None:
     """
     try:
         blocked = get_read_block_error(path)
-    except Exception:
+    except (AttributeError, ValueError):
         return
     if blocked:
         raise ValueError(blocked)

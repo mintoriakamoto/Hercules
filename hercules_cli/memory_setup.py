@@ -177,7 +177,7 @@ def _get_available_providers() -> list:
             provider = load_memory_provider(name)
             if not provider:
                 continue
-        except Exception:
+        except (AttributeError, ValueError):
             continue
 
         schema = (

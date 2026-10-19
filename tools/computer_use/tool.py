@@ -177,7 +177,7 @@ def _get_backend() -> ComputerUseBackend:
                 )
             try:
                 _backend.start()
-            except Exception:
+            except (AttributeError, ValueError):
                 # Don't cache a backend whose start() failed (e.g. a lazy
                 # dependency install was declined / failed). The next call
                 # retries cleanly instead of returning a half-initialised
@@ -194,7 +194,7 @@ def reset_backend_for_tests() -> None:  # pragma: no cover
         if _backend is not None:
             try:
                 _backend.stop()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         _backend = None
     _session_auto_approve = False
@@ -514,7 +514,7 @@ def _image_dimensions_from_b64(image_b64: str) -> Optional[Tuple[int, int]]:
         return None
     try:
         raw = base64.b64decode(image_b64, validate=False)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
     # PNG: signature + IHDR width/height.

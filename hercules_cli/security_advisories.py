@@ -155,7 +155,7 @@ def _installed_version(pkg_name: str) -> Optional[str]:
         return version(pkg_name)
     except PackageNotFoundError:
         return None
-    except Exception:
+    except (AttributeError, ValueError):
         # Some metadata corruption modes raise ValueError or OSError. Don't
         # let advisory checking crash the CLI startup path.
         logger.debug("importlib.metadata.version(%s) raised", pkg_name, exc_info=True)

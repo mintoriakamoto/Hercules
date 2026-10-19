@@ -848,7 +848,7 @@ def _iter_plugin_command_entries() -> list[tuple[str, str, str]]:
         return []
     try:
         commands = get_plugin_commands() or {}
-    except Exception:
+    except (AttributeError, ValueError):
         return []
     entries: list[tuple[str, str, str]] = []
     for name, meta in commands.items():
@@ -1392,9 +1392,9 @@ def discord_skill_commands_by_category(
             for ext in get_external_skills_dirs():
                 try:
                     _scan_roots.append(_P(ext).resolve())
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         skill_cmds = get_skill_commands()
 
@@ -1738,7 +1738,7 @@ class SlashCommandCompleter(Completer):
             return {}
         try:
             return self._skill_commands_provider() or {}
-        except Exception:
+        except (AttributeError, ValueError):
             return {}
 
     def _iter_skill_bundles(self) -> Mapping[str, dict[str, Any]]:
@@ -1746,7 +1746,7 @@ class SlashCommandCompleter(Completer):
             return {}
         try:
             return self._skill_bundles_provider() or {}
-        except Exception:
+        except (AttributeError, ValueError):
             return {}
 
     # -- stacked slash-skill completion helpers ---------------------------
@@ -2298,7 +2298,7 @@ class SlashCommandCompleter(Completer):
                 continue
             try:
                 home = gw.get_home_channel(platform)
-            except Exception:
+            except (AttributeError, ValueError):
                 home = None
             meta = (
                 f"→ {home.name}"

@@ -292,7 +292,7 @@ def _tool_search_scoped_names(agent) -> frozenset:
         names = frozenset()
     try:
         agent._tool_search_scope_cache = (cache_key, names)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return names
 
@@ -585,7 +585,7 @@ def execute_tool_calls_concurrent(
                         agent._checkpoint_mgr.ensure_checkpoint(
                             work_dir, f"before {function_name}"
                         )
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     pass
 
             # Checkpoint before destructive terminal commands
@@ -713,7 +713,7 @@ def execute_tool_calls_concurrent(
         if agent._interrupt_requested:
             try:
                 _ra()._set_interrupt(True, _worker_tid)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         # Set the activity callback on THIS worker thread so
         # _wait_for_process (terminal commands) can fire heartbeats.
@@ -744,7 +744,7 @@ def execute_tool_calls_concurrent(
             except KeyboardInterrupt:
                 try:
                     agent.interrupt("keyboard interrupt")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 result = _emit_cancelled_terminal_post_tool_call(
                     agent,
@@ -808,7 +808,7 @@ def execute_tool_calls_concurrent(
                 agent._tool_worker_threads.discard(_worker_tid)
             try:
                 _ra()._set_interrupt(False, _worker_tid)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     # Start spinner for CLI mode (skip when TUI handles tool progress)
@@ -941,7 +941,7 @@ def execute_tool_calls_concurrent(
                         for tid in worker_tids:
                             try:
                                 _ra()._set_interrupt(True, tid)
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 pass
                         break
 
@@ -1476,7 +1476,7 @@ def execute_tool_calls_sequential(
                     agent._checkpoint_mgr.ensure_checkpoint(
                         work_dir, f"before {function_name}"
                     )
-            except Exception:
+            except (requests.RequestException, httpx.RequestError, OSError):
                 pass  # never block tool execution
 
         # Checkpoint before destructive terminal commands
@@ -1912,7 +1912,7 @@ def execute_tool_calls_sequential(
                 _spinner_result = function_result
                 try:
                     agent.interrupt("keyboard interrupt")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 raise
             except Exception as tool_error:
@@ -1965,7 +1965,7 @@ def execute_tool_calls_sequential(
                 )
                 try:
                     agent.interrupt("keyboard interrupt")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 raise
             except Exception as tool_error:

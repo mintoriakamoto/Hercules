@@ -190,7 +190,7 @@ class CodexAppServerClient:
         try:
             if self._proc.stdin and not self._proc.stdin.closed:
                 self._proc.stdin.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         try:
             self._proc.terminate()
@@ -199,7 +199,7 @@ class CodexAppServerClient:
             try:
                 self._proc.kill()
                 self._proc.wait(timeout=1.0)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     def __enter__(self) -> "CodexAppServerClient":

@@ -2009,7 +2009,7 @@ class ShellFileOperations(FileOperations):
             return False
         try:
             svc = get_service()
-        except Exception:
+        except (AttributeError, ValueError):
             return False
         if svc is None:
             return False
@@ -2039,7 +2039,7 @@ class ShellFileOperations(FileOperations):
             return
         try:
             svc.snapshot_baseline(path)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def _maybe_lsp_diagnostics(
@@ -2077,7 +2077,7 @@ class ShellFileOperations(FileOperations):
             return ""
         try:
             svc = get_service()
-        except Exception:
+        except (AttributeError, ValueError):
             return ""
         if svc is None or not svc.enabled_for(path):
             return ""
@@ -2102,7 +2102,7 @@ class ShellFileOperations(FileOperations):
             diagnostics = svc.get_diagnostics_sync(
                 path, delta=True, line_shift=line_shift
             )
-        except Exception:
+        except (AttributeError, ValueError):
             return ""
         if not diagnostics:
             return ""

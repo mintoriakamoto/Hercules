@@ -184,7 +184,7 @@ def _passthrough_from_wire(raw: Dict[str, Any]) -> PassthroughForward:
     body_b64 = raw.get("bodyB64", "") or ""
     try:
         body = base64.b64decode(body_b64)
-    except Exception:
+    except (AttributeError, ValueError):
         body = b""
     headers_raw = raw.get("headers", []) or []
     headers: list[tuple[str, str]] = []

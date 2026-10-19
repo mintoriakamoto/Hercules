@@ -38,7 +38,7 @@ def start_background_mcp_discovery(*, logger, thread_name: str) -> None:
         def _discover() -> None:
             try:
                 _discover_mcp_tools_without_interactive_oauth()
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("Background MCP tool discovery failed", exc_info=True)
 
         thread = threading.Thread(

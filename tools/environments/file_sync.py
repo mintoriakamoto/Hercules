@@ -90,7 +90,7 @@ def _credential_host_paths() -> set[str]:
     paths: set[str] = set()
     try:
         mounts = get_credential_file_mounts()
-    except Exception:
+    except (AttributeError, ValueError):
         return set()
     for entry in mounts:
         host_path = entry.get("host_path") if isinstance(entry, dict) else None
@@ -349,7 +349,7 @@ class FileSyncManager:
         # Cache file mapping once to avoid O(n*m) from repeated iteration
         try:
             file_mapping = list(self._get_files_fn())
-        except Exception:
+        except (AttributeError, ValueError):
             file_mapping = []
 
         with tempfile.NamedTemporaryFile(suffix=".tar") as tf:

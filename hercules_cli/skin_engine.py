@@ -850,7 +850,7 @@ def get_active_prompt_symbol(fallback: str = "❯") -> str:
     """
     try:
         raw = get_active_skin().get_branding("prompt_symbol", fallback)
-    except Exception:
+    except (AttributeError, ValueError):
         raw = fallback
 
     cleaned = (raw or fallback).strip()
@@ -862,7 +862,7 @@ def get_active_help_header(fallback: str = "(^_^)? Available Commands") -> str:
     """Get the /help header from the active skin."""
     try:
         return get_active_skin().get_branding("help_header", fallback)
-    except Exception:
+    except (AttributeError, ValueError):
         return fallback
 
 
@@ -870,7 +870,7 @@ def get_active_goodbye(fallback: str = "Goodbye! ⚕") -> str:
     """Get the goodbye line from the active skin."""
     try:
         return get_active_skin().get_branding("goodbye", fallback)
-    except Exception:
+    except (AttributeError, ValueError):
         return fallback
 
 
@@ -882,7 +882,7 @@ def get_prompt_toolkit_style_overrides() -> Dict[str, str]:
     """
     try:
         skin = get_active_skin()
-    except Exception:
+    except (AttributeError, ValueError):
         return {}
 
     # Input/prompt: leave unset by default so the typed text inherits

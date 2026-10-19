@@ -325,7 +325,7 @@ class CLIAgentSetupMixin:
                 resolved_id = self._session_db.resolve_resume_session_id(
                     self.session_id
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 resolved_id = self.session_id
             if resolved_id and resolved_id != self.session_id:
                 ChatConsole().print(
@@ -524,7 +524,7 @@ class CLIAgentSetupMixin:
         # walk to the descendant that actually holds the messages. See #15000.
         try:
             resolved_id = self._session_db.resolve_resume_session_id(self.session_id)
-        except Exception:
+        except (AttributeError, ValueError):
             resolved_id = self.session_id
         if resolved_id and resolved_id != self.session_id:
             self._console_print(

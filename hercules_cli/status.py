@@ -60,7 +60,7 @@ def _format_iso_timestamp(value) -> str:
         parsed = datetime.fromisoformat(text)
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
-    except Exception:
+    except (AttributeError, ValueError):
         return value
     return parsed.astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
 
@@ -96,7 +96,7 @@ def _effective_provider_label() -> str:
             model_cfg = load_config().get("model")
             if isinstance(model_cfg, dict):
                 config_base_url = (model_cfg.get("base_url") or "").strip()
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
         if config_base_url or get_env_value("OPENAI_BASE_URL"):
             effective = "custom"
@@ -143,7 +143,7 @@ def show_status(args):
 
     try:
         config = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         config = {}
 
     print(f"  Model:        {_configured_model_label(config)}")

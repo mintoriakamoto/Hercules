@@ -529,7 +529,7 @@ def _apply_pricing(
             continue
         try:
             raw_pricing = get_pricing_for_provider(slug) or {}
-        except Exception:
+        except (AttributeError, ValueError):
             raw_pricing = {}
         if not raw_pricing:
             continue

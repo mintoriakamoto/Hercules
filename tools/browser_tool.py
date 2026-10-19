@@ -678,7 +678,7 @@ def _is_legacy_provider_registry_overridden() -> bool:
                 return True
         # Extra keys not in the default registry → also an override.
         return len(_PROVIDER_REGISTRY) != len(_DEFAULT_PROVIDER_REGISTRY)
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         return False
 
 
@@ -764,7 +764,7 @@ def _get_cloud_provider() -> Optional[CloudBrowserProvider]:
                             "config key spelling).",
                             provider_key,
                         )
-            except Exception:
+            except (requests.RequestException, httpx.RequestError, OSError):
                 logger.warning(
                     "Failed to instantiate explicit cloud_provider %r; will retry on next call",
                     provider_key,
@@ -794,7 +794,7 @@ def _get_cloud_provider() -> Optional[CloudBrowserProvider]:
                 fallback_provider = BrowserbaseProvider()
                 if fallback_provider.is_configured():
                     resolved = fallback_provider
-        except Exception:  # pragma: no cover - defensive: never poison cache
+        except (AttributeError, ValueError):
             logger.debug("Cloud provider auto-detect failed", exc_info=True)
             return None
 

@@ -474,7 +474,7 @@ class ModalEnvironment(BaseEnvironment):
 
                 try:
                     snapshot_id = self._worker.run_coroutine(_snapshot(), timeout=60)
-                except Exception:
+                except (AttributeError, ValueError):
                     snapshot_id = None
 
                 if snapshot_id:
@@ -489,7 +489,7 @@ class ModalEnvironment(BaseEnvironment):
 
         try:
             self._worker.run_coroutine(self._sandbox.terminate.aio(), timeout=15)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         finally:
             self._worker.stop()

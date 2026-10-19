@@ -1461,7 +1461,7 @@ def _current_session_platform_hint() -> str:
         return ""
     try:
         return get_session_env("HERCULES_SESSION_PLATFORM") or ""
-    except Exception:
+    except (AttributeError, ValueError):
         return ""
 
 

@@ -203,7 +203,7 @@ class DaytonaEnvironment(BaseEnvironment):
         # Clean up remote temp file
         try:
             self._sandbox.process.exec(f"rm -f {shlex.quote(remote_tar)}")
-        except Exception:
+        except (AttributeError, ValueError):
             pass  # best-effort cleanup
 
     def _daytona_delete(self, remote_paths: list[str]) -> None:
@@ -246,7 +246,7 @@ class DaytonaEnvironment(BaseEnvironment):
             with lock:
                 try:
                     sandbox.stop()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
         if login:

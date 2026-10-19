@@ -152,14 +152,14 @@ def _collect_memory_provider_external_paths() -> List[Path]:
 
     try:
         active = _get_active_memory_provider()
-    except Exception:
+    except (AttributeError, ValueError):
         active = None
     if not active:
         return []
 
     try:
         provider = load_memory_provider(active)
-    except Exception:
+    except (AttributeError, ValueError):
         provider = None
     if provider is None:
         return []

@@ -320,7 +320,7 @@ def _maybe_nudge_update() -> None:
     def _run() -> None:
         try:
             msg = cua_driver_update_nudge()
-        except Exception:
+        except (AttributeError, ValueError):
             return
         if msg:
             logger.info("computer_use: %s", msg)
@@ -551,7 +551,7 @@ class _AsyncBridge:
             finally:
                 try:
                     self._loop.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
         self._thread = threading.Thread(
@@ -1661,7 +1661,7 @@ class CuaDriverBackend(ComputerUseBackend):
                 if detected_width and detected_height:
                     width = detected_width
                     height = detected_height
-            except Exception:
+            except (AttributeError, ValueError):
                 png_bytes_len = len(png_b64) * 3 // 4
 
         return CaptureResult(

@@ -244,7 +244,7 @@ def _permitted_host_read_target(p: Path, ctx: ResolveContext) -> Optional[Path]:
     if _is_local_terminal_backend():
         try:
             return p.resolve()
-        except Exception:
+        except (AttributeError, ValueError):
             return p
 
     from tools.credential_files import from_agent_visible_cache_path
@@ -252,7 +252,7 @@ def _permitted_host_read_target(p: Path, ctx: ResolveContext) -> Optional[Path]:
     host_candidate = Path(from_agent_visible_cache_path(str(p)))
     try:
         real = host_candidate.resolve()
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     for root in _media_cache_roots():
         try:

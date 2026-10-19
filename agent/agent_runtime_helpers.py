@@ -1046,7 +1046,7 @@ def try_recover_primary_transport(
                     reason="primary_recovery",
                     shared=True,
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         # Rebuild from primary snapshot
@@ -1663,7 +1663,7 @@ def anthropic_prompt_cache_policy(
                     )
                     _agg_base_url = _rt.get("base_url") or ""
                     _agg_api_mode = _rt.get("api_mode") or ""
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     pass
                 return anthropic_prompt_cache_policy(
                     agent,
@@ -2758,7 +2758,7 @@ def sanitize_api_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]
             elif fn is not None and hasattr(fn, "name"):
                 try:
                     fn.name = _EMPTY_NAME_SENTINEL
-                except Exception:
+                except (AttributeError, ValueError, KeyError, OSError):
                     pass
             elif isinstance(tc, dict):
                 tc["function"] = {"name": _EMPTY_NAME_SENTINEL, "arguments": "{}"}

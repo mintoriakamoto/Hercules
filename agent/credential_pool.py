@@ -485,7 +485,7 @@ def credential_pool_matches_provider(
         return False
     try:
         matched_pool = get_custom_provider_pool_key(base_url or "")
-    except Exception:
+    except (AttributeError, ValueError):
         return False
     return str(matched_pool or "").strip().lower() == pool_provider
 
@@ -515,7 +515,7 @@ def _write_through_provider_state_to_global_root(
     """
     try:
         global_path = auth_mod._global_auth_file_path()
-    except Exception:
+    except (AttributeError, ValueError):
         return
     if global_path is None:
         # Classic mode (profile == root); the profile save already hit root.
@@ -531,7 +531,7 @@ def _write_through_provider_state_to_global_root(
             try:
                 if global_path.resolve(strict=False) == real_root.resolve(strict=False):
                     return
-            except Exception:
+            except (AttributeError, ValueError):
                 return
     try:
         if global_path.exists():

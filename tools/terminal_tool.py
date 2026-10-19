@@ -419,7 +419,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
     if _sudo_cb is not None:
         try:
             return _sudo_cb() or ""
-        except Exception:
+        except (AttributeError, ValueError):
             return ""
 
     result = {"password": None, "done": False}
@@ -2558,7 +2558,7 @@ def terminal_tool(
         session_key = get_current_session_key(default="") or (task_id or "")
         try:
             env.cwd_owner = session_key
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             pass
 
         if background:

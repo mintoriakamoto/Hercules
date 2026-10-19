@@ -184,7 +184,7 @@ def check_compression_model_feasibility(agent: Any) -> None:
         # where the compression model is actually being called.
         try:
             _aux_cfg_provider, _, _, _, _ = _resolve_task_provider_model("compression")
-        except Exception:
+        except (AttributeError, ValueError):
             _aux_cfg_provider = ""
         client, aux_model = get_text_auxiliary_client(
             "compression",
@@ -371,7 +371,7 @@ def replay_compression_warning(agent: Any) -> None:
     if msg and agent.status_callback:
         try:
             agent.status_callback("lifecycle", msg)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 
@@ -601,7 +601,7 @@ def compress_context(
         if not _lock_acquired:
             try:
                 existing = _lock_db.get_compression_lock_holder(_lock_sid)
-            except Exception:
+            except (AttributeError, ValueError):
                 existing = None
             logger.warning(
                 "compression skipped: another path is compressing session=%s "
@@ -619,7 +619,7 @@ def compress_context(
                         "is already compressing this session. Will retry "
                         "after it finishes."
                     )
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             _existing_sp = getattr(agent, "_cached_system_prompt", None)
             if not _existing_sp:
@@ -648,7 +648,7 @@ def compress_context(
     if agent._memory_manager:
         try:
             agent._memory_manager.on_pre_compress(messages)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     try:
@@ -798,7 +798,7 @@ def compress_context(
                     # parent transcript (#47202). (In-place skips this — see above.)
                     try:
                         agent._flush_messages_to_session_db(messages)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass  # best-effort — don't block compression on a flush error
                     # Propagate title to the new session with auto-numbering
                     old_title = agent._session_db.get_session_title(agent.session_id)
@@ -871,7 +871,7 @@ def compress_context(
                         # continuing on it, so it must not stay closed.
                         try:
                             agent._session_db.reopen_session(old_session_id)
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                         old_session_id = None  # no rotation happened
                         # The parent row already exists in state.db, so mark the
@@ -1121,21 +1121,21 @@ def _compress_context_via_codex_app_server(
     )
     try:
         agent._emit_status(COMPACTION_STATUS)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     result = codex_session.compact_thread()
     if getattr(result, "should_retire", False):
         try:
             codex_session.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         agent._codex_session = None
 
     if getattr(result, "interrupted", False) or getattr(result, "error", None):
         try:
             agent._emit_warning(f"⚠ Codex app-server compaction failed: {result.error}")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         existing_prompt = getattr(agent, "_cached_system_prompt", None)
         if not existing_prompt:

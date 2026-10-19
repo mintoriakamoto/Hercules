@@ -527,7 +527,7 @@ def _is_satisfied(spec: str) -> bool:
         installed = version(pkg)
     except PackageNotFoundError:
         return False
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
     spec_tail = _specifier_from_spec(spec)
@@ -565,7 +565,7 @@ def _is_present(spec: str) -> bool:
         return True
     except PackageNotFoundError:
         return False
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
 

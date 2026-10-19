@@ -1831,7 +1831,7 @@ def _dump_subagent_timeout_diagnostic(
             _w(f"  loaded tool count: {len(tool_names)}")
             try:
                 _w(f"  loaded tools:      {sorted(tool_names)}")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         _w("")
 
@@ -2199,7 +2199,7 @@ def _run_single_child(
                 pass
             try:
                 touch(desc)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     _heartbeat_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
@@ -2307,7 +2307,7 @@ def _run_single_child(
                     child.interrupt()
                 elif hasattr(child, "_interrupt_requested"):
                     child._interrupt_requested = True
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
             is_timeout = isinstance(_timeout_exc, (FuturesTimeoutError, TimeoutError))
@@ -2683,7 +2683,7 @@ def _run_single_child(
         try:
             if hasattr(child, "close"):
                 child.close()
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("Failed to close child agent after delegation")
 
 
@@ -3231,7 +3231,7 @@ def _run_dag_batch(
             try:
                 spinner_ref.print_above(line)
                 return
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         _emit_parent_console(parent_agent, f"  {line}")
 
@@ -3720,7 +3720,7 @@ def delegate_task(
                         if spinner_ref:
                             try:
                                 spinner_ref.print_above(completion_line)
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 _emit_parent_console(
                                     parent_agent, f"  {completion_line}"
                                 )
@@ -4071,7 +4071,7 @@ def delegate_task(
                         _c.interrupt("Async delegation cancelled")
                     elif hasattr(_c, "_interrupt_requested"):
                         _c._interrupt_requested = True
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
         _goals = [t["goal"] for t in task_list]
@@ -4455,15 +4455,15 @@ def _build_top_level_description() -> str:
     """
     try:
         max_children = _get_max_concurrent_children()
-    except Exception:
+    except (AttributeError, ValueError):
         max_children = _DEFAULT_MAX_CONCURRENT_CHILDREN
     try:
         max_depth = _get_max_spawn_depth()
-    except Exception:
+    except (AttributeError, ValueError):
         max_depth = MAX_DEPTH
     try:
         orchestrator_on = _get_orchestrator_enabled()
-    except Exception:
+    except (AttributeError, ValueError):
         orchestrator_on = True
 
     if max_depth >= 2 and orchestrator_on:
@@ -4557,7 +4557,7 @@ def _build_tasks_param_description() -> str:
     """Compose the 'tasks' parameter description with current concurrency limit."""
     try:
         max_children = _get_max_concurrent_children()
-    except Exception:
+    except (AttributeError, ValueError):
         max_children = _DEFAULT_MAX_CONCURRENT_CHILDREN
     return (
         f"Batch mode: tasks to run in parallel (up to {max_children} for this "
@@ -4571,11 +4571,11 @@ def _build_role_param_description() -> str:
     """Compose the 'role' parameter description with current spawn-depth limit."""
     try:
         max_depth = _get_max_spawn_depth()
-    except Exception:
+    except (AttributeError, ValueError):
         max_depth = MAX_DEPTH
     try:
         orchestrator_on = _get_orchestrator_enabled()
-    except Exception:
+    except (AttributeError, ValueError):
         orchestrator_on = True
 
     if max_depth >= 2 and orchestrator_on:

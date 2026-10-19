@@ -442,10 +442,10 @@ class CopilotACPClient:
         try:
             proc.terminate()
             proc.wait(timeout=2)
-        except Exception:
+        except (AttributeError, ValueError):
             try:
                 proc.kill()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     def _create_chat_completion(

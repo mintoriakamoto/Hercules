@@ -620,7 +620,7 @@ def find_gateway_pids(
         _append_unique_pid(pids, pid, _exclude)
     try:
         include_restart_managers = not supports_systemd_services()
-    except Exception:
+    except (AttributeError, ValueError):
         include_restart_managers = False
     for pid in _scan_gateway_pids(
         _exclude,
@@ -1527,7 +1527,7 @@ def _reap_unsupervised_gateway_orphans() -> bool:
     try:
         if supports_systemd_services():
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
     from gateway.status import _pid_exists, write_planned_stop_marker
@@ -1546,7 +1546,7 @@ def _reap_unsupervised_gateway_orphans() -> bool:
     for pid in orphans:
         try:
             write_planned_stop_marker(pid)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         try:
             os.kill(pid, signal.SIGTERM)
@@ -4623,7 +4623,7 @@ def _guard_named_profile_under_multiplexer(force: bool = False) -> None:
     # (a) Are we a named profile? Default/custom-hash homes return "".
     try:
         suffix = _profile_suffix()
-    except Exception:
+    except (AttributeError, ValueError):
         return
     if not suffix:
         return  # default profile (or unrecognized) — this guard doesn't apply
@@ -4714,7 +4714,7 @@ def _guard_supervised_gateway_conflict(force: bool = False) -> None:
         return
     try:
         snapshot = get_gateway_runtime_snapshot()
-    except Exception:
+    except (AttributeError, ValueError):
         # Best-effort guard: a probe failure must never block a real startup.
         logger.debug("Supervised-gateway conflict probe failed", exc_info=True)
         return
@@ -4868,7 +4868,7 @@ def run_gateway(
     if supports_systemd_services():
         try:
             refresh_systemd_unit_if_needed(system=False)
-        except Exception:
+        except (AttributeError, ValueError):
             pass  # best-effort; don't block gateway startup
 
     from gateway.run import start_gateway

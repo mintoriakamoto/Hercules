@@ -391,7 +391,7 @@ def run_codex_app_server_turn(
             tool_name, preview, args = mapped
             try:
                 progress_callback("tool.started", tool_name, preview, args)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("codex tool-progress callback raised", exc_info=True)
 
         agent._codex_session = CodexAppServerSession(
@@ -416,7 +416,7 @@ def run_codex_app_server_turn(
         # respawns from scratch instead of reusing a dead client.
         try:
             agent._codex_session.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         agent._codex_session = None
         return {
@@ -443,7 +443,7 @@ def run_codex_app_server_turn(
         )
         try:
             agent._codex_session.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         agent._codex_session = None
 
@@ -468,7 +468,7 @@ def run_codex_app_server_turn(
         if getattr(agent, "_session_db", None) is not None:
             try:
                 agent._flush_messages_to_session_db(messages)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "codex app-server projected-message flush failed",
                     exc_info=True,
@@ -509,7 +509,7 @@ def run_codex_app_server_turn(
                 interrupted=False,
                 messages=messages,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("external memory sync raised", exc_info=True)
 
     # Background review fork — same cadence + signature as the default
@@ -526,7 +526,7 @@ def run_codex_app_server_turn(
                 review_memory=should_review_memory,
                 review_skills=should_review_skills,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("background review spawn raised", exc_info=True)
 
     return {
@@ -730,7 +730,7 @@ def _consume_codex_event_stream(
                 if on_reasoning_delta is not None:
                     try:
                         on_reasoning_delta(delta_text)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         logger.debug(
                             "Codex stream on_reasoning_delta raised", exc_info=True
                         )
@@ -742,14 +742,14 @@ def _consume_codex_event_stream(
                         if on_first_delta is not None:
                             try:
                                 on_first_delta()
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 logger.debug(
                                     "Codex stream on_first_delta raised", exc_info=True
                                 )
                     if on_text_delta is not None:
                         try:
                             on_text_delta(delta_text)
-                        except Exception:
+                        except (AttributeError, ValueError):
                             logger.debug(
                                 "Codex stream on_text_delta raised", exc_info=True
                             )
@@ -764,7 +764,7 @@ def _consume_codex_event_stream(
             if reasoning_text and on_reasoning_delta is not None:
                 try:
                     on_reasoning_delta(reasoning_text)
-                except Exception:
+                except (AttributeError, ValueError):
                     logger.debug(
                         "Codex stream on_reasoning_delta raised", exc_info=True
                     )
@@ -967,7 +967,7 @@ def run_codex_stream(agent, api_kwargs: dict, client: Any = None, on_first_delta
             if callable(close_fn):
                 try:
                     close_fn()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
 

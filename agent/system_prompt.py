@@ -494,7 +494,7 @@ def build_system_prompt_parts(
             _ext_mem_block = agent._memory_manager.build_system_prompt()
             if _ext_mem_block:
                 volatile_parts.append(_ext_mem_block)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     from hercules_time import now as _hercules_now

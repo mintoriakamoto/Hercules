@@ -194,7 +194,7 @@ def _model_metadata_disk_cache_age_seconds() -> Optional[float]:
         if age < 0:
             return None
         return age
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -1597,7 +1597,7 @@ def query_ollama_num_ctx(model: str, base_url: str, api_key: str = "") -> Option
 
     try:
         server_type = detect_local_server_type(base_url, api_key=api_key)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     if server_type != "ollama":
         return None
@@ -1651,7 +1651,7 @@ def query_ollama_supports_vision(
     try:
         if detect_local_server_type(base_url, api_key=api_key) != "ollama":
             return None
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
     server_url = _localhost_to_ipv4(base_url.rstrip("/"))
@@ -1867,7 +1867,7 @@ def _query_local_context_length_uncached(
 
     try:
         server_type = detect_local_server_type(base_url, api_key=api_key)
-    except Exception:
+    except (AttributeError, ValueError):
         server_type = None
 
     try:

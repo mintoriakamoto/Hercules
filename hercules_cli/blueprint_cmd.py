@@ -152,7 +152,7 @@ def _humanize_schedule(blueprint) -> str:
 
     try:
         return _h(blueprint)
-    except Exception:
+    except (AttributeError, ValueError):
         return "on a schedule"
 
 

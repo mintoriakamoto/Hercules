@@ -1162,14 +1162,14 @@ class LocalEnvironment(BaseEnvironment):
                 # still makes killpg(pgid, 0) report the group as alive.
                 try:
                     proc.poll()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 if not _group_alive(pgid):
                     return True
                 time.sleep(0.05)
             try:
                 proc.poll()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             return not _group_alive(pgid)
 
@@ -1221,7 +1221,7 @@ class LocalEnvironment(BaseEnvironment):
         except (ProcessLookupError, PermissionError, OSError):
             try:
                 proc.kill()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     def _update_cwd(self, result: dict):

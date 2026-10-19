@@ -200,7 +200,7 @@ def _terminal_env_type_for_task(task_id: str = "default") -> str:
 
         try:
             container_key = _resolve_container_task_id(task_id)
-        except Exception:
+        except (AttributeError, ValueError):
             container_key = task_id
         with _env_lock:
             env = _active_environments.get(container_key) or _active_environments.get(

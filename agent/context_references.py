@@ -632,7 +632,7 @@ def _file_metadata(path: Path) -> str:
         return f"{path.stat().st_size} bytes"
     try:
         line_count = path.read_text(encoding="utf-8").count("\n") + 1
-    except Exception:
+    except (AttributeError, ValueError):
         return f"{path.stat().st_size} bytes"
     return f"{line_count} lines"
 

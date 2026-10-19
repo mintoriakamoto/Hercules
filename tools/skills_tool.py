@@ -1005,7 +1005,7 @@ def _serve_plugin_skill(
     parsed_frontmatter: Dict[str, Any] = {}
     try:
         parsed_frontmatter, _ = _parse_frontmatter(content)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     if not skill_matches_platform(parsed_frontmatter):
@@ -1234,7 +1234,7 @@ def skill_view(
         def _record(sd: Optional[Path], smd: Path) -> None:
             try:
                 key = smd.resolve()
-            except Exception:
+            except (AttributeError, ValueError):
                 key = smd
             if key in seen_md:
                 return
@@ -1286,7 +1286,7 @@ def skill_view(
                 try:
                     fm_content = found_skill_md.read_text(encoding="utf-8")
                     fm, _ = _parse_frontmatter(fm_content)
-                except Exception:
+                except (AttributeError, ValueError):
                     fm = {}
                 if fm.get("name") == name:
                     _record(found_skill_md.parent, found_skill_md)
@@ -1390,7 +1390,7 @@ def skill_view(
         parsed_frontmatter: Dict[str, Any] = {}
         try:
             parsed_frontmatter, _ = _parse_frontmatter(content)
-        except Exception:
+        except (AttributeError, ValueError):
             parsed_frontmatter = {}
 
         if not skill_matches_platform(parsed_frontmatter):

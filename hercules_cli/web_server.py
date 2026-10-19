@@ -1110,7 +1110,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
     # bare display name and ``custom:<name>`` to the durable custom slug.
     try:
         cfg = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         cfg = {}
     user_providers = cfg.get("providers") if isinstance(cfg, dict) else None
     user_provider = resolve_user_provider(
@@ -1154,7 +1154,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
             normalized_model = normalize_model_for_provider(model_in, canonical)
             if normalized_model:
                 model_in = normalized_model
-        except Exception:
+        except (AttributeError, ValueError):
             _log.debug(
                 "model normalization failed for %s/%s", prov_in, model_in, exc_info=True
             )
@@ -1764,7 +1764,7 @@ def _dashboard_local_update_managed_externally() -> bool:
         method = detect_install_method(PROJECT_ROOT)
         if method == "git":
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return True
 
@@ -2723,7 +2723,7 @@ def _collect_profile_gateway_topology() -> Dict[str, Any]:
         try:
             if not _check_gateway_running(home):
                 continue
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         try:
             runtime = read_runtime_status(home / "gateway_state.json")
@@ -3111,7 +3111,7 @@ async def get_curator_status():
         ) from exc
     try:
         state = curator.load_state()
-    except Exception:
+    except (AttributeError, ValueError):
         state = {}
     return {
         "enabled": _safe_call(curator, "is_enabled", True),
@@ -4106,7 +4106,7 @@ async def get_action_status(name: str, lines: int = 200):
         if exit_code is not None:
             try:
                 proc.wait(timeout=1)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             _ACTION_RESULTS[name] = {"exit_code": exit_code, "pid": pid}
             _ACTION_PROCS.pop(name, None)
@@ -4415,7 +4415,7 @@ async def search_sessions(q: str = "", limit: int = 20, profile: Optional[str] =
                         break
                     try:
                         s = db.get_session(cur)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         s = None
                     if not s:
                         root = cur
@@ -4426,7 +4426,7 @@ async def search_sessions(q: str = "", limit: int = 20, profile: Optional[str] =
                         break
                     try:
                         parent_session = db.get_session(parent)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         parent_session = None
                     if not parent_session:
                         root = cur
@@ -4457,7 +4457,7 @@ async def search_sessions(q: str = "", limit: int = 20, profile: Optional[str] =
                     resolved = db.get_compression_tip(root_id)
                     if resolved:
                         tip = resolved
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 tip_cache[root_id] = tip
                 return tip
@@ -4750,7 +4750,7 @@ def _memory_provider_dependencies_installed(setup: Dict[str, Any]) -> bool:
                 display=check_cmd,
                 timeout=20,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             external_ok = False
             continue
         if completed.returncode != 0:
@@ -5040,7 +5040,7 @@ def _read_memory_provider_existing_values(name: str) -> Dict[str, Any]:
 
     try:
         cfg = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         cfg = {}
 
     memory_cfg = cfg.get("memory") if isinstance(cfg, dict) else {}
@@ -6009,7 +6009,7 @@ def _infer_provider_on_model_change(
 
     try:
         detected = detect_provider_for_model(name, prev_provider)
-    except Exception:
+    except (AttributeError, ValueError):
         detected = None
     if detected:
         return detected[0], detected[1]
@@ -6022,7 +6022,7 @@ def _infer_provider_on_model_change(
             cur_is_aggregator = (
                 normalize_provider(prev_provider) in _AGGREGATOR_PROVIDERS
             )
-        except Exception:
+        except (AttributeError, ValueError):
             cur_is_aggregator = False
         if not cur_is_aggregator:
             return "openrouter", name
@@ -7401,10 +7401,10 @@ def _terminate_whatsapp_pairing(proc: subprocess.Popen | None) -> None:
     try:
         proc.terminate()
         proc.wait(timeout=3)
-    except Exception:
+    except (AttributeError, ValueError):
         try:
             proc.kill()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 
@@ -7775,7 +7775,7 @@ def _parse_expiry_ts(value: str) -> float:
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
         return parsed.timestamp()
-    except Exception:
+    except (AttributeError, ValueError):
         return time.time() + 600
 
 
@@ -8295,7 +8295,7 @@ def _anthropic_oauth_status() -> Dict[str, Any]:
     if read_hercules_oauth_credentials:
         try:
             hercules_creds = read_hercules_oauth_credentials()
-        except Exception:
+        except (AttributeError, ValueError):
             hercules_creds = None
     if hercules_creds and hercules_creds.get("accessToken"):
         return {
@@ -10475,7 +10475,7 @@ def _list_cron_jobs_sync(profile: str = "all"):
             continue
         try:
             jobs.extend(_call_cron_for_profile(name, "list_jobs", True))
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("Failed to list cron jobs for profile %s", name)
     return jobs
 
@@ -11768,7 +11768,7 @@ async def list_credential_pool():
     for provider_id in sorted(raw_pool.keys()):
         try:
             pool = load_pool(provider_id)
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("load_pool(%s) failed", provider_id)
             continue
         entries = pool.entries()
@@ -12169,7 +12169,7 @@ async def list_hooks():
     specs = []
     try:
         specs = shell_hooks.iter_configured_hooks(_load_config())
-    except Exception:
+    except (AttributeError, ValueError):
         _log.exception("iter_configured_hooks failed")
 
     out = []
@@ -12177,12 +12177,12 @@ async def list_hooks():
         entry = None
         try:
             entry = shell_hooks.allowlist_entry_for(spec.event, spec.command)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         executable = False
         try:
             executable = shell_hooks.script_is_executable(spec.command)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         out.append({
             "event": spec.event,
@@ -12260,7 +12260,7 @@ async def create_hook(body: HookCreate):
         try:
             shell_hooks._record_approval(event, command)
             approved = True
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("hook consent record failed")
 
     return {"ok": True, "event": event, "command": command, "approved": approved}
@@ -12301,7 +12301,7 @@ async def delete_hook(body: HookDelete):
     # Revoke consent regardless so a re-add re-prompts.
     try:
         shell_hooks.revoke(command)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     if not removed:
@@ -12921,7 +12921,7 @@ def _fallback_profile_dicts(profiles_mod) -> List[Dict[str, Any]]:
     def _safe(callable_, default):
         try:
             return callable_()
-        except Exception:
+        except (AttributeError, ValueError):
             return default
 
     profiles: List[Dict[str, Any]] = []
@@ -13227,7 +13227,7 @@ async def create_profile_endpoint(body: ProfileCreate):
         try:
             _write_profile_model(path, provider, model)
             model_set = True
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("Setting model for new profile %s failed", body.name)
 
     # Optional MCP servers. Best-effort, same rationale as model assignment.
@@ -13235,7 +13235,7 @@ async def create_profile_endpoint(body: ProfileCreate):
     if body.mcp_servers:
         try:
             mcp_written = _write_profile_mcp_servers(path, body.mcp_servers)
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("Writing MCP servers for new profile %s failed", body.name)
 
     # Optional "keep" skill selection — replace semantics. When the builder
@@ -13245,7 +13245,7 @@ async def create_profile_endpoint(body: ProfileCreate):
     if body.keep_skills:
         try:
             skills_disabled = _disable_unselected_skills(path, body.keep_skills)
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception(
                 "Applying skill selection for new profile %s failed", body.name
             )
@@ -13296,11 +13296,11 @@ async def get_active_profile_endpoint():
 
     try:
         active = profiles_mod.get_active_profile() or "default"
-    except Exception:
+    except (AttributeError, ValueError):
         active = "default"
     try:
         current = profiles_mod.get_active_profile_name() or "default"
-    except Exception:
+    except (AttributeError, ValueError):
         current = "default"
     return {"active": active, "current": current}
 
@@ -13806,7 +13806,7 @@ async def get_toolsets(profile: Optional[str] = None):
     for name, label, desc in _get_effective_configurable_toolsets():
         try:
             tools = sorted(set(resolve_toolset(name)))
-        except Exception:
+        except (AttributeError, ValueError):
             tools = []
         is_enabled = name in enabled_toolsets
         result.append({
@@ -17105,7 +17105,7 @@ def _merged_plugins_hub() -> Dict[str, Any]:
     try:
         for n, desc in _discover_context_engines():
             context_engines.append({"name": n, "description": desc})
-    except Exception:
+    except (AttributeError, ValueError):
         context_engines = []
 
     return {
@@ -17472,7 +17472,7 @@ def _mount_plugin_api_routes():
             sys.modules[module_name] = mod
             try:
                 spec.loader.exec_module(mod)
-            except Exception:
+            except (AttributeError, ValueError):
                 sys.modules.pop(module_name, None)
                 raise
             router = getattr(mod, "router", None)

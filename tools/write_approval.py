@@ -205,7 +205,7 @@ def pending_count(subsystem: str) -> int:
         return 0
     try:
         return sum(1 for _ in d.glob("*.json"))
-    except Exception:
+    except (AttributeError, ValueError):
         return 0
 
 
@@ -492,7 +492,7 @@ def skill_pending_diff(record: Dict[str, Any]) -> str:
             try:
                 if p.exists():
                     current = p.read_text(encoding="utf-8")
-            except Exception:
+            except (AttributeError, ValueError):
                 current = ""
 
     if action == "edit":

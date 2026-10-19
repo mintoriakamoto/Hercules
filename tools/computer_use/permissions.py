@@ -88,7 +88,7 @@ def _doctor(binary: str) -> Optional[Dict[str, Any]]:
     """``cua-driver doctor --json`` → ``{ok, checks:[{label,status,message}]}``."""
     try:
         data = _json_out(binary, "doctor", "--json", timeout=12)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     if not isinstance(data, dict):
         return None

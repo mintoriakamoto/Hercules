@@ -244,7 +244,7 @@ class ProcessRegistry:
             return
         try:
             sink(session, chunk)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def _check_watch_patterns(self, session: ProcessSession, new_text: str) -> None:
@@ -865,7 +865,7 @@ class ProcessRegistry:
                 pass
             try:
                 proc.wait(timeout=5)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             raise
 
@@ -1200,7 +1200,7 @@ class ProcessRegistry:
         # Refresh detached/remote state so .exited is current.
         try:
             self._refresh_detached_session(session)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         if session.exited:
             return False
@@ -1259,7 +1259,7 @@ class ProcessRegistry:
         while not self.completion_queue.empty():
             try:
                 evt = self.completion_queue.get_nowait()
-            except Exception:
+            except (AttributeError, ValueError):
                 break
             _evt_sid = evt.get("session_id", "")
             if evt.get("type") == "completion" and self._drain_should_skip(_evt_sid):
@@ -1321,7 +1321,7 @@ class ProcessRegistry:
             return
         try:
             rc = proc.poll()
-        except Exception:
+        except (AttributeError, ValueError):
             return
         if rc is None:
             return  # Direct child still running — reader block is legitimate.
@@ -1352,7 +1352,7 @@ class ProcessRegistry:
                 finally:
                     try:
                         fcntl.fcntl(fd, fcntl.F_SETFL, flags)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
             except Exception as e:
                 logger.debug("Non-blocking drain failed for %s: %s", session.id, e)
@@ -1567,7 +1567,7 @@ class ProcessRegistry:
                 # PTY process -- terminate via ptyprocess
                 try:
                     session._pty.terminate(force=True)
-                except Exception:
+                except (AttributeError, ValueError):
                     if session.pid:
                         os.kill(session.pid, signal.SIGTERM)
             elif session.process:
@@ -1722,7 +1722,7 @@ class ProcessRegistry:
         """
         try:
             return len(self._running)
-        except Exception:
+        except (AttributeError, ValueError):
             return 0
 
     def list_sessions(self, task_id: str = None, session_key: str = None) -> list:

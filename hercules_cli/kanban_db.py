@@ -167,7 +167,7 @@ def _fire_kanban_lifecycle_hook(event: str, task_id: str, **fields: Any) -> None
 
         try:
             profile_name = get_active_profile_name()
-        except Exception:
+        except (AttributeError, ValueError):
             profile_name = "default"
         invoke_hook(event, task_id=task_id, profile_name=profile_name, **fields)
     except Exception as exc:  # pragma: no cover - defensive
@@ -1845,7 +1845,7 @@ def connect_closing(
     finally:
         try:
             conn.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 
@@ -2347,7 +2347,7 @@ def write_txn(conn: sqlite3.Connection):
     _execute_boundary_with_retry(conn, "BEGIN IMMEDIATE")
     try:
         yield conn
-    except Exception:
+    except (AttributeError, ValueError, KeyError, OSError):
         try:
             conn.execute("ROLLBACK")
         except sqlite3.OperationalError:
@@ -2359,7 +2359,7 @@ def write_txn(conn: sqlite3.Connection):
     else:
         try:
             _execute_boundary_with_retry(conn, "COMMIT")
-        except Exception:
+        except (AttributeError, ValueError):
             # COMMIT exhausted retries with the txn still open; roll back so the
             # connection isn't poisoned for the next BEGIN IMMEDIATE.
             try:
@@ -2665,7 +2665,7 @@ def create_task(
                             branch_name = _pdb.branch_name_for(
                                 project_obj, task_id, title=title or ""
                             )
-                        except Exception:
+                        except (AttributeError, ValueError):
                             branch_name = None
 
                 conn.execute(
@@ -4630,7 +4630,7 @@ def _maybe_emit_scratch_tip(
                 "tip_scratch_workspace",
                 {"message": _SCRATCH_TIP_MESSAGE},
             )
-    except Exception:
+    except (AttributeError, ValueError):
         # Best-effort — never block the spawn loop over a help message.
         pass
     finally:
@@ -6086,7 +6086,7 @@ def _classify_worker_exit(pid: int) -> "tuple[str, Optional[int]]":
             return ("nonzero_exit", code)
         if os.WIFSIGNALED(raw):
             return ("signaled", os.WTERMSIG(raw))
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return ("unknown", None)
 
@@ -6109,7 +6109,7 @@ def reap_worker_zombies() -> "list[int]":
                     break
                 _record_worker_exit(pid, status)
                 reaped.append(pid)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     return reaped
 
@@ -7277,7 +7277,7 @@ def dispatch_once(
     """
     try:
         db_path = kanban_db_path(board=board)
-    except Exception:
+    except (AttributeError, ValueError):
         # Path resolution should never fail, but if it somehow does we
         # must not lose the tick — fall through to an unguarded dispatch
         # rather than dropping work.
@@ -8269,9 +8269,9 @@ def run_daemon(
             if on_tick is not None:
                 try:
                     on_tick(res)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
-        except Exception:
+        except (AttributeError, ValueError):
             # Don't let any single tick kill the daemon.
             import traceback
 

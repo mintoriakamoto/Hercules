@@ -324,7 +324,7 @@ def _handle_react(args, remove=False):
         try:
             config = load_gateway_config()
             home = config.get_home_channel(platform)
-        except Exception:
+        except (AttributeError, ValueError):
             home = None
         if not home:
             return tool_error(
@@ -768,7 +768,7 @@ async def _send_via_adapter(
     if runner is not None:
         try:
             adapter = runner.adapters.get(platform)
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             adapter = None
         if adapter is not None:
             try:

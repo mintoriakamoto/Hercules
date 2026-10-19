@@ -310,7 +310,7 @@ def heartbeat_current_worker_from_env() -> bool:
             claim_lock = os.environ.get("HERCULES_KANBAN_CLAIM_LOCK")
             try:
                 kb.heartbeat_claim(conn, tid, claimer=claim_lock)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("auto-heartbeat: heartbeat_claim failed", exc_info=True)
             run_id_raw = os.environ.get("HERCULES_KANBAN_RUN_ID")
             run_id: Optional[int]
@@ -320,15 +320,15 @@ def heartbeat_current_worker_from_env() -> bool:
                 run_id = None
             try:
                 kb.heartbeat_worker(conn, tid, note=None, expected_run_id=run_id)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("auto-heartbeat: heartbeat_worker failed", exc_info=True)
         finally:
             try:
                 conn.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         return True
-    except Exception:
+    except (AttributeError, ValueError):
         logger.debug("auto-heartbeat: bridge failed", exc_info=True)
         return False
 
@@ -1045,7 +1045,7 @@ def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
         cfg = load_config()
         if not cfg_get(cfg, "kanban", "auto_subscribe_on_create", default=True):
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         # If config can't load we still default to True — this is the
         # user-friendly behaviour that mirrors the pre-gate implementation.
         pass

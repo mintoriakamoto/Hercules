@@ -186,12 +186,12 @@ def _resolve_orchestrator_profile(cfg: dict) -> str:
         try:
             if profiles_mod.profile_exists(explicit):
                 return explicit
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     # Fall back to the active default profile.
     try:
         return profiles_mod.get_active_profile_name() or "default"
-    except Exception:
+    except (AttributeError, ValueError):
         return "default"
 
 
@@ -203,11 +203,11 @@ def _resolve_default_assignee(cfg: dict) -> str:
         try:
             if profiles_mod.profile_exists(explicit):
                 return explicit
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     try:
         return profiles_mod.get_active_profile_name() or "default"
-    except Exception:
+    except (AttributeError, ValueError):
         return "default"
 
 

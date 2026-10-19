@@ -188,7 +188,7 @@ def _should_animate_banner() -> bool:
     try:
         if not sys.stdout.isatty():
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         return False
     return True
 

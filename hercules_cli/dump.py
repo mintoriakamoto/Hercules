@@ -312,7 +312,7 @@ def run_dump(args):
 
     try:
         config = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         config = {}
 
     model, provider = _get_model_and_provider(config)

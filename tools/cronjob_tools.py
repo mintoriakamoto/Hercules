@@ -534,7 +534,7 @@ def _validate_cron_base_url(
         # Require the override host to match the provider's CONFIGURED endpoint.
         try:
             cp = _get_named_custom_provider(prov)
-        except Exception:
+        except (AttributeError, ValueError):
             cp = None
         cfg_host = base_url_hostname((cp or {}).get("base_url", "")) if cp else ""
         if cfg_host and base_url_host_matches(bu, cfg_host):
@@ -546,7 +546,7 @@ def _validate_cron_base_url(
         )
     try:
         resolved = resolve_requested_provider(prov)
-    except Exception:
+    except (AttributeError, ValueError):
         resolved = prov
     pconfig = PROVIDER_REGISTRY.get(resolved) if isinstance(resolved, str) else None
     known_host = base_url_hostname(

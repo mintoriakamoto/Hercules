@@ -544,7 +544,7 @@ def _terminate_command_stt_process_tree(proc: subprocess.Popen) -> None:
         parent.terminate()
     except psutil.NoSuchProcess:
         return
-    except Exception:
+    except (AttributeError, ValueError):
         proc.terminate()
 
     try:
@@ -563,7 +563,7 @@ def _terminate_command_stt_process_tree(proc: subprocess.Popen) -> None:
         parent.kill()
     except psutil.NoSuchProcess:
         return
-    except Exception:
+    except (AttributeError, ValueError):
         proc.kill()
 
 
@@ -592,7 +592,7 @@ def _run_command_stt(command: str, timeout: float) -> subprocess.CompletedProces
         _terminate_command_stt_process_tree(proc)
         try:
             stdout, stderr = proc.communicate(timeout=1)
-        except Exception:
+        except (AttributeError, ValueError):
             stdout = getattr(exc, "output", None)
             stderr = getattr(exc, "stderr", None)
         raise subprocess.TimeoutExpired(

@@ -95,7 +95,7 @@ class _BackgroundLoop:
         finally:
             try:
                 loop.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     def run(self, coro, *, timeout: Optional[float] = None) -> Any:
@@ -114,7 +114,7 @@ class _BackgroundLoop:
             raise RuntimeError("background loop not running")
         try:
             return fut.result(timeout=timeout)
-        except Exception:
+        except (AttributeError, ValueError):
             fut.cancel()
             raise
 
@@ -275,7 +275,7 @@ class LSPService:
         # have used anyway when it failed).
         try:
             per_server_root = srv.resolve_root(file_path, ws_root) or ws_root
-        except Exception:
+        except (AttributeError, ValueError):
             per_server_root = ws_root
         if (srv.server_id, per_server_root) in self._broken:
             return False
@@ -417,7 +417,7 @@ class LSPService:
             return
         try:
             per_server_root = srv.resolve_root(file_path, ws_root) or ws_root
-        except Exception:
+        except (AttributeError, ValueError):
             per_server_root = ws_root
         key = (srv.server_id, per_server_root)
         already_broken = key in self._broken
@@ -434,7 +434,7 @@ class LSPService:
                 # Fire-and-forget shutdown — give it a second to cleanup,
                 # but don't block.  We're already on a slow path.
                 self._loop.run(client.shutdown(), timeout=1.0)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         if not already_broken:

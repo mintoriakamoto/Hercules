@@ -477,7 +477,7 @@ def _resolve_host_user_spec() -> Optional[str]:
         return None
     try:
         return f"{get_uid()}:{get_gid()}"
-    except Exception:  # pragma: no cover - defensive
+    except (AttributeError, ValueError):
         return None
 
 

@@ -552,7 +552,7 @@ def safe_url_for_log(url: str, max_len: int = 80) -> str:
 
     try:
         parsed = urlsplit(raw)
-    except Exception:
+    except (AttributeError, ValueError):
         return raw[:max_len]
 
     if parsed.scheme and parsed.netloc:
@@ -2958,7 +2958,7 @@ class BasePlatformAdapter(ABC):
                 logged = set()
                 try:
                     self._status_write_logged = logged
-                except Exception:
+                except (AttributeError, ValueError, KeyError, OSError):
                     pass
             key = (self.platform.value, context)
             if key not in logged:
@@ -3061,7 +3061,7 @@ class BasePlatformAdapter(ABC):
             return
         try:
             recovered = recover(source)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("topic recovery hook failed", exc_info=True)
             return
         if recovered is None or str(recovered) == str(source.thread_id or ""):
@@ -3271,7 +3271,7 @@ class BasePlatformAdapter(ABC):
             return 0
         try:
             cfg = _load_config()
-        except Exception:
+        except (AttributeError, ValueError):
             return 0
         display = cfg.get("display", {}) if isinstance(cfg, dict) else {}
         if not isinstance(display, dict):

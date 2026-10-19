@@ -159,7 +159,7 @@ class WinPtyBridge:
         rows = _clamp(rows, _MAX_ROWS)
         try:
             self._proc.setwinsize(rows, cols)  # pywinpty: (rows, cols)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     # -- teardown ---------------------------------------------------------
@@ -170,7 +170,7 @@ class WinPtyBridge:
         self._closed = True
         try:
             self._proc.terminate(force=True)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def __enter__(self) -> "WinPtyBridge":

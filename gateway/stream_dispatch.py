@@ -89,7 +89,7 @@ class GatewayEventDispatcher:
         """Route a single event.  Never raises into the agent's worker thread."""
         try:
             self._dispatch(event)
-        except Exception:  # presentation must never break the agent loop
+        except (AttributeError, ValueError):
             logger.debug("stream-event dispatch error", exc_info=True)
 
     def _dispatch(self, event: StreamEvent) -> None:

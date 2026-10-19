@@ -878,7 +878,7 @@ def _parse_retry_after_seconds(headers: Any) -> Optional[int]:
         return None
     try:
         raw = headers.get("retry-after")
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         return None
     if raw is None:
         return None
@@ -959,7 +959,7 @@ def _auth_file_path() -> Path:
         real_home_auth = (Path.home() / ".hercules" / "auth.json").resolve(strict=False)
         try:
             resolved = path.resolve(strict=False)
-        except Exception:
+        except (AttributeError, ValueError):
             resolved = path
         if resolved == real_home_auth:
             raise RuntimeError(
@@ -990,7 +990,7 @@ def _global_auth_file_path() -> Optional[Path]:
     try:
         if profile_home.resolve(strict=False) == global_root.resolve(strict=False):
             return None
-    except Exception:
+    except (AttributeError, ValueError):
         if profile_home == global_root:
             return None
     # No pytest seat belt here: this is a pure read-only path, and
@@ -1028,11 +1028,11 @@ def _load_global_auth_store() -> Dict[str, Any]:
             try:
                 if global_path.resolve(strict=False) == real_root.resolve(strict=False):
                     return {}
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
     try:
         return _load_auth_store(global_path)
-    except Exception:
+    except (AttributeError, ValueError):
         # A malformed global store must not break profile reads. The
         # profile's own auth store is still authoritative.
         return {}
@@ -1293,7 +1293,7 @@ def _save_provider_state_to_source(
         same_store = source_path.resolve(strict=False) == active_path.resolve(
             strict=False
         )
-    except Exception:
+    except (AttributeError, ValueError):
         same_store = source_path == active_path
     if same_store:
         _save_provider_state(auth_store, provider_id, state)
@@ -1558,7 +1558,7 @@ def is_provider_explicitly_configured(provider_id: str) -> bool:
         active = (auth_store.get("active_provider") or "").strip().lower()
         if active and active == normalized:
             return True
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         pass
 
     # 2. Check config.yaml model.provider
@@ -1990,7 +1990,7 @@ def _parse_iso_timestamp(value: Any) -> Optional[float]:
         text = text[:-1] + "+00:00"
     try:
         parsed = datetime.fromisoformat(text)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
@@ -4238,7 +4238,7 @@ def _can_open_graphical_browser() -> bool:
 
     try:
         controller = _webbrowser.get()
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         # No browser resolvable at all → definitely don't auto-open.
         return False
 
@@ -5115,7 +5115,7 @@ def _write_through_xai_oauth_to_global_root(state: Dict[str, Any]) -> None:
             try:
                 if global_path.resolve(strict=False) == real_root.resolve(strict=False):
                     return
-            except Exception:
+            except (AttributeError, ValueError):
                 return
     try:
         if global_path.exists():
@@ -6104,7 +6104,7 @@ def _get_azure_foundry_auth_status() -> Dict[str, Any]:
     # api_key mode (default)
     try:
         api_key = get_env_value_prefer_dotenv("AZURE_FOUNDRY_API_KEY") or ""
-    except Exception:
+    except (AttributeError, ValueError):
         api_key = os.getenv("AZURE_FOUNDRY_API_KEY", "")
     info["logged_in"] = has_usable_secret(api_key)
     return info
@@ -6304,7 +6304,7 @@ def _get_config_provider() -> Optional[str]:
     """Return model.provider from config.yaml, normalized, if present."""
     try:
         config = read_raw_config()
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     if not config:
         return None
@@ -7467,7 +7467,7 @@ def _refresh_minimax_oauth_state(
         )
     try:
         expires_at = datetime.fromisoformat(state.get("expires_at", "")).timestamp()
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         expires_at = 0.0
     now = time.time()
     if not force and (expires_at - now) > MINIMAX_OAUTH_REFRESH_SKEW_SECONDS:
@@ -7668,7 +7668,7 @@ def get_minimax_oauth_auth_status() -> Dict[str, Any]:
     try:
         expires_at = datetime.fromisoformat(state.get("expires_at", "")).timestamp()
         token_valid = (expires_at - time.time()) > 0
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         token_valid = bool(state.get("access_token"))
     return {
         "logged_in": token_valid,

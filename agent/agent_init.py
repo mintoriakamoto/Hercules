@@ -498,7 +498,7 @@ def init_agent(
     # not mid-conversation.  Also validates the api_mode is registered.
     try:
         agent._get_transport()
-    except Exception:
+    except (AttributeError, ValueError):
         pass  # Non-fatal — transport may not exist for all modes yet
 
     try:
@@ -1776,7 +1776,7 @@ def init_agent(
     # /models, so the startup feasibility check needs the config hint.
     try:
         _aux_cfg = cfg_get(_agent_cfg, "auxiliary", "compression", default={})
-    except Exception:
+    except (AttributeError, ValueError):
         _aux_cfg = {}
     if isinstance(_aux_cfg, dict):
         _aux_context_config = _aux_cfg.get("context_length")
@@ -1924,7 +1924,7 @@ def init_agent(
     try:
         _ctx_cfg = _agent_cfg.get("context", {}) if isinstance(_agent_cfg, dict) else {}
         _engine_name = _ctx_cfg.get("engine", "compressor") or "compressor"
-    except Exception:
+    except (requests.RequestException, httpx.RequestError, OSError):
         pass
 
     if _engine_name != "compressor":
@@ -2028,7 +2028,7 @@ def init_agent(
     if callable(_bind_session_state):
         try:
             _bind_session_state(session_db=session_db, session_id=agent.session_id)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     agent.compression_enabled = compression_enabled
     agent.compression_in_place = compression_in_place

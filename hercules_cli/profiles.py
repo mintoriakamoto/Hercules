@@ -474,7 +474,7 @@ def check_alias_collision(name: str) -> Optional[str]:
                     content = expected.read_text()
                     if "hercules -p" in content:
                         return None  # it's our wrapper, safe to overwrite
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             return f"'{canon}' conflicts with an existing command ({existing_path})"
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -593,7 +593,7 @@ def _migrate_profile_config_if_outdated(profile_dir: Path) -> None:
                 migrate_config(interactive=False, quiet=True)
         finally:
             reset_hercules_home_override(token)
-    except Exception:
+    except (AttributeError, ValueError):
         # Profile creation should not fail because an old copied config could
         # not be migrated. The next `hercules doctor --fix` can still surface the
         # detailed error in the target profile.
@@ -1259,7 +1259,7 @@ def create_profile(
                 description=description.strip(),
                 description_auto=False,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             pass  # non-fatal — user can describe later with `hercules profile describe`
 
     # Phase 4: when running inside a container under s6, register the
@@ -1411,12 +1411,12 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
         while parent is not None:
             skip.add(parent.pid)
             parent = parent.parent()
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     try:
         current_user = psutil.Process(os.getpid()).username()
-    except Exception:
+    except (AttributeError, ValueError):
         current_user = None
 
     backend_tokens = {"serve", "dashboard", "gateway"}
@@ -1702,7 +1702,7 @@ def delete_profile(name: str, yes: bool = False) -> Path:
         if active == canon:
             set_active_profile("default")
             print("✓ Active profile reset to default")
-    except Exception:
+    except (ValueError, TypeError):
         pass
 
     if remove_error is not None:
@@ -2322,7 +2322,7 @@ def rename_profile(old_name: str, new_name: str) -> Path:
         if get_active_profile() == old_canon:
             set_active_profile(new_canon)
             print(f"✓ Active profile updated: {new_canon}")
-    except Exception:
+    except (ValueError, TypeError):
         pass
 
     return new_dir

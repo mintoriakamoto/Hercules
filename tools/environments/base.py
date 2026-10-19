@@ -265,7 +265,7 @@ class _ThreadedProcessHandle:
         if self._cancel_fn:
             try:
                 self._cancel_fn()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     def wait(self, timeout: float | None = None) -> int:
@@ -625,7 +625,7 @@ class BaseEnvironment(ABC):
             fileno = getattr(stream, "fileno", None)
             try:
                 fd = fileno() if callable(fileno) else None
-            except Exception:
+            except (AttributeError, ValueError):
                 fd = None
             if not isinstance(fd, int) or fd < 0:
                 _drain_iterable(stream)
@@ -810,7 +810,7 @@ class BaseEnvironment(ABC):
             try:
                 self._kill_process(proc)
                 drain_thread.join(timeout=2)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass  # cleanup is best-effort
             raise
 
@@ -821,7 +821,7 @@ class BaseEnvironment(ABC):
 
         try:
             proc.stdout.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
         if _DEBUG_INTERRUPT:
@@ -964,7 +964,7 @@ class BaseEnvironment(ABC):
     def __del__(self):
         try:
             self.cleanup()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def _prepare_command(self, command: str) -> tuple[str, str | None]:

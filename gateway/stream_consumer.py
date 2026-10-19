@@ -346,7 +346,7 @@ class GatewayStreamConsumer:
             return
         try:
             cb()
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("on_new_message callback error", exc_info=True)
 
     def _reset_segment_state(self, *, preserve_no_edit: bool = False) -> None:
@@ -1316,7 +1316,7 @@ class GatewayStreamConsumer:
                 chat_type=self.cfg.chat_type or None,
                 metadata=self.metadata,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("supports_draft_streaming probe raised", exc_info=True)
             supported = False
         if not supported:

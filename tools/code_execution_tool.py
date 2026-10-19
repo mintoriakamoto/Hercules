@@ -425,7 +425,7 @@ def _connect():
                         _sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                         try:
                             _sock.connect(endpoint)
-                        except Exception:
+                        except (AttributeError, ValueError):
                             # BUG FIX #1: Close socket on connection failure to
                             # prevent resource leak.
                             try:
@@ -435,7 +435,7 @@ def _connect():
                             _sock = None
                             raise
                     _sock.settimeout(300)
-                except Exception:
+                except (AttributeError, ValueError):
                     raise
     return _sock
 
@@ -1590,7 +1590,7 @@ def execute_code(
                 if touch_activity_if_due is not None:
                     try:
                         touch_activity_if_due(_activity_state, "execute_code running")
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
                 try:
                     proc.wait(timeout=min(poll_interval, max(0.0, deadline - now)))
@@ -1687,17 +1687,17 @@ def execute_code(
             if proc.stdout:
                 try:
                     proc.stdout.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             if proc.stderr:
                 try:
                     proc.stderr.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             # Ensure process is terminated
             try:
                 proc.terminate()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     except Exception as exc:

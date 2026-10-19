@@ -1702,7 +1702,7 @@ class SessionStore:
                 session_type=entry.chat_type,
             )
             return policy.mode != "none"
-        except Exception:
+        except (AttributeError, ValueError):
             return False
 
     def _is_session_ended_in_db(self, session_id: str) -> bool:
@@ -1727,7 +1727,7 @@ class SessionStore:
             return False
         try:
             row = db.get_session(session_id)
-        except Exception:
+        except (AttributeError, ValueError):
             return False
         return bool(row is not None and row.get("end_reason") is not None)
 
@@ -1791,7 +1791,7 @@ class SessionStore:
             return session_id
         try:
             return self._db.get_compression_tip(session_id) or session_id
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "Compression-tip lookup failed for session %s",
                 session_id,
@@ -1835,7 +1835,7 @@ class SessionStore:
         if self._db:
             try:
                 return self._db.session_count() > 1
-            except Exception:
+            except (AttributeError, ValueError):
                 pass  # fall through to heuristic
         # Fallback: check if sessions.json was loaded with existing data.
         # This covers the rare case where the DB is unavailable.
@@ -2534,7 +2534,7 @@ class SessionStore:
             return False
         try:
             return self._db.has_platform_message_id(session_id, platform_message_id)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("has_platform_message_id lookup failed", exc_info=True)
             return False
 

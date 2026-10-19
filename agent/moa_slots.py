@@ -155,7 +155,7 @@ def _credentials_configured(provider: str) -> bool:
             pass
     try:
         status = get_auth_status(provider) or {}
-    except Exception:
+    except (AttributeError, ValueError):
         return True
     return bool(status.get("logged_in") or status.get("configured"))
 

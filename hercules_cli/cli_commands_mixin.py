@@ -663,7 +663,7 @@ class CLICommandsMixin:
             row = self._session_db.get_session(self.session_id)
             if row:
                 session_title = row.get("title") or ""
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
         if not session_title:
             session_title = self.session_id[:8]
@@ -689,7 +689,7 @@ class CLICommandsMixin:
         while _time.time() < deadline:
             try:
                 state_row = self._session_db.get_handoff_state(self.session_id)
-            except Exception:
+            except (AttributeError, ValueError):
                 state_row = None
             current = (state_row or {}).get("state") or "pending"
             if current != last_state:
@@ -720,7 +720,7 @@ class CLICommandsMixin:
             self._session_db.fail_handoff(
                 self.session_id, "timed out waiting for gateway"
             )
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         _cprint("  Timed out waiting for the gateway. Is `hercules gateway` running?")
         _cprint("  Your CLI session is intact.")
@@ -800,7 +800,7 @@ class CLICommandsMixin:
         # the descendant that actually holds the transcript. See #15000.
         try:
             resolved_id = self._session_db.resolve_resume_session_id(target_id)
-        except Exception:
+        except (AttributeError, ValueError):
             resolved_id = target_id
         if resolved_id and resolved_id != target_id:
             _cprint(
@@ -821,12 +821,12 @@ class CLICommandsMixin:
         if self.agent:
             try:
                 self.agent._flush_messages_to_session_db(self.conversation_history)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         # End current session
         try:
             self._session_db.end_session(self.session_id, "resumed_other")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
         # Switch to the target session
@@ -843,7 +843,7 @@ class CLICommandsMixin:
         # Re-open the target session so it's not marked as ended
         try:
             self._session_db.reopen_session(target_id)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
         # Sync the agent if already initialised
@@ -975,13 +975,13 @@ class CLICommandsMixin:
         if self.agent:
             try:
                 self.agent._flush_messages_to_session_db(self.conversation_history)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         # End the old session
         try:
             self._session_db.end_session(self.session_id, "branched")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
         # Create the new session with parent link.
@@ -1017,13 +1017,13 @@ class CLICommandsMixin:
                     tool_call_id=msg.get("tool_call_id"),
                     reasoning=msg.get("reasoning"),
                 )
-            except Exception:
+            except (requests.RequestException, httpx.RequestError, OSError):
                 pass  # Best-effort copy
 
         # Set title on the branch
         try:
             self._session_db.set_session_title(new_session_id, branch_title)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
         # Switch to the new session
@@ -1791,7 +1791,7 @@ class CLICommandsMixin:
             set_approval_callback(self._approval_callback)
             try:
                 set_secret_capture_callback(self._secret_capture_callback)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             try:
                 bg_agent = AIAgent(
@@ -1906,7 +1906,7 @@ class CLICommandsMixin:
                     set_sudo_password_callback(None)
                     set_approval_callback(None)
                     set_secret_capture_callback(None)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 self._background_tasks.pop(task_id, None)
                 # Clear spinner only if no foreground agent owns it
@@ -2343,7 +2343,7 @@ class CLICommandsMixin:
         # separate message after setting the goal.
         try:
             self._pending_input.put(state.goal)
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
 
     def _handle_goal_draft(self, objective: str) -> None:
@@ -2390,7 +2390,7 @@ class CLICommandsMixin:
             )
         try:
             self._pending_input.put(state.goal)
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
 
     def _handle_subgoal_command(self, cmd: str) -> None:

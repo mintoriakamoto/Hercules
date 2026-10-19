@@ -1228,7 +1228,7 @@ def switch_model(
                 api_key = runtime.get("api_key", "") or _ukey
                 base_url = runtime.get("base_url", "") or _user_pdef.base_url
                 api_mode = runtime.get("api_mode", "")
-            except Exception:
+            except (requests.RequestException, httpx.RequestError, OSError):
                 api_key = _ukey
                 base_url = _user_pdef.base_url
                 api_mode = ""
@@ -1269,7 +1269,7 @@ def switch_model(
             api_key = runtime.get("api_key", "")
             base_url = runtime.get("base_url", "")
             api_mode = runtime.get("api_mode", "")
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
 
     # --- Direct alias override: use exact base_url from the alias if set ---
@@ -1576,7 +1576,7 @@ def list_authenticated_providers(
     if refresh:
         try:
             clear_provider_models_cache()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     results: List[dict] = []
@@ -1986,7 +1986,7 @@ def list_authenticated_providers(
             try:
                 if _credential_pool_is_usable(_cp.slug):
                     _cp_has_creds = True
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         # Special case: aws_sdk auth (bedrock) — no API key env vars,

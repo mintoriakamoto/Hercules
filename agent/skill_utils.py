@@ -542,7 +542,7 @@ def normalize_skill_lookup_name(identifier: str) -> str:
     trusted_roots = [primary_root]
     try:
         trusted_roots.extend(get_external_skills_dirs())
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     # Prefer the lexical path under a trusted skill root before resolving
@@ -697,7 +697,7 @@ def discover_all_skill_config_vars() -> List[Dict[str, Any]]:
             try:
                 raw = skill_file.read_text(encoding="utf-8")
                 frontmatter, _ = parse_frontmatter(raw)
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
 
             skill_name = frontmatter.get("name") or skill_file.parent.name

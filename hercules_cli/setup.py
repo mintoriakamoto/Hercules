@@ -542,9 +542,9 @@ def _print_setup_summary(config: dict, hercules_home):
                     if _p.is_available():
                         _img_backend = _p.display_name
                         break
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         if _img_backend:
             tool_status.append((f"Image Generation ({_img_backend})", True, None))
@@ -565,9 +565,9 @@ def _print_setup_summary(config: dict, hercules_home):
                 if _vp.is_available():
                     _video_backend = _vp.display_name
                     break
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
-    except Exception:
+    except (AttributeError, ValueError):
         _video_backend = None
     if _video_backend:
         tool_status.append((f"Video Generation ({_video_backend})", True, None))
@@ -591,7 +591,7 @@ def _print_setup_summary(config: dict, hercules_home):
     elif tts_provider == "neutts":
         try:
             neutts_ok = importlib.util.find_spec("neutts") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             neutts_ok = False
         if neutts_ok:
             tool_status.append(("Text-to-Speech (NeuTTS local)", True, None))
@@ -604,7 +604,7 @@ def _print_setup_summary(config: dict, hercules_home):
     elif tts_provider == "kittentts":
         try:
             kittentts_ok = importlib.util.find_spec("kittentts") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             kittentts_ok = False
         if kittentts_ok:
             tool_status.append(("Text-to-Speech (KittenTTS local)", True, None))
@@ -1068,7 +1068,7 @@ def _setup_tts_provider(config: dict):
         # Check if already installed
         try:
             already_installed = importlib.util.find_spec("neutts") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             already_installed = False
 
         if already_installed:
@@ -1226,7 +1226,7 @@ def _setup_tts_provider(config: dict):
         # Check if already installed
         try:
             already_installed = importlib.util.find_spec("kittentts") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             already_installed = False
 
         if already_installed:
@@ -2491,7 +2491,7 @@ def _load_openclaw_migration_module():
     _sys.modules[spec.name] = mod
     try:
         spec.loader.exec_module(mod)
-    except Exception:
+    except (AttributeError, ValueError):
         _sys.modules.pop(spec.name, None)
         raise
     return mod

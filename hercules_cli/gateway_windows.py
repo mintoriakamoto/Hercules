@@ -74,7 +74,7 @@ def _schtasks_encoding() -> str:
     """
     try:
         return locale.getpreferredencoding(False) or "utf-8"
-    except Exception:
+    except (AttributeError, ValueError):
         return "utf-8"
 
 
@@ -910,7 +910,7 @@ def windowless_gateway_restart_spec(
         windowless_python, venv_dir, extra_pythonpath = _resolve_detached_python(
             python_exe
         )
-    except Exception:
+    except (AttributeError, ValueError):
         return run_argv, "", {}
 
     new_argv = [windowless_python, *rest]
@@ -1650,7 +1650,7 @@ def _drain_gateway_pid(pid: int, drain_timeout: float) -> bool:
 
     try:
         write_planned_stop_marker(pid)
-    except Exception:
+    except (AttributeError, ValueError):
         # Best-effort: if the marker can't be written, we have no choice
         # but to fall through to a hard kill.  Caller decides escalation.
         pass
@@ -1713,7 +1713,7 @@ def _collect_gateway_stop_pids(primary_pid: int | None = None) -> list[int]:
         for pid in _gateway_pids():
             if pid > 0 and pid not in pids:
                 pids.append(pid)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return pids
 

@@ -160,7 +160,7 @@ def enrich_model_switch_warnings_for_gateway(
         try:
             entry = store.get_or_create_session(source)
             messages = db.get_messages_as_conversation(entry.session_id)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     merge_preflight_compression_warning(

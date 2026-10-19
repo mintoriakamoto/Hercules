@@ -336,7 +336,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
 
     try:
         cfg = _load_secrets_config(home_path)
-    except Exception:  # config errors must not block startup
+    except (AttributeError, ValueError):
         return
     if not cfg:
         return
@@ -348,7 +348,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
 
     try:
         report = apply_all(cfg, home_path)
-    except Exception:  # belt-and-braces; apply_all shouldn't raise
+    except (AttributeError, ValueError):
         return
 
     if report.applied_any:

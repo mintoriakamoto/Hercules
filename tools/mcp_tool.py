@@ -6070,7 +6070,7 @@ def _stop_mcp_loop(*, only_if_idle: bool = False) -> bool:
             thread.join(timeout=5)
         try:
             loop.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         # After closing the loop, any stdio subprocesses that survived the
         # graceful shutdown are now orphaned — include active PIDs too

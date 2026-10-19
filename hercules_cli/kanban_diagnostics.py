@@ -1165,7 +1165,7 @@ def compute_task_diagnostics(
     for rule in _RULES:
         try:
             out.extend(rule(task, events, runs, now_ts, cfg))
-        except Exception:
+        except (AttributeError, ValueError):
             # A broken rule must never crash the dashboard. Rule bugs
             # get caught in tests; in production we'd rather drop the
             # diagnostic than 500 a whole /board request.

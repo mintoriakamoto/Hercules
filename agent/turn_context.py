@@ -255,7 +255,7 @@ def build_turn_context(
                     "issue — cleaned up automatically. Proceeding with fresh "
                     "connection."
                 )
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     # Replay compression warning through status_callback for gateway platforms.
     if agent._compression_warning:
@@ -373,7 +373,7 @@ def build_turn_context(
     # Crash-resilience: persist the inbound user turn as soon as the session row exists.
     try:
         agent._persist_session(messages, conversation_history)
-    except Exception:
+    except (AttributeError, ValueError):
         logger.warning(
             "Early turn-start session persistence failed for session=%s",
             agent.session_id or "none",
@@ -575,7 +575,7 @@ def build_turn_context(
                 original_user_message if isinstance(original_user_message, str) else ""
             )
             agent._memory_manager.on_turn_start(agent._user_turn_count, _turn_msg)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     # External memory provider: prefetch once before the tool loop.
@@ -586,7 +586,7 @@ def build_turn_context(
                 original_user_message if isinstance(original_user_message, str) else ""
             )
             ext_prefetch_cache = agent._memory_manager.prefetch_all(_query) or ""
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     return TurnContext(

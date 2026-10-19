@@ -219,9 +219,9 @@ def check_video_generation_requirements() -> bool:
         # Third check: does it report available?
         try:
             return active.is_available()
-        except Exception:
+        except (AttributeError, ValueError):
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return False
 
@@ -526,7 +526,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
 
     try:
         caps = provider.capabilities() or {}
-    except Exception:
+    except (AttributeError, ValueError):
         caps = {}
     try:
         models = provider.list_models() or []

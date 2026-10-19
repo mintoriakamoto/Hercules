@@ -525,7 +525,7 @@ class SelfImprovementEngine:
                     confidence=imp_data.get("confidence", 0.5),
                 )
                 profile.improvements.append(improvement)
-            except Exception:
+            except (requests.RequestException, httpx.RequestError, OSError):
                 pass
 
         return profile

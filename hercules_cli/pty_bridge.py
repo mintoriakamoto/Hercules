@@ -284,7 +284,7 @@ class PtyBridge:
 
         try:
             self._proc.close(force=True)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     # Context-manager sugar — handy in tests and ad-hoc scripts.

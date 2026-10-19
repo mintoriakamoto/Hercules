@@ -144,7 +144,7 @@ def log_stream_retry(
     try:
         try:
             _summary = agent._summarize_api_error(error)
-        except Exception:
+        except (AttributeError, ValueError):
             _summary = str(error)
         if _summary and len(_summary) > 240:
             _summary = _summary[:240] + "…"
@@ -152,7 +152,7 @@ def log_stream_retry(
         # Inner-cause chain (httpx errors hide under openai.APIError).
         try:
             _chain = flatten_exception_chain(error)
-        except Exception:
+        except (AttributeError, ValueError):
             _chain = type(error).__name__
 
         # Per-attempt counters and upstream headers.

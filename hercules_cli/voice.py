@@ -441,7 +441,7 @@ def start_continuous(
     if on_status:
         try:
             on_status("listening")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     return True
@@ -481,7 +481,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
             if on_status:
                 try:
                     on_status("transcribing")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             try:
                 wav_path = rec.stop()
@@ -533,7 +533,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
                         if should_halt and on_silent_limit:
                             try:
                                 on_silent_limit()
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 pass
 
                     _play_beep(frequency=660, count=2)
@@ -542,7 +542,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
                     if on_status:
                         try:
                             on_status("idle")
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
 
             threading.Thread(target=_transcribe_and_cleanup, daemon=True).start()
@@ -565,7 +565,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
     if on_status:
         try:
             on_status("idle")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 
@@ -602,7 +602,7 @@ def _continuous_on_silence() -> None:
     if on_status:
         try:
             on_status("transcribing")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     wav_path = rec.stop()
@@ -670,16 +670,16 @@ def _continuous_on_silence() -> None:
         if on_silent_limit:
             try:
                 on_silent_limit()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         try:
             rec.cancel()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         if on_status:
             try:
                 on_status("idle")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         return
 
@@ -715,14 +715,14 @@ def _continuous_on_silence() -> None:
             if on_status:
                 try:
                     on_status("idle")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             return
 
         if on_status:
             try:
                 on_status("listening")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
     else:
         # Do not auto-restart. Clean up state and notify idle.
@@ -732,7 +732,7 @@ def _continuous_on_silence() -> None:
         if on_status:
             try:
                 on_status("idle")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
 

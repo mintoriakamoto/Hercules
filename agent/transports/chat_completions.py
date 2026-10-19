@@ -693,7 +693,7 @@ class ChatCompletionsTransport(ProviderTransport):
                     if hasattr(extra, "model_dump"):
                         try:
                             extra = extra.model_dump()
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                     tc_provider_data["extra_content"] = extra
                 tool_calls.append(

@@ -197,7 +197,7 @@ def connect_closing(db_path: Optional[Path] = None):
     finally:
         try:
             conn.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 

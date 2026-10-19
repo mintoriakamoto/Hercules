@@ -840,7 +840,7 @@ def has_named_custom_provider(requested_provider: str) -> bool:
     """
     try:
         return _get_named_custom_provider(requested_provider) is not None
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
 
@@ -865,7 +865,7 @@ def find_custom_provider_identity(base_url: str) -> Optional[str]:
         return None
     try:
         config = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
     providers = config.get("providers")
@@ -881,7 +881,7 @@ def find_custom_provider_identity(base_url: str) -> Optional[str]:
 
     try:
         custom_providers = get_compatible_custom_providers(config)
-    except Exception:
+    except (AttributeError, ValueError):
         custom_providers = None
     for entry in custom_providers or []:
         if not isinstance(entry, dict):
@@ -953,7 +953,7 @@ def canonical_custom_identity(
             if candidate_norm.startswith("custom:"):
                 return candidate_norm
             return f"custom:{candidate_norm}"
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return None
 
@@ -1884,7 +1884,7 @@ def _resolve_runtime_provider_impl(
 
     try:
         pool = load_pool(provider) if should_use_pool else None
-    except Exception:
+    except (AttributeError, ValueError):
         pool = None
     if pool and pool.has_credentials():
         entry = pool.select()

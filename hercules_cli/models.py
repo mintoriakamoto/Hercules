@@ -1770,11 +1770,11 @@ def _resolve_copilot_catalog_api_key() -> str:
                 continue
             try:
                 api_token, _expires_at = exchange_copilot_token(raw)
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
             if api_token:
                 return api_token
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     return ""
@@ -1886,7 +1886,7 @@ def provider_model_ids(
             live = _fetch_github_models(_resolve_copilot_catalog_api_key())
             if live:
                 return live
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         if normalized == "copilot-acp":
             return list(_PROVIDER_MODELS.get("copilot", []))
@@ -2153,9 +2153,9 @@ def _credential_fingerprint(provider: str) -> str:
                 parts.append(f"{rel}@{p.stat().st_mtime_ns}")
             except FileNotFoundError:
                 parts.append(f"{rel}@missing")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     # External well-known credential file locations
@@ -2170,7 +2170,7 @@ def _credential_fingerprint(provider: str) -> str:
             parts.append(f"{path}@{mt}")
         except FileNotFoundError:
             parts.append(f"{path}@missing")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     blob = "|".join(parts).encode("utf-8", errors="replace")
@@ -2685,7 +2685,7 @@ def ensure_lmstudio_model_loaded(
         raw_models = _lmstudio_fetch_raw_models(
             api_key=api_key, base_url=base_url, timeout=10
         )
-    except Exception:
+    except (AttributeError, ValueError):
         raw_models = None
     if raw_models is None:
         return None
@@ -2746,7 +2746,7 @@ def lmstudio_model_reasoning_options(
         raw_models = _lmstudio_fetch_raw_models(
             api_key=api_key, base_url=base_url, timeout=timeout
         )
-    except Exception:
+    except (AttributeError, ValueError):
         raw_models = None
     if not raw_models:
         return []
@@ -3586,7 +3586,7 @@ def validate_requested_model(
     if normalized in {"openai-codex", "xai-oauth"}:
         try:
             catalog_models = provider_model_ids(normalized)
-        except Exception:
+        except (AttributeError, ValueError):
             catalog_models = []
         if catalog_models:
             if requested_for_lookup in set(catalog_models):
@@ -3668,7 +3668,7 @@ def validate_requested_model(
     if normalized in {"minimax", "minimax-cn"}:
         try:
             catalog_models = provider_model_ids(normalized)
-        except Exception:
+        except (AttributeError, ValueError):
             catalog_models = []
         if catalog_models:
             # Case-insensitive lookup (catalog uses mixed case like MiniMax-M2.7)
@@ -3936,7 +3936,7 @@ def validate_requested_model(
     provider_label = _PROVIDER_LABELS.get(normalized, normalized)
     try:
         catalog_models = provider_model_ids(normalized)
-    except Exception:
+    except (AttributeError, ValueError):
         catalog_models = []
 
     if catalog_models:

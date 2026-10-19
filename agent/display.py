@@ -921,7 +921,7 @@ def _emit_inline_diff(diff_text: str, print_fn) -> bool:
         for line in diff_text.rstrip("\n").splitlines():
             print_fn(line)
         return True
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
 
@@ -1181,7 +1181,7 @@ class KawaiiSpinner:
         if self._print_fn is not None:
             try:
                 self._print_fn(text)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             return
         try:
@@ -1512,7 +1512,7 @@ def _get_cute_tool_message(
                     s = data.get("summary", {})
                     total = s.get("total", 0)
                     done = s.get("completed", 0)
-            except Exception:
+            except (requests.RequestException, httpx.RequestError, OSError):
                 pass
         if todos_arg is None:
             if total > 0:
