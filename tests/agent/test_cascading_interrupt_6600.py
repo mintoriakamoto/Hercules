@@ -22,9 +22,7 @@ exits cleanly (no retry, no fallback, no "reconnecting" status) instead of
 treating the forced error as transient.
 """
 
-import threading
 import time
-import types
 from unittest.mock import MagicMock
 
 import httpx

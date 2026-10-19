@@ -18,10 +18,8 @@ Bug 2 — OpenRouter appeared authenticated whenever OPENAI_API_KEY was set
     in runtime_provider.py, independent of the overlay).
 """
 
-import os
 from unittest.mock import patch
 
-import pytest
 
 from hercules_cli import models as M
 from hercules_cli.providers import HERCULES_OVERLAYS

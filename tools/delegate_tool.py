@@ -354,7 +354,9 @@ def _looks_like_error_output(content: Any) -> bool:
                 status = str(parsed.get("status") or "").strip().lower()
                 if status in {"error", "failed", "failure", "timeout"}:
                     return True
-        except Exception:
+        except (ValueError, TypeError):
+            # ValueError: json.JSONDecodeError (invalid JSON)
+            # TypeError: if content is not a string
             pass
 
     first = content.splitlines()[0].strip().lower() if content.splitlines() else ""
@@ -692,7 +694,10 @@ def _acquire_spawn_budget(parent_agent, count: int):
         budget = _SpawnBudget(limit)
         try:
             parent_agent._delegate_budget = budget
-        except Exception:  # pragma: no cover - exotic parent objects
+        except (AttributeError, TypeError):
+            # AttributeError: object doesn't support attribute assignment
+            # TypeError: read-only object or type mismatch
+            # pragma: no cover - exotic parent objects
             pass
     if budget.reserve(count):
         return budget, None
@@ -779,7 +784,10 @@ def _is_mcp_toolset_name(name: str) -> bool:
         from tools.registry import registry
 
         target = registry.get_toolset_alias_target(str(name))
-    except Exception:
+    except (KeyError, AttributeError, ValueError):
+        # KeyError: alias not found in registry
+        # AttributeError: registry method unavailable
+        # ValueError: invalid alias name format
         target = None
     return bool(target and str(target).startswith("mcp-"))
 
@@ -1020,7 +1028,10 @@ def _resolve_workspace_hint(parent_agent) -> Optional[str]:
             continue
         try:
             text = os.path.abspath(os.path.expanduser(str(candidate)))
-        except Exception:
+        except (ValueError, TypeError, OSError):
+            # ValueError: expanduser fails on invalid path
+            # TypeError: str() conversion fails
+            # OSError: path operation fails
             continue
         if os.path.isabs(text) and os.path.isdir(text):
             return text
@@ -1051,7 +1062,9 @@ def _emit_parent_console(parent_agent, line: str) -> None:
         try:
             printer(line)
             return
-        except Exception:
+        except (OSError, UnicodeEncodeError, BrokenPipeError):
+            # OSError/BrokenPipeError: output stream closed
+            # UnicodeEncodeError: string encoding failure
             pass
     print(line)
 
@@ -1701,7 +1714,6 @@ def _build_child_agent(
 
     try:
         from hercules_cli.plugins import invoke_hook as _invoke_hook
-
         _invoke_hook(
             "subagent_start",
             parent_session_id=getattr(parent_agent, "session_id", None),
@@ -1712,7 +1724,12 @@ def _build_child_agent(
             child_role=effective_role,
             child_goal=goal,
         )
+    except (ImportError, AttributeError):
+        # ImportError: hook module not available
+        # AttributeError: invoke_hook not found
+        pass
     except Exception:
+        # Hook invocation failed (hooks are optional, so we silently fail)
         logger.debug("subagent_start hook invocation failed", exc_info=True)
 
     return child
@@ -1748,7 +1765,8 @@ def _dump_subagent_timeout_diagnostic(
         logs_dir = hercules_home / "logs"
         try:
             logs_dir.mkdir(parents=True, exist_ok=True)
-        except Exception:
+        except OSError:
+            # OSError: permission denied, invalid path, or other OS error
             return None
 
         subagent_id = getattr(child, "_subagent_id", None) or f"idx{task_index}"
@@ -1797,7 +1815,11 @@ def _dump_subagent_timeout_diagnostic(
                 if isinstance(val, str) and attr == "base_url":
                     pass
                 _w(f"  {attr}: {val!r}")
-            except Exception:
+            except (AttributeError, TypeError, ValueError, UnicodeEncodeError):
+                # AttributeError: attribute access failed
+                # TypeError: repr() failed
+                # ValueError: repr() failed
+                # UnicodeEncodeError: encoding issue with repr()
                 _w(f"  {attr}: <unreadable>")
         _w("")
 
@@ -1997,7 +2019,11 @@ def _parent_summary_char_budget(parent_agent, n_summaries: int) -> Optional[int]
         per_summary_tokens = batch_token_budget // max(1, n_summaries)
         per_summary_chars = per_summary_tokens * 4  # ~4 chars/token
         return max(_MIN_SUMMARY_CHARS, per_summary_chars)
-    except Exception:
+    except (TypeError, ValueError, AttributeError, ZeroDivisionError):
+        # TypeError: int() conversion fails
+        # ValueError: int() conversion fails
+        # AttributeError: getattr with descriptor fails
+        # ZeroDivisionError: edge case in division
         logger.debug("Summary budget computation failed", exc_info=True)
         return None
 

@@ -74,7 +74,6 @@ ENTRY_DELIMITER = "\n§\n"
 #    explicitly removed.
 # ---------------------------------------------------------------------------
 
-from tools.threat_patterns import first_threat_message as _first_threat_message
 
 
 def _scan_memory_content(content: str) -> Optional[str]:

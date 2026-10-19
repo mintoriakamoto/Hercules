@@ -14,11 +14,11 @@ Integration note:
 import logging
 
 from agent.transports.types import (
-    NormalizedResponse,
-    ToolCall,
-    Usage,
-    build_tool_call,
-    map_finish_reason,
+    NormalizedResponse as NormalizedResponse,
+    ToolCall as ToolCall,
+    Usage as Usage,
+    build_tool_call as build_tool_call,
+    map_finish_reason as map_finish_reason,
 )  # noqa: F401
 from agent.transports.unified import FallbackMode, TransportFactory
 

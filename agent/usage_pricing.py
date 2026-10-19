@@ -1,3 +1,7 @@
+"""Usage and pricing calculations for agent sessions.
+
+Handles token counting, cost estimation, and usage tracking for Claude models.
+"""
 from __future__ import annotations
 
 import re

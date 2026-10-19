@@ -13,7 +13,6 @@ from __future__ import annotations
 import inspect
 from unittest.mock import patch
 
-import pytest
 
 from run_agent import AIAgent
 

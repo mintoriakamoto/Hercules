@@ -6,7 +6,6 @@ Covers `_plugin_image_gen_providers`, `_visible_providers`, and
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 
 import pytest
 

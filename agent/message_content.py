@@ -1,3 +1,7 @@
+"""Message content utilities for agent communication.
+
+Handles construction and validation of message content payloads.
+"""
 from __future__ import annotations
 
 from collections.abc import Mapping

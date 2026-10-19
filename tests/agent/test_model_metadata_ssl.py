@@ -9,8 +9,6 @@ No filesystem or network I/O required — we use tmp_path to create real
 CA bundle stand-in files and monkeypatch env vars.
 """
 
-import os
-import sys
 from pathlib import Path
 
 import pytest

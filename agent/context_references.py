@@ -1,3 +1,7 @@
+"""Management and tracking of context references in agent conversations.
+
+Handles extraction, resolution, and deduplication of references to external data.
+"""
 from __future__ import annotations
 
 import asyncio

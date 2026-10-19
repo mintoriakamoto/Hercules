@@ -6,7 +6,6 @@ import threading
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from io import StringIO
-from pathlib import Path
 
 import pytest
 from rich.console import Console
@@ -16,7 +15,6 @@ from tools.skills_hub import (
     GitHubAuth,
     GitHubSource,
     HubLockFile,
-    SkillBundle,
     UrlSource,
 )
 

@@ -10,7 +10,6 @@ Verifies:
 from __future__ import annotations
 
 import json
-import os
 
 import pytest
 
@@ -31,7 +30,6 @@ def test_kanban_tools_present_by_default(monkeypatch, tmp_path):
     home.mkdir()
     monkeypatch.setenv("HERCULES_HOME", str(home))
 
-    import tools.kanban_tools  # ensure registered
     from tools.registry import invalidate_check_fn_cache, registry
     from toolsets import resolve_toolset
 
@@ -58,7 +56,6 @@ def test_kanban_tools_hidden_when_toolset_unticked(monkeypatch, tmp_path):
     )
     monkeypatch.setenv("HERCULES_HOME", str(home))
 
-    import tools.kanban_tools  # ensure registered
     from tools.registry import invalidate_check_fn_cache, registry
     from toolsets import resolve_toolset
 
@@ -76,7 +73,6 @@ def test_kanban_tools_visible_with_env_var(monkeypatch, tmp_path):
     home.mkdir()
     monkeypatch.setenv("HERCULES_HOME", str(home))
 
-    import tools.kanban_tools  # ensure registered
     from tools.registry import invalidate_check_fn_cache, registry
     from toolsets import resolve_toolset
 
@@ -105,7 +101,6 @@ def test_kanban_worker_env_overrides_profile_toolset_filter(monkeypatch, tmp_pat
     home.mkdir()
     monkeypatch.setenv("HERCULES_HOME", str(home))
 
-    import tools.kanban_tools  # ensure registered
     from model_tools import _clear_tool_defs_cache, get_tool_definitions
     from tools.registry import invalidate_check_fn_cache
 
@@ -135,7 +130,6 @@ def test_worker_with_kanban_toolset_still_hides_board_routing(monkeypatch, tmp_p
     (home / "config.yaml").write_text("toolsets:\n  - kanban\n")
     monkeypatch.setenv("HERCULES_HOME", str(home))
 
-    import tools.kanban_tools  # ensure registered
     from tools.registry import invalidate_check_fn_cache, registry
     from toolsets import resolve_toolset
 
@@ -160,7 +154,6 @@ def test_kanban_tools_visible_with_toolset_config(monkeypatch, tmp_path):
     (home / "config.yaml").write_text("toolsets:\n  - kanban\n")
     monkeypatch.setenv("HERCULES_HOME", str(home))
 
-    import tools.kanban_tools  # ensure registered
     from tools.registry import invalidate_check_fn_cache, registry
     from toolsets import resolve_toolset
 
@@ -630,7 +623,6 @@ def test_complete_retry_with_corrected_created_cards_succeeds(worker_env):
     """After a phantom rejection, retrying kanban_complete with a
     corrected created_cards list (phantom ids removed) must complete the
     task. Regression for #22923."""
-    from hercules_cli import kanban_db as kb
     from tools import kanban_tools as kt
 
     # Create a real child via the tool so it gets the worker-profile

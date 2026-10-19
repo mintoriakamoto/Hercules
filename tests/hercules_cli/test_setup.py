@@ -1,7 +1,5 @@
 """Tests for setup.py configuration flows."""
 
-import sys
-import types
 
 
 from hercules_cli.config import load_config, save_config

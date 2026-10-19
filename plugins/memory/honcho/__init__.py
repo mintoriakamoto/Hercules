@@ -280,7 +280,6 @@ class HonchoMemoryProvider(MemoryProvider):
     def save_config(self, values, hercules_home):
         """Write config to $HERCULES_HOME/honcho.json (Honcho SDK native format)."""
         import json
-        import os
         from pathlib import Path
 
         config_path = Path(hercules_home) / "honcho.json"

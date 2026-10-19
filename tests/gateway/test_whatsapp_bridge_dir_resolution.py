@@ -6,10 +6,8 @@ with EACCES. The resolver must detect the read-only install dir and mirror the
 bridge source into a writable HERCULES_HOME location instead.
 """
 
-import importlib
 from pathlib import Path
 
-import pytest
 
 from gateway.platforms import whatsapp_common
 

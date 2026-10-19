@@ -41,7 +41,10 @@ def _expand_tilde(path: str) -> str:
         from hercules_constants import get_subprocess_home
 
         home = get_subprocess_home()
-    except Exception:
+    except (ImportError, AttributeError, RuntimeError):
+        # ImportError: module not available
+        # AttributeError: function not found
+        # RuntimeError: home directory lookup failed
         home = None
     if home and (path == "~" or path.startswith("~/")):
         return home if path == "~" else os.path.join(home, path[2:])
@@ -79,7 +82,11 @@ def _get_max_read_chars() -> int:
         if isinstance(val, (int, float)) and val > 0:
             _max_read_chars_cached = int(val)
             return _max_read_chars_cached
-    except Exception:
+    except (ImportError, AttributeError, TypeError, ValueError):
+        # ImportError: config module not available
+        # AttributeError: load_config not found
+        # TypeError: int() conversion fails
+        # ValueError: int() conversion fails
         pass
     _max_read_chars_cached = _DEFAULT_MAX_READ_CHARS
     return _max_read_chars_cached

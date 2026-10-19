@@ -1,3 +1,7 @@
+"""Account usage tracking and quota management.
+
+Monitors token usage, compute costs, and enforces account-level quotas.
+"""
 from __future__ import annotations
 
 import logging

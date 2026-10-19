@@ -33,7 +33,6 @@ from agent.auxiliary_client import (
     _resolve_task_provider_model,
     _resolve_xai_oauth_for_aux,
     _CodexCompletionsAdapter,
-    _pool_runtime_base_url,
 )
 
 

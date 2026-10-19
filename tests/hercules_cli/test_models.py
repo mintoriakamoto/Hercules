@@ -1,6 +1,6 @@
 """Tests for the hercules_cli models module."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from hercules_cli.models import (
     OPENROUTER_MODELS,

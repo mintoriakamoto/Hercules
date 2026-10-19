@@ -201,7 +201,7 @@ def check_video_generation_requirements() -> bool:
     to prevent the tool from appearing with no usable backend.
     """
     try:
-        from agent.video_gen_registry import list_providers, get_active_provider
+        from agent.video_gen_registry import get_active_provider
         from hercules_cli.plugins import _ensure_plugins_discovered
 
         _ensure_plugins_discovered()

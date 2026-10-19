@@ -5521,7 +5521,6 @@ class TestMatrixReconnectDisconnect:
 
         fake_mautrix_mods["mautrix.client"].Client = MagicMock(return_value=mock_client)
 
-        import plugins.platforms.matrix.adapter as matrix_mod
 
         with patch.dict("sys.modules", fake_mautrix_mods):
             with patch.object(adapter, "_refresh_dm_cache", AsyncMock()):

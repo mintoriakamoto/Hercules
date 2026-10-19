@@ -1,4 +1,3 @@
-import time
 
 import hercules_state
 from hercules_state import SessionDB

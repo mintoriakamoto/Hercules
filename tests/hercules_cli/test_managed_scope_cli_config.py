@@ -7,7 +7,6 @@ silently ignores administrator-pinned values while `hercules config`/`doctor`
 honor them. This locks the cli.py path.
 """
 
-import importlib
 
 import pytest
 

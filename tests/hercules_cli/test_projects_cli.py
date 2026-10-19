@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 
-import pytest
 
 from hercules_cli import projects_cmd
 from hercules_cli import projects_db as pdb

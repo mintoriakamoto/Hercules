@@ -484,7 +484,6 @@ def _resolve_relay_identity_token() -> str:
 
     # Mode 1 — generic OAuth2 client_credentials grant.
     import json
-    import urllib.error
     import urllib.parse
     import urllib.request
 

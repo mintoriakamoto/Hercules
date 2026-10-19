@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from agent.rate_limit_tracker import RateLimitState
 from urllib.parse import urlparse, parse_qs, urlunparse
 
-from agent.compression_strategy import Compressor, CompressionLevel
+from agent.compression_strategy import Compressor
 from agent.context_compressor import ContextCompressor
 from agent.iteration_budget import IterationBudget
 from agent.memory_manager import StreamingContextScrubber

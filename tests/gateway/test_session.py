@@ -1223,7 +1223,6 @@ class TestSessionEntryFromDictTraversalValidation:
     }
 
     def _entry(self, **overrides):
-        from gateway.session import SessionEntry
 
         return {**self.BASE, **overrides}
 

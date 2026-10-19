@@ -20,13 +20,11 @@ The fix:
 These tests pin the corrected behavior.
 """
 
-import asyncio
 import time
 from datetime import datetime, timezone
 from unittest.mock import patch
 
 import httpx
-import pytest
 from fastapi.testclient import TestClient
 
 from hercules_cli.web_server import _SESSION_TOKEN, app

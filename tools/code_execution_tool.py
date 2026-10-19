@@ -1575,27 +1575,27 @@ def execute_code(
         try:
             poll_interval = 0.005
             while proc.poll() is None:
-            if _is_interrupted():
-                _kill_process_group(proc)
-                status = "interrupted"
-                break
-            now = time.monotonic()
-            if now > deadline:
-                _kill_process_group(proc, escalate=True)
-                status = "timeout"
-                break
-            # Periodic activity touch so the gateway's inactivity timeout
-            # doesn't kill the agent during long code execution (#10807).
-            if touch_activity_if_due is not None:
+                if _is_interrupted():
+                    _kill_process_group(proc)
+                    status = "interrupted"
+                    break
+                now = time.monotonic()
+                if now > deadline:
+                    _kill_process_group(proc, escalate=True)
+                    status = "timeout"
+                    break
+                # Periodic activity touch so the gateway's inactivity timeout
+                # doesn't kill the agent during long code execution (#10807).
+                if touch_activity_if_due is not None:
+                    try:
+                        touch_activity_if_due(_activity_state, "execute_code running")
+                    except Exception:
+                        pass
                 try:
-                    touch_activity_if_due(_activity_state, "execute_code running")
-                except Exception:
+                    proc.wait(timeout=min(poll_interval, max(0.0, deadline - now)))
+                except subprocess.TimeoutExpired:
                     pass
-            try:
-                proc.wait(timeout=min(poll_interval, max(0.0, deadline - now)))
-            except subprocess.TimeoutExpired:
-                pass
-            poll_interval = min(0.2, poll_interval * 1.5)
+                poll_interval = min(0.2, poll_interval * 1.5)
 
             # Wait for readers to finish draining
             stdout_reader.join(timeout=3)

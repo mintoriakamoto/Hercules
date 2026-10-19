@@ -24,7 +24,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 @pytest.fixture
 def session_db(tmp_path):
     """Create a real SessionDB for testing."""
-    from pathlib import Path
     from conftest import setup_hercules_home
 
     hercules_home = tmp_path / ".hercules"

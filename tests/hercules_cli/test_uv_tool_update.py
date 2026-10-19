@@ -14,8 +14,6 @@ that also has ``uv tool install hercules-agent`` does not get misclassified.
 
 from __future__ import annotations
 
-import subprocess
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest

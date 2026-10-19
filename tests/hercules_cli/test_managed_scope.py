@@ -2,7 +2,6 @@
 
 import textwrap
 
-import pytest
 
 
 # ── Directory resolver ───────────────────────────────────────────────────────
