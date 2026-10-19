@@ -692,7 +692,7 @@ class WebhookAdapter(BasePlatformAdapter):
             )
             try:
                 result = await self._direct_deliver(prompt, delivery)
-            except Exception:
+            except (RuntimeError):
                 logger.exception(
                     "[webhook] direct-deliver failed route=%s delivery=%s",
                     route_name,

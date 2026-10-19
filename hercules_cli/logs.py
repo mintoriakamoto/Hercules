@@ -352,7 +352,7 @@ def _read_last_n_lines(path: Path, n: int) -> list:
                     continue
                 try:
                     decoded.append(raw.decode("utf-8", errors="replace") + "\n")
-                except Exception:
+                except (UnicodeDecodeError):
                     decoded.append(raw.decode("latin-1") + "\n")
             return decoded[-n:]
 

@@ -416,7 +416,7 @@ class CDPSupervisor:
                 if ws is not None:
                     try:
                         await ws.close()
-                    except Exception:
+                    except (RuntimeError):
                         pass
 
             try:
@@ -749,7 +749,7 @@ class CDPSupervisor:
                 if ws is not None:
                     try:
                         await ws.close()
-                    except Exception:
+                    except (RuntimeError):
                         pass
 
             if self._stop_requested:
@@ -850,7 +850,7 @@ class CDPSupervisor:
                 session_id=session_id,
                 timeout=3.0,
             )
-        except Exception:
+        except (RuntimeError):
             pass
 
     async def _cdp(
@@ -1143,7 +1143,7 @@ class CDPSupervisor:
                     session_id=session_id,
                     timeout=3.0,
                 )
-            except Exception:
+            except (RuntimeError):
                 pass
             return
 

@@ -673,7 +673,7 @@ def _interactive_auth() -> None:
                         if _hint:
                             print(f"  Hint: {_hint}")
                 print()
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
         pass
     print()
 

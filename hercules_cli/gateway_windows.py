@@ -1537,7 +1537,7 @@ def _print_deep_probes() -> None:
                     print(
                         f"  [6] {_mark(healthy):4s}  Last lifecycle event: tag={tag} pid={pid} ts={ts}"
                     )
-                except Exception:
+                except (IndexError, KeyError):
                     print(
                         f"  [6] {_mark(False):4s}  Last lifecycle line not JSON: {last_event[:120]}"
                     )

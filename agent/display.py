@@ -1126,7 +1126,7 @@ class KawaiiSpinner:
                 faces = skin.spinner.get("waiting_faces", [])
                 if faces:
                     return faces
-        except Exception:
+        except (IndexError, KeyError):
             pass
         return cls.KAWAII_WAITING
 
@@ -1139,7 +1139,7 @@ class KawaiiSpinner:
                 faces = skin.spinner.get("thinking_faces", [])
                 if faces:
                     return faces
-        except Exception:
+        except (IndexError, KeyError):
             pass
         return cls.KAWAII_THINKING
 
@@ -1152,7 +1152,7 @@ class KawaiiSpinner:
                 verbs = skin.spinner.get("thinking_verbs", [])
                 if verbs:
                     return verbs
-        except Exception:
+        except (IndexError, KeyError):
             pass
         return cls.THINKING_VERBS
 

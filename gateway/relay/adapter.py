@@ -237,7 +237,7 @@ class RelayAdapter(BasePlatformAdapter):
         )
         try:
             await self._notify_fatal_error()
-        except Exception:
+        except (RuntimeError):
             logger.debug("relay revocation fatal-error notify failed", exc_info=True)
 
     def _apply_descriptor(self, descriptor: CapabilityDescriptor) -> None:
@@ -476,7 +476,7 @@ class RelayAdapter(BasePlatformAdapter):
                     result: Any = go_idle()
                     if asyncio.iscoroutine(result):
                         await result
-                except Exception:
+                except (RuntimeError):
                     logger.debug("relay going_idle failed during drain", exc_info=True)
             await self._transport.disconnect()
 

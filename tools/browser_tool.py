@@ -3741,7 +3741,7 @@ def _decode_js_string_literal(literal: str) -> str:
     body = literal[1:-1]
     try:
         return bytes(body, "utf-8").decode("unicode_escape")
-    except Exception:
+    except (UnicodeDecodeError, ValueError):
         return body
 
 

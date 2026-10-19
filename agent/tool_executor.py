@@ -599,7 +599,7 @@ def execute_tool_calls_concurrent(
                         agent._checkpoint_mgr.ensure_checkpoint(
                             cwd, f"before terminal: {cmd[:60]}"
                         )
-                except Exception:
+                except (IndexError, KeyError):
                     pass
 
         parsed_calls.append((
@@ -1494,7 +1494,7 @@ def execute_tool_calls_sequential(
                     agent._checkpoint_mgr.ensure_checkpoint(
                         cwd, f"before terminal: {cmd[:60]}"
                     )
-            except Exception:
+            except (IndexError, KeyError):
                 pass  # never block tool execution
 
         tool_start_time = time.time()

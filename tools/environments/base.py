@@ -609,7 +609,7 @@ class BaseEnvironment(ABC):
                     tail = decoder.decode(b"", final=True)
                     if tail:
                         output_chunks.append(tail)
-                except Exception:
+                except (UnicodeDecodeError):
                     pass
 
         def _drain():
@@ -647,7 +647,7 @@ class BaseEnvironment(ABC):
                         tail = decoder.decode(b"", final=True)
                         if tail:
                             output_chunks.append(tail)
-                    except Exception:
+                    except (UnicodeDecodeError):
                         pass
                 return
             idle_after_exit = 0
@@ -681,7 +681,7 @@ class BaseEnvironment(ABC):
                     tail = decoder.decode(b"", final=True)
                     if tail:
                         output_chunks.append(tail)
-                except Exception:
+                except (UnicodeDecodeError):
                     pass
 
         drain_thread = threading.Thread(target=_drain, daemon=True)

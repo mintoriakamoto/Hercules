@@ -1463,7 +1463,7 @@ class GatewayKanbanWatchersMixin:
                         len(pids),
                         pids,
                     )
-            except Exception:
+            except (RuntimeError):
                 logger.exception("kanban dispatcher: zombie reaper failed")
 
             try:
@@ -1517,7 +1517,7 @@ class GatewayKanbanWatchersMixin:
                 _release_singleton_lock(self._kanban_dispatcher_lock_handle)
                 self._kanban_dispatcher_lock_handle = None
                 raise
-            except Exception:
+            except (AttributeError, OSError, RuntimeError, ValueError):
                 logger.exception("kanban dispatcher: unexpected watcher error")
 
             # Sleep in 1s slices so shutdown is snappy — otherwise a stop()

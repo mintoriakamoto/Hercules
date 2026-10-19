@@ -507,5 +507,5 @@ def resolve_whatsapp_bridge_dir() -> Path:
             dirs_exist_ok=False,
         )
         return hercules_home_bridge
-    except Exception:
+    except (OSError):
         return install_bridge

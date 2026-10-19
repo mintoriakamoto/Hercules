@@ -468,13 +468,13 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         if self._runner is not None:
             try:
                 await self._runner.cleanup()
-            except Exception:
+            except (RuntimeError):
                 logger.exception("[whatsapp_cloud] webhook server cleanup failed")
             self._runner = None
         if self._http_client is not None:
             try:
                 await self._http_client.aclose()
-            except Exception:
+            except (RuntimeError):
                 logger.exception("[whatsapp_cloud] http client close failed")
             self._http_client = None
         self._mark_disconnected()
@@ -603,7 +603,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         }
         try:
             resp = await self._http_client.post(url, headers=headers, json=payload)
-        except Exception:
+        except (RuntimeError):
             # Network / connection error — silent fail. Typing UX must
             # never block message dispatch.
             return
@@ -1345,7 +1345,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                 f"{GRAPH_API_BASE}/{self._api_version}/{media_id}",
                 headers=headers,
             )
-        except Exception:
+        except (RuntimeError):
             logger.exception(
                 "[whatsapp_cloud] media metadata fetch raised (id=%s)", media_id
             )
@@ -1371,7 +1371,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         # documents this explicitly — the URL alone is not enough).
         try:
             blob_resp = await self._http_client.get(temp_url, headers=headers)
-        except Exception:
+        except (RuntimeError):
             logger.exception(
                 "[whatsapp_cloud] media bytes fetch raised (id=%s)", media_id
             )
@@ -1476,7 +1476,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             )
         except ValueError:
             return web.Response(status=413)
-        except Exception:
+        except (RuntimeError):
             return web.Response(status=400)
 
         # Refuse to accept anything if app_secret isn't configured. Without
@@ -1619,7 +1619,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                         event = await self._build_message_event_from_cloud(
                             raw_message, contacts_by_waid, metadata
                         )
-                    except Exception:
+                    except (RuntimeError):
                         # Build errors must not bubble out either: the wamid
                         # is already dedup-marked above, so a 500 here would
                         # make Meta retry the batch and every message in it
@@ -1635,7 +1635,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                     self._accepted_count += 1
                     try:
                         await self.handle_message(event)
-                    except Exception:
+                    except (RuntimeError):
                         # Dispatch errors must not bubble out — Meta would
                         # retry the whole batch, multiplying the bug.
                         logger.exception(
@@ -1839,7 +1839,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                 result_text = await _slash_confirm_mod.resolve(
                     session_key, confirm_id, choice
                 )
-            except Exception:
+            except (RuntimeError):
                 logger.exception("[whatsapp_cloud] slash_confirm.resolve failed")
                 return True  # still claim the tap; surfacing it as text wouldn't help
             if result_text:

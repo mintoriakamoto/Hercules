@@ -1,3 +1,9 @@
+"""Timeout configuration and management for provider requests.
+
+Provides utilities to coerce timeout values and retrieve configured
+timeouts for specific providers and models.
+"""
+
 from __future__ import annotations
 
 

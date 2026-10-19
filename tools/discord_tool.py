@@ -124,7 +124,7 @@ def _discord_request(
             error_body = raw_error_body.decode("utf-8", errors="replace")
         except DiscordAPIError as too_large:
             error_body = too_large.body
-        except Exception:
+        except (UnicodeDecodeError):
             pass
         raise DiscordAPIError(e.code, error_body) from e
 

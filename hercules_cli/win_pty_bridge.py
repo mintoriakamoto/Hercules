@@ -149,7 +149,7 @@ class WinPtyBridge:
         try:
             # The dashboard sends raw keystroke bytes; pywinpty.write wants text.
             self._proc.write(data.decode("utf-8", errors="replace"))
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return
 
     def resize(self, cols: int, rows: int) -> None:

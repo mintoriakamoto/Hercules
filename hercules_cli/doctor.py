@@ -2047,7 +2047,7 @@ def run_doctor(args):
                         f"({moderate} moderate "
                         f"{'vulnerability' if moderate == 1 else 'vulnerabilities'})",
                     )
-            except Exception:
+            except (ImportError, IndexError, KeyError, ModuleNotFoundError, OSError, ValueError, subprocess.CalledProcessError):
                 pass
 
     if _is_termux():

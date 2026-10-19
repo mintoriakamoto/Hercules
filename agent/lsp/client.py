@@ -248,7 +248,7 @@ class LSPClient:
             await self._spawn()
             await self._initialize()
             self._state = "running"
-        except Exception:
+        except (RuntimeError):
             self._state = "error"
             await self._cleanup_process()
             raise
@@ -439,7 +439,7 @@ class LSPClient:
                     pass
                 try:
                     await self._send_notification("exit", None)
-                except Exception:
+                except (RuntimeError):
                     pass
         finally:
             self._state = "stopped"

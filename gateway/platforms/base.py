@@ -4165,7 +4165,7 @@ class BasePlatformAdapter(ABC):
             if hasattr(self, "stop_typing"):
                 try:
                     await self.stop_typing(chat_id)
-                except Exception:
+                except (RuntimeError):
                     pass
             self._typing_paused.discard(chat_id)
 
@@ -4194,7 +4194,7 @@ class BasePlatformAdapter(ABC):
             for attempt in range(attempts):
                 try:
                     await self.stop_typing(chat_id)
-                except Exception:
+                except (RuntimeError):
                     pass
                 if attempt < attempts - 1:
                     await asyncio.sleep(0)
@@ -4221,7 +4221,7 @@ class BasePlatformAdapter(ABC):
                 interrupt_event.set()
         try:
             await self.stop_typing(chat_id)
-        except Exception:
+        except (RuntimeError):
             pass
 
     def register_post_delivery_callback(
@@ -4281,7 +4281,7 @@ class BasePlatformAdapter(ABC):
                             _result = _cb()
                             if inspect.isawaitable(_result):
                                 await _result
-                        except Exception:
+                        except (RuntimeError):
                             logger.debug("Post-delivery callback failed", exc_info=True)
 
                 callback = _chained

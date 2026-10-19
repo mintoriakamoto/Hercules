@@ -1160,7 +1160,7 @@ def _session_browse_picker(sessions: list) -> Optional[str]:
         curses.wrapper(_curses_browse)
         return result_holder[0]
 
-    except Exception:
+    except (IndexError, KeyError):
         pass
 
     # Fallback: numbered list (Windows without curses, etc.)
@@ -8424,7 +8424,7 @@ class _UpdateOutputStream:
         if self._log is not None:
             try:
                 self._log.write(data)
-            except Exception:
+            except (OSError):
                 # Log errors should never abort the update.
                 pass
 
@@ -8569,7 +8569,7 @@ def _log_only_write(text: str) -> None:
     try:
         log_file.write(text if text.endswith("\n") else text + "\n")
         log_file.flush()
-    except Exception:
+    except (OSError):
         pass
 
 
@@ -10340,7 +10340,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
                         print(f"  {p.name}: {status}")
                     except Exception as pe:
                         print(f"  {p.name}: error ({pe})")
-        except Exception:
+        except (IndexError, KeyError):
             pass  # profiles module not available or no profiles
 
         # Backfill per-profile .env files for profiles created before the

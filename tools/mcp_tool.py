@@ -1870,7 +1870,7 @@ class MCPServerTask:
             await self._refresh_tools()
         except asyncio.CancelledError:
             raise
-        except Exception:
+        except (RuntimeError):
             logger.exception("MCP server '%s': dynamic tool refresh failed", self.name)
 
     def _schedule_tools_refresh(self) -> asyncio.Task:
@@ -1966,7 +1966,7 @@ class MCPServerTask:
                             )
                         case _:
                             pass
-            except Exception:
+            except (RuntimeError):
                 logger.exception("Error in MCP message handler for '%s'", self.name)
 
         return _handler

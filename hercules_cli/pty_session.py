@@ -69,7 +69,7 @@ class PtySession:
                 if ws is not None:
                     try:
                         await ws.close(code=WS_CLOSE_PROCESS_EXITED)
-                    except Exception:
+                    except (RuntimeError):
                         pass
                 return
             if not chunk:  # idle tick
@@ -80,7 +80,7 @@ class PtySession:
             if ws is not None:
                 try:
                     await ws.send_bytes(chunk)
-                except Exception:
+                except (RuntimeError):
                     pass  # detached mid-send; keep buffering
 
     async def attach(self, ws) -> None:
@@ -88,7 +88,7 @@ class PtySession:
         if old is not None and old is not ws:
             try:
                 await old.close(code=WS_CLOSE_SUPERSEDED)
-            except Exception:
+            except (RuntimeError):
                 pass
         self._ws = ws
         self.attached = True
@@ -120,7 +120,7 @@ class PtySession:
             # bridge.close() joins the child — blocking; keep it off the
             # event loop (#53227).
             await asyncio.to_thread(self.bridge.close)
-        except Exception:
+        except (RuntimeError):
             pass
 
 
@@ -137,7 +137,7 @@ async def run_reaper(registry: "PtySessionRegistry", *, interval: float = 60.0) 
         await asyncio.sleep(interval)
         try:
             await registry.reap_idle()
-        except Exception:
+        except (RuntimeError):
             pass
 
 

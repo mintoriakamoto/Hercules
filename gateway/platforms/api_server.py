@@ -437,7 +437,7 @@ class ResponseStore:
         self._db_path: Optional[str] = db_path if db_path != ":memory:" else None
         try:
             self._conn = sqlite3.connect(db_path, check_same_thread=False)
-        except Exception:
+        except (OSError, sqlite3.DatabaseError):
             self._conn = sqlite3.connect(":memory:", check_same_thread=False)
             self._db_path = None
         # Use shared WAL-fallback helper so response_store.db degrades
@@ -3816,7 +3816,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "response": failed_env,
                     },
                 )
-            except Exception:
+            except (IndexError, KeyError, RuntimeError):
                 pass
             logger.error(
                 "Agent crashed mid-stream for %s: %s",

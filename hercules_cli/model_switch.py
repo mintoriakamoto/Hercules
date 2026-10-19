@@ -1921,7 +1921,7 @@ def list_authenticated_providers(
                     if _ids
                     else (curated.get(hercules_slug, []) or curated.get(pid, []))
                 )
-            except Exception:
+            except (IndexError, KeyError):
                 model_ids = curated.get(hercules_slug, []) or curated.get(pid, [])
         else:
             # Unified pathway — see Section 1 rationale. Fall back to the
@@ -2008,7 +2008,7 @@ def list_authenticated_providers(
             try:
                 _ids = cached_provider_model_ids(_cp.slug)
                 _cp_model_ids = _ids if _ids else curated.get(_cp.slug, [])
-            except Exception:
+            except (IndexError, KeyError):
                 _cp_model_ids = curated.get(_cp.slug, [])
         else:
             # Unified pathway — same as sections 1 and 2.

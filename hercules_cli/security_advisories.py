@@ -244,7 +244,7 @@ def ack_advisory(advisory_id: str) -> bool:
             sec["acked_advisories"] = existing
             save_config(cfg)
         return True
-    except Exception:
+    except (IndexError, KeyError):
         logger.exception("Failed to persist advisory ack for %s", advisory_id)
         return False
 

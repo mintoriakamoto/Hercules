@@ -1149,7 +1149,7 @@ def _execute_remote(
                 cwd="/",
                 timeout=15,
             )
-        except Exception:
+        except (sqlite3.DatabaseError):
             logger.debug("Failed to clean up remote sandbox %s", sandbox_dir)
 
     duration = round(time.monotonic() - exec_start, 2)

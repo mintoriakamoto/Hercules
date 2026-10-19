@@ -1948,7 +1948,7 @@ def _query_local_context_length_uncached(
                         )
                         if ctx and isinstance(ctx, (int, float)):
                             return int(ctx)
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         pass
 
     return None

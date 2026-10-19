@@ -73,7 +73,7 @@ class _ThreadRoutingStream:
     def write(self, data):  # type: ignore[no-untyped-def]
         try:
             return self._target().write(data)
-        except Exception:
+        except (OSError):
             return len(data) if isinstance(data, str) else 0
 
     def flush(self):  # type: ignore[no-untyped-def]

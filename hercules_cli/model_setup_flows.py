@@ -553,7 +553,7 @@ def _model_flow_kimi_oauth(_config, current_model=""):
         creds = resolve_kimi_oauth_runtime_credentials(refresh_if_expiring=True)
         base_url = creds.get("base_url", base_url) or base_url
         models = fetch_api_models(creds["api_key"], base_url)
-    except Exception:
+    except (IndexError, KeyError):
         pass
     if not models:
         # Curated fallback when live discovery is unavailable (the /coding

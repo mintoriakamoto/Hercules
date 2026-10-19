@@ -1481,7 +1481,7 @@ def discord_skill_commands_by_category(
                 categories.setdefault(cat, []).append((discord_name, desc, cmd_key))
             else:
                 uncategorized.append((discord_name, desc, cmd_key))
-    except Exception:
+    except (IndexError, KeyError, OSError):
         pass
 
     return categories, uncategorized, hidden
@@ -2267,7 +2267,7 @@ class SlashCommandCompleter(Completer):
                         display=prefix,
                         display_meta=f"MCP server '{server}'",
                     )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return
 
     @staticmethod

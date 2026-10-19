@@ -364,7 +364,7 @@ class WebSocketRelayTransport:
         if self._ws is not None:
             try:
                 await self._ws.close()
-            except Exception:
+            except (RuntimeError):
                 pass
             self._ws = None
         # Fail any in-flight outbound waiters so callers don't hang.
@@ -509,7 +509,7 @@ class WebSocketRelayTransport:
         self._dormant = True
         try:
             await self._ws.close()
-        except Exception:
+        except (RuntimeError):
             logger.debug("relay go_dormant: ws.close() raised", exc_info=True)
         return acked
 
@@ -522,7 +522,7 @@ class WebSocketRelayTransport:
         """
         try:
             await self._send({"type": "inbound_ack", "bufferId": buffer_id})
-        except Exception:
+        except (RuntimeError):
             logger.debug("relay: inbound_ack send failed for %s", buffer_id)
 
     async def _request_response(

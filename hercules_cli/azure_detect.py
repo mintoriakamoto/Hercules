@@ -166,7 +166,7 @@ def _http_get_json(
             body = resp.read()
             try:
                 return resp.status, json.loads(body.decode("utf-8", errors="replace"))
-            except Exception:
+            except (UnicodeDecodeError):
                 return resp.status, None
     except HTTPError as exc:
         return exc.code, None

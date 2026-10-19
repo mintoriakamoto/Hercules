@@ -330,7 +330,7 @@ def _extract_error_preview(result: Any, max_len: int = 180) -> str:
             data = json.loads(stripped)
             if isinstance(data, dict) and isinstance(data.get("error"), str):
                 text = data["error"]
-        except Exception:
+        except (IndexError, KeyError):
             pass
     # Collapse whitespace, trim to max_len.
     text = " ".join(text.split())

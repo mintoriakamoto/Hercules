@@ -289,7 +289,7 @@ class GatewaySlashCommandsMixin:
             session_info = await asyncio.to_thread(
                 self._reset_notice_session_info, source
             )
-        except Exception:
+        except (RuntimeError):
             session_info = ""
 
         if new_entry:
@@ -344,7 +344,7 @@ class GatewaySlashCommandsMixin:
                 await asyncio.to_thread(
                     self._record_telegram_topic_binding, source, new_entry
                 )
-            except Exception:
+            except (RuntimeError):
                 logger.debug(
                     "Failed to rebind Telegram topic after /new", exc_info=True
                 )
@@ -602,7 +602,7 @@ class GatewaySlashCommandsMixin:
                 title = await self._session_db.get_session_title(
                     session_entry.session_id
                 )
-            except Exception:
+            except (RuntimeError):
                 title = None
             try:
                 row = await self._session_db.get_session(session_entry.session_id)
@@ -615,7 +615,7 @@ class GatewaySlashCommandsMixin:
                         + _int_value(row.get("cache_write_tokens"))
                         + _int_value(row.get("reasoning_tokens"))
                     )
-            except Exception:
+            except (RuntimeError):
                 db_total_tokens = 0
 
         # Resolve model/context for cockpit-style status. Prefer the live or
@@ -633,7 +633,7 @@ class GatewaySlashCommandsMixin:
                         cached = cache.get(session_key)
                     if cached:
                         status_agent = cached[0]
-                except Exception:
+                except (IndexError, KeyError):
                     status_agent = None
 
         model_name = ""
@@ -933,7 +933,7 @@ class GatewaySlashCommandsMixin:
         # Inactive/persisted-only: best-effort scope by DB row source + user.
         try:
             row = await self._session_db.get_session(target_id) or {}
-        except Exception:
+        except (RuntimeError):
             return False
         caller_src = source.platform.value if source.platform else None
         row_src = row.get("source")
@@ -1116,7 +1116,7 @@ class GatewaySlashCommandsMixin:
                 for p in process_registry.list_sessions()
                 if p.get("status") == "running"
             ]
-        except Exception:
+        except (IndexError, KeyError):
             running_processes = []
 
         background_tasks = [
@@ -1657,7 +1657,7 @@ class GatewaySlashCommandsMixin:
                         max_models=50,
                         include_moa=True,
                     )
-                except Exception:
+                except (OSError, RuntimeError, urllib.error.URLError):
                     providers = []
 
                 if providers:
@@ -1955,7 +1955,7 @@ class GatewaySlashCommandsMixin:
                     elif p.get("api_url"):
                         lines.append(f"  `{p['api_url']}`")
                     lines.append("")
-            except Exception:
+            except (IndexError, KeyError, RuntimeError):
                 pass
 
             lines.append(t("gateway.model.usage_switch_model"))
@@ -3768,7 +3768,7 @@ class GatewaySlashCommandsMixin:
                 title = None
                 try:
                     title = await self._session_db.get_session_title(session_id)
-                except Exception:
+                except (RuntimeError):
                     title = None
                 session_label = title or t("gateway.topic.untitled_session")
                 return t(
@@ -3810,7 +3810,7 @@ class GatewaySlashCommandsMixin:
                     chat_type=source.chat_type,
                     thread_id=source.thread_id,
                 )
-            except Exception:
+            except (RuntimeError):
                 pass  # Session might already exist, ignore errors
 
         title_arg = event.get_command_args().strip()
@@ -3840,7 +3840,7 @@ class GatewaySlashCommandsMixin:
                             await asyncio.to_thread(
                                 schedule_rename, source, session_id, sanitized
                             )
-                        except Exception:
+                        except (RuntimeError):
                             logger.debug(
                                 "Failed to rename Telegram topic from /title",
                                 exc_info=True,
@@ -4226,13 +4226,13 @@ class GatewaySlashCommandsMixin:
                     codex_reasoning_items=msg.get("codex_reasoning_items"),
                     codex_message_items=msg.get("codex_message_items"),
                 )
-            except Exception:
+            except (RuntimeError):
                 pass  # Best-effort copy
 
         # Set title
         try:
             await self._session_db.set_session_title(new_session_id, branch_title)
-        except Exception:
+        except (RuntimeError):
             pass
 
         # Switch the session store entry to the new session
@@ -4357,7 +4357,7 @@ class GatewaySlashCommandsMixin:
                     await self._session_db.get_session(_entry_for_billing.session_id)
                     or {}
                 )
-            except Exception:
+            except (RuntimeError):
                 persisted = {}
             provider = provider or persisted.get("billing_provider")
             base_url = base_url or persisted.get("billing_base_url")
@@ -4373,7 +4373,7 @@ class GatewaySlashCommandsMixin:
                     base_url=base_url,
                     api_key=api_key,
                 )
-            except Exception:
+            except (RuntimeError):
                 account_snapshot = None
             if account_snapshot:
                 account_lines = render_account_usage_lines(

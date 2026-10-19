@@ -235,7 +235,7 @@ def finalize_turn(
         if final_response and not interrupted:
             try:
                 _tail_role = messages[-1].get("role") if messages else None
-            except Exception:
+            except (IndexError, KeyError):
                 _tail_role = None
             if _tail_role != "assistant":
                 messages.append({"role": "assistant", "content": final_response})

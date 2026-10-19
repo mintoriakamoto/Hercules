@@ -1169,7 +1169,7 @@ def _run_cua_driver_installer(label: str = "Installing", verbose: bool = True) -
                             + "\n"
                         )
                         _update_log.flush()
-                    except Exception:
+                    except (OSError):
                         pass
                 if result.returncode != 0:
                     logger.debug("cua-driver installer output:\n%s", result.stdout)

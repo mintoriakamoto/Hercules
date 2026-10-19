@@ -3804,7 +3804,7 @@ async def check_hercules_update(force: bool = False):
                 pass
 
         behind = await asyncio.to_thread(check_for_updates)
-    except Exception:
+    except (RuntimeError):
         _log.exception("Update check failed")
         behind = None
 
@@ -6930,7 +6930,7 @@ def _channel_managed_env_keys() -> frozenset[str]:
         for entry in _messaging_platform_catalog():
             keys.update(entry.get("env_vars", ()))
         return frozenset(keys)
-    except Exception:
+    except (IndexError, KeyError):
         _log.debug("could not build channel-managed env key set", exc_info=True)
         return frozenset()
 
@@ -14704,7 +14704,7 @@ async def _legacy_pump(ws: "WebSocket", bridge) -> None:
                     continue
                 try:
                     await ws.send_bytes(chunk)
-                except Exception:
+                except (RuntimeError):
                     return
         finally:
             # The child has exited (EOF) or the send side broke.  Close the
@@ -14722,11 +14722,11 @@ async def _legacy_pump(ws: "WebSocket", bridge) -> None:
             # the reap independent of that cancellation race (#54028).
             try:
                 await asyncio.to_thread(bridge.close)
-            except Exception:
+            except (RuntimeError):
                 pass
             try:
                 await ws.close()
-            except Exception:
+            except (RuntimeError):
                 pass
 
     reader_task = asyncio.create_task(pump_pty_to_ws())
@@ -15268,7 +15268,7 @@ async def _broadcast_event(app: Any, channel: str, payload: str) -> None:
     for sub in subs:
         try:
             await sub.send_text(payload)
-        except Exception:
+        except (RuntimeError):
             # Subscriber went away mid-send; the /api/events finally clause
             # will remove it from the registry on its next iteration.
             _log.warning(

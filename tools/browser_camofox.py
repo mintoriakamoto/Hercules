@@ -931,7 +931,7 @@ def camofox_vision(
                     params={"userId": session["user_id"]},
                 )
                 annotation_context = f"\n\nAccessibility tree (element refs for interaction):\n{snap_data.get('snapshot', '')[:3000]}"
-            except Exception:
+            except (IndexError, KeyError):
                 pass
 
         # Redact secrets from annotation context before sending to vision LLM.

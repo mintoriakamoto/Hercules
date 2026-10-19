@@ -549,7 +549,7 @@ def _match_user_deny_rule(command: str) -> str | None:
     """
     try:
         deny_patterns = _get_approval_config().get("deny") or []
-    except Exception:
+    except (IndexError, KeyError):
         return None
     if not deny_patterns:
         return None
@@ -1157,7 +1157,7 @@ def _rewrite_resolved_user_home(command: str) -> str:
             os.path.realpath(home),
             os.environ.get("HOME", ""),
         ]
-    except Exception:
+    except (IndexError, KeyError):
         return command
     return _fold_home_prefixes(command, candidates, "~")
 

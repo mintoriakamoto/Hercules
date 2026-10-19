@@ -4466,7 +4466,7 @@ def _cleanup_workspace(conn: sqlite3.Connection, task_id: str) -> None:
         # tasks now have all children done — their deferred cleanup can
         # proceed (#33774).
         _try_cleanup_parent_workspaces(conn, task_id)
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, OSError, sqlite3.DatabaseError):
         pass  # best-effort — never block completion
 
 

@@ -152,7 +152,7 @@ class TextBatchAggregator:
         if event:
             try:
                 await self._handler(event)
-            except Exception:
+            except (RuntimeError):
                 logger.exception(
                     "[TextBatchAggregator] Error dispatching batched event for %s", key
                 )

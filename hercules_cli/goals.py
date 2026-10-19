@@ -1720,7 +1720,7 @@ def run_kanban_goal_loop(
         if log is not None:
             try:
                 log(msg)
-            except Exception:
+            except (ValueError):
                 pass
 
     max_turns = int(max_turns or DEFAULT_MAX_TURNS)

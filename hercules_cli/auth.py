@@ -1488,7 +1488,7 @@ def is_source_suppressed(provider_id: str, source: str) -> bool:
         auth_store = _load_auth_store()
         suppressed = auth_store.get("suppressed_sources", {})
         return source in suppressed.get(provider_id, [])
-    except Exception:
+    except (IndexError, KeyError):
         return False
 
 
@@ -2027,7 +2027,7 @@ def _decode_jwt_claims(token: Any) -> Dict[str, Any]:
     try:
         raw = base64.urlsafe_b64decode(payload.encode("utf-8"))
         claims = json.loads(raw.decode("utf-8"))
-    except Exception:
+    except (UnicodeDecodeError):
         return {}
     return claims if isinstance(claims, dict) else {}
 

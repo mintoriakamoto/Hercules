@@ -527,7 +527,7 @@ class LSPService:
         if spawning is not None:
             try:
                 return await spawning
-            except Exception:
+            except (RuntimeError):
                 return None
 
         # Begin spawn

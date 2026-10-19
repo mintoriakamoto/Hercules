@@ -377,7 +377,7 @@ class CLIAgentSetupMixin:
                     (self.session_id,),
                 )
                 self._session_db._conn.commit()
-            except Exception:
+            except (sqlite3.DatabaseError):
                 pass
 
         try:
@@ -567,7 +567,7 @@ class CLIAgentSetupMixin:
                 (self.session_id,),
             )
             self._session_db._conn.commit()
-        except Exception:
+        except (sqlite3.DatabaseError):
             pass
 
         return True

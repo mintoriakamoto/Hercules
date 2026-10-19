@@ -2922,7 +2922,7 @@ async def _dispose_unused_adapter(adapter: "BasePlatformAdapter | None") -> None
         return
     try:
         await adapter.disconnect()
-    except Exception:
+    except (RuntimeError):
         # Half-constructed adapters (e.g. APIServerAdapter that
         # crashed during aiohttp app setup) can raise from
         # disconnect() on objects that never finished initializing.
@@ -4235,7 +4235,7 @@ class GatewayRunner(
                 return
             config["gateway_runtime"] = runtime
             db.update_session_meta(session_id, json.dumps(config), model=model)
-        except Exception:
+        except (IndexError, KeyError):
             logger.debug("Failed to sync gateway session model metadata", exc_info=True)
 
     async def _handle_adapter_fatal_error(self, adapter: BasePlatformAdapter) -> None:
@@ -4439,7 +4439,7 @@ class GatewayRunner(
                     and rlg["window_seconds"] > 0
                 ):
                     window_seconds = rlg["window_seconds"]
-        except Exception:
+        except (IndexError, KeyError):
             pass
         return max_restarts, window_seconds
 
@@ -4612,7 +4612,7 @@ class GatewayRunner(
                     result = go_dormant()
                     if asyncio.iscoroutine(result):
                         await result
-                except Exception:  # dormancy is best-effort
+                except (RuntimeError):
                     logger.debug("scale-to-zero: go_dormant failed", exc_info=True)
                 # 0.F: after a wake the drained inbound updates _last_inbound_at,
                 # but give it a window so we don't immediately re-go-dormant on the
@@ -4620,7 +4620,7 @@ class GatewayRunner(
                 self._scale_to_zero_cooldown_until = time.time() + max(interval, 60.0)
             except asyncio.CancelledError:
                 raise
-            except Exception:  # the watcher must never crash the gateway
+            except (RuntimeError):
                 logger.debug("scale-to-zero watcher iteration error", exc_info=True)
 
     def _status_action_label(self) -> str:
@@ -5509,7 +5509,7 @@ class GatewayRunner(
             session_id = await asyncio.to_thread(
                 self._lookup_session_id_under_store_lock, session_store, session_key
             )
-        except Exception:
+        except (RuntimeError):
             return False
         if not session_id:
             return False
@@ -5717,7 +5717,7 @@ class GatewayRunner(
                                 ),
                             )
                     return True
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError, RuntimeError):
             logger.warning(
                 "Plain-text approval routing failed for session %s; "
                 "falling through to busy handling",
@@ -6536,7 +6536,7 @@ class GatewayRunner(
                         session_key,
                         counts[session_key],
                     )
-            except Exception:
+            except (IndexError, KeyError):
                 pass
 
         if suspended:
@@ -6946,7 +6946,7 @@ class GatewayRunner(
             # the restore gate remains closed for any fresh inbound arrivals.
             try:
                 setattr(event, "_hercules_startup_restore_replay", True)
-            except Exception:
+            except (AttributeError):
                 pass
             await adapter.handle_message(event)
             drained += 1
@@ -10689,7 +10689,7 @@ class GatewayRunner(
                 }
                 self._evict_cached_agent(_quick_key)
                 event._moa_disable_after_turn = True
-            except Exception:
+            except (IndexError, KeyError):
                 return "Failed to prepare MoA turn."
 
         if canonical == "subgoal":
@@ -11032,7 +11032,7 @@ class GatewayRunner(
                         session_entry = (
                             await self.async_session_store.get_or_create_session(source)
                         )
-                    except Exception:
+                    except (RuntimeError):
                         session_entry = None
                     if session_entry is not None:
                         await self._post_turn_goal_continuation(
@@ -11615,7 +11615,7 @@ class GatewayRunner(
                 if self._session_db is not None:
                     # AsyncSessionDB already offloads to a thread.
                     pinned_row = await self._session_db.get_session(pinned_session_id)
-            except Exception:
+            except (RuntimeError):
                 pinned_row = None
             if pinned_row is None or pinned_row.get("ended_at"):
                 logger.warning(
@@ -11671,7 +11671,7 @@ class GatewayRunner(
                                 bound_session_id,
                             )
                         )
-                    except Exception:
+                    except (RuntimeError):
                         logger.debug(
                             "compression-tip lookup failed for %s",
                             bound_session_id,
@@ -11710,7 +11710,7 @@ class GatewayRunner(
                     await asyncio.to_thread(
                         self._record_telegram_topic_binding, source, session_entry
                     )
-                except Exception:
+                except (RuntimeError):
                     logger.debug(
                         "Failed to record Telegram topic binding", exc_info=True
                     )
@@ -11843,7 +11843,7 @@ class GatewayRunner(
                             )
                             if session_info:
                                 notice = f"{notice}\n\n{session_info}"
-                        except Exception:
+                        except (RuntimeError):
                             pass
                         await adapter.send(
                             source.chat_id,
@@ -12549,7 +12549,7 @@ class GatewayRunner(
                 _typing_adapter = self._adapter_for_source(source)
                 if _typing_adapter and hasattr(_typing_adapter, "stop_typing"):
                     await _typing_adapter.stop_typing(source.chat_id)
-            except Exception:
+            except (RuntimeError):
                 pass
 
             if not self._is_session_run_current(_quick_key, run_generation):
@@ -13159,7 +13159,7 @@ class GatewayRunner(
                 _err_adapter = self._adapter_for_source(source)
                 if _err_adapter and hasattr(_err_adapter, "stop_typing"):
                     await _err_adapter.stop_typing(source.chat_id)
-            except Exception:
+            except (RuntimeError):
                 pass
             logger.exception("Agent error in session %s", session_key)
             # Crash-resilience for failures that happen before AIAgent enters
@@ -13181,7 +13181,7 @@ class GatewayRunner(
                                 session_entry.session_id
                             )
                         )
-                    except Exception:
+                    except (RuntimeError):
                         _recent_transcript = []
                     for _msg in reversed(_recent_transcript[-10:]):
                         if _msg.get("role") == "user":
@@ -14515,7 +14515,7 @@ class GatewayRunner(
                             caption=alt_text,
                             metadata=_thread_metadata,
                         )
-                    except Exception:
+                    except (RuntimeError):
                         pass
 
                 # Send media files, routing each by type so a TTS clip
@@ -14556,7 +14556,7 @@ class GatewayRunner(
                                 file_path=media_path,
                                 metadata=_thread_metadata,
                             )
-                    except Exception:
+                    except (RuntimeError):
                         pass
             else:
                 preview = prompt[:60] + ("..." if len(prompt) > 60 else "")
@@ -14574,7 +14574,7 @@ class GatewayRunner(
                     content=f"❌ Background task {task_id} failed: {e}",
                     metadata=_thread_metadata,
                 )
-            except Exception:
+            except (RuntimeError):
                 pass
 
     async def _get_telegram_topic_capabilities(self, source: SessionSource) -> dict:
@@ -14585,7 +14585,7 @@ class GatewayRunner(
             return {"checked": False}
         try:
             me = await bot.get_me()
-        except Exception:
+        except (RuntimeError):
             logger.debug(
                 "Failed to fetch Telegram getMe topic capabilities", exc_info=True
             )
@@ -15261,7 +15261,7 @@ class GatewayRunner(
                 await self.async_session_store.append_to_transcript(
                     session_entry.session_id, reload_msg
                 )
-            except Exception:
+            except (RuntimeError):
                 pass  # Best-effort; don't fail the reload over a transcript write
 
             return "\n".join(lines)
@@ -15858,7 +15858,7 @@ class GatewayRunner(
                     "❌ Hercules update timed out after 30 minutes.",
                     metadata=_non_conversational_metadata(metadata, platform=platform),
                 )
-            except Exception:
+            except (RuntimeError):
                 pass
             for p in (
                 pending_path,
@@ -17194,7 +17194,7 @@ class GatewayRunner(
                 override["credential_pool"] = runtime.get("credential_pool")
                 if not override.get("base_url"):
                     override["base_url"] = runtime.get("base_url")
-            except Exception:
+            except (IndexError, KeyError):
                 logger.debug(
                     "Credential re-resolution failed for persisted override "
                     "(provider=%s); using credential-less override",
@@ -17475,7 +17475,7 @@ class GatewayRunner(
         try:
             _sess_row = await self._session_db.get_session(session_id)
             _live = _sess_row.get("message_count", 0) if _sess_row else None
-        except Exception:
+        except (RuntimeError):
             return
         if _live is None:
             return
@@ -18068,7 +18068,7 @@ class GatewayRunner(
         if _adapter:
             try:
                 await _adapter.send_typing(source.chat_id, metadata=_thread_metadata)
-            except Exception:
+            except (RuntimeError):
                 pass
 
         # Make the HTTP request with SSE streaming -----------------------
@@ -19234,7 +19234,7 @@ class GatewayRunner(
                                         await _edit_progress_message(
                                             progress_msg_id, _pending_text
                                         )
-                                    except Exception:
+                                    except (RuntimeError):
                                         pass
                                 progress_msg_id = None
                                 progress_lines = []
@@ -19252,7 +19252,7 @@ class GatewayRunner(
                         full_text = _progress_text(progress_lines)
                         try:
                             await _edit_progress_message(progress_msg_id, full_text)
-                        except Exception:
+                        except (RuntimeError):
                             pass
                     return
                 except Exception as e:
@@ -20677,7 +20677,7 @@ class GatewayRunner(
                         all_msgs,
                         **maybe_auto_title_kwargs,
                     )
-                except Exception:
+                except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError):
                     pass
 
             return {
@@ -21512,7 +21512,7 @@ class GatewayRunner(
                                 _bg_result = _bg_cb()
                                 if inspect.isawaitable(_bg_result):
                                     await _bg_result
-                            except Exception:
+                            except (RuntimeError):
                                 pass
                     elif adapter and hasattr(adapter, "_post_delivery_callbacks"):
                         _bg_cb = adapter._post_delivery_callbacks.pop(session_key, None)
@@ -21521,7 +21521,7 @@ class GatewayRunner(
                                 _bg_result = _bg_cb()
                                 if inspect.isawaitable(_bg_result):
                                     await _bg_result
-                            except Exception:
+                            except (RuntimeError):
                                 pass
                 # else: interrupted — discard the interrupted response ("Operation
                 # interrupted." is just noise; the user already knows they sent a
@@ -21579,7 +21579,7 @@ class GatewayRunner(
                             source.chat_id,
                             metadata=_status_thread_metadata,
                         )
-                    except Exception:
+                    except (RuntimeError):
                         pass
 
                 # Re-baseline the cached agent's message_count snapshot before
@@ -21779,7 +21779,7 @@ class GatewayRunner(
                             await _adapter_snapshot.delete_message(
                                 _chat_id_snapshot, _mid
                             )
-                        except Exception:
+                        except (RuntimeError):
                             pass
 
                 try:

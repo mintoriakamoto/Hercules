@@ -1905,7 +1905,7 @@ async def _send_matrix_via_adapter(
     finally:
         try:
             await adapter.disconnect()
-        except Exception:
+        except (RuntimeError):
             pass
 
 

@@ -165,7 +165,7 @@ def create_app(adapter: UpstreamAdapter) -> "web.Application":
                     headers=fwd_headers,
                     allow_redirects=False,
                 )
-            except Exception:
+            except (RuntimeError):
                 await session.close()
                 raise
             return session, upstream_resp

@@ -604,7 +604,7 @@ class SignalAdapter(BasePlatformAdapter):
                 task = asyncio.create_task(self._sse_response.aclose())
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
-            except Exception:
+            except (RuntimeError):
                 pass
             self._sse_response = None
 
@@ -789,7 +789,7 @@ class SignalAdapter(BasePlatformAdapter):
                         content_type = att.get("contentType") or _ext_to_mime(ext)
                         media_urls.append(cached_path)
                         media_types.append(content_type)
-                except Exception:
+                except (RuntimeError):
                     logger.exception("Signal: failed to fetch attachment %s", att_id)
 
         # Skip envelopes with no meaningful content (no text, no attachments).

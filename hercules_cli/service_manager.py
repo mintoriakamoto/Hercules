@@ -1051,7 +1051,7 @@ class S6ServiceManager:
                 (tmp_dir / "down").touch()
 
             tmp_dir.rename(svc_dir)
-        except Exception:
+        except (OSError, ValueError):
             shutil.rmtree(tmp_dir, ignore_errors=True)
             raise
 

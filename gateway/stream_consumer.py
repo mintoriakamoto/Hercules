@@ -288,7 +288,7 @@ class GatewayStreamConsumer:
             result = self._on_before_finalize()
             if inspect.isawaitable(result):
                 await result
-        except Exception:
+        except (RuntimeError):
             pass
 
     async def _edit_message(
@@ -1080,7 +1080,7 @@ class GatewayStreamConsumer:
                         )
                         if result.success:
                             self._last_sent_text = clean_text
-                    except Exception:
+                    except (RuntimeError):
                         pass
                 self._already_sent = True
                 self._final_response_sent = True

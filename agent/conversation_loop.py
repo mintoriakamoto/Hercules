@@ -1273,7 +1273,7 @@ def run_conversation(
                             middleware_trace=list(_llm_middleware_trace),
                             request=_request_payload,
                         )
-                except Exception:
+                except (ImportError, IndexError, KeyError, ModuleNotFoundError, OSError):
                     pass
 
                 if env_var_enabled("HERCULES_DUMP_REQUESTS"):

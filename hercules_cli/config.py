@@ -148,7 +148,7 @@ def _warn_config_parse_failure(
     try:
         sys.stderr.write(f"⚠️  hercules config: {msg}\n")
         sys.stderr.flush()
-    except Exception:
+    except (OSError):
         pass
 
 

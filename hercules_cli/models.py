@@ -1969,7 +1969,7 @@ def provider_model_ids(
                         # so the picker still offers sane defaults.
                         return curated or live
                     return live
-            except Exception:
+            except (IndexError, KeyError):
                 pass
     if normalized == "gmi":
         try:
@@ -3086,7 +3086,7 @@ def normalize_opencode_base_url(
         return url
     try:
         host = urllib.parse.urlparse(url).netloc.lower()
-    except Exception:
+    except (OSError, urllib.error.URLError):
         host = ""
     if host == "opencode.ai" or host.endswith(".opencode.ai"):
         return url + "/v1"
