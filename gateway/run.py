@@ -300,7 +300,8 @@ def _gateway_loop_exception_handler(
         if task is not None:
             try:
                 task_name = task.get_name() if hasattr(task, "get_name") else repr(task)
-            except Exception:
+            except (AttributeError, TypeError, ValueError):
+                # Fallback if get_name() or repr() fails
                 task_name = repr(task)
         logger.warning(
             "Gateway swallowed transient network error from %s: %s: %s",
@@ -334,9 +335,11 @@ def _redact_gateway_user_facing_secrets(text: str) -> str:
         from agent.redact import redact_sensitive_text
 
         redacted = redact_sensitive_text(redacted, force=True)
-    except Exception:
-        # Fail-soft: fall back to the local pattern pass below rather than
-        # letting a redactor import/error leak the raw text to chat.
+    except (ImportError, AttributeError, ValueError, TypeError):
+        # ImportError: redact module not available
+        # AttributeError: redact_sensitive_text not found
+        # ValueError/TypeError: redaction function failed
+        # Fail-soft: fall back to local patterns rather than leak text
         pass
     for pattern in _GATEWAY_SECRET_PATTERNS:
         redacted = pattern.sub(
@@ -1220,7 +1223,9 @@ def _collect_history_media_paths(agent_history: List[Dict[str, Any]]) -> set:
         if tool_name_by_call_id.get(cid) == "image_generate":
             try:
                 payload = json.loads(content)
-            except Exception:
+            except (ValueError, TypeError):
+                # ValueError: json.JSONDecodeError
+                # TypeError: content is not a string
                 payload = None
             if isinstance(payload, dict) and payload.get("success"):
                 for field in _JSON_MEDIA_TOOL_PATH_FIELDS:
@@ -1404,7 +1409,10 @@ def _bridge_max_turns_from_config(home: "Path") -> None:
             from hercules_cli import managed_scope
 
             cfg = managed_scope.apply_managed_overlay(cfg)
-        except Exception:
+        except (ImportError, AttributeError, ValueError, TypeError):
+            # ImportError: module not available
+            # AttributeError: apply_managed_overlay not found
+            # ValueError/TypeError: overlay function failed (fail-open)
             pass
     except Exception:
         return
