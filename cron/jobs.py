@@ -2146,6 +2146,9 @@ def _get_due_jobs_locked() -> List[Dict[str, Any]]:
 
                 due.append(job)
         except Exception:
+            # Intentionally broad: handles malformed jobs from storage (missing fields,
+            # type errors, datetime issues, compute_next_run errors, etc). Individual
+            # job failures must not break the entire scan; log and skip.
             logger.exception(
                 "Skipping malformed cron job %r during due scan",
                 job.get("name") or job.get("id") or "?",
