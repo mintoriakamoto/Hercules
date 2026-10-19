@@ -347,7 +347,13 @@ def _handle_sudo_failure(output: str, env_type: str) -> str:
 
             return (
                 output
-                + f"\n\n💡 Tip: To enable sudo over messaging, add SUDO_PASSWORD to {_dhh()}/.env on the agent machine."
+                + f"\n\n💡 **Sudo over Messaging** — Choose one:\n"
+                + f"1. **Set SUDO_PASSWORD** in {_dhh()}/.env on the agent machine:\n"
+                + f"   `SUDO_PASSWORD=your_password`\n"
+                + f"2. **Configure passwordless sudo** in /etc/sudoers for specific commands:\n"
+                + f"   `your_user ALL=(ALL) NOPASSWD: /path/to/command`\n"
+                + f"3. **Use the terminal interface** instead of messaging:\n"
+                + f"   `hercules chat` or `hercules-code` for interactive access"
             )
 
     return output
@@ -953,10 +959,20 @@ def _transform_sudo_command(command: str | None) -> tuple[str | None, str | None
         return command, None
 
     has_sudo_prompt_callback = _get_sudo_password_callback() is not None
-    should_prompt_for_sudo = (
-        env_var_enabled("HERCULES_INTERACTIVE") or has_sudo_prompt_callback
+    # Attempt interactive prompting if:
+    # - No password is configured or cached, AND
+    # - Either HERCULES_INTERACTIVE is set, a callback is registered, or we're
+    #   in a local terminal context (try prompting even without explicit enablement)
+    should_attempt_prompt = (
+        not has_configured_password
+        and not sudo_password
+        and (
+            env_var_enabled("HERCULES_INTERACTIVE")
+            or has_sudo_prompt_callback
+            or os.getenv("TERMINAL_ENV", "local").strip().lower() in ("local", "")
+        )
     )
-    if not has_configured_password and not sudo_password and should_prompt_for_sudo:
+    if should_attempt_prompt:
         sudo_password = _prompt_for_sudo_password(timeout_seconds=45)
         if sudo_password:
             _set_cached_sudo_password(sudo_password)
