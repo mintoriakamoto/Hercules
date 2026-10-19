@@ -88,7 +88,7 @@ class AudioBridge:
                         capture_output=True,
                         stdin=subprocess.DEVNULL,
                     )
-                except Exception:
+                except (subprocess.CalledProcessError, OSError):
                     # Best-effort teardown — never raise from here.
                     pass
             self._module_ids = []

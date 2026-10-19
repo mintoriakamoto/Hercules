@@ -314,7 +314,7 @@ def _cmd_install(*, realtime: bool, assume_yes: bool) -> int:
                     ["system_profiler", "SPAudioDataType"], text=True
                 )
                 have_bh = "BlackHole" in out
-            except Exception:
+            except (KeyError, IndexError):
                 pass
             have_ffmpeg = bool(_shutil.which("ffmpeg"))
             needs = []

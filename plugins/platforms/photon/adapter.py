@@ -371,7 +371,7 @@ class PhotonAdapter(BasePlatformAdapter):
             text = raw.strip()
             try:
                 loaded = json.loads(text) if text else []
-            except Exception:
+            except (KeyError, IndexError):
                 loaded = None
             patterns = (
                 loaded
@@ -481,7 +481,7 @@ class PhotonAdapter(BasePlatformAdapter):
                     await task
                 except asyncio.CancelledError:
                     pass
-                except Exception:
+                except (RuntimeError):
                     pass
         if self._inbound_task is not None:
             self._inbound_task.cancel()
@@ -489,14 +489,14 @@ class PhotonAdapter(BasePlatformAdapter):
                 await self._inbound_task
             except asyncio.CancelledError:
                 pass
-            except Exception:
+            except (RuntimeError):
                 pass
             self._inbound_task = None
         await self._stop_sidecar()
         if self._http_client is not None:
             try:
                 await self._http_client.aclose()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             self._http_client = None
         self._mark_disconnected()
@@ -601,7 +601,7 @@ class PhotonAdapter(BasePlatformAdapter):
             return
         try:
             await self._dispatch_inbound(event)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.exception("[photon] inbound dispatch failed")
 
     def _is_duplicate(self, msg_id: str) -> bool:
@@ -1065,7 +1065,7 @@ class PhotonAdapter(BasePlatformAdapter):
             if proc.stdin is not None:
                 try:
                     proc.stdin.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             # Polite shutdown first.
             if self._http_client is not None:
@@ -1075,7 +1075,7 @@ class PhotonAdapter(BasePlatformAdapter):
                         headers={"X-Hercules-Sidecar-Token": self._sidecar_token},
                         timeout=2.0,
                     )
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             try:
                 proc.wait(timeout=3.0)
@@ -1130,7 +1130,7 @@ class PhotonAdapter(BasePlatformAdapter):
             from gateway.platforms.base import cache_image_from_url
 
             local_path = await cache_image_from_url(image_url)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # Couldn't fetch the URL — fall back to sending it as text.
             return await super().send_image(chat_id, image_url, caption, reply_to)
         return await self._sidecar_send_attachment(

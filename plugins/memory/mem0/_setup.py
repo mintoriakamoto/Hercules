@@ -228,7 +228,7 @@ def _save_mem0_json(hercules_home: str, data: dict) -> None:
     if config_path.exists():
         try:
             existing = json.loads(config_path.read_text(encoding="utf-8"))
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     existing.update(data)
     config_path.write_text(json.dumps(existing, indent=2) + "\n")
@@ -268,7 +268,7 @@ def _setup_platform(hercules_home: str, config: dict, flags: dict[str, str]) -> 
     if config_path.exists():
         try:
             existing_config = json.loads(config_path.read_text())
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     provider_config = dict(existing_config)
@@ -377,7 +377,7 @@ def _check_selfhosted_server(host: str) -> None:
     except urllib.error.HTTPError:
         # Any HTTP response (401/403/404) still means something is listening.
         print(f"  ✓ Mem0 server responding at {host}")
-    except Exception:
+    except (OSError):
         print(
             f"  ⚠ Could not reach {host} — check the URL and that the server is running."
         )
@@ -395,7 +395,7 @@ def _setup_selfhosted(hercules_home: str, config: dict, flags: dict[str, str]) -
     if config_path.exists():
         try:
             existing_config = json.loads(config_path.read_text())
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     provider_config = dict(existing_config)
@@ -607,7 +607,7 @@ def _ensure_pgvector(host: str = "localhost", port: int = 5432) -> dict | None:
                 if ok:
                     print("  ✓ PostgreSQL container restarted")
                     return None
-        except Exception:
+        except (subprocess.CalledProcessError, OSError):
             pass
 
         answer = input("  Start pgvector via Docker? [Y/n]: ").strip().lower()
@@ -759,7 +759,7 @@ def _ollama_has_model(url: str, model: str) -> bool:
         names = [m.get("name", "") for m in data.get("models", [])]
         base_model = model.split(":")[0]
         return any(model in n or base_model in n for n in names)
-    except Exception:
+    except (requests.RequestException, OSError):
         return False
 
 
@@ -1000,7 +1000,7 @@ def _install_provider_deps(llm_id: str, embedder_id: str, vector_id: str) -> Non
                 timeout=60,
             )
             print(f"  ✓ Installed {dep}")
-        except Exception:
+        except (subprocess.CalledProcessError, OSError):
             print(
                 f"  Warning: Could not install {dep}. Install manually: uv pip install {dep}"
             )
@@ -1089,7 +1089,7 @@ def _check_min_dep_version() -> None:
             )
     except ImportError:
         pass
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 

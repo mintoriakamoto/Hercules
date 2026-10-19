@@ -429,7 +429,7 @@ class FALVideoGenProvider(VideoGenProvider):
     def is_available(self) -> bool:
         try:
             return _check_fal_video_available()
-        except Exception:
+        except (AttributeError, ValueError):
             return False
 
     def list_models(self) -> List[Dict[str, Any]]:

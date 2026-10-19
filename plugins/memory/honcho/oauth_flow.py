@@ -96,7 +96,7 @@ def resolve_endpoints(
             cfg = HonchoClientConfig.from_global_config()
             environment = environment or cfg.environment
             base_url = base_url if base_url is not None else cfg.base_url
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             environment = environment or "production"
 
     is_local = (environment or "").lower() == "local" or _is_loopback_url(base_url)
@@ -386,7 +386,7 @@ def _detect_connection() -> tuple[bool, str | None]:
             return True, "oauth"
         if cfg.api_key:
             return True, "apikey"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return False, None
 

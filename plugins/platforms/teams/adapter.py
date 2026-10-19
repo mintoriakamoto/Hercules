@@ -528,7 +528,7 @@ def _validate_teams_service_url(raw: str) -> Optional[str]:
         from urllib.parse import urlparse
 
         parsed = urlparse(raw)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
     if parsed.scheme != "https":
         return None
@@ -1282,7 +1282,7 @@ class TeamsAdapter(BasePlatformAdapter):
             return
         try:
             await self._app.send(chat_id, TypingActivityInput())
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     async def _send_media_attachment(

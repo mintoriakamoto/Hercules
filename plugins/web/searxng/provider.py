@@ -37,7 +37,7 @@ def _searxng_url() -> str:
         from hercules_cli.config import get_env_value
 
         val = get_env_value("SEARXNG_URL")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         val = None
     if val is None:
         val = os.getenv("SEARXNG_URL", "")

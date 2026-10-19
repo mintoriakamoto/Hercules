@@ -208,7 +208,7 @@ class HonchoMemoryProvider(MemoryProvider):
             global_cfg = resolve_global_config_path()
             # Capture the whole ~/.honcho dir so sibling state travels with it.
             paths.append(str(global_cfg.parent))
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         return paths
 
@@ -274,7 +274,7 @@ class HonchoMemoryProvider(MemoryProvider):
             cfg = HonchoClientConfig.from_global_config()
             # Port #2645: baseUrl-only verification — api_key OR base_url suffices
             return cfg.enabled and bool(cfg.api_key or cfg.base_url)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
 
     def save_config(self, values, hercules_home):
@@ -287,7 +287,7 @@ class HonchoMemoryProvider(MemoryProvider):
         if config_path.exists():
             try:
                 existing = json.loads(config_path.read_text())
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         existing.update(values)
         from utils import atomic_json_write
@@ -1513,7 +1513,7 @@ class HonchoMemoryProvider(MemoryProvider):
         ):
             try:
                 self._manager.flush_all()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
 

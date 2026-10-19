@@ -162,7 +162,7 @@ class SelfHostedBackend(Mem0Backend):
     def close(self) -> None:
         try:
             self._client.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 
@@ -237,7 +237,7 @@ class OSSBackend(Mem0Backend):
                         client.delete_collection(collection_name)
                 finally:
                     client.close()
-            except Exception:
+            except (AttributeError):
                 pass
         elif provider == "pgvector":
             try:
@@ -271,7 +271,7 @@ class OSSBackend(Mem0Backend):
                         cur.close()
                 finally:
                     conn.close()
-            except Exception:
+            except (sqlite3.DatabaseError, OSError):
                 pass
 
     def search(
@@ -312,7 +312,7 @@ class OSSBackend(Mem0Backend):
             if telemetry and hasattr(telemetry, "posthog"):
                 try:
                     telemetry.posthog.shutdown()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             if hasattr(self._memory, "close"):
                 self._memory.close()
@@ -322,5 +322,5 @@ class OSSBackend(Mem0Backend):
             client = getattr(vs, "client", None)
             if client and hasattr(client, "close"):
                 client.close()
-        except Exception:
+        except (AttributeError):
             pass

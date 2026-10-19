@@ -50,7 +50,7 @@ def _read_active() -> Optional[Dict[str, Any]]:
         return None
     try:
         return json.loads(p.read_text(encoding="utf-8"))
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -203,7 +203,7 @@ def status() -> Dict[str, Any]:
     if status_path.is_file():
         try:
             bot_status = json.loads(status_path.read_text(encoding="utf-8"))
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     return {

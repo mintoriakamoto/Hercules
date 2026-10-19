@@ -438,7 +438,7 @@ class NtfyAdapter(BasePlatformAdapter):
                 try:
                     data = resp.json()
                     returned_id = data.get("id") or uuid.uuid4().hex[:12]
-                except Exception:
+                except (requests.RequestException, OSError):
                     returned_id = uuid.uuid4().hex[:12]
                 return SendResult(success=True, message_id=returned_id)
             body_text = resp.text
@@ -580,7 +580,7 @@ async def _standalone_send(
         try:
             data = resp.json()
             msg_id = data.get("id") or uuid.uuid4().hex[:12]
-        except Exception:
+        except (requests.RequestException, OSError):
             msg_id = uuid.uuid4().hex[:12]
         return {
             "success": True,

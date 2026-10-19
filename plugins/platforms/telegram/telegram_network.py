@@ -173,7 +173,7 @@ def _resolve_system_dns() -> set[str]:
     try:
         results = socket.getaddrinfo(_TELEGRAM_API_HOST, 443, socket.AF_INET)
         return {addr[4][0] for addr in results}
-    except Exception:
+    except (KeyError, IndexError):
         return set()
 
 

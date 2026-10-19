@@ -97,7 +97,7 @@ class FactRetriever:
         if self._semantic:
             try:
                 query_emb = self.embedder.embed_one(query)  # type: ignore[union-attr]
-            except Exception:
+            except (KeyError, IndexError):
                 query_emb = None
 
         # Stage 1: candidate recall. FTS5 keyword hits UNION semantic (embedding
@@ -229,7 +229,7 @@ class FactRetriever:
                 rows = conn.execute(
                     f"SELECT fact_id, embedding FROM facts WHERE {where}", params
                 ).fetchall()
-        except Exception:
+        except (sqlite3.DatabaseError, OSError):
             return []
 
         scored_ids: list[tuple[float, int]] = []
@@ -252,7 +252,7 @@ class FactRetriever:
                     f"SELECT * FROM facts WHERE fact_id IN ({placeholders})",
                     [fact_id for _sim, fact_id in top],
                 ).fetchall()
-        except Exception:
+        except (sqlite3.DatabaseError, OSError):
             return []
 
         facts = []
@@ -303,7 +303,7 @@ class FactRetriever:
                     fact_ids,
                 )
                 self.store._conn.commit()
-        except Exception:
+        except (sqlite3.DatabaseError, OSError):
             pass
 
     def probe(
@@ -727,7 +727,7 @@ class FactRetriever:
 
         try:
             rows = conn.execute(sql, params).fetchall()
-        except Exception:
+        except (sqlite3.DatabaseError, OSError):
             # FTS5 MATCH can fail on malformed queries — fall back to empty
             return []
 

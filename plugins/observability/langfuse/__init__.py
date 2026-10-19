@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from langfuse import Langfuse, propagate_attributes
-except Exception:  # pragma: no cover - fail-open when optional dep is missing
+except (ImportError, ModuleNotFoundError):
     Langfuse = None
     propagate_attributes = None
 
@@ -303,7 +303,7 @@ def _maybe_parse_json_string(value: str) -> Any:
             return value
     try:
         parsed, idx = json.JSONDecoder().raw_decode(stripped)
-    except Exception:
+    except (AttributeError, ValueError):
         return value
     if not isinstance(parsed, (dict, list)):
         return value
@@ -662,7 +662,7 @@ def _usage_and_cost(
                         )
                 else:
                     cost_details["total"] = float(cost.amount_usd)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 cost_details["total"] = float(cost.amount_usd)
     except Exception as exc:  # pragma: no cover - fail-open
         _debug(f"usage normalization failed: {exc}")
@@ -720,7 +720,7 @@ def _start_root_trace(
                     end_on_exit=False,
                 )
                 root_span = root_ctx.__enter__()
-        except Exception:
+        except (KeyError, IndexError):
             root_ctx = client.start_as_current_observation(
                 trace_context=trace_ctx,
                 name="Hercules turn",
@@ -743,7 +743,7 @@ def _start_root_trace(
 
     try:
         root_span.set_trace_io(input=trace_input)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     _debug(f"started trace {trace_id} for {task_key}")
@@ -859,7 +859,7 @@ def _finish_trace(task_key: str, *, output: Any = None) -> None:
     finally:
         try:
             client.flush()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 
@@ -1164,7 +1164,7 @@ def on_post_llm_call(
                 )
                 if _cost.amount_usd is not None:
                     cost_details["total"] = float(_cost.amount_usd)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
     else:
         usage_details, cost_details = {}, {}

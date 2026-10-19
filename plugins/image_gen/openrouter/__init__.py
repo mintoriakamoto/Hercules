@@ -369,7 +369,7 @@ class OpenRouterCompatImageProvider(ImageGenProvider):
                     err_msg = (
                         resp.json().get("error", {}).get("message", resp.text[:300])
                     )
-                except Exception:
+                except (requests.RequestException, OSError):
                     err_msg = resp.text[:300] if resp is not None else str(exc)
                 logger.error(
                     "%s image gen failed (%d) on %s: %s",

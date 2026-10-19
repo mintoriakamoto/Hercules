@@ -249,7 +249,7 @@ class _Client:
         )
         try:
             payload = resp.json()
-        except Exception:
+        except (ValueError):
             payload = resp.text
         if not resp.ok:
             msg = ""
@@ -299,7 +299,7 @@ class _Client:
                 f"/v1/memory/profile/{quote(user_id, safe='')}",
                 params={"project": self.project, "include_pending": "true"},
             )
-        except Exception:
+        except (AttributeError, ValueError):
             return self.request(
                 "GET",
                 "/v1/memories",
@@ -329,7 +329,7 @@ class _Client:
                 },
                 timeout=5.0,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return self.request(
                 "POST",
                 "/v1/memories",
@@ -349,7 +349,7 @@ class _Client:
             return self.request(
                 "DELETE", f"/v1/memory/{quote(memory_id, safe='')}", timeout=5.0
             )
-        except Exception:
+        except (AttributeError, ValueError):
             return self.request(
                 "DELETE", f"/v1/memories/{quote(memory_id, safe='')}", timeout=5.0
             )

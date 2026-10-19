@@ -353,7 +353,7 @@ class XAIImageGenProvider(ImageGenProvider):
                 err_msg = (
                     response.json().get("error", {}).get("message", response.text[:300])
                 )
-            except Exception:
+            except (requests.RequestException, OSError):
                 err_msg = response.text[:300] if response is not None else str(exc)
             logger.error("xAI image gen failed (%d): %s", status, err_msg)
             return error_response(

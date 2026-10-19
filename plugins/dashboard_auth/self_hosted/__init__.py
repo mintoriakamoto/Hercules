@@ -637,7 +637,7 @@ class SelfHostedOIDCProvider(DashboardAuthProvider):
                     f"expected iss={disco['issuer']!r} "
                     f"aud={self._client_id!r}]"
                 )
-            except Exception:
+            except (requests.RequestException, OSError):
                 pass
             raise ProviderError(
                 f"ID token verification failed: {exc}{details}"
