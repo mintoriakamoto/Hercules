@@ -46,7 +46,7 @@ def _get_anthropic_sdk():
             _lazy_ensure("provider.anthropic", prompt=False)
         except ImportError:
             pass
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # FeatureUnavailable — fall through to ImportError handling below
             pass
         try:
@@ -219,7 +219,7 @@ def _resolve_positive_anthropic_max_tokens(value) -> Optional[int]:
 
         if not math.isfinite(value):
             return None
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return None
     floored = int(value)  # truncates toward zero for floats
     return floored if floored > 0 else None
@@ -1300,7 +1300,7 @@ def _resolve_anthropic_pool_token() -> Optional[str]:
     """
     try:
         from agent.credential_pool import AUTH_TYPE_OAUTH, load_pool
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     try:
@@ -1506,14 +1506,14 @@ def run_hercules_oauth_login_pure() -> Optional[Dict[str, Any]]:
 
     try:
         from hercules_cli.auth import _can_open_graphical_browser as _can_open_gui
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _can_open_gui = lambda: True  # degrade to prior behavior
 
     if _can_open_gui():
         try:
             webbrowser.open(auth_url)
             print("  (Browser opened automatically)")
-        except Exception:
+        except (OSError):
             pass
 
     print()

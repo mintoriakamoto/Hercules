@@ -315,7 +315,7 @@ def check_compression_model_feasibility(agent: Any) -> None:
                     _aux_provider_label = (
                         urlparse(aux_base_url).hostname or aux_base_url
                     )
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     _aux_provider_label = aux_base_url or "auto"
             _main_label = (
                 f"{_main_model} ({_main_provider})" if _main_provider else _main_model
@@ -811,7 +811,7 @@ def compress_context(
                         from gateway.session_context import set_current_session_id
 
                         set_current_session_id(agent.session_id)
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         os.environ["HERCULES_SESSION_ID"] = agent.session_id
                     # The gateway/tools session context (ContextVar + env) and the
                     # logging session context are SEPARATE mechanisms. The call above
@@ -826,7 +826,7 @@ def compress_context(
                         from hercules_logging import set_session_context
 
                         set_session_context(agent.session_id)
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
                     agent._session_db_created = False
                     try:
@@ -859,13 +859,13 @@ def compress_context(
                             from gateway.session_context import set_current_session_id
 
                             set_current_session_id(agent.session_id)
-                        except Exception:
+                        except (ImportError, ModuleNotFoundError):
                             os.environ["HERCULES_SESSION_ID"] = agent.session_id
                         try:
                             from hercules_logging import set_session_context
 
                             set_session_context(agent.session_id)
-                        except Exception:
+                        except (ImportError, ModuleNotFoundError):
                             pass
                         # Re-open the parent: it was ended above, but we're
                         # continuing on it, so it must not stay closed.
@@ -1044,7 +1044,7 @@ def compress_context(
             from tools.file_tools import reset_file_dedup
 
             reset_file_dedup(task_id)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         logger.info(
@@ -1160,14 +1160,14 @@ def _compress_context_via_codex_app_server(
         # the ContextEngine update hook; preserve their existing bookkeeping.
         if hasattr(agent.context_compressor, "update_from_response"):
             _record_codex_app_server_usage(agent, result)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug("codex compaction bookkeeping failed", exc_info=True)
 
     try:
         from tools.file_tools import reset_file_dedup
 
         reset_file_dedup(task_id)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     logger.info(
@@ -1249,7 +1249,7 @@ def try_shrink_image_parts_in_messages(
 
             with _PILImage.open(_io_dim.BytesIO(_b64_dim.b64decode(data_d))) as _img:
                 return _img.size
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError):
             return None
 
     def _shrink_data_url(url: str) -> tuple:

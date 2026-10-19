@@ -44,7 +44,7 @@ def _frontmatter(text: str) -> dict[str, Any]:
 
         fm, _ = parse_frontmatter(text)
         return fm or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -86,7 +86,7 @@ def _load_usage() -> dict[str, dict[str, Any]]:
         from tools.skill_usage import load_usage
 
         return load_usage()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         path = get_hercules_home() / "skills" / ".usage.json"
         try:
             return json.loads(path.read_text(encoding="utf-8"))
@@ -110,7 +110,7 @@ def _to_int_ts(value: Any) -> Optional[int]:
             if parsed.tzinfo is None:
                 parsed = parsed.replace(tzinfo=timezone.utc)
             return int(parsed.timestamp())
-    except Exception:
+    except (ValueError):
         return None
 
 

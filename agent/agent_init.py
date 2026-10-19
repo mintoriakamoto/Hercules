@@ -448,7 +448,7 @@ def init_agent(
                 base_url=agent.base_url,
             ):
                 credential_pool = None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             credential_pool = None
     agent._credential_pool = credential_pool
     agent.acp_command = acp_command or command
@@ -509,7 +509,7 @@ def init_agent(
 
         if agent.provider not in _AGGREGATOR_PROVIDERS:
             agent.model = normalize_model_for_provider(agent.model, agent.provider)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # GPT-5.x models usually require the Responses API path, but some
@@ -662,7 +662,7 @@ def init_agent(
         _ttl = _pc_cfg.get("cache_ttl", "5m")
         if _ttl in {"5m", "1h"}:
             agent._cache_ttl = _ttl
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Iteration budget: the LLM is only notified when it actually exhausts
@@ -936,7 +936,7 @@ def init_agent(
                         None,
                         moa_ref_count=kwargs.get("ref_count"),
                     )
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         agent.client = MoAClient(
@@ -970,7 +970,7 @@ def init_agent(
                     ]
                 if _gr.get("trace"):
                     agent._bedrock_guardrail_config["trace"] = _gr["trace"]
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         agent.client = None
         agent._client_kwargs = {}
@@ -1041,7 +1041,7 @@ def init_agent(
                     _ph = _gpf(agent.provider)
                     if _ph and _ph.default_headers:
                         client_kwargs["default_headers"] = dict(_ph.default_headers)
-                except Exception:
+                except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                     pass
         else:
             # No explicit creds — use the centralized provider router
@@ -1084,7 +1084,7 @@ def init_agent(
                         _pcfg = PROVIDER_REGISTRY.get(_explicit)
                         if _pcfg and _pcfg.api_key_env_vars:
                             _env_hint = _pcfg.api_key_env_vars[0]
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
                     # --- Init-time fallback (#17929) ---
                     _fb_entries = []
@@ -1213,7 +1213,7 @@ def init_agent(
                 _cp_base_url,
                 _cp_entries,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             logger.debug("custom-provider TLS resolution skipped", exc_info=True)
 
         agent.api_key = client_kwargs.get("api_key", "")
@@ -1300,7 +1300,7 @@ def init_agent(
         from tools.registry import registry as _snapshot_registry
 
         agent._tool_snapshot_generation = _snapshot_registry._generation
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         agent._tool_snapshot_generation = 0
     agent.tools = _ra().get_tool_definitions(
         enabled_toolsets=enabled_toolsets,
@@ -1398,7 +1398,7 @@ def init_agent(
         from gateway.session_context import set_current_session_id
 
         set_current_session_id(agent.session_id)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         os.environ["HERCULES_SESSION_ID"] = agent.session_id
 
     # Session logs go into ~/.hercules/sessions/ alongside gateway sessions
@@ -1415,7 +1415,7 @@ def init_agent(
 
         _sess_cfg = _load_sess_cfg().get("sessions") or {}
         agent._session_json_enabled = bool(_sess_cfg.get("write_json_snapshots", False))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     # logs_dir is retained unconditionally for request_dump_*.json (debug
     # breadcrumb path written by agent_runtime_helpers.dump_api_request_debug).
@@ -1477,7 +1477,7 @@ def init_agent(
         from hercules_cli.config import load_config as _load_agent_config
 
         _agent_cfg = _load_agent_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _agent_cfg = {}
     try:
         agent._tool_guardrails = ToolCallGuardrailController(
@@ -1513,7 +1513,7 @@ def init_agent(
                     user_char_limit=mem_config.get("user_char_limit", 1375),
                 )
                 agent._memory_store.load_from_disk()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass  # Memory is optional -- don't break agent init
 
     # Memory provider plugin (external — one at a time, alongside built-in)
@@ -1548,7 +1548,7 @@ def init_agent(
                             _st = agent._session_db.get_session_title(agent.session_id)
                             if _st:
                                 _init_kwargs["session_title"] = _st
-                        except Exception:
+                        except (IndexError, KeyError):
                             pass
                     # Thread gateway user identity for per-user memory scoping
                     if agent._user_id:
@@ -1575,7 +1575,7 @@ def init_agent(
                         _profile = get_active_profile_name()
                         _init_kwargs["agent_identity"] = _profile
                         _init_kwargs["agent_workspace"] = "hercules"
-                    except Exception:
+                    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                         pass
                     agent._memory_manager.initialize_all(**_init_kwargs)
                     _ra().logger.info(
@@ -1604,7 +1604,7 @@ def init_agent(
         agent._skill_nudge_interval = int(
             skills_config.get("creation_nudge_interval", 10)
         )
-    except Exception:
+    except (ValueError):
         pass
 
     # Tool-use enforcement config: "auto" (default — matches hardcoded
@@ -1653,7 +1653,7 @@ def init_agent(
             from tools.env_probe import warm_environment_probe_async
 
             warm_environment_probe_async()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     # Per-platform prompt-hint overrides (config.yaml → platform_hints).
@@ -1733,7 +1733,7 @@ def init_agent(
                 ),
             )
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     compression_enabled = str(_compression_cfg.get("enabled", True)).lower() in {
         "true",
@@ -1846,7 +1846,7 @@ def init_agent(
         from hercules_cli.config import get_compatible_custom_providers
 
         _custom_providers = get_compatible_custom_providers(_agent_cfg)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _custom_providers = _agent_cfg.get("custom_providers")
         if not isinstance(_custom_providers, list):
             _custom_providers = []
@@ -1868,7 +1868,7 @@ def init_agent(
             )
             if _cp_ctx_resolved:
                 _config_context_length = int(_cp_ctx_resolved)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             _cp_ctx_resolved = None
 
         # Surface a clear warning if the user set a context_length but it
@@ -1945,7 +1945,7 @@ def init_agent(
                 from hercules_cli.plugins import get_plugin_context_engine
 
                 _candidate = get_plugin_context_engine()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 _candidate = None
             if _candidate is not None and _candidate.name == _engine_name:
                 # Deep-copy the shared plugin singleton so a child agent's
@@ -2072,7 +2072,7 @@ def init_agent(
                 else:
                     agent._safe_print(f"\n{_user_msg}\n", file=sys.stderr)
                 _ra().logger.warning(_hercules_warn)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     # Inject context engine tool schemas (e.g. lcm_grep, lcm_describe, lcm_expand).

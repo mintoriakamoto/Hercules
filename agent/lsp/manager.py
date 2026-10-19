@@ -381,7 +381,7 @@ class LSPService:
                     self._loop.run(self._current_diags_async(file_path), timeout=2.0)
                     or []
                 )
-            except Exception:
+            except (IndexError, KeyError):
                 fresh = []
             if fresh:
                 self._delta_baseline[abs_path] = fresh

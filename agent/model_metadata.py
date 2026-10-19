@@ -552,7 +552,7 @@ try:
         _host = _pp.get_hostname()
         if _host and _host not in _URL_TO_PROVIDER:
             _URL_TO_PROVIDER[_host] = _pp.name
-except Exception:
+except (ImportError, IndexError, KeyError, ModuleNotFoundError):
     pass
 
 
@@ -788,9 +788,9 @@ def detect_local_server_type(base_url: str, api_key: str = "") -> Optional[str]:
                             data = r.json()
                             if "models" in data:
                                 result = "ollama"
-                        except Exception:
+                        except (ValueError):
                             pass
-                except Exception:
+                except (ValueError):
                     pass
             if result is None:
                 # llama.cpp exposes /v1/props (older builds used /props without the /v1 prefix)
@@ -812,9 +812,9 @@ def detect_local_server_type(base_url: str, api_key: str = "") -> Optional[str]:
                         data = r.json()
                         if "version" in data:
                             result = "vllm"
-                except Exception:
+                except (ValueError):
                     pass
-    except Exception:
+    except (ValueError):
         pass
 
     if result is not None:
@@ -1135,7 +1135,7 @@ def fetch_endpoint_model_metadata(
                         model_alias = props.get("model_alias", "")
                         if n_ctx and model_alias and model_alias in cache:
                             cache[model_alias]["context_length"] = n_ctx
-                except Exception:
+                except (ValueError, requests.RequestException):
                     pass
 
             _endpoint_model_metadata_cache[normalized] = cache
@@ -1628,7 +1628,7 @@ def query_ollama_num_ctx(model: str, base_url: str, api_key: str = "") -> Option
             for key, value in model_info.items():
                 if "context_length" in key and isinstance(value, (int, float)):
                     return int(value)
-    except Exception:
+    except (ValueError):
         pass
     return None
 
@@ -1666,7 +1666,7 @@ def query_ollama_supports_vision(
             if resp.status_code != 200:
                 return None
             data = resp.json()
-    except Exception:
+    except (ValueError, httpx.HTTPStatusError, httpx.RequestError):
         return None
 
     caps = data.get("capabilities")
@@ -1770,7 +1770,7 @@ def _query_ollama_api_show_uncached(
                                     return ctx
                             except ValueError:
                                 pass
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         pass
     return None
 
@@ -2184,7 +2184,7 @@ def get_model_context_length(
                     api_key=rt.get("api_key", "") or "",
                     provider=agg_provider,
                 )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             logger.debug(
                 "MoA aggregator context-length resolution failed", exc_info=True
             )
@@ -2205,7 +2205,7 @@ def get_model_context_length(
             )
             if cp_ctx:
                 return cp_ctx
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # fall through to probing
 
     # Normalise provider-prefixed model names (e.g. "local:model-name" →
@@ -2413,7 +2413,7 @@ def get_model_context_length(
             ctx = get_copilot_model_context(model, api_key=api_key)
             if ctx:
                 return ctx
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # Fall through to models.dev
 
     if effective_provider == "openai-codex":

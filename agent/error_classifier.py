@@ -1612,7 +1612,7 @@ def _extract_error_body(error: Exception) -> dict:
                 json_body = response.json()
                 if isinstance(json_body, dict):
                     return json_body
-            except Exception:
+            except (ValueError):
                 pass
         cause = getattr(current, "__cause__", None) or getattr(
             current, "__context__", None

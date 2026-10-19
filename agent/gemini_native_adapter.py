@@ -217,7 +217,7 @@ def _extract_multimodal_parts(content: Any) -> List[Dict[str, Any]]:
                 header, encoded = url.split(",", 1)
                 mime = header.split(":", 1)[1].split(";", 1)[0]
                 raw = base64.b64decode(encoded)
-            except Exception:
+            except (IndexError, KeyError):
                 continue
             parts.append({
                 "inlineData": {

@@ -88,7 +88,7 @@ def _image_error_max_dimension(error: Exception) -> Optional[int]:
         if value:
             try:
                 parts.append(str(value))
-            except Exception:
+            except (ValueError):
                 pass
     text = " ".join(parts).lower()
     if "image" not in text or "dimension" not in text or "max allowed size" not in text:
@@ -500,7 +500,7 @@ def run_conversation(
                 moa_config = _decoded_moa_config
                 if persist_user_message is None:
                     persist_user_message = _decoded_message
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     # ── Per-turn setup (the prologue) ──
@@ -674,7 +674,7 @@ def run_conversation(
                             blocks = list(existing) if existing else []
                             blocks.append({"type": "text", "text": marker})
                             _sm["content"] = blocks
-                        except Exception:
+                        except (IndexError, KeyError):
                             pass
                     _injected = True
                     logger.debug(
@@ -1212,7 +1212,7 @@ def run_conversation(
                     api_kwargs = _llm_request_mw.payload
                     _original_api_kwargs = _llm_request_mw.original_payload
                     _llm_middleware_trace = _llm_request_mw.trace
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     _original_api_kwargs = dict(api_kwargs)
                     _llm_middleware_trace = []
 
@@ -2713,7 +2713,7 @@ def run_conversation(
                         or getattr(api_error, "message", None)
                         or str(api_error)
                     )
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 _err_status = getattr(api_error, "status_code", None)
                 _IMAGE_REJECTION_PHRASES = (
@@ -4724,7 +4724,7 @@ def run_conversation(
                         assistant_content_chars=len(_assistant_text),
                         assistant_tool_call_count=len(_assistant_tool_calls),
                     )
-            except Exception:
+            except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError):
                 pass
 
             # Handle assistant response
@@ -4759,7 +4759,7 @@ def run_conversation(
                         agent.tool_progress_callback(
                             "reasoning.available", "_thinking", _think_text[:500], None
                         )
-                    except Exception:
+                    except (IndexError, KeyError):
                         pass
 
             # Check for incomplete <REASONING_SCRATCHPAD> (opened but never closed)
@@ -5713,7 +5713,7 @@ def run_conversation(
                         )
                     else:
                         _verify_nudge = None
-                except Exception:
+                except (AttributeError, ImportError, ModuleNotFoundError):
                     logger.debug("verification stop-loop check failed", exc_info=True)
                     _verify_nudge = None
 
@@ -5796,7 +5796,7 @@ def run_conversation(
                             final_response=final_response,
                             changed_paths=_edited,
                         )
-                except Exception:
+                except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
                     logger.debug("pre_verify hook check failed", exc_info=True)
                     _verify_nudge2 = None
 

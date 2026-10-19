@@ -139,11 +139,11 @@ def _credentials_configured(provider: str) -> bool:
             if isinstance(model_cfg, dict):
                 base_url = str(model_cfg.get("base_url") or "").strip()
             return bool(base_url)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             return True
     try:
         from hercules_cli.auth import get_auth_status, has_usable_secret
-    except Exception:  # pragma: no cover - auth import failure
+    except (ImportError, ModuleNotFoundError):
         return True
     if provider == "openrouter":
         # Mirrors list_available_providers(): OpenRouter is env-key driven and
@@ -186,7 +186,7 @@ def _probe_provider(provider: str, model: str = "") -> bool:
             _is_local_endpoint,
             resolve_runtime_provider,
         )
-    except Exception:  # pragma: no cover - resolver import failure
+    except (ImportError, ModuleNotFoundError):
         return provider in _LOCAL_PROVIDERS or _credentials_configured(provider)
 
     try:
@@ -263,7 +263,7 @@ def session_slot() -> Optional[dict[str, str]]:
         provider = _normalize(model_cfg.get("provider"))
         model = str(model_cfg.get("default") or model_cfg.get("model") or "").strip()
         base_url = str(model_cfg.get("base_url") or "").strip()
-    except Exception:  # pragma: no cover - config read failure
+    except (ImportError, ModuleNotFoundError, ValueError):
         return None
 
     if provider in _VIRTUAL_PROVIDERS:
@@ -286,7 +286,7 @@ def session_slot() -> Optional[dict[str, str]]:
             from hercules_cli.auth import get_active_provider
 
             provider = _normalize(get_active_provider())
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             provider = ""
     if not provider or provider in _VIRTUAL_PROVIDERS:
         return None
@@ -300,7 +300,7 @@ def session_slot() -> Optional[dict[str, str]]:
             from hercules_cli.models import get_default_model_for_provider
 
             model = str(get_default_model_for_provider(provider) or "").strip()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             model = ""
         # A local endpoint serves whatever it has loaded; there is no catalog
         # to take a default from, so an unknown model there means no fallback

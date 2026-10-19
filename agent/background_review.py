@@ -73,7 +73,7 @@ def _resolve_review_runtime(agent: Any) -> Dict[str, Any]:
         from hercules_cli.config import load_config
 
         cfg = load_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return parent
     aux = cfg.get("auxiliary", {}) if isinstance(cfg.get("auxiliary"), dict) else {}
     task = (
@@ -841,7 +841,7 @@ def _run_review_in_thread(
                 from tools.skill_manager_tool import _reset_background_review_read_marks
 
                 _reset_background_review_read_marks()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
             try:

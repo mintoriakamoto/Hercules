@@ -81,7 +81,7 @@ def _diff_ansi() -> dict[str, str]:
         if ok_h and len(ok_h) == 7:
             or_, og, ob = int(ok_h[1:3], 16), int(ok_h[3:5], 16), int(ok_h[5:7], 16)
             plus = f"\033[38;2;255;255;255;48;2;{max(or_ // 4, 10)};{max(og // 2, 20)};{max(ob // 4, 10)}m"
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
         pass
 
     _diff_colors_cached = {
@@ -156,7 +156,7 @@ def _get_skin():
         from hercules_cli.skin_engine import get_active_skin
 
         return get_active_skin()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 
@@ -189,7 +189,7 @@ def get_tool_emoji(tool_name: str, default: str = "⚡") -> str:
         emoji = registry.get_emoji(tool_name, default="")
         if emoji:
             return emoji
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     # 3. Hardcoded fallback
     return default
@@ -778,7 +778,7 @@ def _display_diff_path(path: Path) -> str:
     """Prefer cwd-relative paths in diffs when available."""
     try:
         return str(path.resolve().relative_to(Path.cwd().resolve()))
-    except Exception:
+    except (ValueError):
         return str(path)
 
 

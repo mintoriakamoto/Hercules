@@ -95,7 +95,7 @@ def _resolve_home_dir() -> str:
         ).pw_dir.strip()  # windows-footgun: ok — POSIX fallback inside try/except (pwd import fails on Windows)
         if resolved:
             return resolved
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Last resort: /tmp (writable on any POSIX system). Avoids crashing the

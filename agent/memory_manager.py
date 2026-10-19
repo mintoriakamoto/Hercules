@@ -92,7 +92,7 @@ def memory_provider_tools_enabled(enabled_toolsets: Optional[List[str]]) -> bool
         from toolsets import resolve_toolset
 
         return any("memory" in resolve_toolset(name) for name in enabled_toolsets)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug(
             "Failed to resolve enabled toolsets for memory-provider tools",
             exc_info=True,

@@ -181,7 +181,7 @@ def _record_codex_app_server_usage(agent, turn) -> dict[str, Any]:
             context_window = getattr(turn, "model_context_window", None)
             if isinstance(context_window, int) and context_window > 0:
                 compressor.context_length = context_window
-        except Exception:
+        except (AttributeError):
             logger.debug("codex app-server usage update failed", exc_info=True)
 
     agent.session_prompt_tokens += prompt_tokens
@@ -278,7 +278,7 @@ def _record_codex_app_server_compaction(
             from agent.conversation_compression import COMPACTION_STATUS
 
             agent._emit_status(COMPACTION_STATUS)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     compressor = getattr(agent, "context_compressor", None)
@@ -313,7 +313,7 @@ def _record_codex_app_server_compaction(
                     "turn_id": turn_id,
                 },
             )
-    except Exception:
+    except (AttributeError):
         logger.debug("event_callback error on codex session:compress", exc_info=True)
 
     return True
@@ -354,7 +354,7 @@ def run_codex_app_server_turn(
             from tools.terminal_tool import _get_approval_callback
 
             approval_callback = _get_approval_callback()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             approval_callback = None
 
         # Gateway / cron contexts have no UI to surface codex's approval
@@ -371,7 +371,7 @@ def run_codex_app_server_turn(
             from tools.approval import is_approval_bypass_active
 
             auto_approve_requests = is_approval_bypass_active()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, requests.RequestException):
             logger.debug(
                 "codex app-server: approval-bypass lookup failed; "
                 "keeping fail-closed default",

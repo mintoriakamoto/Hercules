@@ -433,7 +433,7 @@ def _render_tool_calls(tool_calls: Any) -> str:
                 import json
 
                 args_text = json.dumps(args, ensure_ascii=False)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 args_text = str(args)
         else:
             args_text = ""
@@ -561,7 +561,7 @@ def _extract_text(response: Any) -> str:
         if not isinstance(content, str):
             content = str(content) if content else ""
         return content.strip()
-    except Exception:
+    except (AttributeError, ValueError):
         return ""
 
 
@@ -1092,7 +1092,7 @@ class MoAChatCompletions:
                     self._pending_trace["aggregator_output"] = _extract_text(
                         _agg_response
                     )
-                except Exception:  # pragma: no cover - defensive
+                except (IndexError, KeyError):
                     self._pending_trace["aggregator_output"] = None
         return _agg_response
 

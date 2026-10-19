@@ -383,7 +383,7 @@ class ExtendedReasoningEngine:
         try:
             with open(trace_file, "w", encoding="utf-8") as f:
                 json.dump(reasoning.to_dict(), f, indent=2)
-        except Exception:
+        except (OSError):
             pass
 
         return trace_file

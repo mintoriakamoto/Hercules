@@ -50,5 +50,5 @@ def flatten_message_text(content: Any, *, sep: str = "\n") -> str:
         return text
     try:
         return str(content)
-    except Exception:
+    except (ValueError):
         return ""

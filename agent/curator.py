@@ -850,7 +850,7 @@ def _parse_structured_summary(
         import yaml  # type: ignore
 
         data = yaml.safe_load(body)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return empty
 
     if not isinstance(data, dict):

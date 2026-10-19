@@ -284,7 +284,7 @@ def _resolve_inference_base_url(
         runtime = str(_RUNTIME_MAIN_BASE_URL or "").strip()
         if runtime:
             return runtime
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
     if not isinstance(cfg, dict):
@@ -341,7 +341,7 @@ def _should_probe_ollama_vision(provider: str, base_url: str) -> bool:
         from agent.model_metadata import detect_local_server_type
 
         return detect_local_server_type(base_url) == "ollama"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -583,11 +583,11 @@ def _transcode_to_png(raw: bytes) -> Optional[bytes]:
         import pillow_heif  # type: ignore
 
         pillow_heif.register_heif_opener()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     try:
         import pillow_avif  # type: ignore  # noqa: F401  -- registers AVIF on import
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     try:
         from io import BytesIO
@@ -663,7 +663,7 @@ def _file_to_data_url(path: Path) -> Optional[str]:
             "image_routing: blocked local image attachment %s -- %s", path, exc
         )
         return None
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         # Keep attachment routing best-effort if the guard itself is unavailable.
         pass
 

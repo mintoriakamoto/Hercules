@@ -454,7 +454,7 @@ def _coding_mode(config: Optional[dict[str, Any]]) -> str:
             from hercules_cli.config import load_config
 
             config = load_config()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             config = {}
     raw = ((config or {}).get("agent", {}) or {}).get("coding_context", "auto")
     mode = str(raw).strip().lower()
@@ -482,7 +482,7 @@ def _coding_instructions(config: Optional[dict[str, Any]]) -> str:
             from hercules_cli.config import load_config
 
             config = load_config()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             config = {}
     raw = ((config or {}).get("agent", {}) or {}).get("coding_instructions", "")
     if isinstance(raw, (list, tuple)):
@@ -497,7 +497,7 @@ def _resolve_cwd(cwd: Optional[str | Path]) -> Path:
         from agent.runtime_cwd import resolve_agent_cwd
 
         return resolve_agent_cwd()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return Path(os.getcwd())
 
 
@@ -796,7 +796,7 @@ def _enabled_mcp_servers(config: Optional[dict[str, Any]]) -> list[str]:
             if isinstance(cfg, dict)
             and _parse_enabled_flag(cfg.get("enabled", True), default=True)
         ]
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return []
 
 

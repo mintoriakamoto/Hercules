@@ -45,7 +45,7 @@ def _traces_enabled_and_dir() -> Optional[Path]:
         from hercules_cli.config import load_config
 
         moa_cfg = (load_config() or {}).get("moa") or {}
-    except Exception:  # pragma: no cover - defensive: never break a turn over tracing
+    except (ImportError, ModuleNotFoundError):
         return None
     if not moa_cfg.get("save_traces"):
         return None

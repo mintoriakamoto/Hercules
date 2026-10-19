@@ -39,8 +39,6 @@ import stat
 import subprocess
 import tempfile
 import time
-import urllib.error
-import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple

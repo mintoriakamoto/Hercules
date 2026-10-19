@@ -224,5 +224,5 @@ def _clear_skill_cache() -> None:
         from agent.prompt_builder import clear_skills_system_prompt_cache
 
         clear_skills_system_prompt_cache(clear_snapshot=True)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass

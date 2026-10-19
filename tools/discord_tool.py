@@ -29,9 +29,6 @@ import json
 import logging
 import os
 import threading
-import urllib.error
-import urllib.parse
-import urllib.request
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from tools.registry import registry

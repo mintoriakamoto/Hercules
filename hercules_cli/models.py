@@ -9,9 +9,6 @@ from __future__ import annotations
 
 import json
 import os
-import urllib.parse
-import urllib.request
-import urllib.error
 import time
 from difflib import get_close_matches
 from pathlib import Path

@@ -48,7 +48,7 @@ def _load_config_safe() -> Optional[dict]:
         from hercules_cli.config import load_config
 
         return load_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 
@@ -368,7 +368,7 @@ def _iter_custom_providers(config: Optional[dict] = None):
             from hercules_cli.config import get_compatible_custom_providers
 
             custom_providers = get_compatible_custom_providers(config)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return
     if not custom_providers:
         return
@@ -1970,7 +1970,7 @@ def _seed_from_singletons(
                             expires_at_ms = int(
                                 _dt.fromisoformat(raw).timestamp() * 1000
                             )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError, ValueError):
                         expires_at_ms = None
                     base_url = str(state.get("inference_base_url", "") or "").rstrip(
                         "/"
@@ -2110,7 +2110,7 @@ def _seed_from_env(
             from hercules_cli.env_loader import get_secret_source
 
             source_label = get_secret_source(env_var)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             source_label = None
         return str(source_label).strip() if source_label else None
 
@@ -2313,7 +2313,7 @@ def _seed_custom_pool(
                                 "label": "model_config",
                             },
                         )
-    except Exception:
+    except (ValueError):
         pass
 
     return changed, active_sources

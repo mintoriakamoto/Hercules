@@ -205,7 +205,7 @@ def _env_float(name: str, default: float) -> float:
 def _stale_streak(agent) -> int:
     try:
         return int(getattr(agent, "_consecutive_stale_streams", 0) or 0)
-    except Exception:
+    except (AttributeError, ValueError):
         return 0
 
 
@@ -926,7 +926,7 @@ def build_api_kwargs(agent, api_messages: list) -> dict:
         _ft = _fixed_temperature_for_model(agent.model, agent.base_url)
         _omit_temp = _ft is OMIT_TEMPERATURE
         _fixed_temp = _ft if not _omit_temp else None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _omit_temp = False
         _fixed_temp = None
 
@@ -952,7 +952,7 @@ def build_api_kwargs(agent, api_messages: list) -> dict:
         _model_norm = (agent.model or "").lower().replace(".", "-")
         if any(key in _model_norm for key in _ANTHROPIC_OUTPUT_LIMITS):
             _ant_max = _get_anthropic_max_output(agent.model)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Qwen session metadata
@@ -970,7 +970,7 @@ def build_api_kwargs(agent, api_messages: list) -> dict:
         from providers import get_provider_profile
 
         _profile = get_provider_profile(agent.provider)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _profile = None
 
     if _profile:
@@ -1810,7 +1810,7 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
                 _fixed_temperature_for_model,
                 OMIT_TEMPERATURE as _OMIT_TEMP,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _fixed_temperature_for_model = None
             _OMIT_TEMP = None
         _raw_summary_temp = (
@@ -1873,7 +1873,7 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
                         base_url=agent.base_url,
                         reasoning_config=agent.reasoning_config,
                     )
-            except Exception:
+            except (AttributeError, ImportError, ModuleNotFoundError):
                 pass
 
             if profile_extra_body:
@@ -2449,9 +2449,9 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 # survives stub provider differences.
                 try:
                     _diag["bytes"] = int(_diag.get("bytes", 0)) + len(repr(chunk))
-                except Exception:
+                except (ValueError):
                     pass
-            except Exception:
+            except (ValueError):
                 pass
 
             if agent._interrupt_requested:
@@ -2753,7 +2753,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 agent._stream_diag_capture_response(
                     _diag, getattr(stream, "response", None)
                 )
-            except Exception:
+            except (AttributeError):
                 pass
             for event in stream:
                 # Update stale-stream timer on every event so the
@@ -2772,9 +2772,9 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                         _diag["first_chunk_at"] = last_chunk_time["t"]
                     try:
                         _diag["bytes"] = int(_diag.get("bytes", 0)) + len(repr(event))
-                    except Exception:
+                    except (ValueError):
                         pass
-                except Exception:
+                except (ValueError):
                     pass
 
                 if agent._interrupt_requested:
@@ -3354,7 +3354,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 _content_filter_terminated = (
                     _cls.reason == FailoverReason.content_policy_blocked
                 )
-            except Exception:
+            except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
                 _content_filter_terminated = False
             _stub = SimpleNamespace(
                 id=PARTIAL_STREAM_STUB_ID,
