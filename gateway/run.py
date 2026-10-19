@@ -1414,7 +1414,11 @@ def _bridge_max_turns_from_config(home: "Path") -> None:
             # AttributeError: apply_managed_overlay not found
             # ValueError/TypeError: overlay function failed (fail-open)
             pass
-    except Exception:
+    except (ImportError, FileNotFoundError, OSError, ValueError, TypeError):
+        # ImportError: yaml not available
+        # FileNotFoundError: config file not found
+        # OSError: file I/O error
+        # ValueError/TypeError: config parsing or expansion failed
         return
 
     agent_cfg = cfg.get("agent", {})
@@ -2048,7 +2052,11 @@ def _credential_pool_for_provider(provider: Optional[str]):
         return _resolve_runtime_agent_kwargs_for_provider(str(provider).strip()).get(
             "credential_pool"
         )
-    except Exception:
+    except (KeyError, AttributeError, ValueError, TypeError):
+        # KeyError: provider not found in runtime config
+        # AttributeError: return value doesn't have .get()
+        # ValueError: provider format invalid
+        # TypeError: _resolve_runtime_agent_kwargs_for_provider failed
         logger.debug(
             "Failed to resolve credential pool for provider=%s",
             provider,
