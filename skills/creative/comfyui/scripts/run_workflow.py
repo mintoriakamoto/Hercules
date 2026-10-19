@@ -131,7 +131,7 @@ class ComfyRunner:
             if r.status == 200:
                 try:
                     return True, r.json()
-                except Exception:
+                except (ValueError):
                     return True, None
             return False, {"http_status": r.status, "body": r.text()[:500]}
         except Exception as e:
@@ -175,7 +175,7 @@ class ComfyRunner:
             )
         try:
             return r.json()
-        except Exception:
+        except (ValueError):
             return {"name": path.name}
 
     def upload_mask(self, path: Path, original_ref: dict) -> dict:
@@ -204,7 +204,7 @@ class ComfyRunner:
         )
         try:
             body = r.json()
-        except Exception:
+        except (ValueError):
             body = {"raw": r.text()[:500]}
         if r.status != 200:
             return {"_http_error": r.status, "body": body}
@@ -233,7 +233,7 @@ class ComfyRunner:
                 if r.status == 200:
                     try:
                         data = r.json()
-                    except Exception:
+                    except (ValueError):
                         data = {}
                     s = data.get("status")
                     if s == "completed":
@@ -262,7 +262,7 @@ class ComfyRunner:
                 if r.status == 200:
                     try:
                         data = r.json() or {}
-                    except Exception:
+                    except (ValueError):
                         data = {}
                     entry = data.get(prompt_id)
                     if isinstance(entry, dict):
@@ -324,7 +324,7 @@ class ComfyRunner:
                     continue
                 try:
                     payload = json.loads(msg)
-                except Exception:
+                except (ValueError):
                     continue
                 mtype = payload.get("type", "")
                 mdata = payload.get("data", {}) or {}
@@ -380,7 +380,7 @@ class ComfyRunner:
         finally:
             try:
                 ws.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         if error_payload is not None:
@@ -399,7 +399,7 @@ class ComfyRunner:
             if r.status == 200:
                 try:
                     return (r.json() or {}).get("outputs", {}) or {}
-                except Exception:
+                except (requests.RequestException, OSError):
                     pass
             # Fallback
             r = http_get(
@@ -408,7 +408,7 @@ class ComfyRunner:
             if r.status == 200:
                 try:
                     body = r.json() or {}
-                except Exception:
+                except (ValueError):
                     body = {}
                 if isinstance(body, dict) and prompt_id in body:
                     return body[prompt_id].get("outputs", {}) or {}
@@ -423,7 +423,7 @@ class ComfyRunner:
             return {}
         try:
             body = r.json() or {}
-        except Exception:
+        except (ValueError):
             return {}
         entry = body.get(prompt_id) or {}
         return entry.get("outputs", {}) or {}
@@ -483,7 +483,7 @@ class ComfyRunner:
             try:
                 if out_path.exists():
                     out_path.unlink()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             raise WorkflowRunError(
                 "download_failed",

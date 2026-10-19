@@ -90,13 +90,13 @@ def _load_root_config() -> dict[str, Any]:
         return {}
     try:
         import yaml  # optional dependency; Hercules already ships PyYAML
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
     try:
         with path.open("r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
         return data if isinstance(data, dict) else {}
-    except Exception:
+    except (OSError):
         return {}
 
 
@@ -153,7 +153,7 @@ def _load_state(path: Path | None = None) -> dict[str, Any]:
         if isinstance(data, dict):
             data.setdefault("version", STATE_VERSION)
             return data
-    except Exception:
+    except (ValueError):
         pass
     return {"version": STATE_VERSION}
 
@@ -238,7 +238,7 @@ def _parse_twilio_date(value: str | None) -> datetime | None:
             if dt.tzinfo
             else dt.replace(tzinfo=timezone.utc)
         )
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -275,7 +275,7 @@ def _json_request(
         body_text = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
         try:
             parsed = json.loads(body_text) if body_text else {}
-        except Exception:
+        except (ValueError):
             parsed = {"raw": body_text}
         raise TelephonyError(
             f"HTTP {exc.code} from {url}: {parsed or exc.reason}"

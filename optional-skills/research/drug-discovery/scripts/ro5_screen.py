@@ -19,7 +19,7 @@ def fetch(name):
     try:
         with urllib.request.urlopen(url, timeout=10) as r:
             return json.loads(r.read())["PropertyTable"]["Properties"][0]
-    except Exception:
+    except (ValueError):
         return None
 
 

@@ -524,7 +524,7 @@ def _apply_base64hint(word):
     """Base64 — base64 encode the word."""
     try:
         return base64.b64encode(word.encode()).decode()
-    except Exception:
+    except (UnicodeDecodeError):
         return word
 
 

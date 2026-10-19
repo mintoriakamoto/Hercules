@@ -958,7 +958,7 @@ def get_toolset(
 
     try:
         from tools.registry import registry
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return toolset if toolset else None
 
     if toolset:
@@ -1090,10 +1090,10 @@ def resolve_toolset(
                             for e in registry._tools.values()
                             if e.toolset == platform_name
                         )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
                     return list(plugin_tools)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
         return []
@@ -1146,7 +1146,7 @@ def _get_plugin_toolset_names() -> Set[str]:
             for toolset_name in registry.get_registered_toolset_names()
             if toolset_name not in TOOLSETS
         }
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return set()
 
 
@@ -1156,7 +1156,7 @@ def _get_registry_toolset_aliases() -> Dict[str, str]:
         from tools.registry import registry
 
         return registry.get_registered_toolset_aliases()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 

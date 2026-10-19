@@ -124,7 +124,7 @@ def activate_durable_lazy_target() -> None:
         from tools import lazy_deps
 
         lazy_deps.activate_durable_lazy_target()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -147,7 +147,7 @@ def apply_open_guardrails() -> None:
         from tools.ungate import apply as _ungate
 
         _ungate()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 

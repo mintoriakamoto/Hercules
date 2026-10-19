@@ -354,7 +354,7 @@ def _get_current_model() -> tuple:
         model_name = model_cfg.get("name", "")
         base_url = model_cfg.get("base_url", "https://openrouter.ai/api/v1")
         return model_name, base_url
-    except Exception:
+    except (requests.RequestException, OSError):
         return None, None
 
 
@@ -409,7 +409,7 @@ def _write_config(system_prompt: str = None, prefill_file: str = None):
         try:
             with open(CONFIG_PATH) as f:
                 cfg = yaml.safe_load(f) or {}
-        except Exception:
+        except (OSError):
             cfg = {}
 
     if "agent" not in cfg:

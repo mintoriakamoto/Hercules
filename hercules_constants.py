@@ -106,7 +106,7 @@ def get_hercules_home() -> Path:
             try:
                 sys.stderr.write(msg + "\n")
                 sys.stderr.flush()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     return _get_platform_default_hercules_home()
@@ -682,7 +682,7 @@ def _norm_home_path(path: str | None) -> str:
         return ""
     try:
         return os.path.normcase(os.path.abspath(os.path.expanduser(raw)))
-    except Exception:
+    except (AttributeError, ValueError):
         return os.path.normcase(raw)
 
 
@@ -729,7 +729,7 @@ def _iter_real_home_candidates(env: dict[str, str] | None = None) -> list[str]:
         ).pw_dir.strip()  # windows-footgun: ok — POSIX-only module inside try/except
         if pw_home:
             candidates.append(pw_home)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     userprofile = str(env.get("USERPROFILE") or os.getenv("USERPROFILE", "")).strip()
     if userprofile:
@@ -891,7 +891,7 @@ def is_wsl() -> bool:
     try:
         with open("/proc/version", "r", encoding="utf-8") as f:
             _wsl_detected = "microsoft" in f.read().lower()
-    except Exception:
+    except (OSError):
         _wsl_detected = False
     return _wsl_detected
 

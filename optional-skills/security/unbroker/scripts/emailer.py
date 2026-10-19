@@ -273,7 +273,7 @@ def _decode_part(part) -> str:
             return ""
         charset = part.get_content_charset() or "utf-8"
         return payload.decode(charset, errors="replace")
-    except Exception:  # noqa: BLE001 - malformed MIME must not kill the poll
+    except (UnicodeDecodeError):
         return ""
 
 
@@ -345,7 +345,7 @@ def fetch_recent(
     finally:
         try:
             conn.logout()
-        except Exception:  # noqa: BLE001
+        except (AttributeError, ValueError):
             pass
 
 

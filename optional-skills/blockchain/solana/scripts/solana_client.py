@@ -87,7 +87,7 @@ def _http_get_json(url: str, timeout: int = 10, retries: int = 2) -> Any:
                 time.sleep(2.0 * (attempt + 1))
                 continue
             return None
-        except Exception:
+        except (ValueError):
             return None
     return None
 
