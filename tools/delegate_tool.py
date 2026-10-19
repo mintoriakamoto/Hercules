@@ -678,7 +678,7 @@ def _get_max_total_agents() -> int:
     return max(0, parsed)
 
 
-def _acquire_spawn_budget(parent_agent, count: int):
+def _acquire_spawn_budget(parent_agent, count: int) -> tuple[Any, Optional[str]]:
     """Reserve ``count`` agents from the tree's allowance.
 
     Returns ``(budget, None)`` on success, or ``(budget, error_message)`` when
@@ -1342,7 +1342,7 @@ def _build_child_agent(
     # 'leaf' (default) cannot; 'orchestrator' retains the delegation
     # toolset subject to depth/kill-switch bounds applied below.
     role: str = "leaf",
-):
+) -> Any:
     """
     Build a child AIAgent on the main thread (thread-safe construction).
     Returns the constructed child agent without running it.
@@ -2195,7 +2195,7 @@ def _run_single_child(
                             f"delegate_task: subagent {child_desc} "
                             f"(iteration {child_iter}/{child_max})"
                         )
-            except Exception:
+            except (IndexError, KeyError):
                 pass
             try:
                 touch(desc)
@@ -2547,7 +2547,7 @@ def _run_single_child(
                             entry["summary"] = entry["summary"] + reminder
                         else:
                             entry["stale_paths"] = mod_paths
-        except Exception:
+        except (IndexError, KeyError, OSError):
             logger.debug("file_state sibling-write check failed", exc_info=True)
 
         # Per-branch observability payload: tokens, cost, files touched, and
