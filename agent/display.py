@@ -18,6 +18,7 @@ from typing import Any
 from utils import safe_json_loads
 from agent.redact import redact_sensitive_text
 from agent.tool_result_classification import file_mutation_result_landed
+from tools.approval import _is_spinner_paused
 
 # ANSI escape codes for coloring tool failure indicators
 _RED = "\033[31m"
@@ -1240,7 +1241,7 @@ class KawaiiSpinner:
         wings = skin.get_spinner_wings() if skin else []
 
         while self.running:
-            if os.getenv("HERCULES_SPINNER_PAUSE"):
+            if _is_spinner_paused():
                 time.sleep(0.1)
                 continue
             frame = self.spinner_frames[self.frame_idx % len(self.spinner_frames)]

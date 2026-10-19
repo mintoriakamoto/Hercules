@@ -46,6 +46,10 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 from utils import env_var_enabled
+from tools.approval import (
+    set_hercules_spinner_pause_context,
+    reset_hercules_spinner_pause_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -471,8 +475,8 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
                     logger.debug("Failed to close tty fd: %s", e)
             result["done"] = True
 
+    spinner_pause_token = set_hercules_spinner_pause_context(True)
     try:
-        os.environ["HERCULES_SPINNER_PAUSE"] = "1"
         time.sleep(0.2)
 
         print()
@@ -518,8 +522,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
         sys.stdout.flush()
         return ""
     finally:
-        if "HERCULES_SPINNER_PAUSE" in os.environ:
-            del os.environ["HERCULES_SPINNER_PAUSE"]
+        reset_hercules_spinner_pause_context(spinner_pause_token)
 
 
 def _safe_command_preview(command: Any, limit: int = 200) -> str:

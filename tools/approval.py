@@ -50,7 +50,7 @@ def _get_content_approval_manager() -> Optional[ContentApprovalManager]:
         try:
             _content_approval_manager = ContentApprovalManager()
         except Exception as exc:
-            logger.debug("Failed to initialize content approval manager: %s", exc)
+            logger.warning("Failed to initialize content approval manager: %s", exc)
             return None
     return _content_approval_manager
 
@@ -104,6 +104,47 @@ def reset_hercules_interactive_context(token: contextvars.Token) -> None:
     _hercules_interactive_ctx.reset(token)
 
 
+# Spinner pause flag. Direct os.environ mutation of HERCULES_SPINNER_PAUSE
+# races in concurrent ACP sessions: one session's delete in `finally` can
+# clobber another session's set mid-run, preventing the spinner from pausing
+# during password/approval prompts. A contextvar is thread/task-local, so each
+# executor worker (or asyncio task) sees only its own value. None = unset →
+# fall back to the env var for legacy single-threaded callers.
+_hercules_spinner_pause_ctx: contextvars.ContextVar[Optional[str]] = (
+    contextvars.ContextVar(
+        "hercules_spinner_pause",
+        default=None,
+    )
+)
+
+
+def set_hercules_spinner_pause_context(paused: bool) -> contextvars.Token:
+    """Bind spinner pause mode for the current context (thread or asyncio task).
+
+    Use this instead of mutating ``os.environ["HERCULES_SPINNER_PAUSE"]`` from
+    concurrent executor threads. When unset (default), spinner pause detection
+    falls back to the ``HERCULES_SPINNER_PAUSE`` env var for legacy callers.
+    """
+    return _hercules_spinner_pause_ctx.set("1" if paused else "")
+
+
+def reset_hercules_spinner_pause_context(token: contextvars.Token) -> None:
+    """Restore the prior value from :func:`set_hercules_spinner_pause_context`."""
+    _hercules_spinner_pause_ctx.reset(token)
+
+
+def _is_spinner_paused() -> bool:
+    """True when the spinner should be paused during interactive prompts.
+
+    Prefers the context-local flag (set by concurrent ACP sessions) and falls
+    back to the ``HERCULES_SPINNER_PAUSE`` env var for single-threaded callers.
+    """
+    ctx_val = _hercules_spinner_pause_ctx.get()
+    if ctx_val is not None:
+        return is_truthy_value(ctx_val)
+    return env_var_enabled("HERCULES_SPINNER_PAUSE")
+
+
 def _is_interactive_cli() -> bool:
     """True when running an interactive CLI/ACP session.
 
@@ -140,7 +181,7 @@ def _fire_approval_hook(hook_name: str, **kwargs) -> None:
         # invoke_hook() already swallows per-callback errors, so reaching here
         # means the dispatch layer itself failed. Log and move on -- approval
         # flow is safety-critical, plugin observability is not.
-        logger.debug("Approval hook %s dispatch failed: %s", hook_name, exc)
+        logger.warning("Approval hook %s dispatch failed: %s", hook_name, exc)
 
 
 def set_current_session_key(session_key: str) -> contextvars.Token[str]:
@@ -1902,7 +1943,7 @@ def prompt_dangerous_approval(
         # tests, sshd, etc.).
         pass
 
-    os.environ["HERCULES_SPINNER_PAUSE"] = "1"
+    spinner_pause_token = set_hercules_spinner_pause_context(True)
     try:
         # Resolve the active UI language once per prompt so we don't re-read
         # config/YAML inside the retry loop below.
@@ -1964,8 +2005,7 @@ def prompt_dangerous_approval(
         print("\n" + t("approval.cancelled"))
         return "deny"
     finally:
-        if "HERCULES_SPINNER_PAUSE" in os.environ:
-            del os.environ["HERCULES_SPINNER_PAUSE"]
+        reset_hercules_spinner_pause_context(spinner_pause_token)
         print()
         sys.stdout.flush()
 
@@ -2168,7 +2208,7 @@ def _smart_approve(command: str, description: str) -> str:
             return "escalate"
 
     except Exception as e:
-        logger.debug("Smart approvals: LLM call failed (%s), escalating", e)
+        logger.warning("Smart approvals: LLM call failed (%s), escalating", e)
         return "escalate"
 
 
@@ -3539,7 +3579,7 @@ def request_content_approval(
         logger.warning("Content approval denied for %s", action_type)
         return False
     except Exception as exc:
-        logger.debug("Content approval check failed: %s", exc)
+        logger.warning("Content approval check failed: %s", exc)
         # Fail open if approval system has errors
         return True
 
