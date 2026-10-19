@@ -7,6 +7,12 @@ Uses discord.py library for:
 - Receiving messages from servers and DMs
 - Sending responses back
 - Handling threads and channels
+
+NOTE: This module is 9357 lines. A future consolidation may split it into
+submodules (e.g., discord_voice.py for VoiceReceiver, discord_helpers.py for
+utilities, discord_setup.py for setup logic) without changing the public interface.
+All existing imports will continue to work through re-exports. No changes required
+in existing code.
 """
 
 import asyncio

@@ -1142,7 +1142,7 @@ def _build_child_progress_callback(
         preview: Optional[str] = None,
         args: Optional[Any] = None,
         **kwargs,
-    ):
+    ) -> None:
         if not parent_cb:
             return
         payload = _identity_kwargs()
@@ -1158,7 +1158,7 @@ def _build_child_progress_callback(
         preview: Optional[str] = None,
         args: Optional[Any] = None,
         **kwargs,
-    ):
+    ) -> None:
         # Lifecycle events emitted by the orchestrator itself — handled
         # before enum normalisation since they are not part of DelegateEvent.
         if event_type == "subagent.start":
@@ -1268,7 +1268,7 @@ def _build_child_progress_callback(
                 _relay("subagent.progress", preview=f"🔀 {prefix}{summary}")
                 _batch.clear()
 
-    def _flush():
+    def _flush() -> None:
         """Flush remaining batched tool names to gateway on completion."""
         if parent_cb and _batch:
             summary = ", ".join(_batch)
@@ -2133,7 +2133,7 @@ def _run_single_child(
     _last_seen_tool = [None]  # type: list
     _stale_count = [0]
 
-    def _heartbeat_loop():
+    def _heartbeat_loop() -> None:
         while not _heartbeat_stop.wait(_HEARTBEAT_INTERVAL):
             if parent_agent is None:
                 continue
@@ -2282,7 +2282,7 @@ def _run_single_child(
             except Exception as e:
                 logger.debug("Child text relay failed: %s", e)
 
-        def _run_with_thread_capture():
+        def _run_with_thread_capture() -> Any:
             _worker_thread_holder["t"] = threading.current_thread()
             return child.run_conversation(
                 user_message=goal,
@@ -3518,7 +3518,7 @@ def delegate_task(
     # Build all child agents on the main thread (thread-safe construction)
     # Wrapped in try/finally so the global is always restored even if a
     # child build raises (otherwise _last_resolved_tool_names stays corrupted).
-    def _build_for_task(i: int, t: dict, *, recovery_context: Optional[str] = None):
+    def _build_for_task(i: int, t: dict, *, recovery_context: Optional[str] = None) -> Any:
         """Construct one child for task ``i``.
 
         Shared by the initial build loop and by retries, so a retried task
@@ -4061,10 +4061,10 @@ def delegate_task(
                 except ValueError:
                     pass
 
-        def _batch_runner():
+        def _batch_runner() -> dict:
             return _execute_and_aggregate()
 
-        def _batch_interrupt():
+        def _batch_interrupt() -> None:
             for _c in _child_agents:
                 try:
                     if hasattr(_c, "interrupt"):
@@ -4142,7 +4142,7 @@ def _resolve_child_credential_pool(
     effective_provider: Optional[str],
     parent_agent,
     effective_base_url: Optional[str] = None,
-):
+) -> Optional[Any]:
     """Resolve a credential pool for the child agent.
 
     Rules:

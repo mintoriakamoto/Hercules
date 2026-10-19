@@ -5,6 +5,11 @@ Uses python-telegram-bot library for:
 - Receiving messages from users/groups
 - Sending responses back
 - Handling media and commands
+
+NOTE: This module is 9756 lines. A future consolidation may split it into
+submodules (e.g., telegram_helpers.py for utilities, telegram_setup.py for
+setup logic) without changing the public interface. All existing imports will
+continue to work through re-exports. No changes required in existing code.
 """
 
 import asyncio
