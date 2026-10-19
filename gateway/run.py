@@ -2985,7 +2985,11 @@ class GatewayRunner(
             set_multiplex_active(
                 bool(getattr(self.config, "multiplex_profiles", False))
             )
-        except Exception:
+        except (ImportError, AttributeError, TypeError, ValueError):
+            # ImportError: secret_scope module not available
+            # AttributeError: set_multiplex_active not found
+            # TypeError: function call fails
+            # ValueError: value conversion fails
             logger.debug("could not set multiplex-active flag", exc_info=True)
         self.adapters: Dict[Platform, BasePlatformAdapter] = {}
         # Multi-profile multiplexing: adapters for NON-default profiles live
@@ -3195,7 +3199,11 @@ class GatewayRunner(
             from tools.tirith_security import ensure_installed
 
             ensure_installed(log_failures=False)
-        except Exception:
+        except (ImportError, AttributeError, RuntimeError, OSError):
+            # ImportError: tirith_security module not available
+            # AttributeError: ensure_installed not found
+            # RuntimeError: installation failed
+            # OSError: file I/O error during installation
             pass  # Non-fatal — fail-open at scan time if unavailable
 
         # Startup heads-up (#30882): a gateway in manual approval mode with no
