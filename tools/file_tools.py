@@ -222,7 +222,10 @@ def _terminal_env_type_for_task(task_id: str = "default") -> str:
                 return "daytona"
         cfg = _get_env_config()
         return str(cfg.get("env_type") or os.getenv("TERMINAL_ENV") or "local").lower()
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
+        # AttributeError: cfg.get() fails
+        # TypeError: str() conversion fails
+        # ValueError: _get_env_config() failed
         return str(os.getenv("TERMINAL_ENV") or "local").lower()
 
 
@@ -231,7 +234,9 @@ def _uses_container_paths(task_id: str = "default") -> bool:
         from tools.terminal_tool import _CONTAINER_BACKENDS
 
         container_backends = _CONTAINER_BACKENDS
-    except Exception:
+    except (ImportError, AttributeError):
+        # ImportError: terminal_tool module not available
+        # AttributeError: _CONTAINER_BACKENDS not found
         container_backends = _CONTAINER_PATH_BACKENDS_FALLBACK
     return _terminal_env_type_for_task(task_id) in container_backends
 

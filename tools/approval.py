@@ -169,9 +169,10 @@ def _fire_approval_hook(hook_name: str, **kwargs) -> None:
     """
     try:
         from hercules_cli.plugins import invoke_hook
-    except Exception:
-        # Plugin system not available in this execution context
-        # (e.g. bare tool-only imports, minimal test environments).
+    except (ImportError, AttributeError):
+        # ImportError: plugin system not available
+        # AttributeError: invoke_hook not found
+        # Common in bare tool-only imports and minimal test environments.
         return
     try:
         kwargs.setdefault("turn_id", _approval_turn_id.get())
