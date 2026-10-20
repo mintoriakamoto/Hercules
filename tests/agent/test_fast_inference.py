@@ -129,8 +129,10 @@ class TestContextPruner(unittest.TestCase):
                 "role": "assistant",
                 "content": json.dumps({"tool_use": "test_tool"}),
             },
-            {"role": "user", "content": f"msg{i}"} for i in range(20)
         ]
+        messages.extend(
+            {"role": "user", "content": f"msg{i}"} for i in range(20)
+        )
 
         pruned, _ = ContextPruner.prune_messages(messages, 0.3)
 
