@@ -8,8 +8,10 @@ This module maintains a SQLite-backed knowledge base that:
   - Auto-prunes low-confidence or outdated facts
 
 Schema:
-  - knowledge_base: (id, session_id, topic, fact, confidence, created_at, source_turn, last_verified)
-  - fact_references: (id, fact_id, referenced_at, context) — tracks usage for adaptive prioritization
+  - knowledge_base: (id, session_id, topic, fact, confidence, created_at,
+                     source_turn, last_verified)
+  - fact_references: (id, fact_id, referenced_at, context) — tracks usage
+                     for adaptive prioritization
   - meta: (key, value) — schema version and other metadata
 
 Confidence scoring:

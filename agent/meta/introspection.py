@@ -227,7 +227,10 @@ class Introspection:
                         gap_type="model",
                         description="Task requires extended thinking",
                         task_requiring_gap=task[:100],
-                        recommended_solution="Switch to model with extended_thinking support (claude-opus)",
+                        recommended_solution=(
+                            "Switch to model with extended_thinking "
+                            "support (claude-opus)"
+                        ),
                         estimated_impact=0.4,
                         priority=5,
                     )

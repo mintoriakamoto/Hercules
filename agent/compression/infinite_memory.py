@@ -158,7 +158,9 @@ class InfiniteMemoryManager:
 
         return should_snapshot
 
-    def create_snapshot(self, messages: List[Dict[str, Any]]) -> Optional[streaming.ContextSnapshot]:
+    def create_snapshot(
+        self, messages: List[Dict[str, Any]]
+    ) -> Optional[streaming.ContextSnapshot]:
         """Create a context snapshot if appropriate.
 
         Args:
@@ -188,7 +190,9 @@ class InfiniteMemoryManager:
             logger.error(f"Failed to create snapshot: {e}", exc_info=True)
             return None
 
-    def build_hierarchy(self, messages: List[Dict[str, Any]]) -> Dict[int, hierarchical.ContextLevel]:
+    def build_hierarchy(
+        self, messages: List[Dict[str, Any]]
+    ) -> Dict[int, hierarchical.ContextLevel]:
         """Build hierarchical compression levels for current context.
 
         Args:
@@ -331,9 +335,14 @@ class InfiniteMemoryManager:
         # Get knowledge base stats
         knowledge_stats = persistent_store.get_statistics(self.session_id)
 
+        # Calculate compression ratio
+        level_2 = hierarchy_cost.get("level_2", 0)
+        level_0 = hierarchy_cost.get("level_0", 1)
+        compression_ratio = (level_2 / level_0) if level_0 else 0
+
         return {
             "hierarchy_costs": hierarchy_cost,
             "cache_savings": cache_savings,
             "knowledge_facts": knowledge_stats["total_facts"],
-            "average_compression_ratio": hierarchy_cost.get("level_2", 0) / hierarchy_cost.get("level_0", 1) if hierarchy_cost.get("level_0") else 0,
+            "average_compression_ratio": compression_ratio,
         }

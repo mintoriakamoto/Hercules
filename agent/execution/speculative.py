@@ -159,7 +159,10 @@ class SpeculativeExecutionPipeline:
             if should_use_capable and capable_task:
                 # Wait for capable model (with timeout)
                 try:
-                    logger.debug("Waiting for capable model with timeout %dms", max_parallel_wait_ms)
+                    logger.debug(
+                        "Waiting for capable model with timeout %dms",
+                        max_parallel_wait_ms,
+                    )
                     result.capable_model_response = await asyncio.wait_for(
                         capable_task,
                         timeout=max_parallel_wait_ms / 1000.0
@@ -177,7 +180,9 @@ class SpeculativeExecutionPipeline:
                 result.used_fast_model = True
                 if capable_task:
                     capable_task.cancel()
-                logger.debug("Fast model response accepted; skipping capable model")
+                logger.debug(
+                    "Fast model response accepted; skipping capable model"
+                )
 
             # Calculate metrics
             success = result.fast_model_response is not None or result.capable_model_response is not None
