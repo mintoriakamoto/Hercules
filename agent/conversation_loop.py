@@ -43,6 +43,7 @@ from agent.message_sanitization import (
     _strip_images_from_messages,
     _strip_non_ascii,
 )
+from agent.transports.model_router import route_request
 from agent.model_metadata import (
     MINIMUM_CONTEXT_LENGTH,
     estimate_messages_tokens_rough,
@@ -1177,8 +1178,6 @@ def run_conversation(
 
                 # === Hybrid Ensemble Routing: Intelligent model selection ===
                 try:
-                    from agent.transports.model_router import route_request
-
                     # Build agent config for router
                     agent_config = {
                         "model": agent.model,

@@ -17,6 +17,7 @@ import hashlib
 import json
 import logging
 import time
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -45,7 +46,7 @@ class InferenceCache:
     def __init__(
         self, max_entries: int = 1000, ttl_seconds: int = 3600
     ):
-        self.cache: Dict[str, CachedInference] = {}
+        self.cache: OrderedDict[str, CachedInference] = OrderedDict()
         self.max_entries = max_entries
         self.ttl = ttl_seconds
         self.hits = 0
@@ -89,13 +90,9 @@ class InferenceCache:
             expires_at=time.time() + self.ttl,
         )
 
-        # LRU eviction
+        # LRU eviction (O(1) using OrderedDict FIFO)
         if len(self.cache) > self.max_entries:
-            oldest_key = min(
-                self.cache.keys(),
-                key=lambda k: self.cache[k].created_at,
-            )
-            del self.cache[oldest_key]
+            self.cache.popitem(last=False)  # Remove oldest (FIFO)
 
     def hit_rate(self) -> float:
         """Return cache hit rate."""
@@ -157,9 +154,12 @@ class ContextPruner:
         # Sort by relevance and keep top N%
         scored.sort(key=lambda x: x[1], reverse=True)
         keep_count = max(1, int(len(messages) * (1 - target_reduction)))
+
+        # Build index once for O(1) lookup (avoid O(n²) messages.index calls)
+        msg_index = {id(msg): i for i, msg in enumerate(messages)}
         pruned = sorted(
             scored[:keep_count],
-            key=lambda x: messages.index(x[0]),
+            key=lambda x: msg_index[id(x[0])],
         )
 
         pruned_messages = [msg for msg, _ in pruned]

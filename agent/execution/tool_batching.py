@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import time
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
@@ -111,7 +112,7 @@ class ToolResultCache:
     """Cache tool results to avoid re-execution."""
 
     def __init__(self, max_entries: int = 500, ttl_seconds: int = 3600):
-        self.cache: Dict[str, Tuple[Any, float]] = {}
+        self.cache: OrderedDict[str, Tuple[Any, float]] = OrderedDict()
         self.max_entries = max_entries
         self.ttl = ttl_seconds
         self.hits = 0
@@ -133,12 +134,8 @@ class ToolResultCache:
         """Store result in cache."""
         self.cache[cache_key] = (result, time.time())
         if len(self.cache) > self.max_entries:
-            # Remove oldest entry
-            oldest_key = min(
-                self.cache.keys(),
-                key=lambda k: self.cache[k][1],
-            )
-            del self.cache[oldest_key]
+            # Remove oldest entry (O(1) using OrderedDict FIFO)
+            self.cache.popitem(last=False)
 
     def hit_rate(self) -> float:
         """Return cache hit rate."""
