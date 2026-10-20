@@ -43,7 +43,7 @@ def _is_root() -> bool:
         return False
     try:
         return getuid() == 0
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
 
@@ -70,7 +70,7 @@ def _iter_sshd_config_lines() -> list[str]:
         d = Path(_SSHD_CONFIG_DIR)
         if d.is_dir():
             paths.extend(sorted(d.glob("*.conf")))
-    except Exception:
+    except (OSError):
         pass
     for p in paths:
         try:
@@ -78,7 +78,7 @@ def _iter_sshd_config_lines() -> list[str]:
                 stripped = raw.strip()
                 if stripped and not stripped.startswith("#"):
                     lines.append(stripped)
-        except Exception:
+        except (AttributeError, ValueError):
             continue
     return lines
 
@@ -121,7 +121,7 @@ def _in_container() -> bool:
         cgroup = Path("/proc/1/cgroup").read_text(encoding="utf-8", errors="replace")
         if any(tok in cgroup for tok in ("docker", "containerd", "kubepods", "libpod")):
             return True
-    except Exception:
+    except (OSError, ZeroDivisionError):
         pass
     return False
 
@@ -136,7 +136,7 @@ def _path_is_mounted(path: Path) -> bool:
     """
     try:
         target = path.resolve()
-    except Exception:
+    except (AttributeError, ValueError):
         target = path
     try:
         mounts = (
@@ -144,7 +144,7 @@ def _path_is_mounted(path: Path) -> bool:
             .read_text(encoding="utf-8", errors="replace")
             .splitlines()
         )
-    except Exception:
+    except (OSError, ZeroDivisionError):
         return True  # can't tell — fail safe (no warning)
     best = None
     best_fstype = ""
@@ -155,7 +155,7 @@ def _path_is_mounted(path: Path) -> bool:
         mountpoint, fstype = parts[1], parts[2]
         try:
             mp = Path(mountpoint)
-        except Exception:
+        except (OSError):
             continue
         if mp == target or mp in target.parents:
             # Longest matching mountpoint wins (most specific).
@@ -177,7 +177,7 @@ def _container_no_volume_mount(hercules_home: Optional[Path]) -> Optional[str]:
     try:
         if _path_is_mounted(home):
             return None
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     return (
         f"Running in a container but the data dir ({home}) is NOT on a "
@@ -197,7 +197,7 @@ def _network_listener_without_auth(config: Optional[dict]) -> list[str]:
     findings: list[str] = []
     try:
         from gateway.platforms.base import is_network_accessible
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return findings
 
     cfg = config or {}
@@ -217,7 +217,7 @@ def _network_listener_without_auth(config: Optional[dict]) -> list[str]:
                     "work — an unauthenticated network endpoint is remote code "
                     "execution. Set a strong API_SERVER_KEY."
                 )
-    except Exception:
+    except (ValueError):
         pass
 
     return findings
@@ -241,17 +241,17 @@ def run_security_audit(
             r = check()
             if r:
                 findings.append(r)
-        except Exception:
+        except (AttributeError, ValueError):
             continue
     try:
         r = _container_no_volume_mount(hercules_home)
         if r:
             findings.append(r)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     try:
         findings.extend(_network_listener_without_auth(config))
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return findings
 
@@ -273,7 +273,7 @@ def log_startup_security_warnings(
     _AUDIT_RAN = True
     try:
         findings = run_security_audit(hercules_home=hercules_home, config=config)
-    except Exception:
+    except (AttributeError, ValueError):
         return []
     if findings:
         logger.warning(

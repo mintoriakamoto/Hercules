@@ -254,7 +254,7 @@ def _is_under_temp_dir(token: str) -> bool:
         resolved = path.resolve()
         temp_root = Path(tempfile.gettempdir()).resolve()
         return resolved == temp_root or temp_root in resolved.parents
-    except Exception:
+    except (OSError):
         return False
 
 
@@ -265,14 +265,14 @@ def _is_under_root(token: str, root: str | Path | None) -> bool:
         path = Path(token).expanduser().resolve()
         root_path = Path(root).expanduser().resolve()
         return path == root_path or root_path in path.parents
-    except Exception:
+    except (OSError):
         return False
 
 
 def _is_temp_script_path(token: str, root: str | Path | None) -> bool:
     try:
         name = Path(token).expanduser().name
-    except Exception:
+    except (OSError):
         return False
     return (
         name.startswith(_AD_HOC_SCRIPT_NAME_PREFIXES)
@@ -400,7 +400,7 @@ def classify_verification_command(
         from agent.coding_context import project_facts_for
 
         facts = project_facts_for(cwd)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         facts = None
     if not facts:
         return None
@@ -508,7 +508,7 @@ def mark_workspace_edited(
         from agent.coding_context import project_facts_for
 
         facts = project_facts_for(cwd)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         facts = None
     if not facts:
         return None
@@ -566,7 +566,7 @@ def verification_status(
         from agent.coding_context import project_facts_for
 
         facts = project_facts_for(cwd)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         facts = None
     if not facts:
         return {"status": "not_applicable", "evidence": None}

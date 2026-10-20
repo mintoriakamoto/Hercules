@@ -30,7 +30,7 @@ def _json_loads_maybe_prefix(value: str) -> Any:
     text = value.strip()
     try:
         return json.loads(text)
-    except Exception:
+    except (AttributeError, ValueError):
         decoder = json.JSONDecoder()
         data, _ = decoder.raw_decode(text)
         return data
@@ -49,7 +49,7 @@ def _build_plan_update_from_todo_result(result: Any) -> AgentPlanUpdate | None:
 
     try:
         data = _json_loads_maybe_prefix(result)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
     if not isinstance(data, dict) or not isinstance(data.get("todos"), list):
@@ -103,7 +103,7 @@ def _send_update(
         return
     try:
         future.result(timeout=5)
-    except Exception:
+    except (AttributeError, ValueError):
         logger.debug("Failed to send ACP update", exc_info=True)
 
 
@@ -166,7 +166,7 @@ def make_tool_progress_cb(
                 from agent.display import capture_local_edit_snapshot
 
                 snapshot = capture_local_edit_snapshot(name, args)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug(
                     "Failed to capture ACP edit snapshot for %s", name, exc_info=True
                 )
@@ -185,7 +185,7 @@ def make_tool_progress_cb(
                     policy, cwd = edit_approval_policy_getter()
                     if should_auto_approve_edit(proposal, policy, cwd):
                         edit_diff = proposal
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug(
                     "Failed to prepare auto-approved ACP edit diff for %s",
                     name,

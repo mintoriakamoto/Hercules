@@ -4,7 +4,6 @@ so that _resolve_auto() can route custom: providers in Step 1.
 Fixes https://github.com/NousResearch/hercules-agent/issues/34777
 """
 
-import pytest
 from unittest.mock import patch, MagicMock
 
 

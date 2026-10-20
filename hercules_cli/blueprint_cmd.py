@@ -71,7 +71,7 @@ def _resolve_origin(explicit: Optional[Dict[str, Any]]) -> Optional[Dict[str, An
                 "chat_name": get_session_env("HERCULES_SESSION_CHAT_NAME") or None,
                 "thread_id": get_session_env("HERCULES_SESSION_THREAD_ID") or None,
             }
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return None
 
@@ -152,7 +152,7 @@ def _humanize_schedule(blueprint) -> str:
 
     try:
         return _h(blueprint)
-    except Exception:
+    except (AttributeError, ValueError):
         return "on a schedule"
 
 

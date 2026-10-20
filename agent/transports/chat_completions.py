@@ -645,7 +645,7 @@ class ChatCompletionsTransport(ProviderTransport):
                 from agent.gemini_native_adapter import is_native_gemini_base_url
 
                 _native_gemini = is_native_gemini_base_url(params.get("base_url"))
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 _native_gemini = False
             if _native_gemini:
                 extra_body = {
@@ -693,7 +693,7 @@ class ChatCompletionsTransport(ProviderTransport):
                     if hasattr(extra, "model_dump"):
                         try:
                             extra = extra.model_dump()
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                     tc_provider_data["extra_content"] = extra
                 tool_calls.append(

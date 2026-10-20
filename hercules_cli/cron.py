@@ -61,7 +61,7 @@ def _active_cron_provider_name() -> str:
         from cron.scheduler_provider import resolve_cron_scheduler
 
         return resolve_cron_scheduler().name or "builtin"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "builtin"
 
 
@@ -88,7 +88,7 @@ def _warn_if_gateway_not_running() -> None:
 
         if find_gateway_pids():
             return
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # If we can't determine gateway state, stay quiet rather than nag.
         return
 

@@ -20,6 +20,7 @@ import logging
 from typing import Optional, Tuple
 
 import requests
+import subprocess
 
 logger = logging.getLogger(__name__)
 

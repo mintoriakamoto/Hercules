@@ -12,6 +12,7 @@ that the main retry loop in run_agent.py consults for every API failure.
 from __future__ import annotations
 
 import enum
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
@@ -1611,7 +1612,7 @@ def _extract_error_body(error: Exception) -> dict:
                 json_body = response.json()
                 if isinstance(json_body, dict):
                     return json_body
-            except Exception:
+            except (ValueError):
                 pass
         cause = getattr(current, "__cause__", None) or getattr(
             current, "__context__", None

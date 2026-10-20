@@ -40,14 +40,14 @@ def fetch_history_entry(
         if r.status == 200:
             try:
                 return {"ok": True, "entry": r.json(), "source": "/api/jobs"}
-            except Exception:
+            except (ValueError):
                 pass
         # Fallback to history_v2
         url = resolve_url(host, f"/history/{prompt_id}", is_cloud=True)
         r = http_get(url, headers=headers, retries=2, timeout=30)
         try:
             data = r.json()
-        except Exception:
+        except (ValueError):
             data = None
         if r.status == 200 and data:
             return {"ok": True, "entry": data, "source": "/api/history_v2"}
@@ -59,7 +59,7 @@ def fetch_history_entry(
         return {"ok": False, "http_status": r.status, "body": r.text()[:500]}
     try:
         data = r.json()
-    except Exception:
+    except (ValueError):
         return {"ok": False, "reason": "non-JSON response"}
     if not isinstance(data, dict) or prompt_id not in data:
         return {
@@ -75,7 +75,7 @@ def fetch_queue(host: str, headers: dict) -> dict:
     r = http_get(url, headers=headers, retries=2, timeout=15)
     try:
         data = r.json()
-    except Exception:
+    except (ValueError):
         data = {"raw": r.text()[:500]}
     return {"http_status": r.status, "data": data}
 

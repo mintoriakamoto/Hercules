@@ -122,7 +122,7 @@ class BaseModalExecutionEnvironment(BaseEnvironment):
             if is_interrupted():
                 try:
                     self._cancel_modal_exec(start.handle)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 return self._result(self._interrupt_output, 130)
 
@@ -137,7 +137,7 @@ class BaseModalExecutionEnvironment(BaseEnvironment):
             if deadline is not None and time.monotonic() >= deadline:
                 try:
                     self._cancel_modal_exec(start.handle)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 return self._timeout_result_for_modal(prepared.timeout)
 
@@ -146,7 +146,7 @@ class BaseModalExecutionEnvironment(BaseEnvironment):
                 from tools.environments.base import touch_activity_if_due
 
                 touch_activity_if_due(_activity_state, "modal command running")
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
             time.sleep(self._poll_interval_seconds)

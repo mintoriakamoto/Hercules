@@ -1,3 +1,7 @@
+"""Management and tracking of context references in agent conversations.
+
+Handles extraction, resolution, and deduplication of references to external data.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -429,7 +433,7 @@ def _ensure_reference_path_allowed(path: Path) -> None:
             )
     except ValueError:
         raise
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         # Fail CLOSED on the security path. This guard exists specifically to
         # cover credential stores the narrow list above misses (auth.json,
         # .anthropic_oauth.json, mcp-tokens/, ...). If the canonical lookup
@@ -628,7 +632,7 @@ def _file_metadata(path: Path) -> str:
         return f"{path.stat().st_size} bytes"
     try:
         line_count = path.read_text(encoding="utf-8").count("\n") + 1
-    except Exception:
+    except (AttributeError, ValueError):
         return f"{path.stat().st_size} bytes"
     return f"{line_count} lines"
 

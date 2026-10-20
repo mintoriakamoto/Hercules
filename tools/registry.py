@@ -207,7 +207,7 @@ def _check_fn_cached(fn: Callable) -> bool:
     raised = False
     try:
         value = bool(fn())
-    except Exception:
+    except (ValueError):
         value = False
         raised = True
 
@@ -398,7 +398,7 @@ class ToolRegistry:
         try:
             frame = sys._getframe(2)
             return frame.f_globals.get("__name__", "") or ""
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             return ""
 
     def register(
@@ -653,7 +653,7 @@ class ToolRegistry:
                 from model_tools import _sanitize_tool_error
 
                 sanitized = _sanitize_tool_error(raw)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 sanitized = (
                     raw  # defensive: never let the sanitizer block error propagation
                 )

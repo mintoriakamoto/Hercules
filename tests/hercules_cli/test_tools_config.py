@@ -1,7 +1,6 @@
 """Tests for hercules_cli.tools_config platform tool persistence."""
 
 import logging
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -22,8 +21,6 @@ from hercules_cli.tools_config import (
     CONFIGURABLE_TOOLSETS,
     TOOL_CATEGORIES,
     gui_toolset_label,
-    _visible_providers,
-    tools_command,
 )
 
 

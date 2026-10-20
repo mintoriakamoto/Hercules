@@ -31,7 +31,7 @@ try:
     from tools.lazy_deps import ensure as _lazy_ensure
 
     _lazy_ensure("provider.vertex", prompt=False)
-except Exception:
+except (ImportError, ModuleNotFoundError):
     pass  # lazy_deps unavailable or install failed — fall through to the real ImportError below
 
 try:
@@ -60,7 +60,7 @@ def _vertex_config() -> dict:
 
         section = load_config().get("vertex")
         return section if isinstance(section, dict) else {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 

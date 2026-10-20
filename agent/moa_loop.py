@@ -15,6 +15,7 @@ from typing import Any
 
 from agent.auxiliary_client import call_llm
 from agent.transports import get_transport
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +290,7 @@ def _run_reference(
                     provider=runtime.get("provider"),
                     api_mode=runtime.get("api_mode"),
                 )
-            except Exception:  # pragma: no cover - defensive
+            except (requests.RequestException, httpx.RequestError, OSError):
                 usage = CanonicalUsage()
         # Price this advisor at ITS OWN model/provider rate (with correct
         # cache-read/cache-write split), not the aggregator's. This is why
@@ -309,7 +310,7 @@ def _run_reference(
             cost_usd = cost.amount_usd
             cost_status = cost.status
             cost_source = cost.source
-        except Exception:  # pragma: no cover - defensive
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
         _output_text = _extract_text(response) or "(empty response)"
         acct = _RefAccounting(
@@ -432,7 +433,7 @@ def _render_tool_calls(tool_calls: Any) -> str:
                 import json
 
                 args_text = json.dumps(args, ensure_ascii=False)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 args_text = str(args)
         else:
             args_text = ""
@@ -549,7 +550,7 @@ def _extract_text(response: Any) -> str:
         text = (normalized.content or "").strip()
         if text:
             return text
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     try:
         message = response.choices[0].message
@@ -560,7 +561,7 @@ def _extract_text(response: Any) -> str:
         if not isinstance(content, str):
             content = str(content) if content else ""
         return content.strip()
-    except Exception:
+    except (AttributeError, ValueError):
         return ""
 
 
@@ -1091,7 +1092,7 @@ class MoAChatCompletions:
                     self._pending_trace["aggregator_output"] = _extract_text(
                         _agg_response
                     )
-                except Exception:  # pragma: no cover - defensive
+                except (IndexError, KeyError):
                     self._pending_trace["aggregator_output"] = None
         return _agg_response
 

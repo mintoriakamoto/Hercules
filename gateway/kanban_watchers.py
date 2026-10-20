@@ -77,7 +77,7 @@ def _resolve_auto_decompose_settings(
     """
     try:
         cfg = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         return False, 3
     kcfg = cfg.get("kanban", {}) if isinstance(cfg, dict) else {}
     enabled = bool(kcfg.get("auto_decompose", True))
@@ -135,11 +135,11 @@ def _release_singleton_lock(handle) -> None:
         from gateway.status import _release_file_lock
 
         _release_file_lock(handle)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     try:
         handle.close()
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
 
@@ -171,7 +171,7 @@ class GatewayKanbanWatchersMixin:
         # TODO: gate per-board when per-board dispatcher_owner tracking lands.
         try:
             from hercules_cli.config import load_config as _load_config
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning("kanban notifier: config loader unavailable; disabled")
             return
         env_override = (
@@ -197,7 +197,7 @@ class GatewayKanbanWatchersMixin:
 
         try:
             from hercules_cli import kanban_db as _kb
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning(
                 "kanban notifier: kanban_db not importable; notifier disabled"
             )
@@ -278,7 +278,7 @@ class GatewayKanbanWatchersMixin:
                     # more than once before advancing the cursor.
                     try:
                         boards = _kb.list_boards(include_archived=False)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         boards = [_kb.read_board_metadata(_kb.DEFAULT_BOARD)]
                     seen_db_paths: set[str] = set()
                     for board_meta in boards:
@@ -290,7 +290,7 @@ class GatewayKanbanWatchersMixin:
                                 if db_path
                                 else str(_kb.kanban_db_path(slug).resolve())
                             )
-                        except Exception:
+                        except (ValueError):
                             resolved_db_path = f"slug:{slug}"
                         if resolved_db_path in seen_db_paths:
                             logger.debug(
@@ -980,7 +980,7 @@ class GatewayKanbanWatchersMixin:
         # as an escape hatch (false-y value disables without editing YAML).
         try:
             from hercules_cli.config import load_config as _load_config
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning("kanban dispatcher: config loader unavailable; disabled")
             return
         env_override = (
@@ -1006,7 +1006,7 @@ class GatewayKanbanWatchersMixin:
 
         try:
             from hercules_cli import kanban_db as _kb
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning(
                 "kanban dispatcher: kanban_db not importable; dispatcher disabled"
             )
@@ -1191,7 +1191,7 @@ class GatewayKanbanWatchersMixin:
             path = _kb.kanban_db_path(slug)
             try:
                 resolved = str(path.expanduser().resolve())
-            except Exception:
+            except (ValueError):
                 resolved = str(path)
             try:
                 stat = path.stat()
@@ -1296,7 +1296,7 @@ class GatewayKanbanWatchersMixin:
                 if conn is not None:
                     try:
                         conn.close()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
         def _tick_once() -> "list[tuple[str, Optional[object]]]":
@@ -1308,7 +1308,7 @@ class GatewayKanbanWatchersMixin:
             """
             try:
                 boards = _kb.list_boards(include_archived=False)
-            except Exception:
+            except (AttributeError, ValueError):
                 boards = [_kb.read_board_metadata(_kb.DEFAULT_BOARD)]
             out: list[tuple[str, "Optional[object]"]] = []
             for b in boards:
@@ -1330,7 +1330,7 @@ class GatewayKanbanWatchersMixin:
             """
             try:
                 boards = _kb.list_boards(include_archived=False)
-            except Exception:
+            except (AttributeError, ValueError):
                 boards = [_kb.read_board_metadata(_kb.DEFAULT_BOARD)]
             for b in boards:
                 slug = b.get("slug") or _kb.DEFAULT_BOARD
@@ -1341,13 +1341,13 @@ class GatewayKanbanWatchersMixin:
                         return True
                     if _kb.has_spawnable_review(conn):
                         return True
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
                 finally:
                     if conn is not None:
                         try:
                             conn.close()
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
             return False
 
@@ -1385,7 +1385,7 @@ class GatewayKanbanWatchersMixin:
                 return 0
             try:
                 boards = _kb.list_boards(include_archived=False)
-            except Exception:
+            except (AttributeError, ValueError):
                 boards = [_kb.read_board_metadata(_kb.DEFAULT_BOARD)]
             attempted = 0
             successes = 0
@@ -1419,7 +1419,7 @@ class GatewayKanbanWatchersMixin:
                             author="auto-decomposer",
                             board=slug,
                         )
-                    except Exception:
+                    except (AttributeError, ValueError):
                         logger.exception(
                             "kanban auto-decompose: decompose_task crashed on %s",
                             tid,
@@ -1463,7 +1463,7 @@ class GatewayKanbanWatchersMixin:
                         len(pids),
                         pids,
                     )
-            except Exception:
+            except (RuntimeError):
                 logger.exception("kanban dispatcher: zombie reaper failed")
 
             try:
@@ -1517,7 +1517,7 @@ class GatewayKanbanWatchersMixin:
                 _release_singleton_lock(self._kanban_dispatcher_lock_handle)
                 self._kanban_dispatcher_lock_handle = None
                 raise
-            except Exception:
+            except (AttributeError, OSError, RuntimeError, ValueError):
                 logger.exception("kanban dispatcher: unexpected watcher error")
 
             # Sleep in 1s slices so shutdown is snappy — otherwise a stop()

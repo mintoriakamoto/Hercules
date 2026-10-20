@@ -184,7 +184,7 @@ def _start_desktop_cron_ticker(
 def _warm_gateway_module() -> None:
     try:
         import hercules_cli.gateway  # noqa: F401
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -577,7 +577,7 @@ async def _plugin_api_runtime_gate(request: Request, call_next):
 
                         enabled_set = _get_enabled_set()
                         disabled_set = _get_disabled_set()
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         enabled_set = set()
                         disabled_set = set()
                     # Determine plugin source.  Check the cached plugin list;
@@ -1110,7 +1110,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
     # bare display name and ``custom:<name>`` to the durable custom slug.
     try:
         cfg = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         cfg = {}
     user_providers = cfg.get("providers") if isinstance(cfg, dict) else None
     user_provider = resolve_user_provider(
@@ -1136,7 +1136,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
                 if isinstance(cur_cfg, dict)
                 else ""
             )
-        except Exception:
+        except (ValueError):
             cur_provider = ""
         from hercules_cli.models import _AGGREGATOR_PROVIDERS
 
@@ -1154,7 +1154,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
             normalized_model = normalize_model_for_provider(model_in, canonical)
             if normalized_model:
                 model_in = normalized_model
-        except Exception:
+        except (AttributeError, ValueError):
             _log.debug(
                 "model normalization failed for %s/%s", prov_in, model_in, exc_info=True
             )
@@ -1275,7 +1275,7 @@ def _probe_gateway_health() -> tuple[bool, dict | None]:
                 if resp.status == 200:
                     body = json.loads(resp.read())
                     return True, body
-        except Exception:
+        except (OSError):
             continue
     return False, None
 
@@ -1612,7 +1612,7 @@ def _fs_git_branch(cwd: str) -> str:
             **run_kwargs,
         )
         return result.stdout.strip() if result.returncode == 0 else ""
-    except Exception:
+    except (IndexError, KeyError, subprocess.CalledProcessError):
         return ""
 
 
@@ -1753,7 +1753,7 @@ def _dashboard_local_update_managed_externally() -> bool:
 
         if not is_container():
             return False
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
     # We are inside a container, but the install may still be self-managed.
     # If the install method is git, the dashboard update button works against
@@ -1764,7 +1764,7 @@ def _dashboard_local_update_managed_externally() -> bool:
         method = detect_install_method(PROJECT_ROOT)
         if method == "git":
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return True
 
@@ -2675,7 +2675,7 @@ def _profile_platform_ports(
             for plat_name, plat_block in src.items():
                 if isinstance(plat_block, dict):
                     blocks.setdefault(plat_name, {}).update(plat_block)
-    except Exception:
+    except (OSError):
         blocks = {}
 
     ports: Dict[str, int] = {}
@@ -2712,7 +2712,7 @@ def _collect_profile_gateway_topology() -> Dict[str, Any]:
         from gateway.status import read_runtime_status
 
         homes = profiles_to_serve(True)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _log.debug("profile/gateway topology enumeration failed", exc_info=True)
         return {"profiles": [], "gateway_mode": "unknown", "gateways": []}
 
@@ -2723,11 +2723,11 @@ def _collect_profile_gateway_topology() -> Dict[str, Any]:
         try:
             if not _check_gateway_running(home):
                 continue
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         try:
             runtime = read_runtime_status(home / "gateway_state.json")
-        except Exception:
+        except (ZeroDivisionError):
             runtime = None
         served = [str(p) for p in ((runtime or {}).get("served_profiles") or [])]
         if name == "default" and len(served) > 1:
@@ -2802,7 +2802,7 @@ async def get_status(profile: Optional[str] = None):
             configured_gateway_platforms = {
                 platform.value for platform in gateway_config.get_connected_platforms()
             }
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             configured_gateway_platforms = None
 
         # Prefer the detailed health endpoint response (has full state) when the
@@ -2895,7 +2895,7 @@ async def get_status(profile: Optional[str] = None):
             from hercules_cli.dashboard_auth import list_providers as _list_providers
 
             auth_providers = [p.name for p in _list_providers()]
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
             # Module not importable yet (early startup) — leave as [].
             pass
 
@@ -3055,19 +3055,19 @@ async def get_system_stats():
                 "free": du.free,
                 "percent": du.percent,
             }
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             pass
         try:
             info["cpu_percent"] = psutil.cpu_percent(interval=0.1)
             la = getattr(psutil, "getloadavg", None)
             if la:
                 info["load_avg"] = list(la())
-        except Exception:
+        except (AttributeError, IndexError, KeyError):
             pass
         try:
             boot = psutil.boot_time()
             info["uptime_seconds"] = int(time.time() - boot)
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             pass
         try:
             proc = psutil.Process()
@@ -3077,10 +3077,10 @@ async def get_system_stats():
                 "create_time": int(proc.create_time()),
                 "num_threads": proc.num_threads(),
             }
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             pass
         info["psutil"] = True
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         info["psutil"] = False
         # stdlib-only fallbacks for load average + uptime where the kernel
         # exposes them.
@@ -3111,7 +3111,7 @@ async def get_curator_status():
         ) from exc
     try:
         state = curator.load_state()
-    except Exception:
+    except (AttributeError, ValueError):
         state = {}
     return {
         "enabled": _safe_call(curator, "is_enabled", True),
@@ -3218,7 +3218,7 @@ def _safe_call(mod, fn_name: str, default):
     try:
         fn = getattr(mod, fn_name, None)
         return fn() if callable(fn) else default
-    except Exception:
+    except (AttributeError):
         return default
 
 
@@ -3600,7 +3600,7 @@ async def gateway_drain(request: Request):
 
     try:
         body = await request.json()
-    except Exception:
+    except (ValueError):
         body = {}
     action = str((body or {}).get("action", "drain")).strip().lower()
 
@@ -3730,7 +3730,7 @@ def _recent_upstream_commits(n: int = 20) -> List[Dict[str, Any]]:
                 "at": int(at or 0),
             })
         return rows
-    except Exception:
+    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
         return []
 
 
@@ -3804,7 +3804,7 @@ async def check_hercules_update(force: bool = False):
                 pass
 
         behind = await asyncio.to_thread(check_for_updates)
-    except Exception:
+    except (RuntimeError):
         _log.exception("Update check failed")
         behind = None
 
@@ -4106,7 +4106,7 @@ async def get_action_status(name: str, lines: int = 200):
         if exit_code is not None:
             try:
                 proc.wait(timeout=1)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             _ACTION_RESULTS[name] = {"exit_code": exit_code, "pid": pid}
             _ACTION_PROCS.pop(name, None)
@@ -4286,7 +4286,7 @@ def get_profiles_sessions(
         try:
             infos = profiles_mod.list_profiles()
             targets = [(info.name, info.path) for info in infos]
-        except Exception:
+        except (IndexError, KeyError):
             _log.exception("GET /api/profiles/sessions: list_profiles failed")
             targets = []
         if not targets:
@@ -4415,7 +4415,7 @@ async def search_sessions(q: str = "", limit: int = 20, profile: Optional[str] =
                         break
                     try:
                         s = db.get_session(cur)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         s = None
                     if not s:
                         root = cur
@@ -4426,7 +4426,7 @@ async def search_sessions(q: str = "", limit: int = 20, profile: Optional[str] =
                         break
                     try:
                         parent_session = db.get_session(parent)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         parent_session = None
                     if not parent_session:
                         root = cur
@@ -4457,7 +4457,7 @@ async def search_sessions(q: str = "", limit: int = 20, profile: Optional[str] =
                     resolved = db.get_compression_tip(root_id)
                     if resolved:
                         tip = resolved
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 tip_cache[root_id] = tip
                 return tip
@@ -4579,7 +4579,7 @@ def _load_memory_provider(name: str):
         from plugins.memory import load_memory_provider
 
         return load_memory_provider(name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _log.debug("Failed to load memory provider %s", name, exc_info=True)
         return None
 
@@ -4597,7 +4597,7 @@ def _memory_provider_manifest(name: str) -> Dict[str, Any]:
         with manifest_path.open(encoding="utf-8-sig") as handle:
             manifest = yaml.safe_load(handle) or {}
         return manifest if isinstance(manifest, dict) else {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         _log.debug(
             "Failed to read memory provider manifest for %s", name, exc_info=True
         )
@@ -4750,7 +4750,7 @@ def _memory_provider_dependencies_installed(setup: Dict[str, Any]) -> bool:
                 display=check_cmd,
                 timeout=20,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             external_ok = False
             continue
         if completed.returncode != 0:
@@ -4964,7 +4964,7 @@ def _normalize_memory_provider_schema(name: str, provider: Any) -> List[Dict[str
             raw = provider.get_config_schema()
             if isinstance(raw, list):
                 raw_schema = [field for field in raw if isinstance(field, dict)]
-        except Exception:
+        except (IndexError, KeyError):
             _log.warning(
                 "Failed to read memory provider schema for %s", name, exc_info=True
             )
@@ -5019,7 +5019,7 @@ def _read_json_file(path: Path) -> Dict[str, Any]:
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         _log.debug("Failed to read JSON config from %s", path, exc_info=True)
         return {}
     return data if isinstance(data, dict) else {}
@@ -5040,7 +5040,7 @@ def _read_memory_provider_existing_values(name: str) -> Dict[str, Any]:
 
     try:
         cfg = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         cfg = {}
 
     memory_cfg = cfg.get("memory") if isinstance(cfg, dict) else {}
@@ -5197,7 +5197,7 @@ def _save_memory_provider_native_config(
     if provider is not None and hasattr(provider, "save_config"):
         try:
             from agent.memory_provider import MemoryProvider as _BaseMemoryProvider
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             provider.save_config(values, str(get_hercules_home()))
             return
         if type(provider).save_config is not _BaseMemoryProvider.save_config:
@@ -5242,7 +5242,7 @@ def _discover_memory_provider_statuses() -> List[Dict[str, Any]]:
                 "available": bool(available),
                 "missing": False,
             }
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
         _log.exception("discover_memory_providers failed")
 
     cfg = load_config()
@@ -5500,7 +5500,7 @@ def get_model_info(profile: Optional[str] = None):
                 provider=provider,
                 config_context_length=None,  # ignore override — we want auto value
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             auto_ctx = 0
 
         config_ctx_int = 0
@@ -5525,7 +5525,7 @@ def get_model_info(profile: Optional[str] = None):
                     "max_output_tokens": mc.max_output_tokens,
                     "model_family": mc.model_family,
                 }
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         return {
@@ -5540,7 +5540,7 @@ def get_model_info(profile: Optional[str] = None):
         # Unknown/invalid profile must surface as 404, not degrade into a
         # 200 with empty model info (which would render as "no model set").
         raise
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _log.exception("GET /api/model/info failed")
         return dict(_EMPTY_MODEL_INFO)
 
@@ -5647,7 +5647,7 @@ def get_recommended_default_model(provider: str = ""):
                     "free_tier": None,
                 }
         return {"provider": slug, "model": "", "free_tier": None}
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         _log.exception("GET /api/model/recommended-default failed")
         return {"provider": slug, "model": "", "free_tier": None}
 
@@ -5810,7 +5810,7 @@ async def set_model_assignment(body: ModelAssignment, profile: Optional[str] = N
                     provider=provider,
                     base_url=base_url,
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 warning = None
             if warning is not None:
                 return {
@@ -5880,7 +5880,7 @@ def _apply_model_assignment_sync(
                     model,
                     name=_auto_provider_name(base_url),
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 # Never block the assignment on the bookkeeping write —
                 # model.* is already persisted and routable.
                 _log.debug("custom_providers registration skipped", exc_info=True)
@@ -6004,12 +6004,12 @@ def _infer_provider_on_model_change(
             detect_provider_for_model,
             normalize_provider,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "", name
 
     try:
         detected = detect_provider_for_model(name, prev_provider)
-    except Exception:
+    except (AttributeError, ValueError):
         detected = None
     if detected:
         return detected[0], detected[1]
@@ -6022,7 +6022,7 @@ def _infer_provider_on_model_change(
             cur_is_aggregator = (
                 normalize_provider(prev_provider) in _AGGREGATOR_PROVIDERS
             )
-        except Exception:
+        except (AttributeError, ValueError):
             cur_is_aggregator = False
         if not cur_is_aggregator:
             return "openrouter", name
@@ -6105,7 +6105,7 @@ def _denormalize_config_from_web(config: Dict[str, Any]) -> Dict[str, Any]:
                     "default": model_val,
                     "context_length": ctx_override,
                 }
-        except Exception:
+        except (ValueError):
             pass  # can't read disk config — just use the string form
     return config
 
@@ -6147,7 +6147,7 @@ def _catalog_provider_env_metadata() -> dict:
     """
     try:
         from hercules_cli.provider_catalog import provider_catalog
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
     # Env vars already declared with a NON-provider category (e.g. the shared
@@ -6156,7 +6156,7 @@ def _catalog_provider_env_metadata() -> dict:
     # aliases, but its provider card uses the provider-owned COPILOT_GITHUB_TOKEN.
     try:
         from hercules_cli.config import OPTIONAL_ENV_VARS as _OPT
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _OPT = {}
     _non_provider_keys = {
         k
@@ -6349,7 +6349,7 @@ def _parse_model_ids(resp: "Any") -> List[str]:
         if not resp.is_success:
             return []
         payload = resp.json()
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         return []
     data = payload.get("data") if isinstance(payload, dict) else payload
     if not isinstance(data, list):
@@ -6402,7 +6402,7 @@ async def validate_provider_credential(body: EnvVarUpdate, request: Request):
                 "message": "",
                 "models": _parse_model_ids(resp),
             }
-        except Exception:
+        except (httpx.HTTPStatusError, httpx.RequestError):
             return {
                 "ok": False,
                 "reachable": False,
@@ -6425,7 +6425,7 @@ async def validate_provider_credential(body: EnvVarUpdate, request: Request):
     try:
         with httpx.Client(timeout=httpx.Timeout(10.0)) as client:
             resp = client.get(url, headers=headers, params=params)
-    except Exception:
+    except (httpx.HTTPStatusError, httpx.RequestError):
         return {
             "ok": False,
             "reachable": False,
@@ -6906,7 +6906,7 @@ def _messaging_platform_catalog() -> tuple[dict[str, Any], ...]:
                 continue
             seen.add(plugin_entry.name)
             entries.append(_build_catalog_entry(plugin_entry.name, plugin_entry))
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _log.debug("plugin platform registry unavailable", exc_info=True)
 
     order = {pid: idx for idx, pid in enumerate(_PLATFORM_ORDER)}
@@ -6930,7 +6930,7 @@ def _channel_managed_env_keys() -> frozenset[str]:
         for entry in _messaging_platform_catalog():
             keys.update(entry.get("env_vars", ()))
         return frozenset(keys)
-    except Exception:
+    except (IndexError, KeyError):
         _log.debug("could not build channel-managed env key set", exc_info=True)
         return frozenset()
 
@@ -7099,7 +7099,7 @@ def _messaging_platform_payload(
             enabled = bool(plat_cfg.get("enabled"))
             hc = plat_cfg.get("home_channel")
             home_channel = hc if isinstance(hc, dict) else None
-        except Exception:
+        except (ValueError):
             enabled = False
             home_channel = None
         configured = all(env_on_disk.get(key) for key in entry["required_env"])
@@ -7118,7 +7118,7 @@ def _messaging_platform_payload(
                 if platform_config and platform_config.home_channel
                 else None
             )
-        except Exception:
+        except (ValueError):
             enabled = False
             configured = all(
                 env_on_disk.get(key) or os.getenv(key, "")
@@ -7272,7 +7272,7 @@ def _whatsapp_linked_account_from_session(
     creds_path = session_path / "creds.json"
     try:
         payload = json.loads(creds_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         return None, None, None
 
     account_id: str | None = None
@@ -7401,10 +7401,10 @@ def _terminate_whatsapp_pairing(proc: subprocess.Popen | None) -> None:
     try:
         proc.terminate()
         proc.wait(timeout=3)
-    except Exception:
+    except (AttributeError, ValueError):
         try:
             proc.kill()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 
@@ -7775,7 +7775,7 @@ def _parse_expiry_ts(value: str) -> float:
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
         return parsed.timestamp()
-    except Exception:
+    except (AttributeError, ValueError):
         return time.time() + 600
 
 
@@ -7841,7 +7841,7 @@ def _telegram_onboarding_request_sync(
     except httpx.HTTPStatusError as exc:
         try:
             parsed = exc.response.json()
-        except Exception:
+        except (ValueError):
             parsed = {}
         error = str(parsed.get("error") or parsed.get("status") or "")
         detail = _telegram_onboarding_error_message(
@@ -8295,7 +8295,7 @@ def _anthropic_oauth_status() -> Dict[str, Any]:
     if read_hercules_oauth_credentials:
         try:
             hercules_creds = read_hercules_oauth_credentials()
-        except Exception:
+        except (AttributeError, ValueError):
             hercules_creds = None
     if hercules_creds and hercules_creds.get("accessToken"):
         return {
@@ -8356,7 +8356,7 @@ def _claude_code_only_status() -> Dict[str, Any]:
         from agent.anthropic_adapter import read_claude_code_credentials
 
         creds = read_claude_code_credentials()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         creds = None
     if creds and creds.get("accessToken"):
         return {
@@ -8643,7 +8643,7 @@ def _build_oauth_catalog() -> list[Dict[str, Any]]:
                 "docs_url": d.signup_url or "",
                 "status_fn": None,
             })
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     return rows
@@ -8738,14 +8738,14 @@ async def disconnect_oauth_provider(
                 if oauth_file.exists():
                     oauth_file.unlink()
                     cleared = True
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             # Also clear the credential pool entry if present.
             try:
                 from hercules_cli.auth import clear_provider_auth
 
                 cleared = clear_provider_auth("anthropic") or cleared
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             _log.info("oauth/disconnect: %s", provider_id)
             return {"ok": bool(cleared), "provider": provider_id}
@@ -8924,7 +8924,7 @@ def _save_anthropic_oauth_creds(
         for e in existing:
             try:
                 pool.remove_entry(getattr(e, "id", ""))
-            except Exception:
+            except (AttributeError):
                 pass
         entry = PooledCredential(
             provider="anthropic",
@@ -9384,7 +9384,7 @@ def _http_response_error_detail(resp: Any) -> str:
     """Best-effort extraction of a short provider error detail."""
     try:
         payload = resp.json()
-    except Exception:
+    except (ValueError):
         payload = None
     if isinstance(payload, dict):
         error = payload.get("error")
@@ -9674,10 +9674,10 @@ def _session_latest_descendant(session_id: str, db):
             return row.get(key)
         try:
             return row[key]
-        except Exception:
+        except (IndexError, KeyError):
             try:
                 return row[index]
-            except Exception:
+            except (IndexError, KeyError):
                 return None
 
     sid = db.resolve_session_id(session_id)
@@ -9725,7 +9725,7 @@ def _session_latest_descendant(session_id: str, db):
     def started(row):
         try:
             return float(row.get("started_at") or 0)
-        except Exception:
+        except (ValueError):
             return 0.0
 
     current = sid
@@ -9872,7 +9872,7 @@ async def get_session_stats(profile: Optional[str] = None):
             ):
                 src = str(s.get("source") or "cli")
                 by_source[src] = by_source.get(src, 0) + 1
-        except Exception:
+        except (ValueError):
             pass
         return {
             "total": total,
@@ -10389,7 +10389,7 @@ def _cron_profile_dicts() -> List[Dict[str, Any]]:
 
     try:
         return [_profile_to_dict(p) for p in profiles_mod.list_profiles()]
-    except Exception:
+    except (IndexError, KeyError):
         _log.exception(
             "Failed to list profiles for cron dashboard; falling back to directory scan"
         )
@@ -10475,7 +10475,7 @@ def _list_cron_jobs_sync(profile: str = "all"):
             continue
         try:
             jobs.extend(_call_cron_for_profile(name, "list_jobs", True))
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("Failed to list cron jobs for profile %s", name)
     return jobs
 
@@ -10632,7 +10632,7 @@ async def get_cron_delivery_targets():
         from cron.scheduler import cron_delivery_targets
 
         targets.extend(cron_delivery_targets())
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _log.exception("GET /api/cron/delivery-targets failed")
     return {"targets": targets}
 
@@ -10805,7 +10805,7 @@ async def cron_fire_webhook(request: Request):
 
     try:
         body = await request.json()
-    except Exception:
+    except (ValueError):
         body = {}
     job_id = (body or {}).get("job_id") if isinstance(body, dict) else None
     if not job_id:
@@ -10856,7 +10856,7 @@ async def list_cron_blueprints():
 
             platforms = [t["id"] for t in cron_delivery_targets() if t.get("id")]
             deliver_options = ["origin", "local", *platforms]
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _log.debug(
                 "cron_delivery_targets unavailable; using static deliver options",
                 exc_info=True,
@@ -10949,7 +10949,7 @@ def _redact_mcp_env(env: Dict[str, Any]) -> Dict[str, str]:
     for k, v in (env or {}).items():
         try:
             out[str(k)] = redact_key(str(v)) if v else ""
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             out[str(k)] = "***"
     return out
 
@@ -11175,7 +11175,7 @@ async def auth_mcp_server(name: str, profile: Optional[str] = None):
                 from tools.mcp_oauth_manager import get_manager
 
                 get_manager().remove(name)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass  # No cached state to clear — fine.
             try:
                 # The default 30s connect timeout would kill the flow while the
@@ -11190,7 +11190,7 @@ async def auth_mcp_server(name: str, profile: Optional[str] = None):
                 tools = _probe_single_server(
                     name, cfg, connect_timeout=max(_cfg_timeout, 315)
                 )
-            except Exception:
+            except (ValueError):
                 storage.restore(backup)
                 raise
             if not _oauth_tokens_present(name):
@@ -11324,7 +11324,7 @@ async def list_mcp_catalog(profile: Optional[str] = None):
     except HTTPException:
         # Unknown/invalid profile → 404, not a silently-empty catalog.
         raise
-    except Exception:
+    except (AttributeError):
         _log.exception("list_mcp_catalog failed")
 
     diagnostics = []
@@ -11333,7 +11333,7 @@ async def list_mcp_catalog(profile: Optional[str] = None):
             {"name": n, "kind": k, "message": m}
             for (n, k, m) in mcp_catalog.catalog_diagnostics()
         ]
-    except Exception:
+    except (IndexError, KeyError):
         pass
 
     return {"entries": entries, "diagnostics": diagnostics}
@@ -11768,7 +11768,7 @@ async def list_credential_pool():
     for provider_id in sorted(raw_pool.keys()):
         try:
             pool = load_pool(provider_id)
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("load_pool(%s) failed", provider_id)
             continue
         entries = pool.entries()
@@ -12163,13 +12163,13 @@ async def list_hooks():
         from hercules_cli.plugins import VALID_HOOKS
 
         valid_events = sorted(VALID_HOOKS)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         valid_events = []
 
     specs = []
     try:
         specs = shell_hooks.iter_configured_hooks(_load_config())
-    except Exception:
+    except (AttributeError, ValueError):
         _log.exception("iter_configured_hooks failed")
 
     out = []
@@ -12177,12 +12177,12 @@ async def list_hooks():
         entry = None
         try:
             entry = shell_hooks.allowlist_entry_for(spec.event, spec.command)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         executable = False
         try:
             executable = shell_hooks.script_is_executable(spec.command)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         out.append({
             "event": spec.event,
@@ -12234,7 +12234,7 @@ async def create_hook(body: HookCreate):
             )
     except HTTPException:
         raise
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     cfg = load_config()
@@ -12260,7 +12260,7 @@ async def create_hook(body: HookCreate):
         try:
             shell_hooks._record_approval(event, command)
             approved = True
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("hook consent record failed")
 
     return {"ok": True, "event": event, "command": command, "approved": approved}
@@ -12301,7 +12301,7 @@ async def delete_hook(body: HookDelete):
     # Revoke consent regardless so a re-add re-prompts.
     try:
         shell_hooks.revoke(command)
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     if not removed:
@@ -12530,7 +12530,7 @@ def _installed_hub_identifiers(profile: Optional[str] = None) -> dict:
                     "scan_verdict": entry.get("scan_verdict"),
                 }
         return out
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -12563,12 +12563,12 @@ async def list_skills_hub_sources(profile: Optional[str] = None):
             if sid == "github":
                 try:
                     entry["rate_limited"] = bool(getattr(src, "is_rate_limited", False))
-                except Exception:
+                except (AttributeError, IndexError, KeyError, ValueError):
                     entry["rate_limited"] = False
             if sid == "hercules-index":
                 try:
                     index_available = bool(getattr(src, "is_available", False))
-                except Exception:
+                except (AttributeError, ValueError):
                     index_available = False
                 entry["available"] = index_available
                 # Empty-query search on the index returns featured/popular skills.
@@ -12577,7 +12577,7 @@ async def list_skills_hub_sources(profile: Optional[str] = None):
                         featured = [
                             _skill_meta_to_payload(m) for m in src.search("", limit=12)
                         ]
-                    except Exception:
+                    except (IndexError, KeyError):
                         featured = []
             out.append(entry)
         # Tell the UI which sources are worth searching individually (for its
@@ -12894,7 +12894,7 @@ class ProfileDescribeAuto(BaseModel):
 def _profile_attr(info, name: str, default: Any = None) -> Any:
     try:
         return getattr(info, name)
-    except Exception:
+    except (AttributeError):
         return default
 
 
@@ -12921,7 +12921,7 @@ def _fallback_profile_dicts(profiles_mod) -> List[Dict[str, Any]]:
     def _safe(callable_, default):
         try:
             return callable_()
-        except Exception:
+        except (AttributeError, ValueError):
             return default
 
     profiles: List[Dict[str, Any]] = []
@@ -13160,7 +13160,7 @@ async def list_profiles_endpoint():
         loop = asyncio.get_running_loop()
         profiles = await loop.run_in_executor(None, profiles_mod.list_profiles)
         return {"profiles": [_profile_to_dict(p) for p in profiles]}
-    except Exception:
+    except (IndexError, KeyError):
         _log.exception(
             "GET /api/profiles failed; falling back to profile directory scan"
         )
@@ -13227,7 +13227,7 @@ async def create_profile_endpoint(body: ProfileCreate):
         try:
             _write_profile_model(path, provider, model)
             model_set = True
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("Setting model for new profile %s failed", body.name)
 
     # Optional MCP servers. Best-effort, same rationale as model assignment.
@@ -13235,7 +13235,7 @@ async def create_profile_endpoint(body: ProfileCreate):
     if body.mcp_servers:
         try:
             mcp_written = _write_profile_mcp_servers(path, body.mcp_servers)
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception("Writing MCP servers for new profile %s failed", body.name)
 
     # Optional "keep" skill selection — replace semantics. When the builder
@@ -13245,7 +13245,7 @@ async def create_profile_endpoint(body: ProfileCreate):
     if body.keep_skills:
         try:
             skills_disabled = _disable_unselected_skills(path, body.keep_skills)
-        except Exception:
+        except (AttributeError, ValueError):
             _log.exception(
                 "Applying skill selection for new profile %s failed", body.name
             )
@@ -13264,7 +13264,7 @@ async def create_profile_endpoint(body: ProfileCreate):
                 _hub_action_name("install", ident),
             )
             hub_installs.append({"identifier": ident, "pid": proc.pid})
-        except Exception:
+        except (IndexError, KeyError):
             _log.exception(
                 "Spawning hub-skill install %s for new profile %s failed",
                 ident,
@@ -13296,11 +13296,11 @@ async def get_active_profile_endpoint():
 
     try:
         active = profiles_mod.get_active_profile() or "default"
-    except Exception:
+    except (AttributeError, ValueError):
         active = "default"
     try:
         current = profiles_mod.get_active_profile_name() or "default"
-    except Exception:
+    except (AttributeError, ValueError):
         current = "default"
     return {"active": active, "current": current}
 
@@ -13717,7 +13717,7 @@ def _clear_skills_prompt_cache() -> None:
         from agent.prompt_builder import clear_skills_system_prompt_cache
 
         clear_skills_system_prompt_cache(clear_snapshot=True)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -13806,7 +13806,7 @@ async def get_toolsets(profile: Optional[str] = None):
     for name, label, desc in _get_effective_configurable_toolsets():
         try:
             tools = sorted(set(resolve_toolset(name)))
-        except Exception:
+        except (AttributeError, ValueError):
             tools = []
         is_enabled = name in enabled_toolsets
         result.append({
@@ -14568,7 +14568,7 @@ async def get_models_analytics(days: int = 30, profile: Optional[str] = None):
                         "max_output_tokens": mc.max_output_tokens,
                         "model_family": mc.model_family,
                     }
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
             models.append({
@@ -14704,7 +14704,7 @@ async def _legacy_pump(ws: "WebSocket", bridge) -> None:
                     continue
                 try:
                     await ws.send_bytes(chunk)
-                except Exception:
+                except (RuntimeError):
                     return
         finally:
             # The child has exited (EOF) or the send side broke.  Close the
@@ -14722,11 +14722,11 @@ async def _legacy_pump(ws: "WebSocket", bridge) -> None:
             # the reap independent of that cancellation race (#54028).
             try:
                 await asyncio.to_thread(bridge.close)
-            except Exception:
+            except (RuntimeError):
                 pass
             try:
                 await ws.close()
-            except Exception:
+            except (RuntimeError):
                 pass
 
     reader_task = asyncio.create_task(pump_pty_to_ws())
@@ -15058,7 +15058,7 @@ def _resolve_chat_argv(
         from hercules_cli.config import apply_terminal_config_to_env
 
         apply_terminal_config_to_env(env=env)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _log.debug(
             "Failed to apply terminal config bridge for dashboard chat", exc_info=True
         )
@@ -15268,7 +15268,7 @@ async def _broadcast_event(app: Any, channel: str, payload: str) -> None:
     for sub in subs:
         try:
             await sub.send_text(payload)
-        except Exception:
+        except (RuntimeError):
             # Subscriber went away mid-send; the /api/events finally clause
             # will remove it from the registry on its next iteration.
             _log.warning(
@@ -16666,7 +16666,7 @@ def _discover_user_themes() -> list:
     for f in sorted(themes_dir.glob("*.yaml")):
         try:
             data = yaml.safe_load(f.read_text(encoding="utf-8"))
-        except Exception:
+        except (yaml.YAMLError):
             continue
         normalised = _normalise_theme_definition(data)
         if normalised is not None:
@@ -16957,7 +16957,7 @@ async def get_dashboard_plugins():
 
         enabled_set = _get_enabled_set()
         disabled_set = _get_disabled_set()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         enabled_set = set()
         disabled_set = set()
 
@@ -17073,7 +17073,7 @@ def _merged_plugins_hub() -> Dict[str, Any]:
                         auth_required = True
                         auth_command = f"hercules auth {name}"
                         break
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
         rows.append({
@@ -17105,7 +17105,7 @@ def _merged_plugins_hub() -> Dict[str, Any]:
     try:
         for n, desc in _discover_context_engines():
             context_engines.append({"name": n, "description": desc})
-    except Exception:
+    except (AttributeError, ValueError):
         context_engines = []
 
     return {
@@ -17307,7 +17307,7 @@ async def serve_plugin_asset(plugin_name: str, file_path: str):
 
         enabled_set = _get_enabled_set()
         disabled_set = _get_disabled_set()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         enabled_set = set()
         disabled_set = set()
     if plugin.get("source") == "user":
@@ -17390,7 +17390,7 @@ def _mount_plugin_api_routes():
 
         enabled_set = _get_enabled_set()
         disabled_set = _get_disabled_set()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         enabled_set = set()
         disabled_set = set()
 
@@ -17472,7 +17472,7 @@ def _mount_plugin_api_routes():
             sys.modules[module_name] = mod
             try:
                 spec.loader.exec_module(mod)
-            except Exception:
+            except (AttributeError, ValueError):
                 sys.modules.pop(module_name, None)
                 raise
             router = getattr(mod, "router", None)
@@ -17548,7 +17548,7 @@ def _write_dashboard_ready_file(actual_port: int) -> None:
         if tmp_name:
             try:
                 Path(tmp_name).unlink(missing_ok=True)
-            except Exception:
+            except (OSError):
                 pass
         _log.warning("Failed to write dashboard ready file %r: %s", target, exc)
 
@@ -17591,7 +17591,7 @@ def _maybe_open_browser(
         try:
             time.sleep(1.0)
             webbrowser.open(_open_url)
-        except Exception:
+        except (OSError):
             pass
 
     threading.Thread(target=_open, daemon=True).start()
@@ -17850,14 +17850,14 @@ def start_server(
         from uvicorn._compat import asyncio_run as _runner
 
         _loop_factory = config.get_loop_factory()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _runner = None
         _loop_factory = None
         try:
             asyncio.set_event_loop_policy(
                 asyncio.WindowsSelectorEventLoopPolicy()  # type: ignore[attr-defined]
             )
-        except Exception:
+        except (IndexError, KeyError):
             pass
 
     if _runner is not None:

@@ -26,6 +26,7 @@ from typing import Any, Optional
 
 from hercules_cli import kanban_db as kb
 from hercules_cli import kanban_swarm as ks
+import shutil
 
 
 # ---------------------------------------------------------------------------
@@ -149,11 +150,11 @@ def _check_dispatcher_presence() -> tuple[bool, str]:
     """
     try:
         from gateway.status import get_running_pid  # type: ignore
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return (True, "")  # can't probe — silent
     try:
         pid = get_running_pid()
-    except Exception:
+    except (AttributeError, ValueError):
         return (True, "")  # probe errored — silent
 
     # Even if the gateway is up, dispatch_in_gateway may be off.
@@ -162,7 +163,7 @@ def _check_dispatcher_presence() -> tuple[bool, str]:
 
         cfg = load_config()
         dispatch_on = bool(cfg.get("kanban", {}).get("dispatch_in_gateway", True))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         dispatch_on = True  # can't tell — assume default
 
     if pid and dispatch_on:
@@ -1161,7 +1162,7 @@ def _profile_author() -> str:
         from hercules_cli.profiles import get_active_profile_name
 
         return get_active_profile_name() or "user"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "user"
 
 
@@ -1209,7 +1210,7 @@ def _board_task_counts(slug: str) -> dict[str, int]:
                 "SELECT status, COUNT(*) AS n FROM tasks GROUP BY status"
             ).fetchall()
         return {r["status"]: int(r["n"]) for r in rows}
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         return {}
 
 
@@ -1421,7 +1422,7 @@ def _cmd_init(args: argparse.Namespace) -> int:
     # through to `hercules -p <name>`.
     try:
         profiles = kb.list_profiles_on_disk()
-    except Exception:
+    except (AttributeError, ValueError):
         profiles = []
     if profiles:
         print(
@@ -1607,7 +1608,7 @@ def _cmd_list(args: argparse.Namespace) -> int:
     # never see this — the feature stays invisible until you opt in.
     try:
         all_boards = kb.list_boards(include_archived=False)
-    except Exception:
+    except (AttributeError, ValueError):
         all_boards = []
     if len(all_boards) > 1:
         current = kb.get_current_board()
@@ -1714,7 +1715,7 @@ def _cmd_show(args: argparse.Namespace) -> int:
 
             cfg = load_config()
             cfg_val = (cfg.get("kanban", {}) or {}).get("failure_limit")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             cfg_val = None
         if cfg_val is not None and int(cfg_val) != kb.DEFAULT_FAILURE_LIMIT:
             print(f"  max-retries: {int(cfg_val)} (config kanban.failure_limit)")
@@ -2356,7 +2357,7 @@ def _cmd_dispatch(args: argparse.Namespace) -> int:
             if cli_max is not None
             else _coerce_positive_int(_kanban_cfg.get("max_spawn"))
         )
-    except Exception:
+    except (AttributeError, ValueError):
         default_assignee = None
         max_in_progress_per_profile = None
         max_in_progress = None
@@ -2562,7 +2563,7 @@ def _cmd_daemon(args: argparse.Namespace) -> int:
         try:
             with kb.connect_closing() as conn:
                 return kb.has_spawnable_ready(conn)
-        except Exception:
+        except (AttributeError, ValueError):
             return False
 
     try:
@@ -2618,7 +2619,7 @@ def _cmd_watch(args: argparse.Namespace) -> int:
                     continue
                 try:
                     payload = json.loads(r["payload"]) if r["payload"] else None
-                except Exception:
+                except (IndexError, KeyError):
                     payload = None
                 pl = f" {payload}" if payload else ""
                 print(

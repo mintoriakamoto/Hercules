@@ -70,7 +70,7 @@ def resolve_active_host() -> str:
 
         profile = get_active_profile_name()
         return profile_host_key(profile)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return HOST
 
@@ -757,7 +757,7 @@ def _apply_fresh_oauth_token(config: HonchoClientConfig) -> None:
         token, _ = oauth.ensure_fresh_token(resolve_config_path(), config.host)
         if token:
             config.api_key = token
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.warning("Honcho OAuth pre-build refresh failed", exc_info=True)
 
 
@@ -774,7 +774,7 @@ def _refresh_cached_oauth(client: "Honcho", config: HonchoClientConfig | None) -
         token, refreshed = oauth.ensure_fresh_token(resolve_config_path(), host)
         if refreshed and token and not oauth.apply_token_to_client(client, token):
             _honcho_client_slot.reset()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.warning("Honcho OAuth cached refresh failed", exc_info=True)
 
 
@@ -825,7 +825,7 @@ def get_honcho_client(config: HonchoClientConfig | None = None) -> Honcho:
         except ImportError:
             # lazy_deps module missing — fall through to the raw import below.
             pass
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # FeatureUnavailable or unexpected error. Don't crash here; let the
             # actual import attempt produce the canonical error message.
             pass
@@ -860,7 +860,7 @@ def get_honcho_client(config: HonchoClientConfig | None = None) -> Honcho:
                             honcho_cfg.get("timeout"),
                             honcho_cfg.get("request_timeout"),
                         )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
         # Fall back to the default so an unconfigured install cannot hang

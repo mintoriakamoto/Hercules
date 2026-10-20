@@ -79,7 +79,7 @@ def _termux_api_app_installed() -> bool:
             stdin=subprocess.DEVNULL,
         )
         return "package:com.termux.api" in (result.stdout or "")
-    except Exception:
+    except (IndexError, KeyError, subprocess.CalledProcessError):
         return False
 
 
@@ -229,7 +229,7 @@ def detect_audio_environment() -> dict:
                     )
                 else:
                     warnings.append("No audio input/output devices detected")
-        except Exception:
+        except (ZeroDivisionError):
             # In WSL with PulseAudio, device queries can fail even though
             # recording/playback works fine. Don't block if host audio
             # forwarding is configured.
@@ -484,7 +484,7 @@ class TermuxAudioRecorder:
             self._current_rms = 0
         try:
             self._stop_termux_recording()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         if path and os.path.isfile(path):
             try:
@@ -698,7 +698,7 @@ class AudioRecorder:
             if stream is not None:
                 try:
                     stream.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             raise RuntimeError(
                 f"Failed to open audio input stream: {e}. "
@@ -766,7 +766,7 @@ class AudioRecorder:
             try:
                 stream.stop()
                 stream.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         t = threading.Thread(target=_do_close, daemon=True)
@@ -1085,7 +1085,7 @@ def _split_wav_for_transcription(wav_path: str, *, max_file_size: int) -> List[s
                     chunk.setcomptype(params.comptype, params.compname)
                     chunk.writeframes(frames)
                 chunk_paths.append(chunk_path)
-            except Exception:
+            except (OSError):
                 try:
                     os.unlink(chunk_path)
                 except OSError:
@@ -1114,13 +1114,13 @@ def stop_playback() -> None:
         try:
             proc.terminate()
             logger.info("Audio playback interrupted")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     # Also stop sounddevice playback if active
     try:
         sd, _ = _import_audio()
         sd.stop()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 

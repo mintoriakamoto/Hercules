@@ -6,7 +6,6 @@ This test simulates a realistic delegation scenario and shows:
 - Overall cost optimization for mixed workloads
 """
 
-import pytest
 
 from agent.routing_metrics import get_routing_metrics, reset_routing_metrics
 from agent.routing_types import ModelTier, TaskCategory

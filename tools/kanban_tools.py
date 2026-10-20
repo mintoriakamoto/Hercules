@@ -82,7 +82,7 @@ def _kanban_toolset_enabled() -> bool:
         return "kanban" in _get_platform_tools(
             cfg, _resolve_session_platform(), include_default_mcp_servers=False
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -100,7 +100,7 @@ def _resolve_session_platform() -> str:
         resolved = os.getenv("HERCULES_PLATFORM") or get_session_env(
             "HERCULES_SESSION_PLATFORM"
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         resolved = os.getenv("HERCULES_PLATFORM")
     return (resolved or "cli").strip() or "cli"
 
@@ -243,7 +243,7 @@ def _goal_judge_available() -> bool:
         from agent.auxiliary_client import get_text_auxiliary_client
 
         client, model = get_text_auxiliary_client("goal_judge")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
     return client is not None and bool(model)
 
@@ -310,7 +310,7 @@ def heartbeat_current_worker_from_env() -> bool:
             claim_lock = os.environ.get("HERCULES_KANBAN_CLAIM_LOCK")
             try:
                 kb.heartbeat_claim(conn, tid, claimer=claim_lock)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("auto-heartbeat: heartbeat_claim failed", exc_info=True)
             run_id_raw = os.environ.get("HERCULES_KANBAN_RUN_ID")
             run_id: Optional[int]
@@ -320,15 +320,15 @@ def heartbeat_current_worker_from_env() -> bool:
                 run_id = None
             try:
                 kb.heartbeat_worker(conn, tid, note=None, expected_run_id=run_id)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("auto-heartbeat: heartbeat_worker failed", exc_info=True)
         finally:
             try:
                 conn.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         return True
-    except Exception:
+    except (AttributeError, ValueError):
         logger.debug("auto-heartbeat: bridge failed", exc_info=True)
         return False
 
@@ -1045,7 +1045,7 @@ def _maybe_auto_subscribe(conn: Any, task_id: str) -> bool:
         cfg = load_config()
         if not cfg_get(cfg, "kanban", "auto_subscribe_on_create", default=True):
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         # If config can't load we still default to True — this is the
         # user-friendly behaviour that mirrors the pre-gate implementation.
         pass

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -87,7 +88,7 @@ def format_secret_source_suffix(env_var: str) -> str:
         registered = get_source(source)
         if registered is not None and registered.label:
             return f" (from {registered.label})"
-    except Exception:  # label lookup must never raise
+    except (ImportError, ModuleNotFoundError):
         pass
     return f" (from {source})"
 
@@ -214,7 +215,7 @@ def _sanitize_env_file_if_needed(path: Path) -> None:
                 except OSError:
                     pass
                 raise
-    except Exception:
+    except (OSError):
         pass  # best-effort — don't block gateway startup
 
 
@@ -294,7 +295,7 @@ def _apply_managed_env() -> None:
         from hercules_cli import managed_scope
 
         managed_dir = managed_scope.get_managed_dir()
-    except Exception:  # managed scope must never block startup
+    except (ImportError, ModuleNotFoundError):
         return
     if managed_dir is None:
         return
@@ -335,7 +336,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
 
     try:
         cfg = _load_secrets_config(home_path)
-    except Exception:  # config errors must not block startup
+    except (AttributeError, ValueError):
         return
     if not cfg:
         return
@@ -347,7 +348,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
 
     try:
         report = apply_all(cfg, home_path)
-    except Exception:  # belt-and-braces; apply_all shouldn't raise
+    except (AttributeError, ValueError):
         return
 
     if report.applied_any:
@@ -394,6 +395,6 @@ def _load_secrets_config(home_path: Path) -> dict:
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             data = fast_safe_load(f) or {}
-    except Exception:
+    except (OSError):
         return {}
     return data.get("secrets") or {}

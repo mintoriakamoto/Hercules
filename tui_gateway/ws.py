@@ -348,7 +348,7 @@ async def handle_ws(ws: Any) -> None:
                     f"reason={getattr(exc, 'reason', None)})"
                 )
                 break
-            except Exception:
+            except (AttributeError):
                 disconnect_reason = "receive_failed"
                 _log.exception("ws receive failed peer=%s", peer)
                 break
@@ -390,7 +390,7 @@ async def handle_ws(ws: Any) -> None:
             req_method = req.get("method") if isinstance(req, dict) else None
             try:
                 resp = await asyncio.to_thread(server.dispatch, req, transport)
-            except Exception:
+            except (RuntimeError):
                 dispatch_crashes += 1
                 _log.exception(
                     "ws dispatch crash peer=%s id=%s method=%s",
@@ -448,7 +448,7 @@ async def handle_ws(ws: Any) -> None:
                     transport,
                     end_reason="ws_disconnect",
                 )
-            except Exception:
+            except (RuntimeError):
                 _log.exception("ws transport teardown failed peer=%s", peer)
         try:
             await ws.close()

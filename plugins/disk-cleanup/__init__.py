@@ -74,7 +74,7 @@ def _attempt_track(path_str: str, task_id: str, session_id: str) -> None:
     """Best-effort auto-track. Never raises."""
     try:
         p = Path(path_str).expanduser()
-    except Exception:
+    except (OSError):
         return
     if not p.exists():
         return

@@ -180,7 +180,7 @@ class WecomCallbackAdapter(BasePlatformAdapter):
                         exc,
                     )
             return True
-        except Exception:
+        except (requests.RequestException, OSError):
             await self._cleanup()
             logger.exception("[WecomCallback] Failed to start")
             return False
@@ -290,7 +290,7 @@ class WecomCallbackAdapter(BasePlatformAdapter):
                 crypt = self._crypt_for_app(app)
                 plain = crypt.verify_url(msg_signature, timestamp, nonce, echostr)
                 return web.Response(text=plain, content_type="text/plain")
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
         return web.Response(status=403, text="signature verification failed")
 
@@ -360,7 +360,7 @@ class WecomCallbackAdapter(BasePlatformAdapter):
                 return web.Response(text="success", content_type="text/plain")
             except WeComCryptoError:
                 continue
-            except Exception:
+            except (requests.RequestException, OSError):
                 logger.exception("[WecomCallback] Error handling message")
                 break
         return web.Response(status=400, text="invalid callback payload")
@@ -373,7 +373,7 @@ class WecomCallbackAdapter(BasePlatformAdapter):
                 task = asyncio.create_task(self.handle_message(event))
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
-            except Exception:
+            except (RuntimeError):
                 logger.exception("[WecomCallback] Failed to enqueue event")
 
     # ------------------------------------------------------------------

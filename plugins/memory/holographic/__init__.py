@@ -377,7 +377,7 @@ def _load_plugin_config() -> dict:
         with open(config_path, encoding="utf-8-sig") as f:
             all_config = yaml.safe_load(f) or {}
         return cfg_get(all_config, "plugins", "hercules-memory-store", default={}) or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -424,7 +424,7 @@ class HolographicMemoryProvider(MemoryProvider):
             existing["plugins"]["hercules-memory-store"] = values
             with open(config_path, "w", encoding="utf-8") as f:
                 yaml.dump(existing, f, default_flow_style=False)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     def get_config_schema(self):
@@ -542,7 +542,7 @@ class HolographicMemoryProvider(MemoryProvider):
             total = self._store._conn.execute("SELECT COUNT(*) FROM facts").fetchone()[
                 0
             ]
-        except Exception:
+        except (sqlite3.DatabaseError, OSError):
             total = 0
         if total == 0:
             return (
@@ -564,7 +564,7 @@ class HolographicMemoryProvider(MemoryProvider):
             profile = self._store.list_profile_facts(
                 limit=int(self._config.get("profile_inject_limit", 15))
             )
-        except Exception:
+        except (requests.RequestException, OSError):
             profile = []
         if profile:
             lines = "\n".join(f"- {p.get('content', '')}" for p in profile)
@@ -583,7 +583,7 @@ class HolographicMemoryProvider(MemoryProvider):
             if llm is not None and getattr(llm, "enabled", False):
                 try:
                     expanded = llm.expand_query(query)
-                except Exception:
+                except (AttributeError, ValueError):
                     expanded = None
                 if expanded and expanded.strip().lower() != query.strip().lower():
                     extra = self._retriever.search(
@@ -816,7 +816,7 @@ class HolographicMemoryProvider(MemoryProvider):
                     importance=int(ins.get("importance", 8)),
                 )
                 made += 1
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 continue
         result["insights"] = made
         if made:
@@ -1181,7 +1181,7 @@ class HolographicMemoryProvider(MemoryProvider):
                     )
                     if res.get("action") in ("new", "update"):
                         stored += 1
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     continue
             logger.info(
                 "LLM salience: extracted %d facts (%d new/updated)", len(facts), stored
@@ -1232,7 +1232,7 @@ class HolographicMemoryProvider(MemoryProvider):
                     try:
                         self._store.add_fact(content[:400], category="user_pref")
                         extracted += 1
-                    except Exception:
+                    except (KeyError, IndexError):
                         pass
                     break
 
@@ -1241,7 +1241,7 @@ class HolographicMemoryProvider(MemoryProvider):
                     try:
                         self._store.add_fact(content[:400], category="project")
                         extracted += 1
-                    except Exception:
+                    except (KeyError, IndexError):
                         pass
                     break
 

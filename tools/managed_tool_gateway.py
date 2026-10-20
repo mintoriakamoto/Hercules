@@ -51,7 +51,7 @@ def _read_nous_provider_state() -> Optional[dict]:
         nous_provider = providers.get("nous", {})
         if isinstance(nous_provider, dict):
             return nous_provider
-    except Exception:
+    except (ValueError):
         pass
     return None
 

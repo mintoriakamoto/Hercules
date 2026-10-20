@@ -10,9 +10,8 @@ from __future__ import annotations
 import json
 import os
 import sys
-from typing import List, Dict, Any
+from typing import Dict, Any
 
-import pytest
 
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -335,7 +334,6 @@ class TestAssembly:
         from tools.tool_search import (
             assemble_tool_defs,
             ToolSearchConfig,
-            BRIDGE_TOOL_NAMES,
         )
 
         defs = [_td("terminal", "Run shell"), _td("tool_search", "old")]
@@ -461,7 +459,6 @@ class TestRegression_OpenClawCron84141:
         from tools.tool_search import (
             assemble_tool_defs,
             ToolSearchConfig,
-            BRIDGE_TOOL_NAMES,
             classify_tools,
         )
 

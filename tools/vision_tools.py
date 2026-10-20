@@ -68,7 +68,7 @@ def _resolve_download_timeout() -> float:
         val = cfg_get(cfg, "auxiliary", "vision", "download_timeout")
         if val is not None:
             return float(val)
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     return 30.0
 
@@ -156,7 +156,7 @@ def _resolve_vision_cpu_workers() -> int:
             parsed = int(val)
             if parsed >= 1:
                 return parsed
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     return _detect_host_cpus()
 
@@ -278,7 +278,7 @@ def _rasterize_svg_to_png(svg_path: Path, out_path: Path) -> bool:
 
         cairosvg.svg2png(url=str(svg_path), write_to=str(out_path))
         return out_path.exists() and out_path.stat().st_size > 0
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     # 2) svglib + reportlab
     try:
@@ -289,7 +289,7 @@ def _rasterize_svg_to_png(svg_path: Path, out_path: Path) -> bool:
         if drawing is not None:
             renderPM.drawToFile(drawing, str(out_path), fmt="PNG")
             return out_path.exists() and out_path.stat().st_size > 0
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     # 3) system rasterizers
     import shutil as _shutil
@@ -315,7 +315,7 @@ def _rasterize_svg_to_png(svg_path: Path, out_path: Path) -> bool:
                 )
                 if out_path.exists() and out_path.stat().st_size > 0:
                     return True
-            except Exception:
+            except (subprocess.CalledProcessError):
                 continue
     return False
 
@@ -632,7 +632,7 @@ def _image_exceeds_dimension(image_path: Path, max_dimension: int) -> bool:
 
         with _PILImage.open(image_path) as _img:
             return max(_img.size) > max_dimension
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         return False
 
 
@@ -671,7 +671,7 @@ def _resize_image_for_vision(
             with _PILQuick.open(image_path) as _quick_img:
                 if max(_quick_img.size) > max_dimension:
                     needs_resize_for_dims = True
-        except Exception:
+        except (ImportError, ModuleNotFoundError, OSError):
             pass  # can't check; Pillow path below will handle or skip
 
     if not needs_resize_for_bytes and not needs_resize_for_dims:
@@ -701,7 +701,7 @@ def _resize_image_for_vision(
             _ensure_dep("tool.vision", prompt=False)
             from PIL import Image
             import io as _io
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.info("Pillow not installed — cannot auto-resize oversized image")
             if data_url is None:
                 data_url = _image_to_base64_data_url(image_path, mime_type=mime_type)
@@ -878,7 +878,7 @@ def _supports_media_in_tool_results(provider: str, model: str) -> bool:
         profile = get_provider_profile(p)
         if profile is not None and profile.supports_vision:
             return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Other vision-capable provider stacks. Conservative default: False.
@@ -1060,7 +1060,7 @@ async def _vision_analyze_native(
             if should_cleanup and temp_image_path.exists():
                 try:
                     temp_image_path.unlink()
-                except Exception:
+                except (OSError):
                     pass
             temp_image_path = normalized_path
             should_cleanup = True
@@ -1124,7 +1124,7 @@ async def _vision_analyze_native(
             try:
                 if temp_image_path.exists():
                     temp_image_path.unlink()
-            except Exception:
+            except (OSError):
                 pass
 
 
@@ -1240,7 +1240,7 @@ async def vision_analyze_tool(
             if should_cleanup and temp_image_path.exists():
                 try:
                     temp_image_path.unlink()
-                except Exception:
+                except (OSError):
                     pass
             temp_image_path = normalized_path
             should_cleanup = True
@@ -1306,7 +1306,7 @@ async def vision_analyze_tool(
             _vtemp = _vision_cfg.get("temperature")
             if _vtemp is not None:
                 vision_temperature = float(_vtemp)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
         call_kwargs = {
             "task": "vision",
@@ -1466,7 +1466,7 @@ def check_vision_requirements() -> bool:
         # provider can't be resolved.
         _provider, client, _model = resolve_vision_provider_client(provider="auto")
         return client is not None
-    except Exception:
+    except (AttributeError, ValueError):
         return False
 
 
@@ -1594,7 +1594,7 @@ async def _handle_vision_analyze(args: Dict[str, Any], **kw: Any) -> str:
         _vmodel = cfg_get(_cfg, "auxiliary", "vision", "model")
         if _vmodel:
             model = str(_vmodel).strip() or None
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     if not model:
         model = os.getenv("AUXILIARY_VISION_MODEL", "").strip() or None
@@ -1848,7 +1848,7 @@ async def video_analyze_tool(
             _vtemp = _vision_cfg.get("temperature")
             if _vtemp is not None:
                 vision_temperature = float(_vtemp)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
 
         call_kwargs = {
@@ -2012,7 +2012,7 @@ def _handle_video_analyze(args: Dict[str, Any], **kw: Any) -> Awaitable[str]:
         )
         if _vmodel:
             model = str(_vmodel).strip() or None
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     if not model:
         model = (

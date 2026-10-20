@@ -15,14 +15,16 @@ import json
 import logging
 import os
 import platform
+import re
 import secrets
+import shutil
 import stat
 import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
 from hercules_constants import get_hercules_home
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from utils import base_url_host_matches, normalize_proxy_env_vars
 
 # NOTE: `import anthropic` is deliberately NOT at module top — the SDK pulls
@@ -44,7 +46,7 @@ def _get_anthropic_sdk():
             _lazy_ensure("provider.anthropic", prompt=False)
         except ImportError:
             pass
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # FeatureUnavailable — fall through to ImportError handling below
             pass
         try:
@@ -217,7 +219,7 @@ def _resolve_positive_anthropic_max_tokens(value) -> Optional[int]:
 
         if not math.isfinite(value):
             return None
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return None
     floored = int(value)  # truncates toward zero for floats
     return floored if floored > 0 else None
@@ -383,7 +385,7 @@ def _detect_claude_code_version() -> str:
                 version = result.stdout.strip().split()[0]
                 if version and version[0].isdigit():
                     return version
-        except Exception:
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
             pass
     return _CLAUDE_CODE_VERSION_FALLBACK
 
@@ -1298,7 +1300,7 @@ def _resolve_anthropic_pool_token() -> Optional[str]:
     """
     try:
         from agent.credential_pool import AUTH_TYPE_OAUTH, load_pool
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     try:
@@ -1308,7 +1310,7 @@ def _resolve_anthropic_pool_token() -> Optional[str]:
         # is deliberately NOT used — it runs clear_expired=True, refresh=True,
         # which would violate this read-only contract.
         entries = pool._available_entries(clear_expired=False, refresh=False)
-    except Exception:
+    except (OSError):
         logger.debug("Failed to read Anthropic credential_pool", exc_info=True)
         return None
 
@@ -1504,14 +1506,14 @@ def run_hercules_oauth_login_pure() -> Optional[Dict[str, Any]]:
 
     try:
         from hercules_cli.auth import _can_open_graphical_browser as _can_open_gui
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _can_open_gui = lambda: True  # degrade to prior behavior
 
     if _can_open_gui():
         try:
             webbrowser.open(auth_url)
             print("  (Browser opened automatically)")
-        except Exception:
+        except (OSError):
             pass
 
     print()

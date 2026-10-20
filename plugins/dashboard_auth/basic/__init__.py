@@ -65,7 +65,7 @@ import logging
 import os
 import secrets
 import time
-from typing import Any, Optional
+from typing import Optional
 
 from hercules_cli.dashboard_auth import (
     DashboardAuthProvider,
@@ -189,7 +189,7 @@ def _unsign(token: str, secret: bytes) -> Optional[dict]:
         if not hmac.compare_digest(sig, expected):
             return None
         return json.loads(raw)
-    except Exception:
+    except (KeyError, IndexError):
         return None
 
 

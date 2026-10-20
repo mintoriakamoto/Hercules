@@ -79,7 +79,7 @@ def expensive_model_warning(
             input_cost, output_cost, source = _pricing_from_model_info(
                 get_model_info(provider, model)
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
     if input_cost is None and output_cost is None:
         try:
@@ -91,7 +91,7 @@ def expensive_model_warning(
                 base_url=base_url,
                 api_key=api_key,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             entry = None
         if entry is not None:
             input_cost = entry.input_cost_per_million

@@ -97,7 +97,7 @@ def _ws_upgrade_authorized(ws: "WebSocket") -> bool:
     """
     try:
         from hercules_cli import web_server as _ws
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # No dashboard context (tests). Accept so the tail loop is still
         # testable; in production the dashboard module always imports
         # cleanly because it's the caller.
@@ -187,7 +187,7 @@ def _task_dict(
     # computing deltas client-side.
     try:
         d["age"] = kanban_db.task_age(task)
-    except Exception:
+    except (KeyError, IndexError):
         d["age"] = {
             "created_age_seconds": None,
             "started_age_seconds": None,
@@ -668,7 +668,7 @@ def create_task(payload: CreateTaskBody, board: Optional[str] = Query(None)):
                 running, message = _check_dispatcher_presence()
                 if not running and message:
                     body["warning"] = message
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 # Probe failure must never block the create itself.
                 pass
         return body
@@ -1808,7 +1808,7 @@ def get_config():
         from hercules_cli.config import load_config
 
         cfg = load_config() or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         cfg = {}
     dash_cfg = cfg.get("dashboard") or {}
     # dashboard.kanban may itself be a dict; fall back to {}.
@@ -1848,11 +1848,11 @@ def _configured_home_channels() -> list[dict]:
     """
     try:
         from gateway.config import load_gateway_config
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
     try:
         gw_cfg = load_gateway_config()
-    except Exception:
+    except (AttributeError, ValueError):
         return []
     result: list[dict] = []
     for platform, pcfg in gw_cfg.platforms.items():
@@ -1876,7 +1876,7 @@ def _active_profile_name() -> str:
         from hercules_cli.profiles import get_active_profile_name
 
         return get_active_profile_name() or "default"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "default"
 
 
@@ -2126,7 +2126,7 @@ def _board_counts(slug: str) -> dict[str, int]:
             return {r["status"]: int(r["n"]) for r in rows}
         finally:
             conn.close()
-    except Exception:
+    except (sqlite3.DatabaseError, OSError):
         return {}
 
 
@@ -2414,7 +2414,7 @@ def get_orchestration_settings():
         from hercules_cli.config import load_config
 
         cfg = load_config() or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         cfg = {}
     kanban_cfg = (cfg.get("kanban") or {}) if isinstance(cfg, dict) else {}
     explicit_orch = (kanban_cfg.get("orchestrator_profile") or "").strip()
@@ -2433,7 +2433,7 @@ def get_orchestration_settings():
             resolved_orch = active_default
         if not resolved_default or not profiles_mod.profile_exists(resolved_default):
             resolved_default = active_default
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         active_default = "default"
         if not resolved_orch:
             resolved_orch = active_default
@@ -2475,7 +2475,7 @@ def set_orchestration_settings(payload: OrchestrationSettingsBody):
     # Validate any non-empty profile names exist before saving.
     try:
         from hercules_cli import profiles as profiles_mod
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         profiles_mod = None  # type: ignore
 
     if payload.orchestrator_profile is not None:
@@ -2489,7 +2489,7 @@ def set_orchestration_settings(payload: OrchestrationSettingsBody):
                     )
             except HTTPException:
                 raise
-            except Exception:
+            except (AttributeError, ValueError):
                 pass  # fail open if the lookup itself errors
         kanban_section["orchestrator_profile"] = name
 
@@ -2504,7 +2504,7 @@ def set_orchestration_settings(payload: OrchestrationSettingsBody):
                     )
             except HTTPException:
                 raise
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         kanban_section["default_assignee"] = name
 
@@ -2566,7 +2566,7 @@ async def stream_events(ws: WebSocket):
                 for r in rows:
                     try:
                         payload = json.loads(r["payload"]) if r["payload"] else None
-                    except Exception:
+                    except (KeyError, IndexError):
                         payload = None
                     out.append({
                         "id": r["id"],
@@ -2599,5 +2599,5 @@ async def stream_events(ws: WebSocket):
         log.warning("Kanban event stream error: %s", exc)
         try:
             await ws.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass

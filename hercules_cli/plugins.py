@@ -244,7 +244,7 @@ def _get_disabled_plugins() -> set:
         config = load_config()
         disabled = cfg_get(config, "plugins", "disabled", default=[])
         return set(disabled) if isinstance(disabled, list) else set()
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         return set()
 
 
@@ -275,7 +275,7 @@ def _get_enabled_plugins() -> Optional[set]:
         if not isinstance(enabled, list):
             return None
         return set(enabled)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 
@@ -401,7 +401,7 @@ class PluginContext:
             from hercules_cli.profiles import get_active_profile_name
 
             return get_active_profile_name()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return "default"
 
     # -- tool registration --------------------------------------------------
@@ -483,7 +483,7 @@ class PluginContext:
             from hercules_cli.config import load_config
 
             cfg = load_config() or {}
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # If we can't load config, fail closed — better to break the
             # override than silently grant it.
             return False
@@ -594,7 +594,7 @@ class PluginContext:
                     clean,
                 )
                 return
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # If commands module isn't available, skip the check
 
         self._manager._plugin_commands[clean] = {
@@ -1669,7 +1669,7 @@ class PluginManager:
                                 "treating as kind='model-provider'",
                                 key,
                             )
-                    except Exception:
+                    except (IndexError, KeyError):
                         pass
 
             logger.debug(
@@ -1786,7 +1786,7 @@ class PluginManager:
                 platform_name,
                 lookup_key,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # If the registry import fails for any reason, fall back to eager
             # loading so the platform is never silently lost.
             logger.debug(
@@ -2354,7 +2354,7 @@ def resolve_pre_tool_block(
                 details.message or "",
                 rule_key=details.rule_key or tool_name,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # Fail-closed: if the gate itself errors, block rather than
             # silently execute an action a plugin flagged for approval.
             return f"BLOCKED: plugin approval gate failed for {tool_name}"
@@ -2525,7 +2525,7 @@ def get_plugin_toolsets() -> List[tuple]:
 
     try:
         from tools.registry import registry
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
     # Group plugin tool names by their toolset

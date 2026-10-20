@@ -1,3 +1,9 @@
+"""Timeout configuration and management for provider requests.
+
+Provides utilities to coerce timeout values and retrieve configured
+timeouts for specific providers and models.
+"""
+
 from __future__ import annotations
 
 
@@ -22,7 +28,7 @@ def get_provider_request_timeout(
         from hercules_cli.config import load_config_readonly
 
         config = load_config_readonly()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     providers = config.get("providers", {}) if isinstance(config, dict) else {}
@@ -52,7 +58,7 @@ def get_provider_stale_timeout(
         from hercules_cli.config import load_config_readonly
 
         config = load_config_readonly()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     providers = config.get("providers", {}) if isinstance(config, dict) else {}

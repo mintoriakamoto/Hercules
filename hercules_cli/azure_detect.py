@@ -166,7 +166,7 @@ def _http_get_json(
             body = resp.read()
             try:
                 return resp.status, json.loads(body.decode("utf-8", errors="replace"))
-            except Exception:
+            except (UnicodeDecodeError):
                 return resp.status, None
     except HTTPError as exc:
         return exc.code, None
@@ -191,7 +191,7 @@ def _looks_like_anthropic_path(url: str) -> bool:
         parsed = urlparse(url)
         path = (parsed.path or "").lower().rstrip("/")
         return path.endswith("/anthropic") or "/anthropic/" in path + "/"
-    except Exception:
+    except (ValueError, ZeroDivisionError):
         return False
 
 
@@ -293,11 +293,11 @@ def _probe_anthropic_messages(
             if exc.code == 400 and ("messages" in lowered or "model" in lowered):
                 return True
             return False
-        except Exception:
+        except (OSError):
             return False
     except (URLError, TimeoutError, OSError):
         return False
-    except Exception:  # pragma: no cover
+    except (OSError):
         return False
 
 
@@ -325,7 +325,7 @@ def detect(
     try:
         parsed = urlparse(base_url)
         result.hostname = (parsed.hostname or "").lower()
-    except Exception:
+    except (ValueError):
         result.hostname = ""
 
     # 1. Path sniff.  Azure Foundry exposes Anthropic-style deployments
@@ -393,7 +393,7 @@ def lookup_context_length(
             DEFAULT_FALLBACK_CONTEXT,
             get_model_context_length,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     # Resolve the credential once. For Entra mode this calls the token

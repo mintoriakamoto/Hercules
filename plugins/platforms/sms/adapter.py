@@ -479,7 +479,7 @@ async def _standalone_send(
             from tools.send_message_tool import _error as _e
 
             return _e(text)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return {"error": text}
 
     try:

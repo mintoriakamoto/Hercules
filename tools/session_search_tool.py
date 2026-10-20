@@ -31,6 +31,7 @@ support.
 
 import json
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 # Sources that are excluded from session browsing/searching by default.
@@ -186,13 +187,13 @@ def _locate_session_db(session_id: str):
     try:
         from hercules_cli import profiles as profiles_mod
         from hercules_state import SessionDB
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None, None
 
     targets = [("default", profiles_mod.get_profile_dir("default"))]
     try:
         targets += [(info.name, info.path) for info in profiles_mod.list_profiles()]
-    except Exception:
+    except (IndexError, KeyError):
         logging.debug("list_profiles failed during session locate", exc_info=True)
 
     seen: set = set()
@@ -204,12 +205,12 @@ def _locate_session_db(session_id: str):
         seen.add(key)
         try:
             pdb = SessionDB(db_path=db_path, read_only=True)
-        except Exception:
+        except (AttributeError, ValueError):
             continue
         try:
             if pdb.get_session(session_id):
                 return pdb, name
-        except Exception:
+        except (AttributeError, ValueError):
             logging.debug(
                 "get_session probe failed for %s in %s", session_id, name, exc_info=True
             )
@@ -408,7 +409,7 @@ def _scroll(
                         )
                         try:
                             session_meta = db.get_session(owning) or session_meta
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                         session_id = owning
                 except Exception as e:
@@ -460,7 +461,7 @@ def _title_match_result(
 
     try:
         session_id = db.resolve_session_by_title(title_query)
-    except Exception:
+    except (AttributeError, ValueError):
         logging.debug(
             "resolve_session_by_title failed for %r", title_query, exc_info=True
         )
@@ -474,7 +475,7 @@ def _title_match_result(
 
     try:
         session_meta = db.get_session(lineage_root) or db.get_session(session_id) or {}
-    except Exception:
+    except (AttributeError, ValueError):
         logging.debug(
             "get_session failed for title match %s", session_id, exc_info=True
         )
@@ -484,7 +485,7 @@ def _title_match_result(
 
     try:
         messages = db.get_messages(session_id)
-    except Exception:
+    except (AttributeError, ValueError):
         logging.debug(
             "get_messages failed for title match %s", session_id, exc_info=True
         )
@@ -494,7 +495,7 @@ def _title_match_result(
     if anchor_id is not None:
         try:
             view = db.get_anchored_view(session_id, anchor_id, window=5, bookend=3)
-        except Exception:
+        except (AttributeError, ValueError):
             logging.debug(
                 "get_anchored_view failed for title match %s/%s",
                 session_id,
@@ -630,7 +631,7 @@ def _discover(
 
         try:
             session_meta = db.get_session(lineage_root) or {}
-        except Exception:
+        except (AttributeError, ValueError):
             session_meta = {}
 
         entry = {
@@ -702,7 +703,7 @@ def session_search(
             from hercules_state import SessionDB
 
             db = SessionDB()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logging.debug("SessionDB unavailable for session_search", exc_info=True)
             from hercules_state import format_session_db_unavailable
 

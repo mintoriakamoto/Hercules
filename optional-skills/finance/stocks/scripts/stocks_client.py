@@ -160,7 +160,7 @@ def _fetch_crumb() -> str | None:
         req = _build_request("https://finance.yahoo.com/")
         with _opener.open(req, timeout=10) as resp:
             resp.read()
-    except Exception:
+    except (OSError):
         pass
 
     # Step 2: fetch crumb
@@ -172,7 +172,7 @@ def _fetch_crumb() -> str | None:
             if crumb_raw and crumb_raw != "":
                 _crumb = crumb_raw
                 return _crumb
-    except Exception:
+    except (OSError):
         pass
 
     return None

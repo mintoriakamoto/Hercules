@@ -13,7 +13,6 @@ Q-B, exercises a real `hercules gateway run`); these lock the unit contract.
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest

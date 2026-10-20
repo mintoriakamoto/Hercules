@@ -4,6 +4,8 @@ Status command for hercules CLI.
 Shows the status of all Hercules Agent components.
 """
 
+import datetime
+import json
 import os
 import sys
 import subprocess  # noqa: F401 — re-exported for tests that monkeypatch status.subprocess to guard against regressions
@@ -47,7 +49,7 @@ def _format_iso_timestamp(value) -> str:
     """Format ISO timestamps for status output, converting to local timezone."""
     if not value or not isinstance(value, str):
         return "(unknown)"
-    from datetime import datetime, timezone
+    from datetime import timezone
 
     text = value.strip()
     if not text:
@@ -58,7 +60,7 @@ def _format_iso_timestamp(value) -> str:
         parsed = datetime.fromisoformat(text)
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
-    except Exception:
+    except (AttributeError, ValueError):
         return value
     return parsed.astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
 
@@ -94,7 +96,7 @@ def _effective_provider_label() -> str:
             model_cfg = load_config().get("model")
             if isinstance(model_cfg, dict):
                 config_base_url = (model_cfg.get("base_url") or "").strip()
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
         if config_base_url or get_env_value("OPENAI_BASE_URL"):
             effective = "custom"
@@ -141,7 +143,7 @@ def show_status(args):
 
     try:
         config = load_config()
-    except Exception:
+    except (AttributeError, ValueError):
         config = {}
 
     print(f"  Model:        {_configured_model_label(config)}")
@@ -221,7 +223,7 @@ def show_status(args):
         codex_status = get_codex_auth_status()
         qwen_status = get_qwen_auth_status()
         minimax_status = get_minimax_oauth_auth_status()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         codex_status = {}
         qwen_status = {}
         minimax_status = {}
@@ -278,7 +280,7 @@ def show_status(args):
         from hercules_cli.auth import get_xai_oauth_auth_status
 
         xai_oauth_status = get_xai_oauth_auth_status() or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         xai_oauth_status = {}
 
     xai_oauth_logged_in = bool(xai_oauth_status.get("logged_in"))
@@ -426,7 +428,7 @@ def show_status(args):
             status_str = "configured" if configured else "not configured"
             label = entry.label
             print(f"  {label:<12}  {check_mark(configured)} {status_str} (plugin)")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # =========================================================================
@@ -460,7 +462,7 @@ def show_status(args):
             )
         elif snapshot.service_installed and not snapshot.service_running:
             print("  Service:      installed but stopped")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         if _is_termux():
             print(f"  Status:       {color('unknown', Colors.DIM)}")
             print("  Manager:      Termux / manual process")
@@ -490,7 +492,7 @@ def show_status(args):
                 jobs = data.get("jobs", [])
                 enabled_jobs = [j for j in jobs if j.get("enabled", True)]
                 print(f"  Jobs:         {len(enabled_jobs)} active, {len(jobs)} total")
-        except Exception:
+        except (OSError):
             print("  Jobs:         (error reading jobs file)")
     else:
         print("  Jobs:         0")
@@ -514,7 +516,7 @@ def show_status(args):
                 _session_count = len(_lister(active_only=True))
         finally:
             _db.close()
-    except Exception:
+    except (AttributeError):
         _session_count = None
 
     if _session_count is not None and _session_count > 0:
@@ -533,7 +535,7 @@ def show_status(args):
                         else {}
                     )
                     print(f"  Active:       {len(_entries)} session(s)")
-            except Exception:
+            except (OSError, ValueError):
                 print("  Active:       (error reading sessions file)")
         else:
             print(

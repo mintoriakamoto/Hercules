@@ -681,7 +681,7 @@ class MCPOAuthManager:
                             if callable(can_refresh_fn):
                                 try:
                                     can_refresh = bool(can_refresh_fn())
-                                except Exception:
+                                except (ValueError):
                                     can_refresh = False
                         if not pending.done():
                             pending.set_result(can_refresh)

@@ -147,19 +147,19 @@ def _collect_memory_provider_external_paths() -> List[Path]:
     """
     try:
         from plugins.memory import _get_active_memory_provider, load_memory_provider
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
     try:
         active = _get_active_memory_provider()
-    except Exception:
+    except (AttributeError, ValueError):
         active = None
     if not active:
         return []
 
     try:
         provider = load_memory_provider(active)
-    except Exception:
+    except (AttributeError, ValueError):
         provider = None
     if provider is None:
         return []
@@ -175,7 +175,7 @@ def _collect_memory_provider_external_paths() -> List[Path]:
     for raw in declared:
         try:
             p = Path(raw).expanduser()
-        except Exception:
+        except (OSError):
             continue
         if not p.exists():
             continue

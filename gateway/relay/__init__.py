@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import os
 from typing import Optional
+import json
+import logging
 
 
 def relay_url() -> Optional[str]:
@@ -40,7 +42,7 @@ def relay_url() -> Optional[str]:
         url = (url or "").strip()
         if url:
             return url.rstrip("/")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return None
 
@@ -92,7 +94,7 @@ def _relay_bot_ids_map() -> dict:
     try:
         parsed = json.loads(raw)
         return parsed if isinstance(parsed, dict) else {}
-    except Exception:
+    except (ValueError):
         logging.getLogger("gateway.relay").warning(
             "GATEWAY_RELAY_BOT_IDS is not valid JSON; treating as empty"
         )
@@ -141,7 +143,7 @@ def relay_connection_auth() -> tuple[Optional[str], Optional[str]]:
             cfg = _load_gateway_config().get("gateway") or {}
             gateway_id = gateway_id or str(cfg.get("relay_id", "") or "").strip()
             secret = secret or str(cfg.get("relay_secret", "") or "").strip()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
     return (gateway_id or None, secret or None)
 
@@ -167,7 +169,7 @@ def relay_endpoint() -> Optional[str]:
 
             cfg = _load_gateway_config().get("gateway") or {}
             url = str(cfg.get("relay_endpoint", "") or "").strip()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             url = ""
     return url.rstrip("/") or None
 
@@ -193,7 +195,7 @@ def relay_route_keys() -> list[str]:
             if isinstance(val, (list, tuple)):
                 return [str(k).strip() for k in val if str(k).strip()]
             raw = str(val or "").strip()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             raw = ""
     return [k.strip() for k in raw.split(",") if k.strip()]
 
@@ -220,7 +222,7 @@ def relay_instance_id() -> Optional[str]:
 
             cfg = _load_gateway_config().get("gateway") or {}
             value = str(cfg.get("relay_instance_id", "") or "").strip()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             value = ""
     return value or None
 
@@ -251,7 +253,7 @@ def relay_wake_url() -> Optional[str]:
 
             cfg = _load_gateway_config().get("gateway") or {}
             value = str(cfg.get("relay_wake_url", "") or "").strip()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             value = ""
     return value.rstrip("/") or None
 
@@ -343,7 +345,7 @@ def relay_relevance_policy(platform: Optional[str] = None) -> Optional[dict]:
             free_response = [str(c).strip() for c in frc if str(c).strip()]
         elif isinstance(frc, str) and frc.strip():
             free_response = [c.strip() for c in frc.split(",") if c.strip()]
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
     # allow_other_bots ← {PLATFORM}_ALLOW_BOTS in {"mentions","all"} (same gate as
@@ -426,7 +428,7 @@ def _post_provision(
         detail = ""
         try:
             detail = (json.loads(exc.read().decode()) or {}).get("error", "")
-        except Exception:
+        except (OSError):
             pass
         raise RuntimeError(
             f"connector returned HTTP {exc.code}" + (f": {detail}" if detail else "")
@@ -473,7 +475,7 @@ def _resolve_relay_identity_token() -> str:
                 client_secret or str(idp.get("client_secret", "") or "").strip()
             )
             scope = scope or str(idp.get("scope", "") or "").strip()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             token_url = token_url or ""
 
     if not token_url:
@@ -484,7 +486,6 @@ def _resolve_relay_identity_token() -> str:
 
     # Mode 1 — generic OAuth2 client_credentials grant.
     import json
-    import urllib.error
     import urllib.parse
     import urllib.request
 
@@ -584,7 +585,7 @@ def self_provision_relay() -> bool:
 
     try:
         host = socket.gethostname().strip()
-    except Exception:
+    except (OSError, httpx.HTTPStatusError, httpx.RequestError):
         host = ""
     gateway_id = (
         os.environ.get("GATEWAY_RELAY_ID", "").strip() or f"gw-{host or 'hercules'}"

@@ -805,7 +805,6 @@ class TestProfileScopedStorage:
     def test_default_store_uses_global_dir(self, tmp_path, monkeypatch):
         """PairingStore() (no profile) keeps the legacy global path so the
         ``hercules pairing`` CLI continues to work without a profile context."""
-        from hercules_constants import get_hercules_home
 
         monkeypatch.setattr("hercules_constants.get_hercules_home", lambda: tmp_path)
         # Re-import PAIRING_DIR (it's a module-level constant resolved at
@@ -820,7 +819,6 @@ class TestProfileScopedStorage:
     def test_profile_store_uses_profiles_subdir(self, tmp_path, monkeypatch):
         """PairingStore(profile="yangyang") puts files under
         <HERCULES_HOME>/profiles/yangyang/pairing/."""
-        from hercules_constants import get_hercules_home
 
         monkeypatch.setattr("hercules_constants.get_hercules_home", lambda: tmp_path)
         store = PairingStore(profile="yangyang")
@@ -834,7 +832,6 @@ class TestProfileScopedStorage:
     def test_profile_approval_does_not_leak_to_global(self, tmp_path, monkeypatch):
         """Approving in a profile-scoped store must not appear in the global
         store — and vice versa. This is the whole point of the fix."""
-        from hercules_constants import get_hercules_home
 
         monkeypatch.setattr("hercules_constants.get_hercules_home", lambda: tmp_path)
         with patch("gateway.pairing.PAIRING_DIR", tmp_path):
@@ -855,7 +852,6 @@ class TestProfileScopedStorage:
     def test_profile_uses_distinct_rate_limit_file(self, tmp_path, monkeypatch):
         """Rate-limit state is per-profile, not shared globally — otherwise
         one profile's flood would lock out the other profile's users."""
-        from hercules_constants import get_hercules_home
 
         monkeypatch.setattr("hercules_constants.get_hercules_home", lambda: tmp_path)
         with patch("gateway.pairing.PAIRING_DIR", tmp_path):

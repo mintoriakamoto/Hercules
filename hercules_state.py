@@ -1030,7 +1030,7 @@ class SessionDB:
                 try:
                     if self._conn is not None:
                         self._conn.close()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 report = repair_state_db_schema(self.db_path)
                 if not report.get("repaired"):
@@ -1229,7 +1229,7 @@ class SessionDB:
                     except BaseException:
                         try:
                             self._conn.rollback()
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                         raise
                 # Success — periodic best-effort checkpoint + FTS merge.
@@ -1286,7 +1286,7 @@ class SessionDB:
                         result[2],
                         result[1],
                     )
-        except Exception:
+        except (sqlite3.DatabaseError, OSError):
             pass  # Best effort — never fatal.
 
     def _try_optimize_fts(self) -> None:
@@ -1302,7 +1302,7 @@ class SessionDB:
         """
         try:
             self.optimize_fts()
-        except Exception:
+        except (AttributeError, ValueError):
             pass  # Best effort — never fatal.
 
     def close(self):
@@ -1315,7 +1315,7 @@ class SessionDB:
             if self._conn:
                 try:
                     self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-                except Exception:
+                except (sqlite3.DatabaseError, OSError):
                     pass
                 self._conn.close()
                 self._conn = None
@@ -4363,7 +4363,7 @@ class SessionDB:
         # and the reply isn't there" report on large sessions.
         try:
             tip = self.get_compression_tip(session_id)
-        except Exception:
+        except (AttributeError, ValueError):
             tip = session_id
         if tip and tip != session_id:
             session_id = tip
@@ -4380,7 +4380,7 @@ class SessionDB:
                         "SELECT 1 FROM messages WHERE session_id = ? LIMIT 1",
                         (current,),
                     ).fetchone()
-                except Exception:
+                except (sqlite3.DatabaseError, OSError):
                     return session_id
                 if row is not None:
                     best = current
@@ -4401,7 +4401,7 @@ class SessionDB:
                         "ORDER BY started_at DESC, id DESC LIMIT 1",
                         (current,),
                     ).fetchone()
-                except Exception:
+                except (sqlite3.DatabaseError, OSError):
                     return session_id
                 if child_row is None:
                     break
@@ -5197,7 +5197,7 @@ class SessionDB:
                             "content": preview[:200],
                         })
                 match["context"] = context_msgs
-            except Exception:
+            except (requests.RequestException, OSError):
                 match["context"] = []
 
         # Remove full content from result (snippet is enough, saves tokens)
@@ -6656,7 +6656,7 @@ class SessionDB:
             # Best-effort WAL checkpoint first, then VACUUM.
             try:
                 self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            except Exception:
+            except (sqlite3.DatabaseError, OSError):
                 pass
             self._conn.execute("VACUUM")
         return optimized
@@ -6787,7 +6787,7 @@ class SessionDB:
                 "platform": row["handoff_platform"],
                 "error": row["handoff_error"],
             }
-        except Exception:
+        except (sqlite3.DatabaseError, OSError):
             return None
 
     def list_pending_handoffs(self) -> List[Dict[str, Any]]:
@@ -6802,7 +6802,7 @@ class SessionDB:
                 "ORDER BY started_at ASC"
             )
             return [dict(r) for r in cur.fetchall()]
-        except Exception:
+        except (sqlite3.DatabaseError, OSError):
             return []
 
     def claim_handoff(self, session_id: str) -> bool:

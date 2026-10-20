@@ -46,6 +46,10 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 from utils import env_var_enabled
+from tools.approval import (
+    set_hercules_spinner_pause_context,
+    reset_hercules_spinner_pause_context,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +211,7 @@ def _get_sudo_password_cache_scope() -> str:
         from gateway.session_context import get_session_env
 
         session_key = get_session_env("HERCULES_SESSION_KEY", "")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         session_key = os.getenv("HERCULES_SESSION_KEY", "")
     if session_key:
         return f"session:{session_key}"
@@ -415,7 +419,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
     if _sudo_cb is not None:
         try:
             return _sudo_cb() or ""
-        except Exception:
+        except (AttributeError, ValueError):
             return ""
 
     result = {"password": None, "done": False}
@@ -454,7 +458,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
                 result["password"] = b"".join(chars).decode("utf-8", errors="replace")
         except (EOFError, KeyboardInterrupt, OSError):
             result["password"] = ""
-        except Exception:
+        except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError, OSError):
             result["password"] = ""
         finally:
             if tty_fd is not None and old_attrs is not None:
@@ -471,8 +475,8 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
                     logger.debug("Failed to close tty fd: %s", e)
             result["done"] = True
 
+    spinner_pause_token = set_hercules_spinner_pause_context(True)
     try:
-        os.environ["HERCULES_SPINNER_PAUSE"] = "1"
         time.sleep(0.2)
 
         print()
@@ -518,8 +522,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
         sys.stdout.flush()
         return ""
     finally:
-        if "HERCULES_SPINNER_PAUSE" in os.environ:
-            del os.environ["HERCULES_SPINNER_PAUSE"]
+        reset_hercules_spinner_pause_context(spinner_pause_token)
 
 
 def _safe_command_preview(command: Any, limit: int = 200) -> str:
@@ -530,7 +533,7 @@ def _safe_command_preview(command: Any, limit: int = 200) -> str:
         return command[:limit]
     try:
         return repr(command)[:limit]
-    except Exception:
+    except (IndexError, KeyError):
         return f"<{type(command).__name__}>"
 
 
@@ -728,7 +731,7 @@ def _sudo_nopasswd_works() -> bool:
             check=False,
         )
         return probe.returncode == 0
-    except Exception:
+    except (IndexError, KeyError, subprocess.CalledProcessError):
         return False
 
 
@@ -1570,7 +1573,7 @@ def _create_environment(
                     in inspect.signature(modal.Sandbox.create).parameters
                 ):
                     sandbox_kwargs["ephemeral_disk"] = disk
-            except Exception:
+            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                 pass
 
         modal_state = _get_modal_backend_state(cc.get("modal_mode"))
@@ -2555,7 +2558,7 @@ def terminal_tool(
         session_key = get_current_session_key(default="") or (task_id or "")
         try:
             env.cwd_owner = session_key
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             pass
 
         if background:
@@ -2931,7 +2934,7 @@ def terminal_tool(
                     if isinstance(hook_result, str):
                         output = hook_result
                         break
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
             # Truncate output if too long, keeping both head and tail
@@ -2997,7 +3000,7 @@ def terminal_tool(
                         "scope": evidence.get("scope"),
                         "canonical_command": evidence.get("canonical_command"),
                     }
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug("verification evidence recording failed", exc_info=True)
             if approval_note:
                 # Treat rc=130 as an interrupt only when the executor's marker is

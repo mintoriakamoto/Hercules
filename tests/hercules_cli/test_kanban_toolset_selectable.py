@@ -17,7 +17,6 @@ These tests pin the contract between the two halves: whatever the checklist
 offers must be what the runtime gate reads.
 """
 
-import os
 
 import pytest
 

@@ -40,7 +40,7 @@ def coerce_message_timestamp(ts_value: Any, tz=None) -> Optional[float]:
     if hasattr(ts_value, "timestamp"):
         try:
             return float(ts_value.timestamp())
-        except Exception:
+        except (ValueError):
             return None
 
     if isinstance(ts_value, str):

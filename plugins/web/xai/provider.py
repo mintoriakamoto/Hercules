@@ -156,7 +156,7 @@ class XAIWebSearchProvider(WebSearchProvider):
 
             if is_interrupted():
                 return {"success": False, "error": "Interrupted"}
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
         creds = resolve_xai_http_credentials()
@@ -291,7 +291,7 @@ class XAIWebSearchProvider(WebSearchProvider):
                 body = ""
                 try:
                     body = exc.response.text[:300] if exc.response is not None else ""
-                except Exception:
+                except (KeyError, IndexError):
                     body = ""
                 logger.warning("xAI web search HTTP %d: %s", status, body)
                 return {

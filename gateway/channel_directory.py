@@ -34,7 +34,7 @@ def _load_channel_aliases() -> Dict[str, Dict[str, str]]:
         with open(CHANNEL_ALIASES_PATH, encoding="utf-8") as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}
-    except Exception:
+    except (OSError):
         return {}
 
 
@@ -166,7 +166,7 @@ async def build_channel_directory(adapters: Dict[Any, Any]) -> Dict[str, Any]:
                 platforms[entry.name] = await asyncio.to_thread(
                     _build_from_sessions, entry.name
                 )
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
     # Overlay user-maintained friendly names before persisting.
@@ -403,7 +403,7 @@ def load_directory() -> Dict[str, Any]:
         # even between timed rebuilds and for brand-new alias entries.
         _apply_channel_aliases(data.setdefault("platforms", {}))
         return data
-    except Exception:
+    except (OSError):
         base = {"updated_at": None, "platforms": {}}
         _apply_channel_aliases(base["platforms"])
         return base

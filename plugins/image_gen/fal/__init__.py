@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
 from agent.image_gen_provider import (
@@ -64,7 +63,7 @@ class FalImageGenProvider(ImageGenProvider):
 
         try:
             return bool(_it.check_fal_api_key())
-        except Exception:
+        except (AttributeError, ValueError):
             return False
 
     def list_models(self) -> List[Dict[str, Any]]:
@@ -109,7 +108,7 @@ class FalImageGenProvider(ImageGenProvider):
 
         try:
             _model_id, meta = _it._resolve_fal_model()
-        except Exception:
+        except (AttributeError, ValueError):
             return {"modalities": ["text"], "max_reference_images": 0}
         if meta.get("edit_endpoint"):
             return {
@@ -177,7 +176,7 @@ class FalImageGenProvider(ImageGenProvider):
 
         try:
             response = json.loads(raw) if isinstance(raw, str) else raw
-        except Exception:
+        except (AttributeError, ValueError):
             response = {
                 "success": False,
                 "image": None,
@@ -203,7 +202,7 @@ class FalImageGenProvider(ImageGenProvider):
             try:
                 model_id, _meta = _it._resolve_fal_model()
                 response["model"] = model_id
-            except Exception:
+            except (KeyError, IndexError):
                 pass
         return response
 

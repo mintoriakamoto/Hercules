@@ -254,7 +254,7 @@ def _resolve_mcp_server_config(config: dict) -> dict:
         from hercules_cli.env_loader import load_hercules_dotenv
 
         load_hercules_dotenv()
-    except Exception:  # pragma: no cover — defensive
+    except (ImportError, ModuleNotFoundError):
         pass
     return _interpolate_env_vars(config)
 
@@ -345,13 +345,13 @@ def _probe_single_server(
                     try:
                         result = await server.session.list_prompts()
                         details["prompts"] = len(result.prompts)
-                    except Exception:
+                    except (IndexError, KeyError):
                         pass
                 if resources_enabled and _advertises("resources"):
                     try:
                         result = await server.session.list_resources()
                         details["resources"] = len(result.resources)
-                    except Exception:
+                    except (IndexError, KeyError):
                         pass
         finally:
             await server.shutdown()
@@ -652,7 +652,7 @@ def cmd_mcp_remove(args):
 
         get_manager().remove(name)
         _success("Cleaned up OAuth tokens")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 

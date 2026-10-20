@@ -85,7 +85,7 @@ def _list_all_skills() -> List[dict]:
         from tools.skills_tool import _find_all_skills
 
         return _find_all_skills(skip_disabled=True)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
 

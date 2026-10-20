@@ -14,7 +14,7 @@ def _prompt_choice(title: str, rows: list[str], default: int = 0) -> int:
         from hercules_cli.curses_ui import curses_radiolist
 
         return curses_radiolist(title, rows, selected=default, cancel_returns=default)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         for idx, row in enumerate(rows, start=1):
             print(f"{idx}. {row}")
         raw = input(f"{title} [{default + 1}]: ").strip()

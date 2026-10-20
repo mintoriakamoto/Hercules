@@ -139,7 +139,7 @@ def _task_field(task, name, default=None):
         # dicts return default via .get. Handle both.
         if hasattr(task, "keys") and name in task.keys():
             return task[name]
-    except Exception:
+    except (IndexError, KeyError):
         pass
     if isinstance(task, dict):
         return task.get(name, default)
@@ -156,7 +156,7 @@ def _parse_payload(ev) -> dict:
     if isinstance(p, str):
         try:
             return json.loads(p) or {}
-        except Exception:
+        except (ValueError):
             return {}
     return {}
 
@@ -1165,7 +1165,7 @@ def compute_task_diagnostics(
     for rule in _RULES:
         try:
             out.extend(rule(task, events, runs, now_ts, cfg))
-        except Exception:
+        except (AttributeError, ValueError):
             # A broken rule must never crash the dashboard. Rule bugs
             # get caught in tests; in production we'd rather drop the
             # diagnostic than 500 a whole /board request.

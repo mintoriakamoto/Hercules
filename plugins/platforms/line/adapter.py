@@ -273,7 +273,7 @@ def verify_line_signature(body: bytes, signature: str, channel_secret: str) -> b
             hashlib.sha256,
         ).digest()
         expected = base64.b64encode(digest).decode("utf-8")
-    except Exception:
+    except (AttributeError, ValueError):
         return False
     return hmac.compare_digest(expected, signature)
 
@@ -543,7 +543,7 @@ class _LineClient:
                         return None
                     data = await resp.json()
                     return data.get("userId")
-        except Exception:
+        except (requests.RequestException, OSError):
             return None
 
 
@@ -849,13 +849,13 @@ class LineAdapter(BasePlatformAdapter):
         if self._site is not None:
             try:
                 await self._site.stop()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             self._site = None
         if self._runner is not None:
             try:
                 await self._runner.cleanup()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             self._runner = None
         self._app = None
@@ -874,7 +874,7 @@ class LineAdapter(BasePlatformAdapter):
                 from gateway.status import release_scoped_lock
 
                 release_scoped_lock("line", self._lock_key)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             self._lock_key = None
 
@@ -913,7 +913,7 @@ class LineAdapter(BasePlatformAdapter):
         for event in events:
             try:
                 await self._dispatch_event(event)
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.exception("LINE: dispatch_event failed")
 
         return web.Response(status=200, text="ok")
@@ -1071,7 +1071,7 @@ class LineAdapter(BasePlatformAdapter):
                 await self._client.reply(
                     reply_token, [_text_message(self.delivered_text)]
                 )
-            except Exception:
+            except (KeyError, IndexError):
                 pass
         elif entry.state is State.PENDING:
             # Still working — re-issue the wait notice.
@@ -1079,7 +1079,7 @@ class LineAdapter(BasePlatformAdapter):
                 await self._client.reply(
                     reply_token, [_text_message(self.pending_text)]
                 )
-            except Exception:
+            except (KeyError, IndexError):
                 pass
 
     async def _download_media(self, message_id: str, msg_type: str) -> Optional[str]:
@@ -1333,7 +1333,7 @@ class LineAdapter(BasePlatformAdapter):
             from hercules_constants import get_hercules_home
 
             hercules_home = Path(get_hercules_home()).resolve()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             hercules_home = Path.home().joinpath(".hercules").resolve()
 
         allowed_roots = {
@@ -1449,7 +1449,7 @@ class LineAdapter(BasePlatformAdapter):
                 tmp.close()
                 preview_token = self._register_media(tmp.name, cleanup=True)
                 preview_filename = "preview.png"
-            except Exception:
+            except (AttributeError, ValueError):
                 try:
                     os.unlink(tmp.name)
                 except OSError:

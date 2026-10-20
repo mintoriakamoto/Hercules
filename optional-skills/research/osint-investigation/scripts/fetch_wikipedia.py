@@ -187,7 +187,7 @@ def _wd_qid_for_title(title: str) -> str:
     url = f"{WP_OPENSEARCH}?{urllib.parse.urlencode(params)}"
     try:
         data = get_json(url)
-    except Exception:  # noqa: BLE001
+    except (AttributeError, ValueError):
         return ""
     if not isinstance(data, dict):
         return ""

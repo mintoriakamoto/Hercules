@@ -907,7 +907,7 @@ def _postprocess_image_generate_result(raw: str, task_id: str | None = None) -> 
     """
     try:
         payload = json.loads(raw) if isinstance(raw, str) else raw
-    except Exception:
+    except (ValueError):
         return raw
 
     if not isinstance(payload, dict) or not payload.get("success"):
@@ -1230,9 +1230,9 @@ def check_image_generation_requirements() -> bool:
             try:
                 if provider.is_available():
                     return True
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     return False
@@ -1712,7 +1712,7 @@ def _active_image_capabilities() -> Dict[str, Any]:
                 caps = {}
                 try:
                     caps = provider.capabilities() or {}
-                except Exception:
+                except (AttributeError, ValueError):
                     caps = {}
                 info["provider"] = provider.display_name
                 info["model"] = _read_configured_image_model() or (
@@ -1723,7 +1723,7 @@ def _active_image_capabilities() -> Dict[str, Any]:
                 if caps.get("max_reference_images"):
                     info["max_reference_images"] = int(caps["max_reference_images"])
                 return info
-        except Exception:
+        except (ValueError):
             pass
 
     # In-tree FAL path (provider unset or == "fal").
@@ -1737,7 +1737,7 @@ def _active_image_capabilities() -> Dict[str, Any]:
         else:
             info["modalities"] = ["text"]
             info["max_reference_images"] = 0
-    except Exception:
+    except (ValueError):
         pass
 
     return info
@@ -1749,7 +1749,7 @@ def _build_dynamic_image_schema() -> Dict[str, Any]:
 
     try:
         info = _active_image_capabilities()
-    except Exception:
+    except (AttributeError, ValueError):
         return {"description": _GENERIC_IMAGE_DESCRIPTION}
 
     provider = info.get("provider")

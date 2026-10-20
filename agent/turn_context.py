@@ -162,7 +162,7 @@ def build_turn_context(
             api_key=getattr(agent, "api_key", "") or "",
             api_mode=getattr(agent, "api_mode", "") or "",
         )
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError):
         pass
 
     # Tag log records on this thread with the session ID for ``hercules logs``.
@@ -204,7 +204,7 @@ def build_turn_context(
 
                 if has_registered_mcp_tools():
                     refresh_agent_mcp_tools(agent, quiet_mode=True)
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError):
         logger.debug("between-turns MCP tool refresh skipped", exc_info=True)
 
     # Sanitize surrogate characters from user input.
@@ -255,7 +255,7 @@ def build_turn_context(
                     "issue — cleaned up automatically. Proceeding with fresh "
                     "connection."
                 )
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     # Replay compression warning through status_callback for gateway platforms.
     if agent._compression_warning:
@@ -349,7 +349,7 @@ def build_turn_context(
             kind = detect_reaction(original_user_message)
             if kind:
                 reaction_callback(kind)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     if not agent.quiet_mode:
@@ -373,7 +373,7 @@ def build_turn_context(
     # Crash-resilience: persist the inbound user turn as soon as the session row exists.
     try:
         agent._persist_session(messages, conversation_history)
-    except Exception:
+    except (AttributeError, ValueError):
         logger.warning(
             "Early turn-start session persistence failed for session=%s",
             agent.session_id or "none",
@@ -522,7 +522,7 @@ def build_turn_context(
             )
 
             _spill_config_cached = _spill_cfg()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _spill_if_oversized = None  # type: ignore[assignment]
             _spill_config_cached = None
         for r in _pre_results:
@@ -575,7 +575,7 @@ def build_turn_context(
                 original_user_message if isinstance(original_user_message, str) else ""
             )
             agent._memory_manager.on_turn_start(agent._user_turn_count, _turn_msg)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     # External memory provider: prefetch once before the tool loop.
@@ -586,7 +586,7 @@ def build_turn_context(
                 original_user_message if isinstance(original_user_message, str) else ""
             )
             ext_prefetch_cache = agent._memory_manager.prefetch_all(_query) or ""
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     return TurnContext(

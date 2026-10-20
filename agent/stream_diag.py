@@ -68,7 +68,7 @@ def stream_diag_capture_response(
         return
     try:
         diag["http_status"] = getattr(http_response, "status_code", None)
-    except Exception:
+    except (AttributeError, IndexError, KeyError):
         pass
     try:
         headers = getattr(http_response, "headers", None) or {}
@@ -81,10 +81,10 @@ def stream_diag_capture_response(
                 if val:
                     # Truncate single-value to keep log lines bounded.
                     captured[name] = str(val)[:120]
-            except Exception:
+            except (ValueError):
                 continue
         diag["headers"] = captured
-    except Exception:
+    except (ValueError):
         pass
 
 
@@ -144,7 +144,7 @@ def log_stream_retry(
     try:
         try:
             _summary = agent._summarize_api_error(error)
-        except Exception:
+        except (AttributeError, ValueError):
             _summary = str(error)
         if _summary and len(_summary) > 240:
             _summary = _summary[:240] + "…"
@@ -152,7 +152,7 @@ def log_stream_retry(
         # Inner-cause chain (httpx errors hide under openai.APIError).
         try:
             _chain = flatten_exception_chain(error)
-        except Exception:
+        except (AttributeError, ValueError):
             _chain = type(error).__name__
 
         # Per-attempt counters and upstream headers.
@@ -177,7 +177,7 @@ def log_stream_retry(
                     _headers_repr = " ".join(f"{k}={v}" for k, v in headers.items())
                 if diag.get("http_status") is not None:
                     _http_status = str(diag.get("http_status"))
-            except Exception:
+            except (ValueError):
                 pass
 
         logger.warning(
@@ -205,7 +205,7 @@ def log_stream_retry(
             _headers_repr,
             extra={"mid_tool_call": mid_tool_call},
         )
-    except Exception:
+    except (AttributeError, ValueError):
         logger.debug("stream-retry log emit failed", exc_info=True)
 
 
@@ -253,7 +253,7 @@ def emit_stream_drop(
             started = diag.get("started_at")
             if started is not None:
                 _suffix = f" after {max(0.0, time.time() - float(started)):.1f}s"
-        except Exception:
+        except (ValueError):
             pass
     try:
         agent._buffer_status(
@@ -263,7 +263,7 @@ def emit_stream_drop(
         agent._touch_activity(
             f"stream retry {attempt}/{max_attempts} after {type(error).__name__}"
         )
-    except Exception:
+    except (ZeroDivisionError):
         pass
 
 

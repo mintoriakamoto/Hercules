@@ -43,6 +43,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
+import re
+import shutil
+import tempfile
 
 try:
     import aiohttp
@@ -915,7 +918,7 @@ class QQAdapter(BasePlatformAdapter):
     def _parse_json(raw: Any) -> Optional[Dict[str, Any]]:
         try:
             payload = json.loads(raw)
-        except Exception:
+        except (ValueError):
             logger.warning("[QQBot] Failed to parse JSON: %r", raw)
             return None
         return payload if isinstance(payload, dict) else None
@@ -2354,7 +2357,7 @@ class QQAdapter(BasePlatformAdapter):
                     ext,
                 )
                 return cache_document_from_bytes(audio_data, f"qq_voice{ext}")
-        except Exception:
+        except (IndexError, KeyError):
             return cache_document_from_bytes(audio_data, f"qq_voice{ext}")
         finally:
             try:

@@ -1641,7 +1641,7 @@ class ShellFileOperations(FileOperations):
                 err_msg += format_no_match_hint(
                     err_msg, match_count, old_string, content
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             return PatchResult(error=err_msg)
 
@@ -1957,7 +1957,7 @@ class ShellFileOperations(FileOperations):
             return False
         try:
             from tools.environments.local import LocalEnvironment
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
         return isinstance(env, LocalEnvironment)
 
@@ -1976,7 +1976,7 @@ class ShellFileOperations(FileOperations):
             return False
         try:
             from agent.lsp.servers import SERVERS
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
         ext_lower = ext.lower()
         for srv in SERVERS:
@@ -2005,17 +2005,17 @@ class ShellFileOperations(FileOperations):
             return False
         try:
             from agent.lsp import get_service
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return False
         try:
             svc = get_service()
-        except Exception:
+        except (AttributeError, ValueError):
             return False
         if svc is None:
             return False
         try:
             return bool(svc.enabled_for(path))
-        except Exception:
+        except (ValueError):
             return False
 
     def _snapshot_lsp_baseline(self, path: str) -> None:
@@ -2033,13 +2033,13 @@ class ShellFileOperations(FileOperations):
             from agent.lsp import get_service
 
             svc = get_service()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return
         if svc is None:
             return
         try:
             svc.snapshot_baseline(path)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def _maybe_lsp_diagnostics(
@@ -2073,11 +2073,11 @@ class ShellFileOperations(FileOperations):
             return ""
         try:
             from agent.lsp import get_service
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return ""
         try:
             svc = get_service()
-        except Exception:
+        except (AttributeError, ValueError):
             return ""
         if svc is None or not svc.enabled_for(path):
             return ""
@@ -2095,14 +2095,14 @@ class ShellFileOperations(FileOperations):
                 from agent.lsp.range_shift import build_line_shift
 
                 line_shift = build_line_shift(pre_content, post_content)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 line_shift = None
 
         try:
             diagnostics = svc.get_diagnostics_sync(
                 path, delta=True, line_shift=line_shift
             )
-        except Exception:
+        except (AttributeError, ValueError):
             return ""
         if not diagnostics:
             return ""
@@ -2113,7 +2113,7 @@ class ShellFileOperations(FileOperations):
             if not block:
                 return ""
             return truncate("LSP diagnostics introduced by this edit:\n" + block)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return ""
 
     # =========================================================================

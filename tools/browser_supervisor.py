@@ -49,7 +49,7 @@ def _redact_cdp_error_text(exc: object) -> str:
         from agent.redact import redact_cdp_url
 
         return redact_cdp_url(str(exc))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return "<error redacted>"
 
 
@@ -384,7 +384,7 @@ class CDPSupervisor:
                 from agent.redact import redact_cdp_url
 
                 _safe_url = redact_cdp_url(self.cdp_url)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 _safe_url = "<cdp_url redacted>"
             raise TimeoutError(
                 f"CDP supervisor did not attach within {timeout}s "
@@ -416,7 +416,7 @@ class CDPSupervisor:
                 if ws is not None:
                     try:
                         await ws.close()
-                    except Exception:
+                    except (RuntimeError):
                         pass
 
             try:
@@ -426,7 +426,7 @@ class CDPSupervisor:
                 if fut is not None:
                     try:
                         fut.result(timeout=2.0)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
             except RuntimeError:
                 pass  # loop already shutting down
@@ -655,11 +655,11 @@ class CDPSupervisor:
                     loop.run_until_complete(
                         asyncio.gather(*pending, return_exceptions=True)
                     )
-            except Exception:
+            except (IndexError, KeyError):
                 pass
             try:
                 loop.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             with self._state_lock:
                 self._active = False
@@ -749,7 +749,7 @@ class CDPSupervisor:
                 if ws is not None:
                     try:
                         await ws.close()
-                    except Exception:
+                    except (RuntimeError):
                         pass
 
             if self._stop_requested:
@@ -850,7 +850,7 @@ class CDPSupervisor:
                 session_id=session_id,
                 timeout=3.0,
             )
-        except Exception:
+        except (RuntimeError):
             pass
 
     async def _cdp(
@@ -888,7 +888,7 @@ class CDPSupervisor:
                     break
                 try:
                     msg = json.loads(raw)
-                except Exception:
+                except (ValueError):
                     logger.debug("CDP supervisor: non-JSON frame dropped")
                     continue
                 if "id" in msg:
@@ -1143,7 +1143,7 @@ class CDPSupervisor:
                     session_id=session_id,
                     timeout=3.0,
                 )
-            except Exception:
+            except (RuntimeError):
                 pass
             return
 

@@ -217,7 +217,7 @@ def is_interactive_stdin() -> bool:
         return False
     try:
         return bool(stdin.isatty())
-    except Exception:
+    except (ValueError):
         return False
 
 
@@ -457,7 +457,7 @@ def _print_setup_summary(config: dict, hercules_home):
         from agent.auxiliary_client import get_available_vision_backends
 
         _vision_backends = get_available_vision_backends()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _vision_backends = []
 
     if _vision_backends:
@@ -542,9 +542,9 @@ def _print_setup_summary(config: dict, hercules_home):
                     if _p.is_available():
                         _img_backend = _p.display_name
                         break
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         if _img_backend:
             tool_status.append((f"Image Generation ({_img_backend})", True, None))
@@ -565,9 +565,9 @@ def _print_setup_summary(config: dict, hercules_home):
                 if _vp.is_available():
                     _video_backend = _vp.display_name
                     break
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
-    except Exception:
+    except (AttributeError, ValueError):
         _video_backend = None
     if _video_backend:
         tool_status.append((f"Video Generation ({_video_backend})", True, None))
@@ -591,7 +591,7 @@ def _print_setup_summary(config: dict, hercules_home):
     elif tts_provider == "neutts":
         try:
             neutts_ok = importlib.util.find_spec("neutts") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             neutts_ok = False
         if neutts_ok:
             tool_status.append(("Text-to-Speech (NeuTTS local)", True, None))
@@ -604,7 +604,7 @@ def _print_setup_summary(config: dict, hercules_home):
     elif tts_provider == "kittentts":
         try:
             kittentts_ok = importlib.util.find_spec("kittentts") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             kittentts_ok = False
         if kittentts_ok:
             tool_status.append(("Text-to-Speech (KittenTTS local)", True, None))
@@ -638,7 +638,7 @@ def _print_setup_summary(config: dict, hercules_home):
         _spotify_state = get_provider_auth_state("spotify") or {}
         if _spotify_state.get("access_token") or _spotify_state.get("refresh_token"):
             tool_status.append(("Spotify (PKCE OAuth)", True, None))
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Skills Hub
@@ -965,7 +965,7 @@ def _xai_oauth_logged_in_for_setup() -> bool:
         from hercules_cli.auth import get_xai_oauth_auth_status
 
         return bool(get_xai_oauth_auth_status().get("logged_in"))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -1068,7 +1068,7 @@ def _setup_tts_provider(config: dict):
         # Check if already installed
         try:
             already_installed = importlib.util.find_spec("neutts") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             already_installed = False
 
         if already_installed:
@@ -1226,7 +1226,7 @@ def _setup_tts_provider(config: dict):
         # Check if already installed
         try:
             already_installed = importlib.util.find_spec("kittentts") is not None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             already_installed = False
 
         if already_installed:
@@ -1732,7 +1732,7 @@ def _setup_telegram_auto_result():
     profile_name: str | None = None
     try:
         profile_name = _profile_name_from_hercules_home(Path(get_hercules_home()))
-    except Exception:
+    except (OSError):
         pass
 
     return auto_setup_telegram_bot_result(profile_name=profile_name)
@@ -2333,12 +2333,12 @@ def _model_section_has_credentials(config: dict) -> bool:
 
         if get_active_provider():
             return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     try:
         from hercules_cli.auth import PROVIDER_REGISTRY
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         PROVIDER_REGISTRY = {}  # type: ignore[assignment]
 
     def _has_key(pconfig) -> bool:
@@ -2491,7 +2491,7 @@ def _load_openclaw_migration_module():
     _sys.modules[spec.name] = mod
     try:
         spec.loader.exec_module(mod)
-    except Exception:
+    except (AttributeError, ValueError):
         _sys.modules.pop(spec.name, None)
         raise
     return mod
@@ -2789,7 +2789,7 @@ def run_setup_wizard(args):
             import shutil
 
             shutil.copy2(config_path, _backup_path)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _backup_path = None
     else:
         _backup_path = None

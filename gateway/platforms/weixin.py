@@ -266,7 +266,7 @@ def load_weixin_account(
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         return None
 
 
@@ -1034,7 +1034,7 @@ def _load_sync_buf(hercules_home: str, account_id: str) -> str:
         return ""
     try:
         return json.loads(path.read_text(encoding="utf-8")).get("get_updates_buf", "")
-    except Exception:
+    except (ValueError):
         return ""
 
 
@@ -1148,7 +1148,7 @@ async def qr_login(
                         qr.add_data(qr_scan_data)
                         qr.make(fit=True)
                         qr.print_ascii(invert=True)
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
                 except Exception as exc:
                     logger.error("weixin: QR refresh failed: %s", exc)

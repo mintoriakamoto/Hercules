@@ -2065,7 +2065,7 @@ class SkillsShSource(SkillSource):
         for base_path in base_paths:
             try:
                 skills = self.github._list_skills_in_repo(repo, base_path)
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
             for meta in skills:
                 if self._matches_skill_tokens(meta, tokens):
@@ -2108,12 +2108,12 @@ class SkillsShSource(SkillSource):
                             skills = self.github._list_skills_in_repo(
                                 repo, dir_name + "/"
                             )
-                        except Exception:
+                        except (ZeroDivisionError):
                             continue
                         for meta in skills:
                             if self._matches_skill_tokens(meta, tokens):
                                 return meta.identifier
-        except Exception:
+        except (ZeroDivisionError):
             pass
 
         return None
@@ -3984,7 +3984,7 @@ def check_for_skill_updates(
         for src in candidate_sources:
             try:
                 bundle = src.fetch(identifier)
-            except Exception:
+            except (AttributeError, ValueError):
                 bundle = None
             if bundle:
                 break
@@ -4441,7 +4441,7 @@ def parallel_search_sources(
                     all_results.extend(results)
                     if on_source_done:
                         on_source_done(sid, len(results))
-                except Exception:
+                except (IndexError, KeyError):
                     pass
         except TimeoutError:
             timed_out_ids = [futures[f] for f in futures if not f.done()]

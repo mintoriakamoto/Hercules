@@ -175,6 +175,6 @@ def fal_key_is_configured() -> bool:
             from hercules_cli.config import get_env_value
 
             value = get_env_value("FAL_KEY")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             value = None
     return bool(value and value.strip())

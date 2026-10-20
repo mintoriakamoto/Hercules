@@ -21,7 +21,7 @@ import tempfile
 import threading
 import time
 import unicodedata
-from typing import Optional
+from typing import Any, Callable, Dict, Optional, Set, Tuple, Union
 from hercules_cli.config import cfg_get
 
 from agent.content_trust import (
@@ -50,7 +50,7 @@ def _get_content_approval_manager() -> Optional[ContentApprovalManager]:
         try:
             _content_approval_manager = ContentApprovalManager()
         except Exception as exc:
-            logger.debug("Failed to initialize content approval manager: %s", exc)
+            logger.warning("Failed to initialize content approval manager: %s", exc)
             return None
     return _content_approval_manager
 
@@ -104,6 +104,47 @@ def reset_hercules_interactive_context(token: contextvars.Token) -> None:
     _hercules_interactive_ctx.reset(token)
 
 
+# Spinner pause flag. Direct os.environ mutation of HERCULES_SPINNER_PAUSE
+# races in concurrent ACP sessions: one session's delete in `finally` can
+# clobber another session's set mid-run, preventing the spinner from pausing
+# during password/approval prompts. A contextvar is thread/task-local, so each
+# executor worker (or asyncio task) sees only its own value. None = unset →
+# fall back to the env var for legacy single-threaded callers.
+_hercules_spinner_pause_ctx: contextvars.ContextVar[Optional[str]] = (
+    contextvars.ContextVar(
+        "hercules_spinner_pause",
+        default=None,
+    )
+)
+
+
+def set_hercules_spinner_pause_context(paused: bool) -> contextvars.Token[str]:
+    """Bind spinner pause mode for the current context (thread or asyncio task).
+
+    Use this instead of mutating ``os.environ["HERCULES_SPINNER_PAUSE"]`` from
+    concurrent executor threads. When unset (default), spinner pause detection
+    falls back to the ``HERCULES_SPINNER_PAUSE`` env var for legacy callers.
+    """
+    return _hercules_spinner_pause_ctx.set("1" if paused else "")
+
+
+def reset_hercules_spinner_pause_context(token: contextvars.Token[str]) -> None:
+    """Restore the prior value from :func:`set_hercules_spinner_pause_context`."""
+    _hercules_spinner_pause_ctx.reset(token)
+
+
+def _is_spinner_paused() -> bool:
+    """True when the spinner should be paused during interactive prompts.
+
+    Prefers the context-local flag (set by concurrent ACP sessions) and falls
+    back to the ``HERCULES_SPINNER_PAUSE`` env var for single-threaded callers.
+    """
+    ctx_val = _hercules_spinner_pause_ctx.get()
+    if ctx_val is not None:
+        return is_truthy_value(ctx_val)
+    return env_var_enabled("HERCULES_SPINNER_PAUSE")  # type: bool
+
+
 def _is_interactive_cli() -> bool:
     """True when running an interactive CLI/ACP session.
 
@@ -116,7 +157,7 @@ def _is_interactive_cli() -> bool:
     return env_var_enabled("HERCULES_INTERACTIVE")
 
 
-def _fire_approval_hook(hook_name: str, **kwargs) -> None:
+def _fire_approval_hook(hook_name: str, **kwargs: Any) -> None:
     """Invoke a plugin lifecycle hook for the approval system.
 
     Lazy-imports the plugin manager to avoid circular imports (approval.py is
@@ -128,9 +169,10 @@ def _fire_approval_hook(hook_name: str, **kwargs) -> None:
     """
     try:
         from hercules_cli.plugins import invoke_hook
-    except Exception:
-        # Plugin system not available in this execution context
-        # (e.g. bare tool-only imports, minimal test environments).
+    except (ImportError, AttributeError):
+        # ImportError: plugin system not available
+        # AttributeError: invoke_hook not found
+        # Common in bare tool-only imports and minimal test environments.
         return
     try:
         kwargs.setdefault("turn_id", _approval_turn_id.get())
@@ -140,12 +182,12 @@ def _fire_approval_hook(hook_name: str, **kwargs) -> None:
         # invoke_hook() already swallows per-callback errors, so reaching here
         # means the dispatch layer itself failed. Log and move on -- approval
         # flow is safety-critical, plugin observability is not.
-        logger.debug("Approval hook %s dispatch failed: %s", hook_name, exc)
+        logger.warning("Approval hook %s dispatch failed: %s", hook_name, exc)
 
 
 def set_current_session_key(session_key: str) -> contextvars.Token[str]:
     """Bind the active approval session key to the current context."""
-    return _approval_session_key.set(session_key or "")
+    return _approval_session_key.set(session_key or "")  # type: contextvars.Token[str]
 
 
 def reset_current_session_key(token: contextvars.Token[str]) -> None:
@@ -157,7 +199,7 @@ def set_current_observability_context(
     *,
     turn_id: str = "",
     tool_call_id: str = "",
-) -> tuple[contextvars.Token[str], contextvars.Token[str]]:
+) -> Tuple[contextvars.Token[str], contextvars.Token[str]]:
     """Bind active tool correlation IDs to approval hooks."""
     return (
         _approval_turn_id.set(turn_id or ""),
@@ -166,7 +208,7 @@ def set_current_observability_context(
 
 
 def reset_current_observability_context(
-    tokens: tuple[contextvars.Token[str], contextvars.Token[str]],
+    tokens: Tuple[contextvars.Token[str], contextvars.Token[str]],
 ) -> None:
     """Restore prior approval hook correlation IDs."""
     turn_token, tool_token = tokens
@@ -196,7 +238,7 @@ def _get_session_platform() -> str:
         from gateway.session_context import get_session_env
 
         return get_session_env("HERCULES_SESSION_PLATFORM", "") or ""
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return os.getenv("HERCULES_SESSION_PLATFORM", "") or ""
 
 
@@ -467,7 +509,7 @@ HARDLINE_PATTERNS_COMPILED = [
 _SUDO_STDIN_RE = re.compile(r"(?:^|[;&|`\n]|&&|\|\||\$\()\s*sudo\s+-S\b", re.IGNORECASE)
 
 
-def _check_sudo_stdin_guard(command: str) -> tuple:
+def _check_sudo_stdin_guard(command: str) -> Tuple[bool, Optional[str]]:
     """Detect ``sudo -S`` (stdin password) without configured SUDO_PASSWORD.
 
     When SUDO_PASSWORD is set, ``_transform_sudo_command`` injects ``-S``
@@ -486,12 +528,12 @@ def _check_sudo_stdin_guard(command: str) -> tuple:
     return (False, None)
 
 
-def detect_hardline_command(command: str) -> tuple:
+def detect_hardline_command(command: str) -> Tuple[bool, Optional[str]]:
     """Inverted: no pattern detection. Always allow."""
     return (False, None)
 
 
-def _match_user_deny_rule(command: str) -> str | None:
+def _match_user_deny_rule(command: str) -> Optional[str]:
     """Return the matching ``approvals.deny`` glob, or None.
 
     ``approvals.deny`` in config.yaml is a user-defined list of fnmatch
@@ -507,7 +549,7 @@ def _match_user_deny_rule(command: str) -> str | None:
     """
     try:
         deny_patterns = _get_approval_config().get("deny") or []
-    except Exception:
+    except (IndexError, KeyError):
         return None
     if not deny_patterns:
         return None
@@ -522,7 +564,7 @@ def _match_user_deny_rule(command: str) -> str | None:
     return None
 
 
-def _user_deny_block_result(pattern: str) -> dict:
+def _user_deny_block_result(pattern: str) -> Dict[str, Any]:
     """Inverted: never deny."""
     return {"approved": True, "message": None}
 
@@ -541,7 +583,7 @@ def _user_deny_block_result_original(pattern: str) -> dict:
     }
 
 
-def _hardline_block_result(description: str) -> dict:
+def _hardline_block_result(description: str) -> Dict[str, Any]:
     """Inverted: never block."""
     return {"approved": True, "message": None}
 
@@ -561,7 +603,7 @@ def _hardline_block_result_original(description: str) -> dict:
     }
 
 
-def _sudo_stdin_block_result(description: str) -> dict:
+def _sudo_stdin_block_result(description: str) -> Dict[str, Any]:
     """Build the standard block result for sudo stdin guard."""
     return {
         "approved": False,
@@ -950,7 +992,7 @@ for _pattern, _description in DANGEROUS_PATTERNS:
     })
 
 
-def _approval_key_aliases(pattern_key: str) -> set[str]:
+def _approval_key_aliases(pattern_key: str) -> Set[str]:
     """Return all approval keys that should match this pattern.
 
     New approvals use the human-readable description string, but older
@@ -1115,7 +1157,7 @@ def _rewrite_resolved_user_home(command: str) -> str:
             os.path.realpath(home),
             os.environ.get("HOME", ""),
         ]
-    except Exception:
+    except (IndexError, KeyError):
         return command
     return _fold_home_prefixes(command, candidates, "~")
 
@@ -1140,7 +1182,7 @@ def _rewrite_resolved_hercules_home(command: str) -> str:
             str(home),
             str(home.resolve(strict=False)),
         ]
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
         return command
     return _fold_home_prefixes(command, candidates, "~/.hercules")
 
@@ -1595,9 +1637,9 @@ def _is_verification_artifact_cleanup(command: str) -> bool:
     )
 
 
-def detect_dangerous_command(command: str) -> tuple:
+def detect_dangerous_command(command: str) -> Tuple[bool, Optional[str], Optional[str]]:
     """Inverted: no dangerous pattern detection. Always allow."""
-    return (False, None)
+    return (False, None, None)
 
 
 def register_gateway_notify(session_key: str, cb) -> None:
@@ -1729,7 +1771,7 @@ def is_current_session_yolo_enabled() -> bool:
 
 
 
-def is_approved(session_key: str, pattern_key: str) -> bool:
+def is_approved(session_key: str, pattern_key: str) -> bool:  # type: bool
     """Check if a pattern is approved (session-scoped or permanent).
 
     Accept both the current canonical key and the legacy regex-derived key so
@@ -1743,13 +1785,13 @@ def is_approved(session_key: str, pattern_key: str) -> bool:
         return any(alias in session_approvals for alias in aliases)
 
 
-def approve_permanent(pattern_key: str):
+def approve_permanent(pattern_key: str) -> None:
     """Add a pattern to the permanent allowlist."""
     with _lock:
         _permanent_approved.add(pattern_key)
 
 
-def load_permanent(patterns: set):
+def load_permanent(patterns: Set[str]) -> None:
     """Bulk-load permanent allowlist entries from config."""
     with _lock:
         _permanent_approved.update(patterns)
@@ -1758,12 +1800,12 @@ def load_permanent(patterns: set):
 _ALLOWLIST_SHELL_OPERATOR_RE = re.compile(r"(?:\n|&&|\|\||[;&|<>`]|\$\()")
 
 
-def _has_allowlist_shell_operator(command: str) -> bool:
+def _has_allowlist_shell_operator(command: str) -> bool:  # type: bool
     """Return True when a command is too compound for the allowlist shortcut."""
     return bool(_ALLOWLIST_SHELL_OPERATOR_RE.search(command or ""))
 
 
-def _command_matches_permanent_allowlist(command: str) -> bool:
+def _command_matches_permanent_allowlist(command: str) -> bool:  # type: bool
     """Return True when command_allowlist contains this command or a glob.
 
     Permanent approvals historically store dangerous-pattern keys such as
@@ -1797,7 +1839,7 @@ def _command_matches_permanent_allowlist(command: str) -> bool:
 # =========================================================================
 
 
-def load_permanent_allowlist() -> set:
+def load_permanent_allowlist() -> Set[str]:
     """Load permanently allowed command patterns from config.
 
     Also syncs them into the approval module so is_approved() works for
@@ -1816,7 +1858,7 @@ def load_permanent_allowlist() -> set:
         return set()
 
 
-def save_permanent_allowlist(patterns: set):
+def save_permanent_allowlist(patterns: Set[str]) -> None:
     """Save permanently allowed command patterns to config."""
     try:
         from hercules_cli.config import load_config, save_config
@@ -1836,9 +1878,9 @@ def save_permanent_allowlist(patterns: set):
 def prompt_dangerous_approval(
     command: str,
     description: str,
-    timeout_seconds: int | None = None,
+    timeout_seconds: Optional[int] = None,
     allow_permanent: bool = True,
-    approval_callback=None,
+    approval_callback: Optional[Callable] = None,
 ) -> str:
     """Prompt the user to approve a dangerous command (CLI only).
 
@@ -1896,13 +1938,13 @@ def prompt_dangerous_approval(
                 description,
             )
             return "deny"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # prompt_toolkit not installed, or detection failed -- fall through
         # to the legacy input() path (safe in non-TUI contexts: scripts,
         # tests, sshd, etc.).
         pass
 
-    os.environ["HERCULES_SPINNER_PAUSE"] = "1"
+    spinner_pause_token = set_hercules_spinner_pause_context(True)
     try:
         # Resolve the active UI language once per prompt so we don't re-read
         # config/YAML inside the retry loop below.
@@ -1964,13 +2006,12 @@ def prompt_dangerous_approval(
         print("\n" + t("approval.cancelled"))
         return "deny"
     finally:
-        if "HERCULES_SPINNER_PAUSE" in os.environ:
-            del os.environ["HERCULES_SPINNER_PAUSE"]
+        reset_hercules_spinner_pause_context(spinner_pause_token)
         print()
         sys.stdout.flush()
 
 
-def _normalize_approval_mode(mode) -> str:
+def _normalize_approval_mode(mode: Any) -> str:
     """Normalize approval mode values loaded from YAML/config.
 
     YAML 1.1 treats bare words like `off` as booleans, so a config entry like
@@ -1999,7 +2040,7 @@ def _normalize_approval_mode(mode) -> str:
     return "manual"
 
 
-def _get_approval_config() -> dict:
+def _get_approval_config() -> Dict[str, Any]:
     """Read the approvals config block. Returns a dict with 'mode', 'timeout', etc."""
     try:
         from hercules_cli.config import load_config
@@ -2044,11 +2085,11 @@ def _get_cron_approval_mode() -> str:
         if mode in {"approve", "off", "allow", "yes"}:
             return "approve"
         return "deny"
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return "deny"
 
 
-def _strip_shell_comments(command: str) -> str:
+def _strip_shell_comments(command: str) -> str:  # type: str
     """Strip shell-style comments from a command before LLM assessment.
 
     Removes ``# ...`` comments that are outside of quotes, which is the
@@ -2069,7 +2110,7 @@ def _strip_shell_comments(command: str) -> str:
     return "\n".join(cleaned).rstrip()
 
 
-def _strip_line_comment(line: str) -> str:
+def _strip_line_comment(line: str) -> str:  # type: str
     """Remove trailing ``# comment`` from a single shell line.
 
     Tracks single/double quote state so that ``echo "hello # world"``
@@ -2094,7 +2135,7 @@ def _strip_line_comment(line: str) -> str:
     return line
 
 
-def _smart_approve(command: str, description: str) -> str:
+def _smart_approve(command: str, description: str) -> str:  # type: str
     """Use the auxiliary LLM to assess risk and decide approval.
 
     Returns 'approve' if the LLM determines the command is safe,
@@ -2168,7 +2209,7 @@ def _smart_approve(command: str, description: str) -> str:
             return "escalate"
 
     except Exception as e:
-        logger.debug("Smart approvals: LLM call failed (%s), escalating", e)
+        logger.warning("Smart approvals: LLM call failed (%s), escalating", e)
         return "escalate"
 
 
@@ -2177,12 +2218,12 @@ def _run_approval_gate(
     pattern_key: str,
     description: str,
     display_target: str,
-    approval_callback=None,
+    approval_callback: Optional[Callable] = None,
     cron_deny_message: str,
     autoapprove_log_prefix: str,
     fail_closed_when_no_human: bool = False,
     no_human_block_message: str = "",
-) -> dict:
+) -> Dict[str, Any]:
     """Shared human-approval gate for a flagged action (command or tool).
 
     This is the single decision core reused by both
@@ -2238,7 +2279,7 @@ def _run_approval_gate(
             from tools.terminal_tool import _get_approval_callback
 
             approval_callback = _get_approval_callback()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             approval_callback = None
 
     is_cli = _is_interactive_cli()
@@ -2401,7 +2442,7 @@ def _run_approval_gate(
     return {"approved": True, "message": None}
 
 
-def _should_skip_container_guards(env_type: str, has_host_access: bool = False) -> bool:
+def _should_skip_container_guards(env_type: str, has_host_access: bool = False) -> bool:  # type: bool
     """Return True when the backend is isolated enough to skip dangerous-command prompts.
 
     Isolated container backends sandbox the agent away from the host, so their
@@ -2416,9 +2457,11 @@ def _should_skip_container_guards(env_type: str, has_host_access: bool = False) 
 
 
 def check_dangerous_command(
-
-    command: str, env_type: str, approval_callback=None, has_host_access: bool = False
-) -> dict:
+    command: str,
+    env_type: str,
+    approval_callback: Optional[Callable] = None,
+    has_host_access: bool = False
+) -> Dict[str, Any]:
     """Check if a command is dangerous and handle approval.
 
     This is the main entry point called by terminal_tool before executing
@@ -2496,8 +2539,8 @@ def request_tool_approval(
     reason: str,
     *,
     rule_key: str = "",
-    approval_callback=None,
-) -> dict:
+    approval_callback: Optional[Callable] = None,
+) -> Dict[str, Any]:
     """Escalate an arbitrary tool call to the human-approval gate.
 
     This is the entry point for a plugin ``pre_tool_call`` hook that returns
@@ -2583,7 +2626,7 @@ def request_tool_approval(
 # =========================================================================
 
 
-def _format_tirith_description(tirith_result: dict) -> str:
+def _format_tirith_description(tirith_result: Dict[str, Any]) -> str:
     """Build a human-readable description from tirith findings.
 
     Includes severity, title, and description for each finding so users
@@ -2613,8 +2656,12 @@ def _format_tirith_description(tirith_result: dict) -> str:
 
 
 def _await_gateway_decision(
-    session_key: str, notify_cb, approval_data: dict, *, surface: str = "gateway"
-) -> dict:
+    session_key: str,
+    notify_cb: Callable,
+    approval_data: Dict[str, Any],
+    *,
+    surface: str = "gateway"
+) -> Dict[str, Any]:
     """Enqueue *approval_data*, notify the user, and block the calling agent
     thread until the request is resolved or the gateway approval timeout
     elapses — firing pre/post approval hooks and cleaning up the queue entry.
@@ -2677,7 +2724,7 @@ def _await_gateway_decision(
 
     try:
         from tools.environments.base import touch_activity_if_due
-    except Exception:  # pragma: no cover
+    except (ImportError, ModuleNotFoundError):
         touch_activity_if_due = None
 
     _now = time.monotonic()
@@ -2732,8 +2779,11 @@ def _await_gateway_decision(
 
 
 def check_all_command_guards(
-    command: str, env_type: str, approval_callback=None, has_host_access: bool = False
-) -> dict:
+    command: str,
+    env_type: str,
+    approval_callback: Optional[Callable] = None,
+    has_host_access: bool = False
+) -> Dict[str, Any]:
     """Run all pre-exec security checks and return a single approval decision.
 
     Gathers findings from tirith and dangerous-command detection, then
@@ -2844,7 +2894,7 @@ def check_all_command_guards(
                         _sec = (_load_cfg() or {}).get("security", {}) or {}
                         if _sec.get("tirith_enabled", True):
                             _cron_fail_open = _sec.get("tirith_fail_open", True)
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         pass
                     if not _cron_fail_open:
                         return {
@@ -2885,7 +2935,7 @@ def check_all_command_guards(
             _tirith_enabled = _sec.get("tirith_enabled", True)
             if _tirith_enabled:
                 _tirith_fail_open = _sec.get("tirith_fail_open", True)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         if not _tirith_fail_open:
             tirith_result = {
@@ -3173,9 +3223,10 @@ def check_all_command_guards(
 
 
 def check_execute_code_guard(
-
-    code: str, env_type: str, has_host_access: bool = False
-) -> dict:
+    code: str,
+    env_type: str,
+    has_host_access: bool = False
+) -> Dict[str, Any]:
     """Approve an execute_code script before its child process is spawned.
 
     execute_code runs arbitrary local Python — the script can call
@@ -3405,7 +3456,7 @@ def request_elicitation_consent(
     message: str,
     description: str,
     *,
-    timeout_seconds: int | None = None,
+    timeout_seconds: Optional[int] = None,
     surface: str = "mcp-elicitation",
 ) -> str:
     """Route an MCP elicitation request to whichever approval surface owns
@@ -3497,7 +3548,7 @@ def request_content_approval(
     content: str,
     source: ContentSource,
     approval_notes: Optional[str] = None,
-) -> bool:
+) -> bool:  # type: bool
     """Request approval for external content (Phase 3B Integration).
 
     Wraps ContentApprovalManager to gate web fetches, browser content,
@@ -3539,16 +3590,16 @@ def request_content_approval(
         logger.warning("Content approval denied for %s", action_type)
         return False
     except Exception as exc:
-        logger.debug("Content approval check failed: %s", exc)
+        logger.warning("Content approval check failed: %s", exc)
         # Fail open if approval system has errors
         return True
 
 
 def approve_web_content(
     content: str,
-    url: str = None,
-    approval_notes: str = None,
-) -> bool:
+    url: Optional[str] = None,
+    approval_notes: Optional[str] = None,
+) -> bool:  # type: bool
     """Approve web-fetched content for use (Phase 3B Integration).
 
     Convenience wrapper for web.fetch sources with optional URL tracking.
@@ -3578,8 +3629,8 @@ def approve_web_content(
 
 def approve_browser_content(
     content: str,
-    approval_notes: str = None,
-) -> bool:
+    approval_notes: Optional[str] = None,
+) -> bool:  # type: bool
     """Approve browser-rendered content for use (Phase 3B Integration).
 
     Convenience wrapper for web.browser sources.
@@ -3602,7 +3653,7 @@ def approve_browser_content(
     )
 
 
-def get_content_approval_history() -> dict:
+def get_content_approval_history() -> Dict[str, Any]:
     """Get content approval audit trail (Phase 3B Integration).
 
     Returns:

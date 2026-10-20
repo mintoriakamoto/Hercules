@@ -26,6 +26,7 @@ import json
 import logging
 import os
 import shutil
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from hercules_constants import (
@@ -139,7 +140,7 @@ def _read_suppressed_names() -> set:
         from tools.skill_usage import read_suppressed_names
 
         return read_suppressed_names()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         path = SKILLS_DIR / ".curator_suppressed"
         if not path.exists():
             return set()
@@ -160,8 +161,6 @@ def _write_manifest(entries: Dict[str, str]):
     Uses a temp file + os.replace() to avoid corruption if the process
     crashes or is interrupted mid-write.
     """
-    import tempfile
-
     MANIFEST_FILE.parent.mkdir(parents=True, exist_ok=True)
     data = (
         "\n".join(f"{name}:{hash_val}" for name, hash_val in sorted(entries.items()))
@@ -281,7 +280,7 @@ def _content_hash(directory: Path) -> str:
         from tools.skills_guard import content_hash
 
         return content_hash(directory)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Hashing is provenance metadata only; keep sync resilient if guard
         # dependencies are unavailable in a packaged/update context.
         return _dir_hash(directory)

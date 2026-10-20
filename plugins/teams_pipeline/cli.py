@@ -388,7 +388,7 @@ def _cmd_subscriptions(args) -> None:
     for sub in subscriptions:
         try:
             _sync_subscription_record(store, sub, status="active")
-        except Exception:
+        except (AttributeError, ValueError):
             continue
     if not subscriptions:
         print("No Microsoft Graph subscriptions found.")

@@ -49,7 +49,7 @@ def _default_gateway_id() -> str:
     host = ""
     try:
         host = socket.gethostname().strip()
-    except Exception:
+    except (OSError, httpx.HTTPStatusError, httpx.RequestError):
         host = ""
     return f"gw-{host or 'hercules'}"
 
@@ -69,7 +69,7 @@ def _resolve_connector_url(override: Optional[str]) -> Optional[str]:
 
             cfg = _load_gateway_config().get("gateway") or {}
             raw = str(cfg.get("relay_url", "") or "").strip()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             raw = ""
     if not raw:
         return None
@@ -134,7 +134,7 @@ def _post_enroll(
         detail = ""
         try:
             detail = (json.loads(exc.read().decode()) or {}).get("error", "")
-        except Exception:
+        except (OSError):
             pass
         if exc.code == 401:
             raise RuntimeError(

@@ -145,7 +145,7 @@ def parse_frontmatter(content: str) -> Tuple[Dict[str, Any], str]:
         parsed = yaml_load(yaml_content)
         if isinstance(parsed, dict):
             frontmatter = parsed
-    except Exception:
+    except (yaml.YAMLError):
         # Fallback: simple key:value parsing for malformed YAML
         for line in yaml_content.strip().split("\n"):
             if ":" not in line:
@@ -246,14 +246,14 @@ def _detect_environment(env: str) -> bool:
                 from tools.kanban_tools import _profile_has_kanban_toolset
 
                 result = bool(_profile_has_kanban_toolset())
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 result = False
     elif env == "docker":
         try:
             from hercules_constants import is_container
 
             result = is_container()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             result = False
     elif env == "s6":
         # The Hercules Docker image runs s6-overlay as PID 1 (/init). s6 plants
@@ -536,13 +536,13 @@ def normalize_skill_lookup_name(identifier: str) -> str:
         from tools import skills_tool as _skills_tool
 
         primary_root = Path(_skills_tool.SKILLS_DIR)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         primary_root = get_skills_dir()
 
     trusted_roots = [primary_root]
     try:
         trusted_roots.extend(get_external_skills_dirs())
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     # Prefer the lexical path under a trusted skill root before resolving
@@ -558,7 +558,7 @@ def normalize_skill_lookup_name(identifier: str) -> str:
 
     try:
         return str(identifier_path.resolve().relative_to(primary_root.resolve()))
-    except Exception:
+    except (ValueError):
         logger.debug(
             "Skill identifier %r is an absolute path outside trusted skills "
             "roots — passing through unchanged (skill_view will reject it)",
@@ -697,7 +697,7 @@ def discover_all_skill_config_vars() -> List[Dict[str, Any]]:
             try:
                 raw = skill_file.read_text(encoding="utf-8")
                 frontmatter, _ = parse_frontmatter(raw)
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
 
             skill_name = frontmatter.get("name") or skill_file.parent.name

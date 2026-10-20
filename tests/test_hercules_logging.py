@@ -1,6 +1,5 @@
 """Tests for hercules_logging — centralized logging setup."""
 
-import io
 import logging
 import os
 import stat

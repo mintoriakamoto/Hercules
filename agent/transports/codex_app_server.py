@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from tools.environments.local import hercules_subprocess_env
+import re
 
 # Default minimum codex version we test against. The PR sets this from the
 # `codex --version` parsed at install time; bumping is a one-line change here.
@@ -189,7 +190,7 @@ class CodexAppServerClient:
         try:
             if self._proc.stdin and not self._proc.stdin.closed:
                 self._proc.stdin.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         try:
             self._proc.terminate()
@@ -198,7 +199,7 @@ class CodexAppServerClient:
             try:
                 self._proc.kill()
                 self._proc.wait(timeout=1.0)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     def __enter__(self) -> "CodexAppServerClient":
@@ -391,7 +392,7 @@ class CodexAppServerClient:
                     # Bound memory: keep last 500 lines.
                     if len(self._stderr_lines) > 500:
                         self._stderr_lines = self._stderr_lines[-500:]
-        except Exception:  # pragma: no cover
+        except (IndexError, KeyError):
             pass
 
 

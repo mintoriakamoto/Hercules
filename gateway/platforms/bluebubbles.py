@@ -189,7 +189,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
             text = raw.strip()
             try:
                 loaded = json.loads(text) if text else []
-            except Exception:
+            except (IndexError, KeyError):
                 loaded = None
             patterns = (
                 loaded
@@ -365,7 +365,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
             data = res.get("data")
             if isinstance(data, list):
                 return [wh for wh in data if wh.get("url") == url]
-        except Exception:
+        except (IndexError, KeyError, RuntimeError):
             pass
         return []
 
@@ -493,7 +493,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
                         while len(self._guid_cache) > _GUID_CACHE_SIZE:
                             self._guid_cache.popitem(last=False)
                     return guid
-        except Exception:
+        except (IndexError, KeyError, RuntimeError):
             pass
         return None
 
@@ -647,7 +647,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
 
             local_path = await cache_image_from_url(image_url)
             return await self._send_attachment(chat_id, local_path, caption=caption)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return await super().send_image(chat_id, image_url, caption, reply_to)
 
     async def send_image_file(
@@ -725,7 +725,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
                 await self.client.post(
                     self._api_url(f"/api/v1/chat/{encoded}/typing"), timeout=5
                 )
-        except Exception:
+        except (RuntimeError):
             pass
 
     async def stop_typing(self, chat_id: str) -> None:
@@ -742,7 +742,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
                 await self.client.delete(
                     self._api_url(f"/api/v1/chat/{encoded}/typing"), timeout=5
                 )
-        except Exception:
+        except (RuntimeError):
             pass
 
     # ------------------------------------------------------------------
@@ -764,7 +764,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
                     self._api_url(f"/api/v1/chat/{encoded}/read"), timeout=5
                 )
                 return True
-        except Exception:
+        except (OSError, RuntimeError):
             pass
         return False
 
@@ -799,7 +799,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
                 info["name"] = display_name
                 if participants:
                     info["participants"] = participants
-        except Exception:
+        except (IndexError, KeyError, RuntimeError):
             pass
         return info
 
@@ -912,7 +912,7 @@ class BlueBubblesAdapter(BasePlatformAdapter):
             body = raw.decode("utf-8", errors="replace")
             try:
                 payload = json.loads(body)
-            except Exception:
+            except (ValueError):
                 from urllib.parse import parse_qs
 
                 form = parse_qs(body)

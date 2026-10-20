@@ -26,8 +26,6 @@ Limitations (documented, not fixable at pre-flight level):
 import ipaddress
 import logging
 import os
-import socket
-import asyncio
 import re
 from typing import Any, Optional
 from urllib.parse import (
@@ -35,7 +33,6 @@ from urllib.parse import (
     quote,
     unquote,
     urljoin,
-    urlparse,
     urlsplit,
     urlunsplit,
 )
@@ -253,7 +250,7 @@ def _global_allow_private_urls() -> bool:
         ):
             _cached_allow_private = True
             return _cached_allow_private
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Config unavailable (e.g. tests, early import) — keep default
         pass
 

@@ -94,7 +94,7 @@ def platform_label(key: str, default: str = "") -> str:
         entry = platform_registry.get(key)
         if entry:
             return f"{entry.emoji}  {entry.label}" if entry.emoji else entry.label
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return default
 
@@ -117,6 +117,6 @@ def get_all_platforms() -> "OrderedDict[str, PlatformInfo]":
                     else entry.label,
                     default_toolset=f"hercules-{entry.name}",
                 )
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
     return merged

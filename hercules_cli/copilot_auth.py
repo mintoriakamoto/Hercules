@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Optional
 
 from hercules_cli._subprocess_compat import IS_WINDOWS, windows_hide_flags
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +249,7 @@ def copilot_device_code_login(
         try:
             with urllib.request.urlopen(poll_req, timeout=10) as resp:
                 result = json.loads(resp.read().decode())
-        except Exception:
+        except (OSError):
             print(".", end="", flush=True)
             continue
 

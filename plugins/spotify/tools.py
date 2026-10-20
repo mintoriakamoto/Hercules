@@ -20,7 +20,7 @@ from tools.registry import tool_error, tool_result
 def _check_spotify_available() -> bool:
     try:
         return bool(get_auth_status("spotify").get("logged_in"))
-    except Exception:
+    except (requests.RequestException, OSError):
         return False
 
 
@@ -41,7 +41,7 @@ def _coerce_limit(
 ) -> int:
     try:
         value = int(raw)
-    except Exception:
+    except (ValueError):
         value = default
     return max(minimum, min(maximum, value))
 

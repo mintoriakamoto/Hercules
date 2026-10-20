@@ -288,7 +288,7 @@ def dns_records(domain, types=None):
                         for i in socket.getaddrinfo(domain, None, socket.AF_INET)
                     )
                 )
-            except Exception:
+            except (KeyError, IndexError):
                 records["A"] = []
         elif qtype == "AAAA":
             try:
@@ -298,7 +298,7 @@ def dns_records(domain, types=None):
                         for i in socket.getaddrinfo(domain, None, socket.AF_INET6)
                     )
                 )
-            except Exception:
+            except (KeyError, IndexError):
                 records["AAAA"] = []
         else:
             url = f"https://dns.google/resolve?name={urllib.parse.quote(domain)}&type={qtype}"
@@ -313,7 +313,7 @@ def dns_records(domain, types=None):
                     for a in data.get("Answer", [])
                     if a.get("data")
                 ]
-            except Exception:
+            except (requests.RequestException, OSError):
                 records[qtype] = []
 
     return {"domain": domain, "records": records}
@@ -329,7 +329,7 @@ def check_available(domain):
     # DNS
     try:
         a = [i[4][0] for i in socket.getaddrinfo(domain, None, socket.AF_INET)]
-    except Exception:
+    except (KeyError, IndexError):
         a = []
 
     try:
@@ -339,7 +339,7 @@ def check_available(domain):
         )
         with urllib.request.urlopen(req, timeout=10) as r:
             ns = [x.get("data", "") for x in json.loads(r.read()).get("Answer", [])]
-    except Exception:
+    except (requests.RequestException, OSError):
         ns = []
 
     signals["dns_a"] = a
@@ -355,7 +355,7 @@ def check_available(domain):
         with socket.create_connection((domain, 443), timeout=3) as s:
             with ctx.wrap_socket(s, server_hostname=domain):
                 ssl_up = True
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     signals["ssl_reachable"] = ssl_up
 

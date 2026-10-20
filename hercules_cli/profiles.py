@@ -33,6 +33,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import List, Optional, Tuple
 
 from agent.skill_utils import is_excluded_skill_path
+import tempfile
 
 _PROFILE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
 
@@ -473,7 +474,7 @@ def check_alias_collision(name: str) -> Optional[str]:
                     content = expected.read_text()
                     if "hercules -p" in content:
                         return None  # it's our wrapper, safe to overwrite
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             return f"'{canon}' conflicts with an existing command ({existing_path})"
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -560,7 +561,7 @@ def remove_wrapper_script(name: str) -> bool:
                 if "hercules -p" in content:
                     wrapper_path.unlink()
                     return True
-            except Exception:
+            except (OSError):
                 pass
     return False
 
@@ -592,7 +593,7 @@ def _migrate_profile_config_if_outdated(profile_dir: Path) -> None:
                 migrate_config(interactive=False, quiet=True)
         finally:
             reset_hercules_home_override(token)
-    except Exception:
+    except (AttributeError, ValueError):
         # Profile creation should not fail because an old copied config could
         # not be migrated. The next `hercules doctor --fix` can still surface the
         # detailed error in the target profile.
@@ -739,7 +740,7 @@ def _read_distribution_meta(profile_dir: Path) -> tuple:
             data.get("version"),
             data.get("source"),
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         return None, None, None
 
 
@@ -761,7 +762,7 @@ def _read_config_model(profile_dir: Path) -> tuple:
                 "provider"
             )
         return None, None
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         return None, None
 
 
@@ -786,7 +787,7 @@ def _check_gateway_running(profile_dir: Path) -> bool:
             is not None
         ):
             return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     try:
         from gateway.status import (
@@ -799,7 +800,7 @@ def _check_gateway_running(profile_dir: Path) -> bool:
             get_runtime_status_running_pid(runtime, expected_home=profile_dir)
             is not None
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -902,7 +903,7 @@ def read_profile_meta(profile_dir: Path) -> dict:
 
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         return {"description": "", "description_auto": False}
     if not isinstance(data, dict):
         return {"description": "", "description_auto": False}
@@ -936,7 +937,7 @@ def write_profile_meta(
                 loaded = yaml.safe_load(f) or {}
             if isinstance(loaded, dict):
                 existing = loaded
-        except Exception:
+        except (OSError):
             existing = {}
     if description is not None:
         existing["description"] = description.strip()
@@ -1224,7 +1225,7 @@ def create_profile(
             from hercules_cli.default_soul import DEFAULT_SOUL_MD
 
             soul_path.write_text(DEFAULT_SOUL_MD, encoding="utf-8")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # best-effort — don't fail profile creation over this
 
     # Write the opt-out marker so seed_profile_skills() and `hercules update`'s
@@ -1258,7 +1259,7 @@ def create_profile(
                 description=description.strip(),
                 description_auto=False,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             pass  # non-fatal — user can describe later with `hercules profile describe`
 
     # Phase 4: when running inside a container under s6, register the
@@ -1394,7 +1395,7 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
     """
     try:
         import psutil  # type: ignore
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
     try:
@@ -1410,12 +1411,12 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
         while parent is not None:
             skip.add(parent.pid)
             parent = parent.parent()
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     try:
         current_user = psutil.Process(os.getpid()).username()
-    except Exception:
+    except (AttributeError, ValueError):
         current_user = None
 
     backend_tokens = {"serve", "dashboard", "gateway"}
@@ -1471,7 +1472,7 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
                     env_home = (proc.environ() or {}).get("HERCULES_HOME", "")
                     if env_home and Path(env_home).resolve() == resolved_dir:
                         bound = True
-                except Exception:
+                except (OSError):
                     # environ() can raise AccessDenied even same-user on some
                     # platforms; fall back to the argv signal only.
                     pass
@@ -1480,7 +1481,7 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
                 pids.append(pid)
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
-        except Exception:
+        except (OSError):
             continue
 
     return pids
@@ -1501,7 +1502,7 @@ def _stop_profile_backends(canon: str, profile_dir: Path) -> None:
 
     try:
         from gateway.status import _pid_exists, terminate_pid as _terminate_pid
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
 
     for pid in pids:
@@ -1701,7 +1702,7 @@ def delete_profile(name: str, yes: bool = False) -> Path:
         if active == canon:
             set_active_profile("default")
             print("✓ Active profile reset to default")
-    except Exception:
+    except (ValueError, TypeError):
         pass
 
     if remove_error is not None:
@@ -1757,7 +1758,7 @@ def _maybe_register_gateway_service(profile_name: str) -> None:
         mgr = get_service_manager()
     except RuntimeError:
         return  # no backend on this host — nothing to do
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Defensive: detect_service_manager failed for some other
         # reason. Stay silent on host rather than printing a confusing
         # s6 warning to users who have never touched the container.
@@ -1794,7 +1795,7 @@ def _maybe_unregister_gateway_service(profile_name: str) -> None:
         mgr = get_service_manager()
     except RuntimeError:
         return
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return
     if not mgr.supports_runtime_registration():
         return
@@ -2321,7 +2322,7 @@ def rename_profile(old_name: str, new_name: str) -> Path:
         if get_active_profile() == old_canon:
             set_active_profile(new_canon)
             print(f"✓ Active profile updated: {new_canon}")
-    except Exception:
+    except (ValueError, TypeError):
         pass
 
     return new_dir

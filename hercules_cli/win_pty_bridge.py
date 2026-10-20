@@ -111,7 +111,7 @@ class WinPtyBridge:
             return False
         try:
             return bool(self._proc.isalive())
-        except Exception:
+        except (ValueError):
             return False
 
     # -- I/O --------------------------------------------------------------
@@ -128,7 +128,7 @@ class WinPtyBridge:
             data = self._proc.read(65536)  # pywinpty returns str
         except EOFError:
             return None
-        except Exception:
+        except (OSError):
             return None
         if not data:
             # No fd to select on; poll politely so the executor thread
@@ -149,7 +149,7 @@ class WinPtyBridge:
         try:
             # The dashboard sends raw keystroke bytes; pywinpty.write wants text.
             self._proc.write(data.decode("utf-8", errors="replace"))
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             return
 
     def resize(self, cols: int, rows: int) -> None:
@@ -159,7 +159,7 @@ class WinPtyBridge:
         rows = _clamp(rows, _MAX_ROWS)
         try:
             self._proc.setwinsize(rows, cols)  # pywinpty: (rows, cols)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     # -- teardown ---------------------------------------------------------
@@ -170,7 +170,7 @@ class WinPtyBridge:
         self._closed = True
         try:
             self._proc.terminate(force=True)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def __enter__(self) -> "WinPtyBridge":

@@ -55,7 +55,7 @@ def _resolve_timezone_name() -> str:
             from hercules_cli.config import read_raw_config
 
             cfg = read_raw_config() or {}
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             import yaml
 
             config_path = get_config_path()
@@ -71,12 +71,12 @@ def _resolve_timezone_name() -> str:
                 from hercules_cli import managed_scope
 
                 cfg = managed_scope.apply_managed_overlay(cfg)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             tz_cfg = cfg.get("timezone", "")
             if isinstance(tz_cfg, str) and tz_cfg.strip():
                 return tz_cfg.strip()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     return ""

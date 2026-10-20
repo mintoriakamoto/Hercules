@@ -58,7 +58,7 @@ def _resolve_origin() -> Optional[Dict[str, Any]]:
                 "chat_name": get_session_env("HERCULES_SESSION_CHAT_NAME") or None,
                 "thread_id": get_session_env("HERCULES_SESSION_THREAD_ID") or None,
             }
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return None
 

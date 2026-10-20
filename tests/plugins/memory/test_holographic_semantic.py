@@ -5,7 +5,6 @@ whose meaning matches with zero keyword overlap), semantic *rerank*, graceful
 lexical fallback when embeddings are off, and the entity-resolution fix.
 """
 
-import importlib.util
 import sys
 from pathlib import Path
 

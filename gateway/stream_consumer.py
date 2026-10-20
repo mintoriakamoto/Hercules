@@ -288,7 +288,7 @@ class GatewayStreamConsumer:
             result = self._on_before_finalize()
             if inspect.isawaitable(result):
                 await result
-        except Exception:
+        except (RuntimeError):
             pass
 
     async def _edit_message(
@@ -346,7 +346,7 @@ class GatewayStreamConsumer:
             return
         try:
             cb()
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("on_new_message callback error", exc_info=True)
 
     def _reset_segment_state(self, *, preserve_no_edit: bool = False) -> None:
@@ -901,7 +901,7 @@ class GatewayStreamConsumer:
                             is_turn_final=False,
                         )
                     )
-                except Exception:
+                except (ValueError):
                     pass
             # Only confirm final delivery if the best-effort send above
             # actually succeeded OR if the final response was already
@@ -1080,7 +1080,7 @@ class GatewayStreamConsumer:
                         )
                         if result.success:
                             self._last_sent_text = clean_text
-                    except Exception:
+                    except (RuntimeError):
                         pass
                 self._already_sent = True
                 self._final_response_sent = True
@@ -1316,7 +1316,7 @@ class GatewayStreamConsumer:
                 chat_type=self.cfg.chat_type or None,
                 metadata=self.metadata,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("supports_draft_streaming probe raised", exc_info=True)
             supported = False
         if not supported:
@@ -1422,7 +1422,7 @@ class GatewayStreamConsumer:
             )
             if getattr(result, "success", False):
                 self._last_sent_text = prefix
-        except Exception:
+        except (AttributeError):
             pass  # best-effort — don't let this block the fallback path
 
     async def _send_commentary(self, text: str) -> bool:

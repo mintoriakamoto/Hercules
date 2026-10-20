@@ -785,7 +785,7 @@ def recover_with_credential_pool(
                     (get_custom_provider_pool_key(_agent_base) or "").strip().lower()
                     == pool_provider
                 )
-            except Exception:
+            except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
                 _custom_match = False
         if not _custom_match:
             _ra().logger.warning(
@@ -1046,7 +1046,7 @@ def try_recover_primary_transport(
                     reason="primary_recovery",
                     shared=True,
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         # Rebuild from primary snapshot
@@ -1282,7 +1282,7 @@ def restore_primary_runtime(agent) -> bool:
                 pool_matches_primary = (
                     bool(primary_key) and primary_key == pool_provider
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 pool_matches_primary = False
         if pool is not None and pool_provider and not pool_matches_primary:
             agent._credential_pool = None
@@ -1339,7 +1339,7 @@ def restore_primary_runtime(agent) -> bool:
                         entry_matches_primary = (
                             bool(primary_key) and primary_key == entry_provider
                         )
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError, ValueError):
                         entry_matches_primary = False
 
                 entry_key = getattr(entry, "runtime_api_key", None) or getattr(
@@ -1663,7 +1663,7 @@ def anthropic_prompt_cache_policy(
                     )
                     _agg_base_url = _rt.get("base_url") or ""
                     _agg_api_mode = _rt.get("api_mode") or ""
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     pass
                 return anthropic_prompt_cache_policy(
                     agent,
@@ -2115,7 +2115,7 @@ def switch_model(agent, new_model, new_provider, api_key="", base_url="", api_mo
                     str(effective_base or ""),
                     get_compatible_custom_providers(load_config_readonly()),
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 logger.debug(
                     "custom-provider TLS resolution skipped on switch_model",
                     exc_info=True,
@@ -2133,7 +2133,7 @@ def switch_model(agent, new_model, new_provider, api_key="", base_url="", api_mo
                 reason="switch_model",
                 shared=True,
             )
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError, requests.RequestException):
         # Rollback every mutated field to the pre-swap snapshot so the agent
         # is left consistent (old model + old provider + old client) and the
         # caller's exception handler can surface a meaningful warning.  The
@@ -2145,7 +2145,7 @@ def switch_model(agent, new_model, new_provider, api_key="", base_url="", api_mo
                 continue
             try:
                 setattr(agent, _name, _value)
-            except Exception:
+            except (AttributeError):
                 pass
         raise
 
@@ -2175,7 +2175,7 @@ def switch_model(agent, new_model, new_provider, api_key="", base_url="", api_mo
 
             _sm_cfg = load_config()
             _sm_custom_providers = get_compatible_custom_providers(_sm_cfg)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _sm_custom_providers = None
         # ``agent.api_key`` may be a callable (Azure Foundry Entra ID
         # token provider). ``get_model_context_length`` expects a
@@ -2295,7 +2295,7 @@ def switch_model(agent, new_model, new_provider, api_key="", base_url="", api_mo
                 base_url=agent.base_url,
                 billing_mode=getattr(agent, "api_mode", None),
             )
-        except Exception:
+        except (AttributeError):
             logger.warning(
                 "Failed to persist billing route after model switch",
                 exc_info=True,
@@ -2357,7 +2357,7 @@ def invoke_tool(
                 api_request_id=getattr(agent, "_current_api_request_id", "") or "",
                 middleware_trace=list(_tool_middleware_trace),
             )
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError):
             block_message = None
     if block_message is not None:
         result = json.dumps({"error": block_message}, ensure_ascii=False)
@@ -2378,7 +2378,7 @@ def invoke_tool(
                 error_message=block_message,
                 middleware_trace=list(_tool_middleware_trace),
             )
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError):
             pass
         return result
 
@@ -2401,7 +2401,7 @@ def invoke_tool(
                 duration_ms=int((time.monotonic() - tool_start_time) * 1000),
                 middleware_trace=list(_tool_middleware_trace),
             )
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
             pass
         return result
 
@@ -2758,7 +2758,7 @@ def sanitize_api_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]
             elif fn is not None and hasattr(fn, "name"):
                 try:
                     fn.name = _EMPTY_NAME_SENTINEL
-                except Exception:
+                except (AttributeError, ValueError, KeyError, OSError):
                     pass
             elif isinstance(tc, dict):
                 tc["function"] = {"name": _EMPTY_NAME_SENTINEL, "arguments": "{}"}
@@ -3174,7 +3174,7 @@ def _iter_pool_sockets(client: Any):
         connections = (
             getattr(pool, "_connections", None) or getattr(pool, "_pool", None) or []
         )
-    except Exception:
+    except (AttributeError, IndexError, KeyError):
         return
 
     seen: set[int] = set()
@@ -3195,7 +3195,7 @@ def _iter_pool_sockets(client: Any):
                 if callable(get_extra_info):
                     try:
                         sock = get_extra_info("socket")
-                    except Exception:
+                    except (OSError, httpx.HTTPStatusError, httpx.RequestError):
                         sock = None
             if sock is None:
                 wrapped = getattr(stream, "stream", None)
@@ -3211,7 +3211,7 @@ def _iter_pool_sockets(client: Any):
                         from anyio.abc import SocketAttribute
 
                         sock = extra(SocketAttribute.raw_socket)
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         sock = None
             if sock is None:
                 continue
@@ -3407,7 +3407,7 @@ def apply_pending_steer_to_tool_results(
             blocks = list(existing_content) if existing_content else []
             blocks.append({"type": "text", "text": marker.lstrip()})
             messages[target_idx]["content"] = blocks
-        except Exception:
+        except (IndexError, KeyError):
             # Fall back to string replacement if content shape is unexpected.
             messages[target_idx]["content"] = f"{existing_content}{marker}"
     else:

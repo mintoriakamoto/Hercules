@@ -16,7 +16,6 @@ from hercules_constants import (
     get_default_hercules_root,
     get_hercules_dir,
     get_hercules_home,
-    heal_hercules_managed_node,
     hercules_managed_node_tree_present,
     iter_hercules_node_dirs,
     is_container,

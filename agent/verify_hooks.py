@@ -57,7 +57,7 @@ def _agent_cfg(config: Optional[dict[str, Any]]) -> dict[str, Any]:
             from hercules_cli.config import load_config
 
             config = load_config()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             config = {}
     agent_cfg = (config or {}).get("agent") if isinstance(config, dict) else None
     return agent_cfg if isinstance(agent_cfg, dict) else {}

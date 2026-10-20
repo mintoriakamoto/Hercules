@@ -26,6 +26,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Sequence
+import shutil
 
 log = logging.getLogger(__name__)
 
@@ -501,7 +502,7 @@ def _register_service(scandir: Path, profile: str, *, start: bool) -> None:
         if service_dir.exists():
             shutil.rmtree(service_dir)
         tmp_dir.replace(service_dir)
-    except Exception:
+    except (OSError, ValueError):
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
 

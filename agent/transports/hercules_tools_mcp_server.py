@@ -174,7 +174,7 @@ def _publish_input_schema(mcp: Any, name: str, params_schema: dict) -> None:
         return
     try:
         tool = get_tool(name)
-    except Exception:
+    except (AttributeError, ValueError):
         return
     if tool is not None and hasattr(tool, "parameters"):
         tool.parameters = params_schema

@@ -143,7 +143,7 @@ def _get_proxy_for_base_url(base_url: Optional[str]) -> Optional[str]:
     try:
         if urllib.request.proxy_bypass_environment(host):
             return None
-    except Exception:
+    except (OSError, urllib.error.URLError):
         pass
 
     return proxy
@@ -204,7 +204,7 @@ def build_keepalive_http_client(
             mounts=mounts or None,
             verify=verify,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError, httpx.HTTPStatusError, httpx.RequestError):
         return None
 
 

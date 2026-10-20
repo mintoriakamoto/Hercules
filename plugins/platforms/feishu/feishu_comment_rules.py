@@ -367,7 +367,7 @@ def _main() -> int:
         from hercules_cli.env_loader import load_hercules_dotenv
 
         load_hercules_dotenv()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     usage = (

@@ -38,7 +38,7 @@ def file_mutation_result_landed(tool_name: str, result: Any) -> bool:
         return False
     try:
         data = json.loads(result.strip())
-    except Exception:
+    except (ValueError):
         return False
     if not isinstance(data, dict) or data.get("error"):
         return False

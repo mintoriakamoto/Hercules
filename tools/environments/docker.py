@@ -6,6 +6,7 @@ persistence via bind mounts.
 """
 
 import json
+import datetime
 import logging
 import os
 import re
@@ -101,7 +102,7 @@ def _load_hercules_env_vars() -> dict[str, str]:
         from hercules_cli.config import load_env
 
         return load_env() or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -136,7 +137,7 @@ def _get_active_profile_name() -> str:
         from hercules_cli.profiles import get_active_profile_name
 
         return get_active_profile_name() or "default"
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "default"
 
 
@@ -476,7 +477,7 @@ def _resolve_host_user_spec() -> Optional[str]:
         return None
     try:
         return f"{get_uid()}:{get_gid()}"
-    except Exception:  # pragma: no cover - defensive
+    except (AttributeError, ValueError):
         return None
 
 
@@ -593,7 +594,7 @@ def _ensure_docker_available() -> None:
         raise RuntimeError(
             "Docker daemon is not responding. Ensure Docker is running and try again."
         )
-    except Exception:
+    except (IndexError, KeyError, subprocess.CalledProcessError):
         logger.error(
             "Unexpected error while checking Docker availability.",
             exc_info=True,
@@ -1116,7 +1117,7 @@ class DockerEnvironment(BaseEnvironment):
             from tools.env_passthrough import get_all_passthrough
 
             passthrough_keys = set(get_all_passthrough())
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         # Explicit docker_forward_env entries are an intentional opt-in and must
         # win over the generic Hercules secret blocklist. Only implicit passthrough
@@ -1351,7 +1352,7 @@ class DockerEnvironment(BaseEnvironment):
                 _storage_opt_ok = True
             else:
                 _storage_opt_ok = False
-        except Exception:
+        except (IndexError, KeyError, subprocess.CalledProcessError):
             _storage_opt_ok = False
         logger.debug("Docker --storage-opt support: %s", _storage_opt_ok)
         return _storage_opt_ok

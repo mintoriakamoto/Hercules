@@ -1,3 +1,7 @@
+"""Message content utilities for agent communication.
+
+Handles construction and validation of message content payloads.
+"""
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -46,5 +50,5 @@ def flatten_message_text(content: Any, *, sep: str = "\n") -> str:
         return text
     try:
         return str(content)
-    except Exception:
+    except (ValueError):
         return ""

@@ -115,12 +115,12 @@ def prompt_for_secret(cli, var_name: str, prompt: str, metadata=None) -> dict:
     if hasattr(cli, "_clear_secret_input_buffer"):
         try:
             cli._clear_secret_input_buffer()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     elif hasattr(cli, "_app") and cli._app:
         try:
             cli._app.current_buffer.reset()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     if hasattr(cli, "_app") and cli._app:
@@ -165,12 +165,12 @@ def prompt_for_secret(cli, var_name: str, prompt: str, metadata=None) -> dict:
     if hasattr(cli, "_clear_secret_input_buffer"):
         try:
             cli._clear_secret_input_buffer()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     elif hasattr(cli, "_app") and cli._app:
         try:
             cli._app.current_buffer.reset()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     if hasattr(cli, "_app") and cli._app:
         cli._app.invalidate()

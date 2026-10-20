@@ -269,7 +269,7 @@ def decode_moa_turn(message: Any) -> tuple[str, dict[str, Any] | None]:
         payload = json.loads(
             base64.urlsafe_b64decode(encoded.encode("ascii")).decode("utf-8")
         )
-    except Exception:
+    except (UnicodeDecodeError):
         return message, None
     prompt = str(payload.get("prompt") or "")
     return prompt, _normalize_preset(payload.get("config") or {})

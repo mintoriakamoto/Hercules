@@ -152,7 +152,7 @@ class TextBatchAggregator:
         if event:
             try:
                 await self._handler(event)
-            except Exception:
+            except (RuntimeError):
                 logger.exception(
                     "[TextBatchAggregator] Error dispatching batched event for %s", key
                 )
@@ -244,7 +244,7 @@ class ThreadParticipationTracker:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 if isinstance(data, list):
                     return [str(thread_id) for thread_id in data]
-            except Exception:
+            except (IndexError, KeyError, ValueError):
                 pass
         return []
 

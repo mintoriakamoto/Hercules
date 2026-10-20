@@ -201,7 +201,7 @@ def check_video_generation_requirements() -> bool:
     to prevent the tool from appearing with no usable backend.
     """
     try:
-        from agent.video_gen_registry import list_providers, get_active_provider
+        from agent.video_gen_registry import get_active_provider
         from hercules_cli.plugins import _ensure_plugins_discovered
 
         _ensure_plugins_discovered()
@@ -219,9 +219,9 @@ def check_video_generation_requirements() -> bool:
         # Third check: does it report available?
         try:
             return active.is_available()
-        except Exception:
+        except (AttributeError, ValueError):
             return False
-    except Exception:
+    except (AttributeError, ValueError):
         pass
     return False
 
@@ -514,7 +514,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
 
         _ensure_plugins_discovered()
         provider = get_provider(configured)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         provider = None
 
     if provider is None:
@@ -526,11 +526,11 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
 
     try:
         caps = provider.capabilities() or {}
-    except Exception:
+    except (AttributeError, ValueError):
         caps = {}
     try:
         models = provider.list_models() or []
-    except Exception:
+    except (IndexError, KeyError):
         models = []
 
     active_model = configured_model or provider.default_model()
@@ -589,7 +589,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
             from tools.xai_http import xai_storage_notice_text
 
             notice = xai_storage_notice_text("video_gen")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             notice = ""
         if notice:
             parts.append(f"- storage: {notice}")

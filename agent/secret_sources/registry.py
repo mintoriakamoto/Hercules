@@ -171,7 +171,7 @@ def _ensure_builtin_sources() -> None:
         from agent.secret_sources.bitwarden import BitwardenSource
 
         register_source(BitwardenSource())
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.warning(
             "Failed to register bundled Bitwarden secret source", exc_info=True
         )
@@ -179,7 +179,7 @@ def _ensure_builtin_sources() -> None:
         from agent.secret_sources.onepassword import OnePasswordSource
 
         register_source(OnePasswordSource())
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.warning(
             "Failed to register bundled 1Password secret source", exc_info=True
         )
@@ -276,7 +276,7 @@ def _ordered_enabled_sources(secrets_cfg: dict) -> List[SecretSource]:
         try:
             if source.is_enabled(cfg):
                 enabled.append(source)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.warning(
                 "Secret source '%s' is_enabled() raised; skipping", name, exc_info=True
             )
@@ -328,7 +328,7 @@ def apply_all(
         try:
             for var in source.protected_env_vars(cfg):
                 protected.setdefault(var, source.name)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     # Apply phase — sequential, first-wins, fully attributed.
@@ -343,7 +343,7 @@ def apply_all(
 
         try:
             override = source.override_existing(cfg)
-        except Exception:
+        except (AttributeError, ValueError):
             override = False
 
         for var, value in result.secrets.items():

@@ -205,21 +205,21 @@ def _env_float(name: str, default: float) -> float:
 def _stale_streak(agent) -> int:
     try:
         return int(getattr(agent, "_consecutive_stale_streams", 0) or 0)
-    except Exception:
+    except (AttributeError, ValueError):
         return 0
 
 
 def _bump_stale_streak(agent) -> None:
     try:
         agent._consecutive_stale_streams = _stale_streak(agent) + 1
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
 
 def _reset_stale_streak(agent) -> None:
     try:
         agent._consecutive_stale_streams = 0
-    except Exception:
+    except (AttributeError, ValueError, KeyError, OSError):
         pass
 
 
@@ -344,7 +344,7 @@ def direct_api_call(agent, api_kwargs: dict):
         response = _dispatch_nonstreaming_api_request(
             agent, api_kwargs, make_client=_make_client
         )
-    except Exception:
+    except (AttributeError, ValueError):
         if getattr(agent, "_interrupt_requested", False):
             raise InterruptedError("Agent interrupted during API call") from None
         raise
@@ -610,7 +610,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
             if callable(_hint_fn):
                 try:
                     _silent_hint = _hint_fn(model=api_kwargs.get("model"))
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     _silent_hint = None
             logger.warning(
                 "Codex stream produced no bytes within TTFB cutoff "
@@ -635,7 +635,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
                 )
             try:
                 _close_request_client_once("codex_ttfb_kill")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             agent._touch_activity(
                 f"codex stream killed after {int(_elapsed)}s with no first byte"
@@ -681,7 +681,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
             )
             try:
                 _close_request_client_once("codex_stream_idle_kill")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             agent._touch_activity(
                 f"codex stream killed after {int(_event_stale_elapsed)}s with no SSE events"
@@ -703,7 +703,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
             if callable(_hint_fn):
                 try:
                     _silent_hint = _hint_fn(model=api_kwargs.get("model"))
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     _silent_hint = None
             logger.warning(
                 "Non-streaming API call stale for %.0fs (threshold %.0fs). "
@@ -731,7 +731,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
                     agent._rebuild_anthropic_client()
                 else:
                     _close_request_client_once("stale_call_kill")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             # Circuit breaker (#58962): count the stale kill.  See the
             # canonical comment block above ``_stale_streak()``.
@@ -773,7 +773,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
                     agent._rebuild_anthropic_client()
                 else:
                     _close_request_client_once("interrupt_abort")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             raise InterruptedError("Agent interrupted during API call")
     if result["error"] is not None:
@@ -926,7 +926,7 @@ def build_api_kwargs(agent, api_messages: list) -> dict:
         _ft = _fixed_temperature_for_model(agent.model, agent.base_url)
         _omit_temp = _ft is OMIT_TEMPERATURE
         _fixed_temp = _ft if not _omit_temp else None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _omit_temp = False
         _fixed_temp = None
 
@@ -952,7 +952,7 @@ def build_api_kwargs(agent, api_messages: list) -> dict:
         _model_norm = (agent.model or "").lower().replace(".", "-")
         if any(key in _model_norm for key in _ANTHROPIC_OUTPUT_LIMITS):
             _ant_max = _get_anthropic_max_output(agent.model)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Qwen session metadata
@@ -970,7 +970,7 @@ def build_api_kwargs(agent, api_messages: list) -> dict:
         from providers import get_provider_profile
 
         _profile = get_provider_profile(agent.provider)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _profile = None
 
     if _profile:
@@ -1095,7 +1095,7 @@ def build_assistant_message(agent, assistant_message, finish_reason: str) -> dic
         if not agent.stream_delta_callback and not agent._stream_callback:
             try:
                 agent.reasoning_callback(reasoning_text)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     # Sanitize surrogates from API response — some models (e.g. Kimi/GLM via Ollama)
@@ -1810,7 +1810,7 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
                 _fixed_temperature_for_model,
                 OMIT_TEMPERATURE as _OMIT_TEMP,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _fixed_temperature_for_model = None
             _OMIT_TEMP = None
         _raw_summary_temp = (
@@ -1873,7 +1873,7 @@ def handle_max_iterations(agent, messages: list, api_call_count: int) -> str:
                         base_url=agent.base_url,
                         reasoning_config=agent.reasoning_config,
                     )
-            except Exception:
+            except (AttributeError, ImportError, ModuleNotFoundError):
                 pass
 
             if profile_extra_body:
@@ -2099,7 +2099,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 first_delta_fired["done"] = True
                 try:
                     on_first_delta()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
         def _bedrock_call():
@@ -2263,7 +2263,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
             first_delta_fired["done"] = True
             try:
                 on_first_delta()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     def _call_chat_completions():
@@ -2449,9 +2449,9 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 # survives stub provider differences.
                 try:
                     _diag["bytes"] = int(_diag.get("bytes", 0)) + len(repr(chunk))
-                except Exception:
+                except (ValueError):
                     pass
-            except Exception:
+            except (ValueError):
                 pass
 
             if agent._interrupt_requested:
@@ -2500,7 +2500,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                     try:
                         agent.stream_delta_callback(delta.content)
                         agent._record_streamed_assistant_text(delta.content)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
             # Accumulate tool call deltas — notify display on first name
@@ -2753,7 +2753,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 agent._stream_diag_capture_response(
                     _diag, getattr(stream, "response", None)
                 )
-            except Exception:
+            except (AttributeError):
                 pass
             for event in stream:
                 # Update stale-stream timer on every event so the
@@ -2772,9 +2772,9 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                         _diag["first_chunk_at"] = last_chunk_time["t"]
                     try:
                         _diag["bytes"] = int(_diag.get("bytes", 0)) + len(repr(event))
-                    except Exception:
+                    except (ValueError):
                         pass
-                except Exception:
+                except (ValueError):
                     pass
 
                 if agent._interrupt_requested:
@@ -2944,7 +2944,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                                 "\n\n⚠ Connection dropped mid tool-call; "
                                 "reconnecting…\n\n"
                             )
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                         # Reset the streamed-text buffer so the retry's
                         # fresh preamble doesn't get double-recorded in
@@ -2952,7 +2952,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                         # pollute the interim-visible-text comparison).
                         try:
                             agent._reset_stream_delivery_tracking()
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
                         # Reset in-memory accumulators so the next
                         # attempt's chunks don't concat onto the dead
@@ -2972,14 +2972,14 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                             try:
                                 agent._anthropic_client.close()
                                 agent._rebuild_anthropic_client()
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 pass
                         else:
                             try:
                                 agent._replace_primary_openai_client(
                                     reason="stream_mid_tool_retry_pool_cleanup"
                                 )
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 pass
                         continue
 
@@ -3039,14 +3039,14 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                                 try:
                                     agent._anthropic_client.close()
                                     agent._rebuild_anthropic_client()
-                                except Exception:
+                                except (AttributeError, ValueError):
                                     pass
                             else:
                                 try:
                                     agent._replace_primary_openai_client(
                                         reason="stream_retry_pool_cleanup"
                                     )
-                                except Exception:
+                                except (AttributeError, ValueError):
                                     pass
                             continue
                         # Retries exhausted. Log the final failure with
@@ -3224,7 +3224,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
             )
             try:
                 _close_request_client_once("stale_stream_kill")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             # Circuit breaker (#58962): count the stale kill.  See the
             # canonical comment block above ``_stale_streak()``.
@@ -3235,14 +3235,14 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 try:
                     agent._anthropic_client.close()
                     agent._rebuild_anthropic_client()
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             else:
                 try:
                     agent._replace_primary_openai_client(
                         reason="stale_stream_pool_cleanup"
                     )
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             # Reset the timer so we don't kill repeatedly while
             # the inner thread processes the closure.
@@ -3267,7 +3267,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                     agent._rebuild_anthropic_client()
                 else:
                     _close_request_client_once("stream_interrupt_abort")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             raise InterruptedError("Agent interrupted during streaming API call")
     # Worker thread exited before the main thread's poll loop could check
@@ -3306,7 +3306,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 # Fire as streaming delta so the user sees it immediately.
                 try:
                     agent._fire_stream_delta(_warn)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 logger.warning(
                     "Partial stream dropped tool call(s) %s after %s chars "
@@ -3354,7 +3354,7 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
                 _content_filter_terminated = (
                     _cls.reason == FailoverReason.content_policy_blocked
                 )
-            except Exception:
+            except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
                 _content_filter_terminated = False
             _stub = SimpleNamespace(
                 id=PARTIAL_STREAM_STUB_ID,

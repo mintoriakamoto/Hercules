@@ -6,12 +6,11 @@ event building, or response generation occurs.
 
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
 from gateway.config import Platform, PlatformConfig
-from gateway.platforms.base import MessageType
 
 
 def _make_adapter(

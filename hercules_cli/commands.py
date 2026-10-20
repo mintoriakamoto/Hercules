@@ -18,7 +18,7 @@ import subprocess
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable, Mapping
 
 from utils import is_truthy_value
 
@@ -766,7 +766,7 @@ def _resolve_config_gates() -> set[str]:
         from hercules_cli.config import read_raw_config
 
         cfg = read_raw_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return set()
     result: set[str] = set()
     for cmd in gated:
@@ -844,11 +844,11 @@ def _iter_plugin_command_entries() -> list[tuple[str, str, str]]:
     """
     try:
         from hercules_cli.plugins import get_plugin_commands
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
     try:
         commands = get_plugin_commands() or {}
-    except Exception:
+    except (AttributeError, ValueError):
         return []
     entries: list[tuple[str, str, str]] = []
     for name, meta in commands.items():
@@ -958,7 +958,7 @@ def _telegram_command_menu_config() -> dict[str, Any]:
         from hercules_cli.config import read_raw_config
 
         raw_cfg = read_raw_config() or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         raw_cfg = {}
     if not isinstance(raw_cfg, Mapping):
         raw_cfg = {}
@@ -1173,7 +1173,7 @@ def _collect_gateway_skill_entries(
             if len(desc) > desc_limit:
                 desc = desc[: desc_limit - 3] + "..."
             plugin_pairs.append((name, desc))
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     plugin_pairs = _clamp_command_names(plugin_pairs, reserved_names)
@@ -1188,7 +1188,7 @@ def _collect_gateway_skill_entries(
         from agent.skill_utils import get_disabled_skill_names
 
         _platform_disabled = get_disabled_skill_names(platform=platform)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     skill_triples: list[tuple[str, str, str]] = []
@@ -1230,7 +1230,7 @@ def _collect_gateway_skill_entries(
             if len(desc) > desc_limit:
                 desc = desc[: desc_limit - 3] + "..."
             skill_triples.append((name, desc, cmd_key))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
     # Clamp names; cmd_key is passed through as extra payload so it survives
@@ -1363,7 +1363,7 @@ def discord_skill_commands_by_category(
         from agent.skill_utils import get_disabled_skill_names
 
         _platform_disabled = get_disabled_skill_names(platform="discord")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # Collect raw skill data --------------------------------------------------
@@ -1392,9 +1392,9 @@ def discord_skill_commands_by_category(
             for ext in get_external_skills_dirs():
                 try:
                     _scan_roots.append(_P(ext).resolve())
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         skill_cmds = get_skill_commands()
 
@@ -1481,7 +1481,7 @@ def discord_skill_commands_by_category(
                 categories.setdefault(cat, []).append((discord_name, desc, cmd_key))
             else:
                 uncategorized.append((discord_name, desc, cmd_key))
-    except Exception:
+    except (IndexError, KeyError, OSError):
         pass
 
     return categories, uncategorized, hidden
@@ -1730,7 +1730,7 @@ class SlashCommandCompleter(Completer):
             return True
         try:
             return bool(self._command_filter(slash_command))
-        except Exception:
+        except (ValueError):
             return True
 
     def _iter_skill_commands(self) -> Mapping[str, dict[str, Any]]:
@@ -1738,7 +1738,7 @@ class SlashCommandCompleter(Completer):
             return {}
         try:
             return self._skill_commands_provider() or {}
-        except Exception:
+        except (AttributeError, ValueError):
             return {}
 
     def _iter_skill_bundles(self) -> Mapping[str, dict[str, Any]]:
@@ -1746,7 +1746,7 @@ class SlashCommandCompleter(Completer):
             return {}
         try:
             return self._skill_bundles_provider() or {}
-        except Exception:
+        except (AttributeError, ValueError):
             return {}
 
     # -- stacked slash-skill completion helpers ---------------------------
@@ -1778,7 +1778,7 @@ class SlashCommandCompleter(Completer):
         """
         try:
             from agent.skill_commands import _MAX_STACKED_SKILLS as _cap
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _cap = 5
 
         tokens = text.split()
@@ -2180,7 +2180,7 @@ class SlashCommandCompleter(Completer):
                         display=name,
                         display_meta=s.get("description", "") or s.get("source", ""),
                     )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     @staticmethod
@@ -2267,7 +2267,7 @@ class SlashCommandCompleter(Completer):
                         display=prefix,
                         display_meta=f"MCP server '{server}'",
                     )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return
 
     @staticmethod
@@ -2290,7 +2290,7 @@ class SlashCommandCompleter(Completer):
 
             gw = load_gateway_config()
             platforms = gw.get_connected_platforms()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return
         for platform in platforms:
             name = platform.value
@@ -2298,7 +2298,7 @@ class SlashCommandCompleter(Completer):
                 continue
             try:
                 home = gw.get_home_channel(platform)
-            except Exception:
+            except (AttributeError, ValueError):
                 home = None
             meta = (
                 f"→ {home.name}"
@@ -2347,7 +2347,7 @@ class SlashCommandCompleter(Completer):
                         display=name,
                         display_meta=meta,
                     )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
 
     def get_completions(self, document, complete_event):
@@ -2468,7 +2468,7 @@ class SlashCommandCompleter(Completer):
                         display=f"/{cmd_name}",
                         display_meta=f"🔌 {short_desc}",
                     )
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
 
 

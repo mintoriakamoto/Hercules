@@ -420,7 +420,7 @@ def _extract_spotify_error_detail(response: httpx.Response, *, fallback: str) ->
                 detail = str(error_obj.get("message") or detail)
             elif isinstance(error_obj, str):
                 detail = error_obj
-    except Exception:
+    except (requests.RequestException, OSError):
         pass
     return detail.strip()
 

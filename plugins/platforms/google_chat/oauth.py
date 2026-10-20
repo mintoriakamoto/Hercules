@@ -310,7 +310,7 @@ def _persist_credentials(creds: Any, token_path: Path) -> None:
             token_path,
             _normalize_authorized_user_payload(json.loads(creds.to_json())),
         )
-    except Exception:
+    except (AttributeError, ValueError):
         logger.debug(
             "[google_chat_user_oauth] failed to persist credentials at %s",
             token_path,

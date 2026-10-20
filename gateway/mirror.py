@@ -139,7 +139,7 @@ def _find_session_id(
     try:
         with open(_SESSIONS_INDEX, encoding="utf-8") as f:
             data = json.load(f)
-    except Exception:
+    except (OSError):
         return None
 
     platform_lower = platform.lower()

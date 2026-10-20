@@ -142,9 +142,9 @@ def finalize_turn(
                 finally:
                     try:
                         _conn.close()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.warning(
                     "Failed to record budget-exhausted failure for task %s",
                     _kanban_task,
@@ -235,7 +235,7 @@ def finalize_turn(
         if final_response and not interrupted:
             try:
                 _tail_role = messages[-1].get("role") if messages else None
-            except Exception:
+            except (IndexError, KeyError):
                 _tail_role = None
             if _tail_role != "assistant":
                 messages.append({"role": "assistant", "content": final_response})
@@ -532,7 +532,7 @@ def finalize_turn(
                 review_memory=_should_review_memory,
                 review_skills=_should_review_skills,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             pass  # Background review is best-effort
 
     # Note: Memory provider on_session_end() + shutdown_all() are NOT

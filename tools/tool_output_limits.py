@@ -77,7 +77,7 @@ def get_tool_output_limits() -> Dict[str, int]:
         section = cfg.get("tool_output") if isinstance(cfg, dict) else None
         if not isinstance(section, dict):
             section = {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         section = {}
 
     _cached_limits = {

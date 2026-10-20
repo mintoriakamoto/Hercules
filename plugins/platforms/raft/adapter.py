@@ -161,7 +161,7 @@ def _content_string(value: Any) -> Optional[tuple[str, bool]]:
     else:
         try:
             text = json.dumps(value, ensure_ascii=False, sort_keys=True)
-        except Exception:
+        except (AttributeError, ValueError):
             return None
     if not text:
         return None
@@ -353,7 +353,7 @@ def _on_session_start(**kwargs: Any) -> None:
         from tools.env_passthrough import register_env_passthrough
 
         register_env_passthrough(["RAFT_PROFILE"])
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug(
             "[raft] failed to register RAFT_PROFILE env passthrough", exc_info=True
         )
@@ -584,7 +584,7 @@ class RaftAdapter(BasePlatformAdapter):
                 profile,
                 endpoint,
             )
-        except Exception:
+        except (OSError):
             logger.exception("[raft] Failed to spawn bridge")
 
     def _stop_bridge(self) -> None:
@@ -601,7 +601,7 @@ class RaftAdapter(BasePlatformAdapter):
             logger.warning(
                 "[raft] Bridge process killed after timeout (pid=%d)", proc.pid
             )
-        except Exception:
+        except (subprocess.CalledProcessError, OSError):
             logger.exception("[raft] Error stopping bridge")
 
     async def send(
@@ -649,7 +649,7 @@ class RaftAdapter(BasePlatformAdapter):
             return web.json_response(
                 {"ok": False, "error": "payload_too_large"}, status=413
             )
-        except Exception:
+        except (OSError):
             return web.json_response({"ok": False, "error": "bad_request"}, status=400)
         if len(raw_body) > self._max_body_bytes:
             # Defense in depth: enforce the cap on the actual bytes read even
@@ -786,7 +786,7 @@ class RaftAdapter(BasePlatformAdapter):
         )
         try:
             await self.handle_message(event)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.exception("[raft] Failed to inject wake event")
             return False
         return True
@@ -824,7 +824,7 @@ class RaftAdapter(BasePlatformAdapter):
     def report_activity(self, event: Dict[str, Any]) -> None:
         try:
             self._activity_queue.push(event)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "[raft] activity event dropped during validation", exc_info=True
             )

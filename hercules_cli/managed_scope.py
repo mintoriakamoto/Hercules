@@ -177,7 +177,7 @@ def apply_managed_overlay(config: dict) -> dict:
             managed_expanded = dict(managed_expanded)
             managed_expanded["model"] = {"default": managed_expanded["model"]}
         return _deep_merge(config, managed_expanded)
-    except Exception:  # overlay must never break a caller
+    except (ImportError, ModuleNotFoundError):
         logger.warning("managed scope: failed to apply config overlay", exc_info=True)
         return config
 

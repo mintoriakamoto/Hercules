@@ -1,3 +1,7 @@
+"""Operator persona tools for agent runtime.
+
+Provides tools to retrieve and list available operator personas.
+"""
 
 from tools.registry import registry
 from tools.operators import get_operator, list_operators

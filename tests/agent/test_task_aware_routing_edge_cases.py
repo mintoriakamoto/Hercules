@@ -8,7 +8,6 @@ Tests scenarios that might break routing:
 - Concurrent access patterns
 """
 
-import pytest
 
 from agent.routing_security import RoutingSecurityValidator
 from agent.routing_types import ModelTier, TaskCategory

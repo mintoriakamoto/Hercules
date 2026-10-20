@@ -438,7 +438,7 @@ class ChunkedUploader:
                 body_preview = ""
                 try:
                     body_preview = getattr(resp, "text", "")[:200]
-                except Exception:  # pragma: no cover — defensive
+                except (AttributeError, IndexError, KeyError):
                     pass
                 raise RuntimeError(f"COS PUT returned {status}: {body_preview}")
             except Exception as exc:

@@ -66,7 +66,7 @@ def _config_refresh_lock(path: Path):
             import fcntl
 
             fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug(
             "Honcho OAuth cross-process lock unavailable; in-process only",
             exc_info=True,
@@ -88,7 +88,7 @@ def _config_refresh_lock(path: Path):
                     import fcntl
 
                     fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             fh.close()
 
@@ -228,7 +228,7 @@ def _atomic_write_config(path: Path, raw: dict[str, Any]) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
-    except Exception:
+    except (OSError):
         tmp.unlink(missing_ok=True)
         raise
     os.replace(tmp, path)

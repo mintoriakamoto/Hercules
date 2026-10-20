@@ -203,7 +203,7 @@ def specify_task(
 
     try:
         raw = (resp.choices[0].message.content or "").strip()
-    except Exception:
+    except (IndexError, KeyError):
         raw = ""
 
     parsed = _extract_json_blob(raw)

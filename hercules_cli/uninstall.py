@@ -461,7 +461,7 @@ def _is_default_hercules_home(hercules_home: Path) -> bool:
         from hercules_constants import get_default_hercules_root
 
         return hercules_home.resolve() == get_default_hercules_root().resolve()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -471,7 +471,7 @@ def _discover_named_profiles():
     default root."""
     try:
         from hercules_cli.profiles import list_profiles
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
     try:
         return [p for p in list_profiles() if not getattr(p, "is_default", False)]

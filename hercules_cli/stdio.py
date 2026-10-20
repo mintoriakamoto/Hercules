@@ -30,6 +30,7 @@ sort it out.  Python doesn't get that luxury.
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 
 __all__ = ["configure_windows_stdio", "is_windows"]
@@ -60,7 +61,7 @@ def _flip_console_code_page_to_utf8() -> None:
         # Best-effort; if there's no console attached these just fail silently.
         kernel32.SetConsoleCP(65001)
         kernel32.SetConsoleOutputCP(65001)
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         # ctypes import, missing kernel32, or non-Windows — any failure here
         # is non-fatal.  We've still reconfigured Python's own streams below.
         pass
@@ -80,7 +81,7 @@ def _reconfigure_stream(
         if reconfigure is None:
             return
         reconfigure(encoding=encoding, errors=errors)
-    except Exception:
+    except (AttributeError):
         pass
 
 

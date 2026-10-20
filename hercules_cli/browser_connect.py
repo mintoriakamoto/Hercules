@@ -187,7 +187,7 @@ def is_browser_debug_ready(url: str, timeout: float = 1.0) -> bool:
             with urllib.request.urlopen(probe, timeout=timeout) as resp:
                 if 200 <= getattr(resp, "status", 200) < 300:
                     return True
-        except Exception:
+        except (AttributeError, OSError):
             continue
     return False
 

@@ -44,7 +44,6 @@ logger = logging.getLogger(__name__)
 # placeholder; the actual content never reaches the system prompt).
 # ---------------------------------------------------------------------------
 
-from tools.threat_patterns import scan_for_threats as _scan_for_threats
 
 
 def _scan_context_content(content: str, filename: str) -> str:
@@ -1324,7 +1323,7 @@ def _load_skills_snapshot(skills_dir: Path) -> Optional[dict]:
         return None
     try:
         snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (ValueError):
         return None
     if not isinstance(snapshot, dict):
         return None
@@ -1462,7 +1461,7 @@ def _current_session_platform_hint() -> str:
         return ""
     try:
         return get_session_env("HERCULES_SESSION_PLATFORM") or ""
-    except Exception:
+    except (AttributeError, ValueError):
         return ""
 
 
@@ -1712,7 +1711,7 @@ def build_skills_system_prompt(
             _cfg_cap = cfg_get(load_config_readonly(), "skills", "index_max_chars")
             if _cfg_cap is not None:
                 _index_cap = int(_cfg_cap)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
         if _index_cap > 0:
             _running = 0

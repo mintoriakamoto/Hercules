@@ -34,6 +34,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+import tempfile
 
 # Raw-bytes INGEST budget — what the resolver will load before handing off.
 # This is deliberately the 50MB download cap (tools/vision_tools._VISION_MAX_DOWNLOAD_BYTES),
@@ -127,7 +128,7 @@ async def resolve_image_source(src: str, ctx: ResolveContext) -> ResolvedImage:
         # a real block always propagates.
         try:
             from agent.file_safety import raise_if_read_blocked
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             raise_if_read_blocked = None
         if raise_if_read_blocked is not None:
             try:
@@ -243,7 +244,7 @@ def _permitted_host_read_target(p: Path, ctx: ResolveContext) -> Optional[Path]:
     if _is_local_terminal_backend():
         try:
             return p.resolve()
-        except Exception:
+        except (AttributeError, ValueError):
             return p
 
     from tools.credential_files import from_agent_visible_cache_path
@@ -251,7 +252,7 @@ def _permitted_host_read_target(p: Path, ctx: ResolveContext) -> Optional[Path]:
     host_candidate = Path(from_agent_visible_cache_path(str(p)))
     try:
         real = host_candidate.resolve()
-    except Exception:
+    except (AttributeError, ValueError):
         return None
     for root in _media_cache_roots():
         try:
@@ -269,7 +270,7 @@ def _get_active_env(task_id: Optional[str]):
         from tools.terminal_tool import get_active_env
 
         return get_active_env(task_id)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 

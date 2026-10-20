@@ -115,7 +115,7 @@ def _xai_user_agent() -> str:
         from tools.xai_http import hercules_xai_user_agent
 
         return hercules_xai_user_agent()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "hercules-agent/video_gen"
 
 
@@ -400,7 +400,7 @@ class XAIVideoGenProvider(VideoGenProvider):
             from tools.xai_http import xai_storage_notice_text
 
             storage_notice = xai_storage_notice_text("video_gen")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             storage_notice = ""
         tag = (
             "grok-imagine-video for text/reference; "
@@ -815,7 +815,7 @@ async def _submit_xai_video_payload(
         )
         storage_notice = maybe_mark_xai_storage_notice_seen("video_gen")
         storage_cfg = read_xai_imagine_storage_config("video_gen")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         storage_options = None
         storage_notice = None
         storage_cfg = {"enabled": False}
@@ -835,7 +835,7 @@ async def _submit_xai_video_payload(
             detail = ""
             try:
                 detail = exc.response.text[:500]
-            except Exception:
+            except (KeyError, IndexError):
                 pass
             return error_response(
                 error=f"xAI submit failed ({exc.response.status_code}): {detail or exc}",

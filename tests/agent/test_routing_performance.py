@@ -7,7 +7,6 @@ Measures the performance impact of routing analysis to ensure:
 """
 
 import time
-from typing import List, Tuple
 
 import pytest
 

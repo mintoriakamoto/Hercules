@@ -8,8 +8,9 @@ the provider's config schema. Writes config to config.yaml + .env.
 from __future__ import annotations
 
 import os
-import sys
 import shlex
+import subprocess
+import sys
 from pathlib import Path
 
 from hercules_constants import get_hercules_home
@@ -95,7 +96,7 @@ def _install_dependencies(provider_name: str) -> None:
 
         with open(yaml_path, encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError, OSError):
         return
 
     pip_deps = meta.get("pip_dependencies", [])
@@ -152,7 +153,7 @@ def _install_dependencies(provider_name: str) -> None:
                 subprocess.run(
                     shlex.split(check_cmd), check=True, capture_output=True, timeout=5
                 )
-            except Exception:
+            except (subprocess.CalledProcessError):
                 if install_cmd:
                     print(f"\n  ⚠ '{dep_name}' not found. Install with:")
                     print(f"    {install_cmd}")
@@ -167,7 +168,7 @@ def _get_available_providers() -> list:
         from plugins.memory import discover_memory_providers, load_memory_provider
 
         raw = discover_memory_providers()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         raw = []
 
     results = []
@@ -176,7 +177,7 @@ def _get_available_providers() -> list:
             provider = load_memory_provider(name)
             if not provider:
                 continue
-        except Exception:
+        except (AttributeError, ValueError):
             continue
 
         schema = (

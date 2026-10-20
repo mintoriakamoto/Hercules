@@ -71,7 +71,7 @@ def _get_user_plugins_dir() -> Optional[Path]:
 
         d = get_hercules_home() / "plugins"
         return d if d.is_dir() else None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 
@@ -87,7 +87,7 @@ def _is_memory_provider_dir(path: Path) -> bool:
     try:
         source = init_file.read_text(errors="replace")[:8192]
         return "register_memory_provider" in source or "MemoryProvider" in source
-    except Exception:
+    except (KeyError, IndexError):
         return False
 
 
@@ -167,7 +167,7 @@ def discover_memory_providers() -> List[Tuple[str, str, bool]]:
                 with open(yaml_file, encoding="utf-8-sig") as f:
                     meta = yaml.safe_load(f) or {}
                 desc = meta.get("description", "")
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
         # Quick availability check — try loading and calling is_available()
@@ -178,7 +178,7 @@ def discover_memory_providers() -> List[Tuple[str, str, bool]]:
                 available = provider.is_available()
             else:
                 available = False
-        except Exception:
+        except (AttributeError, ValueError):
             available = False
 
         results.append((name, desc, available))
@@ -261,7 +261,7 @@ def _load_provider_from_dir(provider_dir: Path) -> Optional["MemoryProvider"]:
                         sys.modules[parent] = parent_mod
                         try:
                             spec.loader.exec_module(parent_mod)
-                        except Exception:
+                        except (AttributeError, ValueError):
                             pass
 
         # User-installed plugins need their synthetic parent registered the
@@ -329,7 +329,7 @@ def _load_provider_from_dir(provider_dir: Path) -> Optional["MemoryProvider"]:
         ):
             try:
                 return attr()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     return None
@@ -367,7 +367,7 @@ def _get_active_memory_provider() -> Optional[str]:
 
         config = load_config()
         return cfg_get(config, "memory", "provider") or None
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 
@@ -456,7 +456,7 @@ def discover_plugin_cli_commands() -> List[dict]:
                 if desc:
                     help_text = desc
                     description = desc
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
 
         handler_fn = getattr(cli_mod, f"{active_provider}_command", None) or getattr(

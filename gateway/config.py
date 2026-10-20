@@ -284,7 +284,7 @@ class Platform(Enum):
                 cls._value2member_map_[value] = pseudo
                 cls._member_map_[pseudo._name_] = pseudo
                 return pseudo
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
             pass
 
         return None
@@ -306,7 +306,7 @@ class Platform(Enum):
                         )
                     ):
                         names.add(child.name.lower())
-        except Exception:
+        except (OSError, ZeroDivisionError, yaml.YAMLError):
             pass
         return names
 
@@ -785,7 +785,7 @@ class GatewayConfig:
                 from hercules_cli.plugins import discover_plugins
 
                 discover_plugins()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
             entry = platform_registry.get(platform.value)
             if entry:
@@ -794,7 +794,7 @@ class GatewayConfig:
                 if entry.validate_config is not None:
                     return entry.validate_config(config)
                 return True
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass  # Registry not yet initialised during early import
 
         return False
@@ -2131,7 +2131,7 @@ def _apply_env_overrides(config: GatewayConfig) -> None:
         if bluebubbles_mention_patterns:
             try:
                 parsed_patterns = json.loads(bluebubbles_mention_patterns)
-            except Exception:
+            except (ValueError):
                 parsed_patterns = [
                     part.strip()
                     for part in bluebubbles_mention_patterns.replace("\n", ",").split(

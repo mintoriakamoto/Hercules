@@ -30,7 +30,7 @@ from __future__ import annotations
 import random as _random
 from collections.abc import Mapping, MutableSequence
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import yaml
 
@@ -91,7 +91,7 @@ def _merge_phrase_file(
 ) -> None:
     try:
         loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (yaml.YAMLError):
         return
     if isinstance(loaded, Mapping):
         _merge_phrase_mapping(catalog, loaded, inherited_mode=inherited_mode)

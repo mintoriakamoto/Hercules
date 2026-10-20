@@ -176,7 +176,7 @@ def connect(db_path: Optional[Path] = None) -> sqlite3.Connection:
             conn.executescript(SCHEMA_SQL)
             _migrate_add_optional_columns(conn)
             _INITIALIZED_PATHS.add(resolved)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         conn.close()
         raise
     return conn
@@ -197,7 +197,7 @@ def connect_closing(db_path: Optional[Path] = None):
     finally:
         try:
             conn.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 

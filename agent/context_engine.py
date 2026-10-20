@@ -25,6 +25,7 @@ Lifecycle:
      gateway session expiry) — NOT per-turn
 """
 
+import json
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 

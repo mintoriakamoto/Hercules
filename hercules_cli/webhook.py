@@ -45,7 +45,7 @@ def _load_subscriptions() -> Dict[str, dict]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}
-    except Exception:
+    except (ValueError):
         return {}
 
 
@@ -73,7 +73,7 @@ def _save_subscriptions(subs: Dict[str, dict]) -> None:
         # Re-assert after rename in case the destination existed with a
         # broader mode and atomic_replace preserved it.
         os.chmod(path, _SUBSCRIPTIONS_FILE_MODE)
-    except Exception:
+    except (OSError):
         try:
             tmp_path.unlink(missing_ok=True)
         except OSError:
@@ -88,7 +88,7 @@ def _get_webhook_config() -> dict:
 
         cfg = load_config()
         return cfg_get(cfg, "platforms", "webhook", default={})
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 

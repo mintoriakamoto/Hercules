@@ -11,8 +11,12 @@ layout, and the (ported-from-desktop) palette all live in
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from functools import lru_cache
 from typing import Any, Optional
@@ -36,7 +40,7 @@ def _primary_hex() -> str:
         return skin.get_color("ui_primary", "") or skin.get_color(
             "banner_title", "#F7B23B"
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "#F7B23B"
 
 

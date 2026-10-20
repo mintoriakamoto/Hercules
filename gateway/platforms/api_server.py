@@ -79,13 +79,13 @@ def _hercules_version() -> str:
         from importlib.metadata import version
 
         return version("hercules-agent")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     try:
         from hercules_cli import __version__
 
         return __version__
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "dev"
 
 
@@ -191,7 +191,7 @@ def _normalize_chat_content(
                             part = str(text)[:MAX_NORMALIZED_TEXT_LENGTH]
                             parts.append(part)
                             total_len += len(part)
-                        except Exception:
+                        except (IndexError, KeyError, ValueError):
                             pass
                 # Silently skip image_url / other non-text parts
             elif isinstance(item, list):
@@ -219,7 +219,7 @@ def _normalize_chat_content(
             if len(result) > MAX_NORMALIZED_TEXT_LENGTH
             else result
         )
-    except Exception:
+    except (IndexError, KeyError, ValueError):
         return ""
 
 
@@ -432,12 +432,12 @@ class ResponseStore:
                 from hercules_cli.config import get_hercules_home
 
                 db_path = str(get_hercules_home() / "response_store.db")
-            except Exception:
+            except (ImportError, ModuleNotFoundError, ValueError):
                 db_path = ":memory:"
         self._db_path: Optional[str] = db_path if db_path != ":memory:" else None
         try:
             self._conn = sqlite3.connect(db_path, check_same_thread=False)
-        except Exception:
+        except (OSError, sqlite3.DatabaseError):
             self._conn = sqlite3.connect(":memory:", check_same_thread=False)
             self._db_path = None
         # Use shared WAL-fallback helper so response_store.db degrades
@@ -575,7 +575,7 @@ class ResponseStore:
         """Close the database connection."""
         try:
             self._conn.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def __len__(self) -> int:
@@ -679,7 +679,7 @@ def _resolve_media_to_data_urls(text: str) -> str:
 
     try:
         return MEDIA_TAG_CLEANUP_RE.sub(_repl, text)
-    except Exception:
+    except (AttributeError, ValueError):
         return text
 
 
@@ -880,7 +880,7 @@ def _notify_cron_provider_jobs_changed() -> None:
         from cron.scheduler import _notify_provider_jobs_changed
 
         _notify_provider_jobs_changed()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -894,7 +894,7 @@ def _notify_cron_provider_jobs_changed() -> None:
 # must not disable the cron REST API.
 try:
     from tools.cronjob_tools import _scan_cron_prompt as _scan_cron_prompt
-except Exception:  # pragma: no cover - scanner is optional hardening
+except (ImportError, ModuleNotFoundError):
     _scan_cron_prompt = None
 
 
@@ -995,13 +995,13 @@ class APIServerAdapter(BasePlatformAdapter):
             from tools.process_registry import process_registry
 
             process_depth = process_registry.completion_queue.qsize()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         try:
             from tools.async_delegation import active_count
 
             active_delegations = active_count()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         return active_api_runs, process_depth, active_delegations
 
@@ -1040,7 +1040,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 default=default,
             )
             value = int(raw)
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             return default
         return max(0, value)
 
@@ -1061,7 +1061,7 @@ class APIServerAdapter(BasePlatformAdapter):
             profile = get_active_profile_name()
             if profile and profile not in {"default", "custom"}:
                 return profile
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
         return "hercules-agent"
 
@@ -1114,7 +1114,7 @@ class APIServerAdapter(BasePlatformAdapter):
             )
             if isinstance(peer, (tuple, list)) and peer:
                 peer_ip = str(peer[0])
-        except Exception:
+        except (IndexError, KeyError, ValueError):
             peer_ip = ""
 
         return {
@@ -1369,7 +1369,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 return None
             override = runner._session_model_overrides.get(session_key)
             return dict(override) if isinstance(override, dict) else None
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return None
 
     def _create_agent(
@@ -1451,7 +1451,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     )
                     provider_kwargs.pop("model", None)
                     runtime_kwargs.update(provider_kwargs)
-                except Exception:
+                except (ImportError, IndexError, KeyError, ModuleNotFoundError):
                     # Fall back to just switching the provider name; explicit
                     # per-route api_key/base_url below can still complete auth.
                     runtime_kwargs["provider"] = route["provider"]
@@ -1732,7 +1732,7 @@ class APIServerAdapter(BasePlatformAdapter):
             from tools.skills_tool import _find_all_skills, _sort_skills
 
             skills = _sort_skills(_find_all_skills(skip_disabled=False))
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.exception("GET /v1/skills failed")
             return web.json_response(
                 _openai_error("Failed to enumerate skills", err_type="server_error"),
@@ -1776,7 +1776,7 @@ class APIServerAdapter(BasePlatformAdapter):
             for name, label, desc in _get_effective_configurable_toolsets():
                 try:
                     tools = sorted(set(resolve_toolset(name)))
-                except Exception:
+                except (AttributeError, ValueError):
                     tools = []
                 is_enabled = name in enabled_toolsets
                 data.append({
@@ -1787,7 +1787,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     "configured": _toolset_has_keys(name, config),
                     "tools": tools,
                 })
-        except Exception:
+        except (IndexError, KeyError):
             logger.exception("GET /v1/toolsets failed")
             return web.json_response(
                 _openai_error("Failed to enumerate toolsets", err_type="server_error"),
@@ -1871,7 +1871,7 @@ class APIServerAdapter(BasePlatformAdapter):
     ) -> tuple[Dict[str, Any], Optional["web.Response"]]:
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError):
             return {}, web.json_response(
                 _openai_error("Invalid JSON in request body"), status=400
             )
@@ -2178,7 +2178,7 @@ class APIServerAdapter(BasePlatformAdapter):
             base = source.get("title") or "fork"
             try:
                 title = db.get_next_title_in_lineage(base)
-            except Exception:
+            except (AttributeError, ValueError):
                 title = f"{base} fork"
         try:
             db.set_session_title(fork_id, str(title))
@@ -3085,7 +3085,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE client disconnected")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -3117,7 +3117,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 }
                 await response.write(f"data: {json.dumps(error_chunk)}\n\n".encode())
                 await response.write(b"data: [DONE]\n\n")
-            except Exception:
+            except (IndexError, KeyError):
                 pass
 
         return response
@@ -3660,7 +3660,7 @@ class APIServerAdapter(BasePlatformAdapter):
                                         + " chars — truncated for response.completed]"
                                     )
                             _item["arguments"] = json.dumps(_args)
-                    except Exception:
+                    except (ValueError):
                         pass
                 elif _item.get("type") == "function_call_output":
                     _output = _item.get("output", [])
@@ -3759,7 +3759,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE client disconnected")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -3780,7 +3780,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE task cancelled")
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -3816,7 +3816,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "response": failed_env,
                     },
                 )
-            except Exception:
+            except (IndexError, KeyError, RuntimeError):
                 pass
             logger.error(
                 "Agent crashed mid-stream for %s: %s",
@@ -4522,7 +4522,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError):
             body = {}
         job_id = (body or {}).get("job_id")
         if not job_id:
@@ -4876,7 +4876,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 return
             try:
                 loop.call_soon_threadsafe(q.put_nowait, event)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         def _callback(
@@ -4934,7 +4934,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError):
             return web.json_response(_openai_error("Invalid JSON"), status=400)
 
         raw_input = body.get("input")
@@ -5060,7 +5060,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "delta": delta,
                     },
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         self._set_run_status(
@@ -5124,7 +5124,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     )
                     try:
                         loop.call_soon_threadsafe(q.put_nowait, event)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
 
                 def _run_sync():
@@ -5160,12 +5160,12 @@ class APIServerAdapter(BasePlatformAdapter):
                             if approval_token is not None:
                                 try:
                                     reset_current_session_key(approval_token)
-                                except Exception:
+                                except (AttributeError, ValueError):
                                     pass
                             if session_tokens:
                                 try:
                                     clear_session_vars(session_tokens)
-                                except Exception:
+                                except (AttributeError, ValueError):
                                     pass
                     u = {
                         "input_tokens": getattr(agent, "session_prompt_tokens", 0) or 0,
@@ -5240,7 +5240,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "run_id": run_id,
                         "timestamp": time.time(),
                     })
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 raise
             except Exception as exc:
@@ -5258,7 +5258,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "timestamp": time.time(),
                         "error": _redact_api_error_text(exc),
                     })
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             finally:
                 # If the asyncio wrapper is cancelled (for example via
@@ -5270,12 +5270,12 @@ class APIServerAdapter(BasePlatformAdapter):
                     from tools.approval import unregister_gateway_notify
 
                     unregister_gateway_notify(approval_session_key)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
                 # Sentinel: signal SSE stream to close
                 try:
                     _put_event_if_active(None)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
                 self._active_run_agents.pop(run_id, None)
                 self._active_run_tasks.pop(run_id, None)
@@ -5387,7 +5387,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except Exception:
+        except (ValueError):
             return web.json_response(_openai_error("Invalid JSON"), status=400)
 
         raw_choice = str(body.get("choice", "")).strip().lower()
@@ -5450,7 +5450,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     "choice": choice,
                     "resolved": resolved,
                 })
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         return web.json_response({
@@ -5482,7 +5482,7 @@ class APIServerAdapter(BasePlatformAdapter):
         if agent is not None:
             try:
                 agent.interrupt("Stop requested via API")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         return web.json_response({"run_id": run_id, "status": "stopping"})
@@ -5514,7 +5514,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     approval_session_key = self._run_approval_sessions.get(run_id)
                     if approval_session_key:
                         unregister_gateway_notify(approval_session_key)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     pass
             # The transport TTL always bounds buffering. Live control state is
             # independent and survives until the executor-backed task returns.
@@ -5710,7 +5710,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     _backend = ((_load_cfg() or {}).get("terminal") or {}).get(
                         "backend", "local"
                     )
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     _backend = "local"
                 if str(_backend).lower() == "local":
                     logger.warning(
@@ -5759,7 +5759,7 @@ class APIServerAdapter(BasePlatformAdapter):
         if self._response_store is not None:
             try:
                 self._response_store.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "Failed to close response store for %s",
                     self.name,

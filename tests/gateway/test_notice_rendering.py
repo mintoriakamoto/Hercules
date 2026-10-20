@@ -82,7 +82,6 @@ class TestRenderNoticeLine:
 
 # ── Delivery seam: a rendered notice line goes out via _deliver_platform_notice ──
 
-import threading
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

@@ -287,7 +287,7 @@ class ModalEnvironment(BaseEnvironment):
             else:
                 if restored_snapshot_id and restored_from_legacy_key:
                     _store_direct_snapshot(self._task_id, restored_snapshot_id)
-        except Exception:
+        except (IndexError, KeyError):
             self._worker.stop()
             raise
 
@@ -474,7 +474,7 @@ class ModalEnvironment(BaseEnvironment):
 
                 try:
                     snapshot_id = self._worker.run_coroutine(_snapshot(), timeout=60)
-                except Exception:
+                except (AttributeError, ValueError):
                     snapshot_id = None
 
                 if snapshot_id:
@@ -489,7 +489,7 @@ class ModalEnvironment(BaseEnvironment):
 
         try:
             self._worker.run_coroutine(self._sandbox.terminate.aio(), timeout=15)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         finally:
             self._worker.stop()

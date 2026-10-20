@@ -10,6 +10,7 @@ import logging
 from collections import deque
 from hashlib import sha1
 from typing import Any, Awaitable, Callable, Dict, Optional
+import re
 
 try:
     from aiohttp import web
@@ -238,14 +239,14 @@ class MSGraphWebhookAdapter(BasePlatformAdapter):
 
         try:
             content_length = request.content_length
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             content_length = None
         if content_length is not None and content_length > self._max_body_bytes:
             return web.Response(status=413)
 
         try:
             raw_body = await request.read()
-        except Exception:
+        except (OSError):
             return web.Response(status=400)
         if len(raw_body) > self._max_body_bytes:
             return web.Response(status=413)

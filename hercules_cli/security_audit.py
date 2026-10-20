@@ -20,12 +20,9 @@ daily background scans, auto-blocking installs.
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
 import json
 import re
 import sys
-import urllib.error
-import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional
@@ -90,7 +87,7 @@ def _discover_venv() -> list[Component]:
     for dist in distributions():
         try:
             name = (dist.metadata["Name"] or "").strip()
-        except Exception:
+        except (IndexError, KeyError):
             continue
         version = (dist.version or "").strip()
         if not name or not version:
@@ -147,7 +144,7 @@ def _parse_pyproject_pins(text: str) -> list[tuple[str, str]]:
         return []
     try:
         data = tomllib.loads(text)
-    except Exception:
+    except (ValueError):
         return []
     deps: list[str] = []
     project = data.get("project") or {}
@@ -277,7 +274,7 @@ def _discover_mcp() -> list[Component]:
     """Pinned MCP server packages from ``config.yaml``."""
     try:
         from hercules_cli.mcp_config import _get_mcp_servers
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
     out: list[Component] = []

@@ -21,6 +21,7 @@ from abc import ABC, abstractmethod
 from urllib.parse import urlsplit
 
 from utils import normalize_proxy_url
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -252,7 +253,7 @@ def _detect_macos_system_proxy() -> str | None:
             text=True,
             stderr=subprocess.DEVNULL,
         )
-    except Exception:
+    except (IndexError, KeyError, subprocess.CalledProcessError):
         return None
 
     props: dict[str, str] = {}
@@ -551,7 +552,7 @@ def safe_url_for_log(url: str, max_len: int = 80) -> str:
 
     try:
         parsed = urlsplit(raw)
-    except Exception:
+    except (AttributeError, ValueError):
         return raw[:max_len]
 
     if parsed.scheme and parsed.netloc:
@@ -646,7 +647,7 @@ def get_inbound_media_max_bytes() -> int:
         from hercules_cli.config import load_config as _load_config
 
         cfg = _load_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return DEFAULT_INBOUND_MEDIA_MAX_BYTES
     gw = cfg.get("gateway", {}) if isinstance(cfg, dict) else {}
     if not isinstance(gw, dict) or "max_inbound_media_bytes" not in gw:
@@ -2056,7 +2057,7 @@ def coerce_plaintext_gateway_command(event: "MessageEvent") -> None:
             if pattern.match(text):
                 event.text = "/restart"
                 return
-    except Exception:
+    except (AttributeError):
         return
 
 
@@ -2957,7 +2958,7 @@ class BasePlatformAdapter(ABC):
                 logged = set()
                 try:
                     self._status_write_logged = logged
-                except Exception:
+                except (AttributeError, ValueError, KeyError, OSError):
                     pass
             key = (self.platform.value, context)
             if key not in logged:
@@ -3060,14 +3061,14 @@ class BasePlatformAdapter(ABC):
             return
         try:
             recovered = recover(source)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("topic recovery hook failed", exc_info=True)
             return
         if recovered is None or str(recovered) == str(source.thread_id or ""):
             return
         try:
             event.source = dataclasses.replace(source, thread_id=str(recovered))
-        except Exception:
+        except (ValueError):
             logger.debug("topic recovery rewrite failed", exc_info=True)
 
     def set_busy_session_handler(
@@ -3107,7 +3108,7 @@ class BasePlatformAdapter(ABC):
             return None
         try:
             return bool(self._authorization_check(user_id, chat_type, chat_id))
-        except Exception:
+        except (ValueError):
             logger.warning(
                 "[%s] Authorization check raised for user %s; treating as unknown",
                 self.name,
@@ -3266,11 +3267,11 @@ class BasePlatformAdapter(ABC):
         """
         try:
             from hercules_cli.config import load_config as _load_config
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return 0
         try:
             cfg = _load_config()
-        except Exception:
+        except (AttributeError, ValueError):
             return 0
         display = cfg.get("display", {}) if isinstance(cfg, dict) else {}
         if not isinstance(display, dict):
@@ -4164,7 +4165,7 @@ class BasePlatformAdapter(ABC):
             if hasattr(self, "stop_typing"):
                 try:
                     await self.stop_typing(chat_id)
-                except Exception:
+                except (RuntimeError):
                     pass
             self._typing_paused.discard(chat_id)
 
@@ -4193,7 +4194,7 @@ class BasePlatformAdapter(ABC):
             for attempt in range(attempts):
                 try:
                     await self.stop_typing(chat_id)
-                except Exception:
+                except (RuntimeError):
                     pass
                 if attempt < attempts - 1:
                     await asyncio.sleep(0)
@@ -4220,7 +4221,7 @@ class BasePlatformAdapter(ABC):
                 interrupt_event.set()
         try:
             await self.stop_typing(chat_id)
-        except Exception:
+        except (RuntimeError):
             pass
 
     def register_post_delivery_callback(
@@ -4280,7 +4281,7 @@ class BasePlatformAdapter(ABC):
                             _result = _cb()
                             if inspect.isawaitable(_result):
                                 await _result
-                        except Exception:
+                        except (RuntimeError):
                             logger.debug("Post-delivery callback failed", exc_info=True)
 
                 callback = _chained
@@ -4376,7 +4377,7 @@ class BasePlatformAdapter(ABC):
             if ttl is None:
                 try:
                     ttl = int(self._get_ephemeral_system_ttl_default())
-                except Exception:
+                except (ValueError):
                     ttl = 0
             if (
                 ttl
@@ -4834,7 +4835,7 @@ class BasePlatformAdapter(ABC):
                     self.name,
                     session_key,
                 )
-            except Exception:
+            except (IndexError, KeyError):
                 logger.debug(
                     "[%s] Session cancellation raised while unwinding %s",
                     self.name,
@@ -4932,7 +4933,7 @@ class BasePlatformAdapter(ABC):
                 release_guard=False,
                 discard_pending=False,
             )
-        except Exception:
+        except (IndexError, KeyError):
             # On failure, restore the original guard if one still exists so
             # we don't leave the session in a half-reset state.
             if self._active_sessions.get(session_key) is command_guard:
@@ -5079,7 +5080,7 @@ class BasePlatformAdapter(ABC):
                         )
                         is not None
                     )
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     _has_text_clarify = False
 
                 if _has_text_clarify:

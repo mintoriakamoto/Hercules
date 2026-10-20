@@ -84,7 +84,7 @@ def propagate_context_to_thread(target: Callable) -> Callable:
         parent_approval_cb = get_approval()
         parent_sudo_cb = get_sudo()
         setters = (set_approval, set_sudo)
-    except Exception:
+    except (AttributeError, ValueError):
         logger.debug("Could not capture parent approval/sudo callbacks", exc_info=True)
 
     def _runner(*args, **kwargs):
@@ -96,7 +96,7 @@ def propagate_context_to_thread(target: Callable) -> Callable:
                         set_approval(parent_approval_cb)
                     if parent_sudo_cb is not None:
                         set_sudo(parent_sudo_cb)
-                except Exception:
+                except (AttributeError, ValueError):
                     logger.debug(
                         "Failed to install propagated approval/sudo callbacks; "
                         "dangerous-command approval will fail closed",
@@ -110,7 +110,7 @@ def propagate_context_to_thread(target: Callable) -> Callable:
                     try:
                         set_approval(None)
                         set_sudo(None)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         logger.debug(
                             "Failed to clear propagated approval/sudo callbacks",
                             exc_info=True,

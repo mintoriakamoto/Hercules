@@ -263,7 +263,7 @@ def main(argv: list[str] | None = None) -> None:
         from tools.mcp_tool import discover_mcp_tools
 
         discover_mcp_tools()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug("MCP tool discovery failed at ACP startup", exc_info=True)
 
     agent = HerculesACPAgent()
@@ -271,7 +271,7 @@ def main(argv: list[str] | None = None) -> None:
         asyncio.run(acp.run_agent(agent, use_unstable_protocol=True))
     except KeyboardInterrupt:
         logger.info("Shutting down (KeyboardInterrupt)")
-    except Exception:
+    except (RuntimeError):
         logger.exception("ACP agent crashed")
         sys.exit(1)
 

@@ -71,7 +71,7 @@ def _ensure_authenticated():
 def _stored_token_scopes() -> list[str]:
     try:
         data = json.loads(TOKEN_PATH.read_text())
-    except Exception:
+    except (ValueError):
         return list(SCOPES)
     scopes = data.get("scopes")
     if isinstance(scopes, list) and scopes:

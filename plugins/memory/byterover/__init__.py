@@ -83,7 +83,7 @@ def _load_plugin_config() -> Dict[str, Any]:
         legacy_config = memory_config.get("provider_config", {})
         if isinstance(legacy_config, dict):
             return dict(legacy_config)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return {}
 

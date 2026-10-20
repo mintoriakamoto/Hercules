@@ -7,9 +7,8 @@ explicit choice — e.g. a user OAuth-logged-into Anthropic but with
 OPENAI_API_KEY exported (or model.provider set) got routed to Anthropic.
 """
 
-import pytest
 
-from hercules_cli.auth import resolve_provider, AuthError
+from hercules_cli.auth import resolve_provider
 
 
 def _login(monkeypatch, provider_id):

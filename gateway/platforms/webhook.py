@@ -308,7 +308,7 @@ class WebhookAdapter(BasePlatformAdapter):
                 from gateway.platform_registry import platform_registry
 
                 _is_known_platform = platform_registry.is_registered(deliver_type)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass
         if self.gateway_runner and _is_known_platform:
             return await self._deliver_cross_platform(deliver_type, content, delivery)
@@ -473,7 +473,7 @@ class WebhookAdapter(BasePlatformAdapter):
             from hercules_cli.profiles import profiles_to_serve
 
             served = {name for name, _ in profiles_to_serve(multiplex=True)}
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             return _PROFILE_REJECTED
         if profile not in served:
             return _PROFILE_REJECTED
@@ -562,7 +562,7 @@ class WebhookAdapter(BasePlatformAdapter):
                 import urllib.parse
 
                 payload = dict(urllib.parse.parse_qsl(raw_body.decode("utf-8")))
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 return web.json_response({"error": "Cannot parse body"}, status=400)
 
         # Check event type filter
@@ -692,7 +692,7 @@ class WebhookAdapter(BasePlatformAdapter):
             )
             try:
                 result = await self._direct_deliver(prompt, delivery)
-            except Exception:
+            except (RuntimeError):
                 logger.exception(
                     "[webhook] direct-deliver failed route=%s delivery=%s",
                     route_name,
@@ -854,7 +854,7 @@ class WebhookAdapter(BasePlatformAdapter):
                 if hasattr(store, "_ensure_loaded"):
                     try:
                         store._ensure_loaded()
-                    except Exception:
+                    except (AttributeError, ValueError):
                         pass
                 entries = getattr(store, "_entries", {}) or {}
                 entry = entries.get(session_key)

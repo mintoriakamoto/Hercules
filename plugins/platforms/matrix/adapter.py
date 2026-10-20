@@ -171,7 +171,7 @@ def _resolve_matrix_bang_command(name: str) -> str | None:
         for candidate in candidates:
             if is_gateway_known_command(candidate):
                 return candidate
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug(
             "Matrix: is_gateway_known_command failed for %r", name, exc_info=True
         )
@@ -185,7 +185,7 @@ def _resolve_matrix_bang_command(name: str) -> str | None:
         for candidate in candidates:
             if f"/{candidate}" in skill_commands:
                 return candidate
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         logger.debug("Matrix: get_skill_commands failed for %r", name, exc_info=True)
 
     return None
@@ -583,7 +583,7 @@ def _write_matrix_recovery_key_output_file(recovery_key: str) -> Optional[Path]:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(recovery_key)
             fh.write("\n")
-    except Exception:
+    except (OSError):
         try:
             os.close(fd)
         except OSError:
@@ -653,7 +653,7 @@ def _sanitize_matrix_html(html: str) -> str:
         sanitizer.feed(html or "")
         sanitizer.close()
         return sanitizer.get_html()
-    except Exception:
+    except (AttributeError, ValueError):
         return _html_escape(html or "")
 
 
@@ -664,7 +664,7 @@ def _redact_url_for_log(url: str) -> str:
         if not parts.scheme and not parts.netloc:
             return str(url).split("?", 1)[0].split("#", 1)[0]
         return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
-    except Exception:
+    except (KeyError, IndexError):
         return "<url>"
 
 
@@ -1179,7 +1179,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 logger.info(
                     "Matrix: deleted stale device %s from server", client.device_id
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             try:
                 await olm.share_keys()
@@ -1624,7 +1624,7 @@ class MatrixAdapter(BasePlatformAdapter):
         if self._client:
             try:
                 await self._client.api.session.close()
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
             self._client = None
 
@@ -1762,7 +1762,7 @@ class MatrixAdapter(BasePlatformAdapter):
         if self._client:
             try:
                 await self._client.set_typing(RoomID(chat_id), timeout=30000)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     async def stop_typing(self, chat_id: str) -> None:
@@ -1770,7 +1770,7 @@ class MatrixAdapter(BasePlatformAdapter):
         if self._client:
             try:
                 await self._client.set_typing(RoomID(chat_id), timeout=0)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     async def edit_message(
@@ -1859,7 +1859,7 @@ class MatrixAdapter(BasePlatformAdapter):
             raw = None
             try:
                 raw = headers.get("Content-Length") or headers.get("content-length")
-            except Exception:
+            except (requests.RequestException, OSError):
                 raw = None
             if raw is None:
                 return
@@ -2156,7 +2156,7 @@ class MatrixAdapter(BasePlatformAdapter):
             from hercules_cli.providers import get_label
 
             provider_label = get_label(current_provider)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             provider_label = current_provider
 
         lines = [
@@ -2239,7 +2239,7 @@ class MatrixAdapter(BasePlatformAdapter):
                     room_encrypted = bool(
                         await state_store.is_encrypted(RoomID(room_id))
                     )
-                except Exception:
+                except (AttributeError, ValueError):
                     room_encrypted = False
                 if room_encrypted:
                     try:
@@ -3139,7 +3139,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 try:
                     await self._client.leave_room(RoomID(room_id))
                     logger.info("Matrix: declined dead invite to %s", room_id)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
             return False
 
@@ -3878,7 +3878,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 members = await state_store.get_members(room_id)
                 if members is not None:
                     return len(members)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
         # Tier 2: API fallback (direct server query) when the cache is empty.
@@ -3888,7 +3888,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 resp = await client.joined_members(room_id)
                 if getattr(resp, "members", None) is not None:
                     return len(resp.members)
-            except Exception:
+            except (AttributeError):
                 pass
 
         return None
@@ -3901,7 +3901,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 RoomID(room_id),
                 "m.room.name",
             )
-        except Exception:
+        except (AttributeError, ValueError):
             return None
         value = self._state_event_value(event, "name")
         return value.strip() if value and value.strip() else None
@@ -3914,7 +3914,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 RoomID(room_id),
                 "m.room.canonical_alias",
             )
-        except Exception:
+        except (AttributeError, ValueError):
             return None
         value = self._state_event_value(event, "alias")
         return value.strip() if value and value.strip() else None
@@ -3927,7 +3927,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 RoomID(room_id),
                 "m.room.topic",
             )
-        except Exception:
+        except (AttributeError, ValueError):
             return None
         value = self._state_event_value(event, "topic")
         return value.strip() if value and value.strip() else None
@@ -4064,7 +4064,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 dm_data = resp.content
             elif isinstance(resp, dict):
                 dm_data = resp
-        except Exception:
+        except (AttributeError, ValueError):
             pass  # m.direct doesn't exist yet — start fresh
 
         rooms_for_user = dm_data.get(inviter, [])
@@ -4271,7 +4271,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 member = await state_store.get_member(room_id, user_id)
                 if member and getattr(member, "displayname", None):
                     return member.displayname
-            except Exception:
+            except (AttributeError):
                 pass
         # Strip the @...:server format to just the localpart.
         if user_id.startswith("@") and ":" in user_id:

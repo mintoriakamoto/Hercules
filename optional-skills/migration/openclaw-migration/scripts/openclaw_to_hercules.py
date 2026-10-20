@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 try:
     import yaml
-except Exception:  # pragma: no cover - handled at runtime
+except (ImportError, ModuleNotFoundError):
     yaml = None
 
 

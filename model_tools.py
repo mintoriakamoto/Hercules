@@ -139,7 +139,7 @@ def _run_async(coro):
                         worker_loop.run_until_complete(
                             asyncio.gather(*pending, return_exceptions=True)
                         )
-                except Exception:
+                except (RuntimeError):
                     pass
                 worker_loop.close()
 
@@ -516,7 +516,7 @@ def _compute_tool_definitions(
 
                 schema_fn = getattr(_dt, _discord_schema_fns[discord_tool_name])
                 dynamic = schema_fn()
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 dynamic = None
             if dynamic is None:
                 filtered_tools = [
@@ -1037,7 +1037,7 @@ def _tool_result_observer_fields(
         parsed_result = json.loads(result) if isinstance(result, str) else result
         if isinstance(parsed_result, dict) and parsed_result.get("error"):
             return "error", "tool_error", str(parsed_result.get("error"))
-    except Exception:
+    except (requests.RequestException, OSError):
         pass
     return "ok", None, None
 
@@ -1148,7 +1148,7 @@ def handle_function_call(
     _ts_mod = None
     try:
         from tools import tool_search as _ts_mod
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _ts_mod = None
 
     if _ts_mod is not None and _ts_mod.is_bridge_tool(function_name):
@@ -1175,7 +1175,7 @@ def handle_function_call(
                 )
                 or []
             )
-        except Exception:
+        except (KeyError, IndexError):
             current_defs = []
         if function_name == _ts_mod.TOOL_SEARCH_NAME:
             return _ts_mod.dispatch_tool_search(
@@ -1327,7 +1327,7 @@ def handle_function_call(
                 from tools.file_tools import notify_other_tool_call
 
                 notify_other_tool_call(task_id or "default")
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 pass  # file_tools may not be loaded yet
 
         # Measure tool dispatch latency so post_tool_call and
@@ -1349,7 +1349,7 @@ def handle_function_call(
                 turn_id=turn_id or "",
                 tool_call_id=tool_call_id or "",
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             reset_current_observability_context = None
         try:
             if function_name == "execute_code":
@@ -1401,7 +1401,7 @@ def handle_function_call(
             ):
                 try:
                     reset_current_observability_context(_approval_tokens)
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
         duration_ms = int((time.monotonic() - _dispatch_start) * 1000)
 

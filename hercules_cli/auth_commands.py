@@ -49,7 +49,7 @@ def _get_custom_provider_names() -> list:
         from hercules_cli.config import get_compatible_custom_providers, load_config
 
         config = load_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
     result = []
     for entry in get_compatible_custom_providers(config):
@@ -234,7 +234,7 @@ def auth_add_command(args) -> None:
             suppressed = _load_auth_store().get("suppressed_sources", {})
             for src in list(suppressed.get(provider, []) or []):
                 unsuppress_credential_source(provider, src)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     if requested_type == AUTH_TYPE_API_KEY:
@@ -615,7 +615,7 @@ def _interactive_auth() -> None:
                 identity = sts.get_caller_identity()
                 arn = identity.get("Arn", "unknown")
                 print(f"  Identity: {arn}")
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 print("  Identity: (could not resolve — boto3 STS call failed)")
             print()
     except ImportError:
@@ -673,7 +673,7 @@ def _interactive_auth() -> None:
                         if _hint:
                             print(f"  Hint: {_hint}")
                 print()
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
         pass
     print()
 

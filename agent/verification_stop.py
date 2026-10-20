@@ -53,7 +53,7 @@ def _is_non_code_path(raw: str) -> bool:
     """Return True when a changed path is documentation/prose with nothing to verify."""
     try:
         p = Path(str(raw))
-    except Exception:
+    except (ValueError):
         return False
     suffix = p.suffix.lower()
     if suffix in _NON_CODE_VERIFY_EXTENSIONS:
@@ -113,7 +113,7 @@ def _session_is_messaging_surface() -> bool:
             "HERCULES_SESSION_PLATFORM", ""
         )
         source = get_session_env("HERCULES_SESSION_SOURCE", "")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         platform = os.getenv("HERCULES_PLATFORM", "") or os.environ.get(
             "HERCULES_SESSION_PLATFORM", ""
         )
@@ -145,7 +145,7 @@ def verify_on_stop_enabled(config: dict[str, Any] | None = None) -> bool:
             from hercules_cli.config import load_config
 
             config = load_config()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             config = {}
     agent_cfg = (config or {}).get("agent") if isinstance(config, dict) else None
     cfg_val = agent_cfg.get("verify_on_stop") if isinstance(agent_cfg, dict) else None
@@ -173,7 +173,7 @@ def _candidate_cwds(paths: Iterable[str]) -> list[Path]:
             path = Path(raw).expanduser()
             candidate = path if path.is_dir() else path.parent
             resolved = str(candidate.resolve())
-        except Exception:
+        except (ValueError):
             continue
         if resolved not in seen:
             seen.add(resolved)
@@ -190,7 +190,7 @@ def _verification_snapshot(
     try:
         from agent.coding_context import project_facts_for
         from agent.verification_evidence import verification_status
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     first_snapshot: tuple[dict[str, Any], dict[str, Any]] | None = None
@@ -272,7 +272,7 @@ def build_verify_on_stop_nudge(
         from agent.verify_hooks import coding_verify_guidance
 
         guidance = coding_verify_guidance()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         guidance = None
     addendum = f"\n\n{guidance}" if guidance else ""
 

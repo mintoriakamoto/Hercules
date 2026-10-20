@@ -79,7 +79,7 @@ def _effective_temperature_for_model(
             _fixed_temperature_for_model,
             OMIT_TEMPERATURE,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return requested_temperature
 
     fixed_temperature = _fixed_temperature_for_model(model, base_url)
@@ -576,7 +576,7 @@ class TrajectoryCompressor:
             return 0
         try:
             return len(self.tokenizer.encode(text))
-        except Exception:
+        except (AttributeError, ValueError):
             # Fallback to character estimate
             return len(text) // 4
 

@@ -13,7 +13,7 @@ def _hercules_home_path() -> Path:
         from hercules_constants import get_hercules_home  # local import to avoid cycles
 
         return get_hercules_home()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return Path(os.path.expanduser("~/.hercules"))
 
 
@@ -25,7 +25,7 @@ def _hercules_root_path() -> Path:
         )  # local import to avoid cycles
 
         return get_default_hercules_root()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return Path(os.path.expanduser("~/.hercules"))
 
 
@@ -141,7 +141,7 @@ def raise_if_read_blocked(path: str) -> None:
     """
     try:
         blocked = get_read_block_error(path)
-    except Exception:
+    except (AttributeError, ValueError):
         return
     if blocked:
         raise ValueError(blocked)

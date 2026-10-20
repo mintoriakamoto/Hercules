@@ -315,7 +315,7 @@ def _extracted_summaries(
         builder = getattr(module, builder_name)
         builder(subparsers, **{main_handler_name: _noop_console_command})
         return _summaries_from_parser(parser)
-    except Exception:
+    except (AttributeError):
         return {}
 
 
@@ -332,7 +332,7 @@ def _registered_summaries(
         register = getattr(module, register_name)
         register(top_parser)
         return _summaries_from_parser(parser)
-    except Exception:
+    except (AttributeError):
         return {}
 
 
@@ -346,7 +346,7 @@ def _builder_summaries(
         module = importlib.import_module(module_name)
         getattr(module, builder_name)(subparsers)
         return _summaries_from_parser(parser)
-    except Exception:
+    except (AttributeError):
         return {}
 
 
@@ -357,7 +357,7 @@ def _adder_summaries(module_name: str, add_name: str) -> dict[tuple[str, ...], s
         module = importlib.import_module(module_name)
         getattr(module, add_name)(subparsers)
         return _summaries_from_parser(parser)
-    except Exception:
+    except (AttributeError):
         return {}
 
 

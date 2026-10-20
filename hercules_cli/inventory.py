@@ -207,7 +207,7 @@ def build_models_payload(
         from hercules_cli.providers import (
             is_routing_aggregator as _is_routing_aggregator,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         _is_routing_aggregator = None  # type: ignore[assignment]
 
     if _is_routing_aggregator is not None:
@@ -276,7 +276,7 @@ def _apply_capabilities(rows: list[dict]) -> None:
 
     try:
         from agent.models_dev import get_model_capabilities
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         get_model_capabilities = None  # type: ignore[assignment]
 
     for row in rows:
@@ -290,7 +290,7 @@ def _apply_capabilities(rows: list[dict]) -> None:
                     meta = get_model_capabilities(slug, model)
                     if meta is not None:
                         reasoning = bool(meta.supports_reasoning)
-                except Exception:
+                except (ValueError):
                     reasoning = True
 
             caps[model] = {
@@ -413,7 +413,7 @@ def _raw_config_has_enabled_moa_preset() -> bool:
         from hercules_cli.config import read_raw_config
 
         raw = read_raw_config()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
     if not isinstance(raw, dict):
@@ -529,7 +529,7 @@ def _apply_pricing(
             continue
         try:
             raw_pricing = get_pricing_for_provider(slug) or {}
-        except Exception:
+        except (AttributeError, ValueError):
             raw_pricing = {}
         if not raw_pricing:
             continue
@@ -585,5 +585,5 @@ def _moa_provider_row(current_provider: str = "") -> dict | None:
             "auth_type": "virtual",
             "warning": "Aggregator acts as the selected model; references provide analysis before each call.",
         }
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None

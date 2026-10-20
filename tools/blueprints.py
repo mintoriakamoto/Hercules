@@ -149,7 +149,7 @@ def blueprint_spec_for_installed(skill_name: str) -> Optional[BlueprintSpec]:
     """
     try:
         from tools.skills_hub import SKILLS_DIR
-    except Exception:  # pragma: no cover - import guard
+    except (ImportError, ModuleNotFoundError):
         return None
 
     base = Path(SKILLS_DIR)
@@ -227,7 +227,7 @@ def register_blueprint_suggestion(spec: BlueprintSpec) -> Optional[Dict[str, Any
         return None
     try:
         from cron.suggestions import add_suggestion
-    except Exception:  # pragma: no cover - import guard
+    except (ImportError, ModuleNotFoundError):
         return None
 
     return add_suggestion(

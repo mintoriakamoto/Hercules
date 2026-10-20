@@ -9,9 +9,6 @@ from __future__ import annotations
 
 import json
 import os
-import urllib.parse
-import urllib.request
-import urllib.error
 import time
 from difflib import get_close_matches
 from pathlib import Path
@@ -19,6 +16,8 @@ from typing import Any, NamedTuple, Optional
 
 from hercules_cli import __version__ as _HERCULES_VERSION
 from hercules_cli.urllib_security import open_credentialed_url
+import logging
+import re
 
 # Identify ourselves so endpoints fronted by Cloudflare's Browser Integrity
 # Check (error 1010) don't reject the default ``Python-urllib/*`` signature.
@@ -187,7 +186,7 @@ def _xai_curated_models() -> list[str]:
             ids = [mid for mid in models.keys() if isinstance(mid, str)]
             if ids:
                 return _xai_merge_curated_extras(_xai_promote_top(sorted(ids)))
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         # Any failure (missing file, malformed JSON, import error)
         # falls through to the static list.
         pass
@@ -700,7 +699,7 @@ try:
         _desc = _pp.description or f"{_label} (direct API)"
         CANONICAL_PROVIDERS.append(ProviderEntry(_pp.name, _label, _desc))
         _canonical_slugs.add(_pp.name)
-except Exception:
+except (ImportError, ModuleNotFoundError):
     pass
 
 # Derived dicts — used throughout the codebase
@@ -1015,7 +1014,7 @@ def fetch_openrouter_models(
         from hercules_cli.model_catalog import get_curated_openrouter_models
 
         remote = get_curated_openrouter_models()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         remote = None
     fallback = list(remote) if remote else list(OPENROUTER_MODELS)
     preferred_ids = [mid for mid, _ in fallback]
@@ -1027,7 +1026,7 @@ def fetch_openrouter_models(
         )
         with _urlopen_model_catalog_request(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode())
-    except Exception:
+    except (OSError):
         return list(_openrouter_catalog_cache or fallback)
 
     live_items = payload.get("data", [])
@@ -1130,7 +1129,7 @@ def fetch_models_with_pricing(
         req = urllib.request.Request(url, headers=headers)
         with _urlopen_model_catalog_request(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode())
-    except Exception:
+    except (OSError):
         _pricing_cache[cache_key] = {}
         return {}
 
@@ -1210,7 +1209,7 @@ def _fetch_novita_pricing(
         req = urllib.request.Request(url, headers=headers)
         with _urlopen_model_catalog_request(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode())
-    except Exception:
+    except (OSError):
         _pricing_cache[cache_key] = {}
         return {}
 
@@ -1276,7 +1275,7 @@ def list_available_providers() -> list[dict[str, str]]:
             else:
                 status = get_auth_status(pid)
                 has_creds = bool(status.get("logged_in") or status.get("configured"))
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
         result.append({
             "id": pid,
@@ -1338,7 +1337,7 @@ def _get_model_config_dict() -> dict[str, Any]:
         model_cfg = config.get("model", {})
         if isinstance(model_cfg, dict):
             return model_cfg
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
     return {}
 
@@ -1425,7 +1424,7 @@ def _resolve_static_model_alias(
     """Resolve short aliases (e.g. sonnet/opus) using static catalogs only."""
     try:
         from hercules_cli.model_switch import MODEL_ALIASES
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
     identity = MODEL_ALIASES.get(name_lower)
@@ -1750,7 +1749,7 @@ def _resolve_copilot_catalog_api_key() -> str:
         api_key = str(creds.get("api_key") or "").strip()
         if api_key:
             return api_key
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
     try:
@@ -1771,11 +1770,11 @@ def _resolve_copilot_catalog_api_key() -> str:
                 continue
             try:
                 api_token, _expires_at = exchange_copilot_token(raw)
-            except Exception:
+            except (AttributeError, ValueError):
                 continue
             if api_token:
                 return api_token
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     return ""
@@ -1826,7 +1825,7 @@ def _merge_with_models_dev(provider: str, curated: list[str]) -> list[str]:
         from agent.models_dev import list_agentic_models
 
         mdev = list_agentic_models(provider)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         mdev = []
 
     if not mdev:
@@ -1877,7 +1876,7 @@ def provider_model_ids(
 
             creds = resolve_codex_runtime_credentials(refresh_if_expiring=True)
             access_token = creds.get("api_key")
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             access_token = None
         return get_codex_model_ids(access_token=access_token)
     if normalized == "xai-oauth":
@@ -1887,7 +1886,7 @@ def provider_model_ids(
             live = _fetch_github_models(_resolve_copilot_catalog_api_key())
             if live:
                 return live
-        except Exception:
+        except (AttributeError, ValueError):
             pass
         if normalized == "copilot-acp":
             return list(_PROVIDER_MODELS.get("copilot", []))
@@ -1902,7 +1901,7 @@ def provider_model_ids(
                 live = fetch_api_models(api_key, base_url)
                 if live:
                     return live
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
     if normalized == "anthropic":
         model_cfg = _get_model_config_dict()
@@ -1970,7 +1969,7 @@ def provider_model_ids(
                         # so the picker still offers sane defaults.
                         return curated or live
                     return live
-            except Exception:
+            except (IndexError, KeyError):
                 pass
     if normalized == "gmi":
         try:
@@ -1983,7 +1982,7 @@ def provider_model_ids(
                 live = fetch_api_models(api_key, base_url)
                 if live:
                     return live
-        except Exception:
+        except (ImportError, ModuleNotFoundError, ValueError):
             pass
     if normalized == "custom":
         base_url = _get_custom_base_url()
@@ -2015,7 +2014,7 @@ def provider_model_ids(
             ids = bedrock_model_ids_or_none()
             if ids is not None:
                 return ids
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     # ── Profile-based generic live fetch (all simple api-key providers) ──
@@ -2031,7 +2030,7 @@ def provider_model_ids(
                 creds = resolve_api_key_provider_credentials(normalized)
                 api_key = str(creds.get("api_key") or "").strip()
                 base_url = str(creds.get("base_url") or "").strip()
-            except Exception:
+            except (ValueError):
                 api_key, base_url = "", _p.base_url
             if not base_url:
                 base_url = _p.base_url
@@ -2073,7 +2072,7 @@ def provider_model_ids(
             # Use profile's fallback_models if defined
             if _p.fallback_models:
                 return list(_p.fallback_models)
-    except Exception:
+    except (ValueError):
         pass
 
     curated_static = list(_PROVIDER_MODELS.get(normalized, []))
@@ -2141,7 +2140,7 @@ def _credential_fingerprint(provider: str) -> str:
             bev = getattr(pcfg, "base_url_env_var", "") or ""
             if bev:
                 parts.append(f"{bev}={_os.environ.get(bev, '')}")
-    except Exception:
+    except (AttributeError, ImportError, ModuleNotFoundError):
         pass
 
     # OAuth / external-file mtimes that change on re-auth
@@ -2154,9 +2153,9 @@ def _credential_fingerprint(provider: str) -> str:
                 parts.append(f"{rel}@{p.stat().st_mtime_ns}")
             except FileNotFoundError:
                 parts.append(f"{rel}@missing")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     # External well-known credential file locations
@@ -2171,7 +2170,7 @@ def _credential_fingerprint(provider: str) -> str:
             parts.append(f"{path}@{mt}")
         except FileNotFoundError:
             parts.append(f"{path}@missing")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     blob = "|".join(parts).encode("utf-8", errors="replace")
@@ -2194,7 +2193,7 @@ def _load_provider_models_cache() -> dict:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}
-    except Exception:
+    except (OSError):
         return {}
 
 
@@ -2206,7 +2205,7 @@ def _save_provider_models_cache(data: dict) -> None:
         path = _provider_models_cache_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         atomic_json_write(path, data, indent=None)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -2282,7 +2281,7 @@ def clear_provider_models_cache(provider: Optional[str] = None) -> None:
         if normalized in cache:
             del cache[normalized]
             _save_provider_models_cache(cache)
-    except Exception:
+    except (IndexError, KeyError):
         pass
 
 
@@ -2340,7 +2339,7 @@ def _fetch_anthropic_models(
             if is_oauth and http_err.code == 400:
                 try:
                     body_text = http_err.read().decode(errors="ignore").lower()
-                except Exception:
+                except (OSError):
                     body_text = ""
                 if (
                     "long context beta" in body_text
@@ -2463,7 +2462,7 @@ def fetch_github_model_catalog(
                     models.append(item)
                 if models:
                     return models
-        except Exception:
+        except (OSError, ValueError):
             continue
     return None
 
@@ -2686,7 +2685,7 @@ def ensure_lmstudio_model_loaded(
         raw_models = _lmstudio_fetch_raw_models(
             api_key=api_key, base_url=base_url, timeout=10
         )
-    except Exception:
+    except (AttributeError, ValueError):
         raw_models = None
     if raw_models is None:
         return None
@@ -2726,7 +2725,7 @@ def ensure_lmstudio_model_loaded(
         )
         with _urlopen_model_catalog_request(load_request, timeout=timeout) as resp:
             resp.read()
-    except Exception:
+    except (OSError):
         return None
     return target_context_length
 
@@ -2747,7 +2746,7 @@ def lmstudio_model_reasoning_options(
         raw_models = _lmstudio_fetch_raw_models(
             api_key=api_key, base_url=base_url, timeout=timeout
         )
-    except Exception:
+    except (AttributeError, ValueError):
         raw_models = None
     if not raw_models:
         return []
@@ -3087,7 +3086,7 @@ def normalize_opencode_base_url(
         return url
     try:
         host = urllib.parse.urlparse(url).netloc.lower()
-    except Exception:
+    except (OSError, urllib.error.URLError):
         host = ""
     if host == "opencode.ai" or host.endswith(".opencode.ai"):
         return url + "/v1"
@@ -3217,7 +3216,7 @@ def probe_api_models(
                     else normalized,
                     "used_fallback": is_fallback,
                 }
-        except Exception:
+        except (OSError):
             continue
 
     return {
@@ -3300,7 +3299,7 @@ def _load_ollama_cloud_cache(*, ignore_ttl: bool = False) -> Optional[dict]:
             if (time.time() - cached_at) > _OLLAMA_CLOUD_CACHE_TTL:
                 return None  # stale
         return data
-    except Exception:
+    except (OSError):
         pass
     return None
 
@@ -3315,7 +3314,7 @@ def _save_ollama_cloud_cache(models: list[str]) -> None:
         atomic_json_write(
             cache_path, {"models": models, "cached_at": time.time()}, indent=None
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
 
@@ -3359,7 +3358,7 @@ def fetch_ollama_cloud_models(
         from agent.models_dev import list_agentic_models
 
         mdev_models = list_agentic_models("ollama-cloud")
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     # 4. Merge: live first, then models.dev additions (deduped, order-preserving)
@@ -3587,7 +3586,7 @@ def validate_requested_model(
     if normalized in {"openai-codex", "xai-oauth"}:
         try:
             catalog_models = provider_model_ids(normalized)
-        except Exception:
+        except (AttributeError, ValueError):
             catalog_models = []
         if catalog_models:
             if requested_for_lookup in set(catalog_models):
@@ -3669,7 +3668,7 @@ def validate_requested_model(
     if normalized in {"minimax", "minimax-cn"}:
         try:
             catalog_models = provider_model_ids(normalized)
-        except Exception:
+        except (AttributeError, ValueError):
             catalog_models = []
         if catalog_models:
             # Case-insensitive lookup (catalog uses mixed case like MiniMax-M2.7)
@@ -3923,7 +3922,7 @@ def validate_requested_model(
                     f"{suggestion_text}"
                 ),
             }
-        except Exception:
+        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
             pass  # Fall through to generic warning
 
     # Static-catalog fallback: when the /models probe was unreachable,
@@ -3937,7 +3936,7 @@ def validate_requested_model(
     provider_label = _PROVIDER_LABELS.get(normalized, normalized)
     try:
         catalog_models = provider_model_ids(normalized)
-    except Exception:
+    except (AttributeError, ValueError):
         catalog_models = []
 
     if catalog_models:

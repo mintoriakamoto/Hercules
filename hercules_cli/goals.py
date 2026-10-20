@@ -650,14 +650,14 @@ def _pid_alive(pid: int) -> bool:
         from gateway.status import _pid_exists
 
         return bool(_pid_exists(int(pid)))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     # Last-resort fallback if gateway.status is unavailable: psutil directly.
     try:
         import psutil  # type: ignore
 
         return bool(psutil.pid_exists(int(pid)))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -675,7 +675,7 @@ def _session_waiting(session_id: str) -> bool:
         from tools.process_registry import process_registry
 
         return bool(process_registry.is_session_waiting(session_id))
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         return False
 
 
@@ -701,7 +701,7 @@ def _goal_judge_max_tokens() -> int:
         value = int(value)
         if value > 0:
             return value
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
     return DEFAULT_JUDGE_MAX_TOKENS
 
@@ -740,13 +740,13 @@ def _parse_judge_response(raw: str) -> Tuple[str, str, bool, Optional[Dict[str, 
     data: Optional[Dict[str, Any]] = None
     try:
         data = json.loads(text)
-    except Exception:
+    except (ValueError):
         # Second try: pull the first JSON object out.
         match = _JSON_OBJECT_RE.search(text)
         if match:
             try:
                 data = json.loads(match.group(0))
-            except Exception:
+            except (ValueError):
                 data = None
 
     if not isinstance(data, dict):
@@ -993,7 +993,7 @@ def judge_goal(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except Exception:
+    except (IndexError, KeyError):
         raw = ""
 
     verdict, reason, parse_failed, wait_directive = _parse_judge_response(raw)
@@ -1081,7 +1081,7 @@ def draft_contract(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except Exception:
+    except (IndexError, KeyError):
         raw = ""
 
     data = _extract_json_object(raw)
@@ -1108,13 +1108,13 @@ def _extract_json_object(raw: str) -> Optional[Dict[str, Any]]:
             text = text[nl + 1 :]
     try:
         data = json.loads(text)
-    except Exception:
+    except (ValueError):
         match = _JSON_OBJECT_RE.search(text)
         if not match:
             return None
         try:
             data = json.loads(match.group(0))
-        except Exception:
+        except (ValueError):
             return None
     return data if isinstance(data, dict) else None
 
@@ -1720,7 +1720,7 @@ def run_kanban_goal_loop(
         if log is not None:
             try:
                 log(msg)
-            except Exception:
+            except (ValueError):
                 pass
 
     max_turns = int(max_turns or DEFAULT_MAX_TURNS)

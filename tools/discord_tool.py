@@ -29,9 +29,6 @@ import json
 import logging
 import os
 import threading
-import urllib.error
-import urllib.parse
-import urllib.request
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from tools.registry import registry
@@ -127,7 +124,7 @@ def _discord_request(
             error_body = raw_error_body.decode("utf-8", errors="replace")
         except DiscordAPIError as too_large:
             error_body = too_large.body
-        except Exception:
+        except (UnicodeDecodeError):
             pass
         raise DiscordAPIError(e.code, error_body) from e
 
@@ -203,7 +200,7 @@ def _load_caps_from_disk(token: str) -> Optional[Dict[str, Any]]:
         caps = entry.get("caps")
         if isinstance(caps, dict) and "has_members_intent" in caps:
             return caps
-    except Exception:
+    except (OSError, ValueError):
         pass
     return None
 
@@ -219,14 +216,14 @@ def _save_caps_to_disk(token: str, caps: Dict[str, Any]) -> None:
                 data = json.load(f)
             if not isinstance(data, dict):
                 data = {}
-        except Exception:
+        except (OSError):
             data = {}
         data[_token_cache_key(token)] = {"caps": caps, "ts": time.time()}
         tmp = path.with_suffix(".json.tmp")
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(data, f)
         tmp.replace(path)
-    except Exception:
+    except (IndexError, KeyError, OSError):
         logger.debug("discord capability disk-cache write failed", exc_info=True)
 
 
@@ -276,7 +273,7 @@ def _detect_capabilities_nonblocking(token: str) -> Dict[str, Any]:
                     caps = _fetch_capabilities(token)
                     if caps.get("detected"):
                         _save_caps_to_disk(token, caps)
-                except Exception:
+                except (requests.RequestException, httpx.RequestError, OSError):
                     logger.debug(
                         "background discord capability detection failed", exc_info=True
                     )

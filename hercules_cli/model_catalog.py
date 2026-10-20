@@ -96,7 +96,7 @@ def _load_catalog_config() -> dict[str, Any]:
         from hercules_cli.config import load_config
 
         cfg = load_config() or {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         cfg = {}
 
     raw = cfg.get("model_catalog")

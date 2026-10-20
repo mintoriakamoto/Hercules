@@ -124,7 +124,7 @@ def probe_gemini_tier(
         body_text = ""
         try:
             body_text = resp.text or ""
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             body_text = ""
         if "free_tier" in body_text.lower():
             return "free"
@@ -217,7 +217,7 @@ def _extract_multimodal_parts(content: Any) -> List[Dict[str, Any]]:
                 header, encoded = url.split(",", 1)
                 mime = header.split(":", 1)[1].split(";", 1)[0]
                 raw = base64.b64decode(encoded)
-            except Exception:
+            except (IndexError, KeyError):
                 continue
             parts.append({
                 "inlineData": {
@@ -777,7 +777,7 @@ def gemini_http_error(
     if body_text is None:
         try:
             body_text = response.text
-        except Exception:
+        except (AttributeError, ValueError, KeyError, OSError):
             body_text = ""
     body_text = body_text or ""
     if body_text:
@@ -916,7 +916,7 @@ class GeminiNativeClient:
         self.is_closed = True
         try:
             self._http.close()
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     def __enter__(self):

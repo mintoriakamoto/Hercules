@@ -37,6 +37,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any, Dict, Optional
+import shutil
 
 
 logger = logging.getLogger(__name__)
@@ -256,7 +257,7 @@ class WhatsAppBehaviorMixin:
             if raw:
                 try:
                     patterns = json.loads(raw)
-                except Exception:
+                except (ValueError):
                     patterns = [
                         part.strip() for part in raw.splitlines() if part.strip()
                     ]
@@ -506,5 +507,5 @@ def resolve_whatsapp_bridge_dir() -> Path:
             dirs_exist_ok=False,
         )
         return hercules_home_bridge
-    except Exception:
+    except (OSError):
         return install_bridge

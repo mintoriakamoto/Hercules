@@ -185,7 +185,7 @@ def _load_dashboard_section() -> dict:
     """
     try:
         from hercules_cli.config import load_config
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
     try:
         cfg = load_config()

@@ -1161,7 +1161,7 @@ def _resolve_model_and_runtime() -> Tuple[str, dict]:
             from hercules_cli.models import get_default_model_for_provider
 
             model = get_default_model_for_provider(runtime_kwargs["provider"])
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     return model, runtime_kwargs

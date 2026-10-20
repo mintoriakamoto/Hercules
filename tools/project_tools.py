@@ -46,7 +46,7 @@ def _apply_workspace(task_id: Optional[str], path: Optional[str], name: str) -> 
     if cb and task_id and path:
         try:
             cb(task_id, path, name)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
 

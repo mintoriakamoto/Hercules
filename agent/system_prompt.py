@@ -326,7 +326,7 @@ def build_system_prompt_parts(
             _compact_cats = coding_compact_skill_categories(
                 platform=agent.platform, cwd=resolve_context_cwd()
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _compact_cats = frozenset()
         skills_prompt = _r.build_skills_system_prompt(
             available_tools=agent.valid_tool_names,
@@ -375,7 +375,7 @@ def build_system_prompt_parts(
                     model=agent.model,
                 )
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # Coding-context probing must never block prompt build.
             pass
 
@@ -393,7 +393,7 @@ def build_system_prompt_parts(
             _probe_line = get_environment_probe_line()
             if _probe_line:
                 stable_parts.append(_probe_line)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             # Probe failure must never block prompt build.
             pass
 
@@ -408,7 +408,7 @@ def build_system_prompt_parts(
         from agent.file_safety import _resolve_active_profile_name
 
         active_profile = _resolve_active_profile_name()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         active_profile = "default"
     if active_profile == "default":
         stable_parts.append(
@@ -446,7 +446,7 @@ def build_system_prompt_parts(
             _entry = platform_registry.get(platform_key)
             if _entry and _entry.platform_hint:
                 _default_hint = _entry.platform_hint
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
 
     _effective_hint = _resolve_platform_hint(agent, platform_key, _default_hint)
@@ -494,7 +494,7 @@ def build_system_prompt_parts(
             _ext_mem_block = agent._memory_manager.build_system_prompt()
             if _ext_mem_block:
                 volatile_parts.append(_ext_mem_block)
-        except Exception:
+        except (AttributeError, ValueError):
             pass
 
     from hercules_time import now as _hercules_now

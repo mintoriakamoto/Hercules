@@ -17,7 +17,7 @@ def render_message(text: str, cols: int = 80) -> str | None:
         return format_response(text, cols=cols)
     except TypeError:
         return format_response(text)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -31,7 +31,7 @@ def render_diff(text: str, cols: int = 80) -> str | None:
         return _rd(text, cols=cols)
     except TypeError:
         return _rd(text)
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -45,5 +45,5 @@ def make_stream_renderer(cols: int = 80):
         return StreamingRenderer(cols=cols)
     except TypeError:
         return StreamingRenderer()
-    except Exception:
+    except (AttributeError, ValueError):
         return None

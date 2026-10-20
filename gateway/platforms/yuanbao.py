@@ -1123,7 +1123,7 @@ class InboundPipeline:
                     continue
                 try:
                     await handler(ctx, next_fn)
-                except Exception:
+                except (RuntimeError):
                     logger.error(
                         "[InboundPipeline] middleware [%s] error", name, exc_info=True
                     )
@@ -1161,7 +1161,7 @@ class DecodeMiddleware(InboundMiddleware):
             if isinstance(msg_content, str):
                 try:
                     msg_content = json.loads(msg_content)
-                except Exception:
+                except (ValueError):
                     msg_content = {"text": msg_content}
             result.append({"msg_type": msg_type, "msg_content": msg_content or {}})
         return result
@@ -1226,7 +1226,7 @@ class DecodeMiddleware(InboundMiddleware):
         """Decode a single raw frame into (push_dict, decoded_via) or (None, '')."""
         try:
             conn_json = json.loads(data.decode("utf-8"))
-        except Exception:
+        except (UnicodeDecodeError):
             conn_json = None
 
         if isinstance(conn_json, dict):
@@ -1236,7 +1236,7 @@ class DecodeMiddleware(InboundMiddleware):
         else:
             try:
                 push = decode_inbound_push(data)
-            except Exception:
+            except (AttributeError, ValueError):
                 push = None
             if push:
                 return push, "protobuf"
@@ -1487,7 +1487,7 @@ class RecallGuardMiddleware(InboundMiddleware):
                 sid = store.get_or_create_session(
                     cls._build_source(adapter, group_code, from_account),
                 ).session_id
-            except Exception:
+            except (AttributeError, ValueError):
                 return
             # Poll until the recalled content appears in transcript — the
             # interrupted turn hasn't finished writing yet when scheduled.
@@ -1495,7 +1495,7 @@ class RecallGuardMiddleware(InboundMiddleware):
                 await asyncio.sleep(0.5)
                 try:
                     transcript = store.load_transcript(sid)
-                except Exception:
+                except (AttributeError, ValueError):
                     continue
                 for entry in transcript:
                     if (
@@ -1870,7 +1870,7 @@ class ExtractContentMiddleware(InboundMiddleware):
             query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
             ids = query.get("resourceId") or query.get("resourceid") or []
             return str(ids[0]).strip() if ids else ""
-        except Exception:
+        except (ValueError):
             return ""
 
     @classmethod
@@ -2656,7 +2656,7 @@ class ForwardedRecordsParseMiddleware(InboundMiddleware):
                 ctx.chat_id,
                 WS_HEARTBEAT_RUNNING,
             )
-        except Exception:
+        except (RuntimeError):
             pass
 
     # -- Record rendering helpers -----------------------------------------
@@ -2968,7 +2968,7 @@ class MediaResolveMiddleware(InboundMiddleware):
         """
         try:
             parsed = urllib.parse.urlparse(url)
-        except Exception:
+        except (OSError, urllib.error.URLError):
             return url
 
         query = urllib.parse.parse_qs(parsed.query)
@@ -2981,7 +2981,7 @@ class MediaResolveMiddleware(InboundMiddleware):
             return await MediaResolveMiddleware._fetch_resource_url(
                 adapter, resource_id
             )
-        except Exception:
+        except (RuntimeError):
             return url
 
     @classmethod
@@ -3628,7 +3628,7 @@ class DispatchMiddleware(InboundMiddleware):
                     await dispatch_fn()
                     while session_key in adapter._active_sessions:
                         await asyncio.sleep(0.1)
-                except Exception:
+                except (RuntimeError):
                     logger.exception("[%s] Group queue consumer error", adapter.name)
         finally:
             adapter._group_queues.pop(session_key, None)
@@ -3724,7 +3724,7 @@ class ConnectionManager:
         if callable(open_attr):
             try:
                 return bool(open_attr())
-            except Exception:
+            except (ValueError):
                 return False
         return False
 
@@ -3763,7 +3763,7 @@ class ConnectionManager:
                         "[%s] Already connected, skipping connect()", adapter.name
                     )
                     return True
-            except Exception:
+            except (AttributeError, IndexError, KeyError):
                 pass
 
         # Acquire platform-scoped lock to prevent duplicate connections
@@ -3920,7 +3920,7 @@ class ConnectionManager:
 
                 try:
                     msg = decode_conn_msg(bytes(raw))
-                except Exception:
+                except (ValueError):
                     continue
 
                 head = msg.get("head", {})
@@ -4182,14 +4182,14 @@ class ConnectionManager:
                 )
                 if from_account:
                     return f"{from_account}:{group_code}"
-        except Exception:
+        except (UnicodeDecodeError):
             pass
         # Protobuf: try decode_inbound_push for sender info
         try:
             push = decode_inbound_push(raw_data)
             if push:
                 return f"{push.get('from_account', '')}:{push.get('group_code', '')}"
-        except Exception:
+        except (requests.RequestException, httpx.RequestError, OSError):
             pass
         # Fallback: unique key (no aggregation)
         return f"__unknown_{id(raw_data)}"
@@ -4281,7 +4281,7 @@ class ConnectionManager:
             return result
         except asyncio.TimeoutError:
             raise
-        except Exception:
+        except (RuntimeError):
             raise
         finally:
             self._pending_acks.pop(req_id, None)
@@ -4416,7 +4416,7 @@ class ConnectionManager:
                     self._adapter.name,
                     WS_CLOSE_TIMEOUT_S,
                 )
-            except Exception:
+            except (IndexError, KeyError):
                 pass
 
 
@@ -4957,7 +4957,7 @@ class HeartbeatManager:
 
         except asyncio.CancelledError:
             cancelled = True
-        except Exception:
+        except (RuntimeError):
             cancelled = False
         else:
             cancelled = False
@@ -4965,7 +4965,7 @@ class HeartbeatManager:
             if not cancelled:
                 try:
                     await self.send_heartbeat_once(chat_id, WS_HEARTBEAT_FINISH)
-                except Exception:
+                except (RuntimeError):
                     pass
             self._reply_heartbeat_tasks.pop(chat_id, None)
             self._reply_hb_last_active.pop(chat_id, None)
@@ -4982,7 +4982,7 @@ class HeartbeatManager:
         if send_finish:
             try:
                 await self.send_heartbeat_once(chat_id, WS_HEARTBEAT_FINISH)
-            except Exception:
+            except (RuntimeError):
                 pass
 
     async def close(self) -> None:
@@ -5158,7 +5158,7 @@ class MessageSender:
         if self._on_send_finish:
             try:
                 await self._on_send_finish(chat_id)
-            except Exception:
+            except (RuntimeError):
                 pass
         return SendResult(success=True)
 
@@ -5896,7 +5896,7 @@ class YuanbaoAdapter(BasePlatformAdapter):
         """Send "typing" status heartbeat (RUNNING). Delegates to OutboundManager."""
         try:
             await self._outbound.start_typing(chat_id)
-        except Exception:
+        except (RuntimeError):
             pass
 
     async def stop_typing(self, chat_id: str) -> None:
@@ -5907,7 +5907,7 @@ class YuanbaoAdapter(BasePlatformAdapter):
         """
         try:
             await self._outbound.stop_typing(chat_id, send_finish=False)
-        except Exception:
+        except (RuntimeError):
             pass
 
     async def _process_message_background(self, event, session_key: str) -> None:

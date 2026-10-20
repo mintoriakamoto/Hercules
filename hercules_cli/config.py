@@ -89,7 +89,7 @@ def _backup_corrupt_config(config_path: Path) -> Optional[Path]:
             return None
         shutil.copy2(config_path, backup_path)
         return backup_path
-    except Exception:
+    except (AttributeError, ValueError):
         return None
 
 
@@ -148,7 +148,7 @@ def _warn_config_parse_failure(
     try:
         sys.stderr.write(f"⚠️  hercules config: {msg}\n")
         sys.stderr.flush()
-    except Exception:
+    except (OSError):
         pass
 
 
@@ -560,7 +560,7 @@ def _running_in_container() -> bool:
         from hercules_constants import is_container
 
         return is_container()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -4648,7 +4648,7 @@ def get_missing_skill_config_vars() -> List[Dict[str, Any]]:
             discover_all_skill_config_vars,
             SKILL_CONFIG_PREFIX,
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return []
 
     try:
@@ -5034,7 +5034,7 @@ def get_custom_provider_tls_settings(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except Exception:
+        except (AttributeError, ValueError):
             custom_providers = []
     if not base_url or not isinstance(custom_providers, list):
         return {}
@@ -5112,7 +5112,7 @@ def get_custom_provider_extra_headers(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except Exception:
+        except (AttributeError, ValueError):
             custom_providers = []
     if not base_url or not isinstance(custom_providers, list):
         return {}
@@ -5182,7 +5182,7 @@ def get_custom_provider_context_length(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except Exception:
+        except (AttributeError, ValueError):
             if config is None:
                 return None
             raw = config.get("custom_providers")
@@ -5335,7 +5335,7 @@ def validate_config_structure(
     if config is None:
         try:
             config = load_config()
-        except Exception:
+        except (AttributeError, ValueError):
             return [
                 ConfigIssue(
                     "error",
@@ -5515,7 +5515,7 @@ def print_config_warnings(config: Optional[Dict[str, Any]] = None) -> None:
     """
     try:
         issues = validate_config_structure(config)
-    except Exception:
+    except (AttributeError, ValueError):
         return
     if not issues:
         return
@@ -5540,7 +5540,7 @@ def warn_deprecated_cwd_env_vars(config: Optional[Dict[str, Any]] = None) -> Non
     if config is None:
         try:
             config = load_config()
-        except Exception:
+        except (AttributeError, ValueError):
             return
 
     terminal_cfg = config.get("terminal", {})
@@ -5614,7 +5614,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
         fixes = sanitize_env_file()
         if fixes and not quiet:
             print(f"  ✓ Repaired .env file ({fixes} corrupted entries fixed)")
-    except Exception:
+    except (ValueError, TypeError):
         pass  # best-effort; don't block migration on sanitize failure
 
     # Check config version
@@ -5676,7 +5676,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 save_env_value("ANTHROPIC_TOKEN", "")
                 if not quiet:
                     print("  ✓ Cleared ANTHROPIC_TOKEN from .env (no longer used)")
-        except Exception:
+        except (ValueError, TypeError):
             pass
 
     # ── Version 11 → 12: migrate custom_providers list → providers dict ──
@@ -5721,7 +5721,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
 
                         parsed = urlparse(old_url)
                         key = (parsed.hostname or "endpoint").replace(".", "-")
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         key = f"endpoint-{migrated_count}"
 
                 # Don't overwrite existing entries
@@ -5772,7 +5772,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                         print(
                             f"  ✓ Cleared {dead_var} from .env (no longer used — config.yaml is source of truth)"
                         )
-            except Exception:
+            except (yaml.YAMLError):
                 pass
 
     # ── Version 13 → 14: migrate legacy flat stt.model to provider section ──
@@ -5965,13 +5965,13 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                         try:
                             with open(manifest_file, encoding="utf-8") as _mf:
                                 manifest = fast_safe_load(_mf) or {}
-                        except Exception:
+                        except (OSError):
                             manifest = {}
                         name = manifest.get("name") or child.name
                         if name in disabled_set:
                             continue
                         grandfathered.append(name)
-            except Exception:
+            except (OSError):
                 grandfathered = []
 
             plugins_cfg["enabled"] = grandfathered
@@ -6231,7 +6231,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             from hercules_cli.mcp_security import (
                 validate_mcp_server_entry as _validate_mcp_server_entry,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _validate_mcp_server_entry = None
         if _validate_mcp_server_entry:
             mcp_touched = False
@@ -6400,7 +6400,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             config = read_raw_config()
             try:
                 from agent.skill_utils import SKILL_CONFIG_PREFIX
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 SKILL_CONFIG_PREFIX = "skills.config"
             for var in missing_skill_config:
                 default = var.get("default", "")
@@ -7463,7 +7463,7 @@ def load_env() -> Dict[str, str]:
         cache_key = (str(env_path), mtime, size)
     except FileNotFoundError:
         cache_key = (str(env_path), None, None)
-    except Exception:
+    except (ValueError):
         cache_key = None
 
     cached = _env_cache["entry"]
@@ -7982,7 +7982,7 @@ def get_env_value_prefer_dotenv(key: str) -> Optional[str]:
         from agent.secret_scope import get_secret as _get_secret
 
         return _get_secret(key)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return os.environ.get(key)
 
 
@@ -8169,7 +8169,7 @@ def show_config():
                     Colors.YELLOW,
                 )
             )
-    except Exception:
+    except (ValueError):
         pass
 
     # Display
@@ -8311,7 +8311,7 @@ def show_config():
                 print(
                     f"  {key:<20s} {display_val}  {color(f'[{skill_name}]', Colors.DIM)}"
                 )
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError):
         pass
 
     print()
@@ -8434,7 +8434,7 @@ def set_config_value(key: str, value: str):
         try:
             with open(config_path, encoding="utf-8") as f:
                 user_config = fast_safe_load(f) or {}
-        except Exception:
+        except (OSError):
             user_config = {}
 
     # Handle nested keys (e.g., "tts.provider") including numeric list
@@ -8688,7 +8688,7 @@ def _inject_profile_env_vars() -> None:
                     "category": "provider",
                     "advanced": True,
                 }
-    except Exception:
+    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
         pass
 
 
@@ -8744,7 +8744,7 @@ def _inject_platform_plugin_env_vars() -> None:
             try:
                 with open(manifest_path, "r", encoding="utf-8") as f:
                     manifest = fast_safe_load(f) or {}
-            except Exception:
+            except (OSError):
                 continue
             label = manifest.get("label") or manifest.get("name") or child.name
             # Merge required + optional env var declarations.
@@ -8779,7 +8779,7 @@ def _inject_platform_plugin_env_vars() -> None:
                     "password": is_secret,
                     "category": meta.get("category") or "messaging",
                 }
-    except Exception:
+    except (OSError, ValueError):
         pass
 
 

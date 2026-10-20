@@ -99,7 +99,7 @@ def _is_mcp_tool_parallel_safe(tool_name: str) -> bool:
         from tools.mcp_tool import is_mcp_tool_parallel_safe
 
         return is_mcp_tool_parallel_safe(tool_name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -117,7 +117,7 @@ def _should_parallelize_tool_batch(tool_calls) -> bool:
         tool_name = tool_call.function.name
         try:
             function_args = json.loads(tool_call.function.arguments)
-        except Exception:
+        except (ValueError):
             logging.debug(
                 "Could not parse args for %s — defaulting to sequential; raw=%s",
                 tool_name,
@@ -214,7 +214,7 @@ def _multimodal_text_summary(value: Any) -> str:
         return value
     try:
         return json.dumps(value, default=str)
-    except Exception:
+    except (ValueError):
         return str(value)
 
 
@@ -296,7 +296,7 @@ def _extract_landed_file_mutation_paths(
         return targets
     try:
         data = json.loads(result.strip())
-    except Exception:
+    except (ValueError):
         return targets
     if not isinstance(data, dict):
         return targets
@@ -320,7 +320,7 @@ def _extract_error_preview(result: Any, max_len: int = 180) -> str:
     if not isinstance(text, str):
         try:
             text = str(text)
-        except Exception:
+        except (ValueError):
             return ""
     # Try to parse JSON and pull the ``error`` field — tool handlers return
     # ``{"success": false, "error": "..."}``; raw string wins if parse fails.
@@ -330,7 +330,7 @@ def _extract_error_preview(result: Any, max_len: int = 180) -> str:
             data = json.loads(stripped)
             if isinstance(data, dict) and isinstance(data.get("error"), str):
                 text = data["error"]
-        except Exception:
+        except (IndexError, KeyError):
             pass
     # Collapse whitespace, trim to max_len.
     text = " ".join(text.split())

@@ -6,7 +6,7 @@ import base64
 from pathlib import Path
 from unittest.mock import patch
 
-from agent import image_routing, models_dev, model_metadata
+from agent import image_routing
 from agent.image_routing import (
     _coerce_capability_bool,
     _coerce_mode,

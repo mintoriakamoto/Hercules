@@ -92,7 +92,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from hercules_cli import __version__ as HERCULES_VERSION
-except Exception:
+except (ImportError, ModuleNotFoundError):
     HERCULES_VERSION = "0.0.0"
 
 # Thread pool for running AIAgent (synchronous) in parallel.
@@ -384,7 +384,7 @@ def _embedded_resource_to_parts(
         blob = resource.blob or ""
         try:
             data = base64.b64decode(blob, validate=True)
-        except Exception:
+        except (AttributeError, ValueError):
             data = blob.encode("utf-8", errors="replace")
 
         # Image blobs go through as image_url so vision models can see them.
@@ -717,7 +717,7 @@ class HerculesACPAgent(acp.Agent):
                     available_models=available_models,
                     current_model_id=current_model_id or available_models[0].model_id,
                 )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug("Could not build ACP model state", exc_info=True)
 
         if not model:
@@ -745,7 +745,7 @@ class HerculesACPAgent(acp.Agent):
                 detected = detect_provider_for_model(new_model, current_provider)
                 if detected:
                     target_provider, new_model = detected
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug("Provider detection failed, using model as-is", exc_info=True)
 
         return target_provider, new_model
@@ -774,7 +774,7 @@ class HerculesACPAgent(acp.Agent):
                 system_prompt=getattr(agent, "_cached_system_prompt", "") or "",
                 tools=getattr(agent, "tools", None) or None,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug("Could not estimate ACP native context usage", exc_info=True)
             used = int(getattr(compressor, "last_prompt_tokens", 0) or 0)
 
@@ -796,7 +796,7 @@ class HerculesACPAgent(acp.Agent):
                 session_id=state.session_id,
                 update=update,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.warning(
                 "Failed to send ACP usage update for session %s",
                 state.session_id,
@@ -817,7 +817,7 @@ class HerculesACPAgent(acp.Agent):
                 current_hercules_session_id,
                 previous_hercules_session_id=previous_hercules_session_id,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "Could not build ACP session provenance for %s",
                 acp_session_id,
@@ -842,7 +842,7 @@ class HerculesACPAgent(acp.Agent):
             return
         try:
             row = self.session_manager._get_db().get_session(session_id)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "Could not read ACP session info for %s", session_id, exc_info=True
             )
@@ -872,7 +872,7 @@ class HerculesACPAgent(acp.Agent):
                 session_id=session_id,
                 update=update,
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug(
                 "Could not send ACP session info update for %s",
                 session_id,
@@ -915,7 +915,7 @@ class HerculesACPAgent(acp.Agent):
                 config_map[name] = config
 
             await asyncio.to_thread(register_mcp_servers, config_map)
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning(
                 "Session %s: failed to register ACP MCP servers",
                 state.session_id,
@@ -950,7 +950,7 @@ class HerculesACPAgent(acp.Agent):
                 state.session_id,
                 len(state.agent.tools or []),
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.warning(
                 "Session %s: failed to refresh tool surface after ACP MCP registration",
                 state.session_id,
@@ -1119,7 +1119,7 @@ class HerculesACPAgent(acp.Agent):
         if isinstance(raw_args, str):
             try:
                 parsed = json.loads(raw_args)
-            except Exception:
+            except (AttributeError, ValueError):
                 parsed = {"raw": raw_args}
             raw_args = parsed
         if not isinstance(raw_args, dict):
@@ -1160,7 +1160,7 @@ class HerculesACPAgent(acp.Agent):
                     session_id=state.session_id, update=update
                 )
                 return True
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.warning(
                     "Failed to replay ACP history for session %s",
                     state.session_id,
@@ -1275,7 +1275,7 @@ class HerculesACPAgent(acp.Agent):
         # against the load response — see #12285 follow-up.
         try:
             await self._replay_session_history(state)
-        except Exception:
+        except (AttributeError, ValueError):
             # Replay is best-effort — a corrupted or unexpected message shape
             # must not turn a successful session/load into a JSON-RPC error
             # response. Per-notification failures are already caught inside
@@ -1317,7 +1317,7 @@ class HerculesACPAgent(acp.Agent):
         # within the request's lifetime.
         try:
             await self._replay_session_history(state)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.warning(
                 "ACP history replay raised during session/resume for %s — "
                 "resume will still succeed, partial transcript may be missing",
@@ -1344,7 +1344,7 @@ class HerculesACPAgent(acp.Agent):
             try:
                 if getattr(state, "agent", None) and hasattr(state.agent, "interrupt"):
                     state.agent.interrupt()
-            except Exception:
+            except (AttributeError):
                 logger.debug(
                     "Failed to interrupt ACP session %s", session_id, exc_info=True
                 )
@@ -1572,7 +1572,7 @@ class HerculesACPAgent(acp.Agent):
                         state
                     ),
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug(
                     "Could not create ACP edit approval requester", exc_info=True
                 )
@@ -1630,7 +1630,7 @@ class HerculesACPAgent(acp.Agent):
                 )
 
                 session_tokens = set_session_vars(session_key=session_id)
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 session_tokens = None
                 clear_session_vars = None  # type: ignore[assignment]
                 logger.debug("Could not set ACP session context", exc_info=True)
@@ -1640,7 +1640,7 @@ class HerculesACPAgent(acp.Agent):
 
                     previous_approval_cb = _terminal_tool._get_approval_callback()
                     _terminal_tool.set_approval_callback(approval_cb)
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     logger.debug("Could not set ACP approval callback", exc_info=True)
             if edit_approval_requester:
                 try:
@@ -1649,7 +1649,7 @@ class HerculesACPAgent(acp.Agent):
                     edit_approval_token = set_edit_approval_requester(
                         edit_approval_requester
                     )
-                except Exception:
+                except (ImportError, ModuleNotFoundError):
                     logger.debug(
                         "Could not set ACP edit approval requester", exc_info=True
                     )
@@ -1690,7 +1690,7 @@ class HerculesACPAgent(acp.Agent):
                         from tools import terminal_tool as _terminal_tool
 
                         _terminal_tool.set_approval_callback(previous_approval_cb)
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         logger.debug(
                             "Could not restore approval callback", exc_info=True
                         )
@@ -1701,7 +1701,7 @@ class HerculesACPAgent(acp.Agent):
                         )
 
                         reset_edit_approval_requester(edit_approval_token)
-                    except Exception:
+                    except (ImportError, ModuleNotFoundError):
                         logger.debug(
                             "Could not restore ACP edit approval requester",
                             exc_info=True,
@@ -1709,7 +1709,7 @@ class HerculesACPAgent(acp.Agent):
                 if session_tokens is not None and clear_session_vars is not None:
                     try:
                         clear_session_vars(session_tokens)
-                    except Exception:
+                    except (AttributeError, ValueError):
                         logger.debug(
                             "Could not clear ACP session context", exc_info=True
                         )
@@ -1726,7 +1726,7 @@ class HerculesACPAgent(acp.Agent):
             # particular — used by the interactive sudo password cache scope).
             ctx = contextvars.copy_context()
             result = await loop.run_in_executor(_executor, ctx.run, _run_agent)
-        except Exception:
+        except (AttributeError):
             logger.exception("Executor error for session %s", session_id)
             with state.runtime_lock:
                 state.is_running = False
@@ -1755,7 +1755,7 @@ class HerculesACPAgent(acp.Agent):
                     current_hercules_session_id=post_turn_hercules_id,
                     previous_hercules_session_id=pre_turn_hercules_id,
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug(
                     "Could not emit ACP provenance update after rotation for %s",
                     session_id,
@@ -1791,7 +1791,7 @@ class HerculesACPAgent(acp.Agent):
                     state.history,
                     title_callback=_notify_title_update,
                 )
-            except Exception:
+            except (ImportError, ModuleNotFoundError):
                 logger.debug(
                     "Failed to auto-title ACP session %s", session_id, exc_info=True
                 )
@@ -1879,7 +1879,7 @@ class HerculesACPAgent(acp.Agent):
                     available_commands=self._available_commands(),
                 ),
             )
-        except Exception:
+        except (AttributeError, ValueError):
             logger.warning(
                 "Failed to advertise ACP slash commands for session %s",
                 session_id,
@@ -2024,7 +2024,7 @@ class HerculesACPAgent(acp.Agent):
                 system_prompt=system_prompt,
                 tools=tools,
             )
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             logger.debug("Could not estimate ACP context usage", exc_info=True)
             approx_tokens = 0
 

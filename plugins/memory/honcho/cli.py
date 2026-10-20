@@ -115,7 +115,7 @@ def _ensure_peer_exists(host_key: str | None = None) -> bool:
         if hcfg.peer_name:
             client.peer(hcfg.peer_name)
         return True
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return False
 
 
@@ -248,7 +248,7 @@ def sync_honcho_profiles_quiet() -> int:
         from hercules_cli.profiles import list_profiles
 
         profiles = list_profiles()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return 0
 
     cfg = _read_config()
@@ -301,7 +301,7 @@ def _read_config() -> dict:
     if path.exists():
         try:
             return json.loads(path.read_text(encoding="utf-8"))
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     return {}
 
@@ -447,7 +447,7 @@ def _gateway_platforms() -> list[str] | None:
         from gateway.config import load_gateway_config
 
         return [p.value for p in load_gateway_config().get_connected_platforms()]
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return None
 
 
@@ -1105,7 +1105,7 @@ def _active_profile_name() -> str:
         from hercules_cli.profiles import get_active_profile_name
 
         return get_active_profile_name()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return "default"
 
 
@@ -1118,7 +1118,7 @@ def _all_profile_host_configs() -> list[tuple[str, str, dict]]:
         from hercules_cli.profiles import list_profiles
 
         profiles = list_profiles()
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return [(_active_profile_name(), _host_key(), {})]
 
     cfg = _read_config()
@@ -1170,7 +1170,7 @@ def cmd_status(args) -> None:
                 print(f"  No Honcho config found at {active_path}")
                 print("  Run 'hercules honcho setup' to configure.\n")
                 return
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             print(f"  No Honcho config found at {active_path}")
             print("  Run 'hercules honcho setup' to configure.\n")
             return

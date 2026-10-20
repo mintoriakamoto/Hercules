@@ -161,7 +161,7 @@ def _sweep_expired_pastes(now: Optional[float] = None) -> tuple[int, int]:
             if delete_paste(url):
                 deleted += 1
                 continue
-        except Exception:
+        except (AttributeError, ValueError):
             # Network hiccup, 404 (already gone), etc. — drop the entry
             # after a grace period; don't retry forever.
             pass
@@ -182,7 +182,7 @@ def _best_effort_sweep_expired_pastes() -> None:
     """Attempt pending-paste cleanup without letting /debug fail offline."""
     try:
         _sweep_expired_pastes()
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
 
@@ -640,7 +640,7 @@ def _github_token() -> Optional[str]:
                 tok = gh.get("token") or gh.get("access_token")
                 if isinstance(tok, str) and tok.strip():
                     return tok.strip()
-    except Exception:
+    except (ValueError, ZeroDivisionError):
         pass
     return None
 
@@ -898,7 +898,7 @@ def run_debug(args):
     # reliable even when offline.
     try:
         _sweep_expired_pastes()
-    except Exception:
+    except (AttributeError, ValueError):
         pass
 
     subcmd = getattr(args, "debug_command", None)

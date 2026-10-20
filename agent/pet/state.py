@@ -16,7 +16,7 @@ mirror stay faithful without a second design.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Iterable
 
 from agent.pet.constants import PetState
 

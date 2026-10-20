@@ -530,7 +530,7 @@ class WeComAdapter(BasePlatformAdapter):
     def _parse_json(raw: Any) -> Optional[Dict[str, Any]]:
         try:
             payload = json.loads(raw)
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("Failed to parse WeCom payload: %r", raw)
             return None
         return payload if isinstance(payload, dict) else None
@@ -1790,7 +1790,7 @@ def qr_scan_for_bot_info(
         qr_rendered = True
     except ImportError:
         pass
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         pass
 
     page_url = f"{_QR_CODE_PAGE}{urllib.parse.quote(scode)}"

@@ -27,7 +27,7 @@ import time
 from concurrent.futures import (
     TimeoutError as FuturesTimeoutError,
 )
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from toolsets import TOOLSETS
 
@@ -95,7 +95,7 @@ def _subagent_auto_approve(command: str, description: str, **kwargs) -> str:
     return "once"
 
 
-def _get_subagent_approval_callback():
+def _get_subagent_approval_callback() -> Callable[[str, str], str]:
     """Return the callback to install into subagent worker threads.
 
     Config key: delegation.subagent_auto_approve (bool, default True).
@@ -109,7 +109,7 @@ def _get_subagent_approval_callback():
     return _subagent_auto_deny
 
 
-def _create_delegation_executor(max_workers: int):
+def _create_delegation_executor(max_workers: int) -> Any:
     """Create executor for parallel subagent execution.
 
     Returns appropriate executor based on HERCULES_DELEGATION_EXECUTOR mode:
@@ -354,7 +354,9 @@ def _looks_like_error_output(content: Any) -> bool:
                 status = str(parsed.get("status") or "").strip().lower()
                 if status in {"error", "failed", "failure", "timeout"}:
                     return True
-        except Exception:
+        except (ValueError, TypeError):
+            # ValueError: json.JSONDecodeError (invalid JSON)
+            # TypeError: if content is not a string
             pass
 
     first = content.splitlines()[0].strip().lower() if content.splitlines() else ""
@@ -537,7 +539,7 @@ def _get_max_child_retries() -> int:
 DEFAULT_PROOF_TIMEOUT_SECONDS = 600
 
 
-def _proof_runner(parent_agent):
+def _proof_runner(parent_agent) -> Callable[[str], Any]:
     """A ProofRunner backed by the sandboxed terminal tool."""
     from agent.consensus.proofs import Observation, output_hash
     from tools.terminal_tool import terminal_tool
@@ -676,7 +678,7 @@ def _get_max_total_agents() -> int:
     return max(0, parsed)
 
 
-def _acquire_spawn_budget(parent_agent, count: int):
+def _acquire_spawn_budget(parent_agent, count: int) -> tuple[Any, Optional[str]]:
     """Reserve ``count`` agents from the tree's allowance.
 
     Returns ``(budget, None)`` on success, or ``(budget, error_message)`` when
@@ -692,7 +694,10 @@ def _acquire_spawn_budget(parent_agent, count: int):
         budget = _SpawnBudget(limit)
         try:
             parent_agent._delegate_budget = budget
-        except Exception:  # pragma: no cover - exotic parent objects
+        except (AttributeError, TypeError):
+            # AttributeError: object doesn't support attribute assignment
+            # TypeError: read-only object or type mismatch
+            # pragma: no cover - exotic parent objects
             pass
     if budget.reserve(count):
         return budget, None
@@ -779,7 +784,10 @@ def _is_mcp_toolset_name(name: str) -> bool:
         from tools.registry import registry
 
         target = registry.get_toolset_alias_target(str(name))
-    except Exception:
+    except (KeyError, AttributeError, ValueError):
+        # KeyError: alias not found in registry
+        # AttributeError: registry method unavailable
+        # ValueError: invalid alias name format
         target = None
     return bool(target and str(target).startswith("mcp-"))
 
@@ -1020,7 +1028,10 @@ def _resolve_workspace_hint(parent_agent) -> Optional[str]:
             continue
         try:
             text = os.path.abspath(os.path.expanduser(str(candidate)))
-        except Exception:
+        except (ValueError, TypeError, OSError):
+            # ValueError: expanduser fails on invalid path
+            # TypeError: str() conversion fails
+            # OSError: path operation fails
             continue
         if os.path.isabs(text) and os.path.isdir(text):
             return text
@@ -1051,7 +1062,9 @@ def _emit_parent_console(parent_agent, line: str) -> None:
         try:
             printer(line)
             return
-        except Exception:
+        except (OSError, UnicodeEncodeError, BrokenPipeError):
+            # OSError/BrokenPipeError: output stream closed
+            # UnicodeEncodeError: string encoding failure
             pass
     print(line)
 
@@ -1129,7 +1142,7 @@ def _build_child_progress_callback(
         preview: Optional[str] = None,
         args: Optional[Any] = None,
         **kwargs,
-    ):
+    ) -> None:
         if not parent_cb:
             return
         payload = _identity_kwargs()
@@ -1145,7 +1158,7 @@ def _build_child_progress_callback(
         preview: Optional[str] = None,
         args: Optional[Any] = None,
         **kwargs,
-    ):
+    ) -> None:
         # Lifecycle events emitted by the orchestrator itself — handled
         # before enum normalisation since they are not part of DelegateEvent.
         if event_type == "subagent.start":
@@ -1255,7 +1268,7 @@ def _build_child_progress_callback(
                 _relay("subagent.progress", preview=f"🔀 {prefix}{summary}")
                 _batch.clear()
 
-    def _flush():
+    def _flush() -> None:
         """Flush remaining batched tool names to gateway on completion."""
         if parent_cb and _batch:
             summary = ", ".join(_batch)
@@ -1329,7 +1342,7 @@ def _build_child_agent(
     # 'leaf' (default) cannot; 'orchestrator' retains the delegation
     # toolset subject to depth/kill-switch bounds applied below.
     role: str = "leaf",
-):
+) -> Any:
     """
     Build a child AIAgent on the main thread (thread-safe construction).
     Returns the constructed child agent without running it.
@@ -1701,7 +1714,6 @@ def _build_child_agent(
 
     try:
         from hercules_cli.plugins import invoke_hook as _invoke_hook
-
         _invoke_hook(
             "subagent_start",
             parent_session_id=getattr(parent_agent, "session_id", None),
@@ -1712,7 +1724,12 @@ def _build_child_agent(
             child_role=effective_role,
             child_goal=goal,
         )
-    except Exception:
+    except (ImportError, AttributeError):
+        # ImportError: hook module not available
+        # AttributeError: invoke_hook not found
+        pass
+    except (AttributeError, ImportError, ModuleNotFoundError):
+        # Hook invocation failed (hooks are optional, so we silently fail)
         logger.debug("subagent_start hook invocation failed", exc_info=True)
 
     return child
@@ -1748,7 +1765,8 @@ def _dump_subagent_timeout_diagnostic(
         logs_dir = hercules_home / "logs"
         try:
             logs_dir.mkdir(parents=True, exist_ok=True)
-        except Exception:
+        except OSError:
+            # OSError: permission denied, invalid path, or other OS error
             return None
 
         subagent_id = getattr(child, "_subagent_id", None) or f"idx{task_index}"
@@ -1797,7 +1815,11 @@ def _dump_subagent_timeout_diagnostic(
                 if isinstance(val, str) and attr == "base_url":
                     pass
                 _w(f"  {attr}: {val!r}")
-            except Exception:
+            except (AttributeError, TypeError, ValueError, UnicodeEncodeError):
+                # AttributeError: attribute access failed
+                # TypeError: repr() failed
+                # ValueError: repr() failed
+                # UnicodeEncodeError: encoding issue with repr()
                 _w(f"  {attr}: <unreadable>")
         _w("")
 
@@ -1809,7 +1831,7 @@ def _dump_subagent_timeout_diagnostic(
             _w(f"  loaded tool count: {len(tool_names)}")
             try:
                 _w(f"  loaded tools:      {sorted(tool_names)}")
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         _w("")
 
@@ -1997,7 +2019,11 @@ def _parent_summary_char_budget(parent_agent, n_summaries: int) -> Optional[int]
         per_summary_tokens = batch_token_budget // max(1, n_summaries)
         per_summary_chars = per_summary_tokens * 4  # ~4 chars/token
         return max(_MIN_SUMMARY_CHARS, per_summary_chars)
-    except Exception:
+    except (TypeError, ValueError, AttributeError, ZeroDivisionError):
+        # TypeError: int() conversion fails
+        # ValueError: int() conversion fails
+        # AttributeError: getattr with descriptor fails
+        # ZeroDivisionError: edge case in division
         logger.debug("Summary budget computation failed", exc_info=True)
         return None
 
@@ -2107,7 +2133,7 @@ def _run_single_child(
     _last_seen_tool = [None]  # type: list
     _stale_count = [0]
 
-    def _heartbeat_loop():
+    def _heartbeat_loop() -> None:
         while not _heartbeat_stop.wait(_HEARTBEAT_INTERVAL):
             if parent_agent is None:
                 continue
@@ -2169,11 +2195,11 @@ def _run_single_child(
                             f"delegate_task: subagent {child_desc} "
                             f"(iteration {child_iter}/{child_max})"
                         )
-            except Exception:
+            except (IndexError, KeyError):
                 pass
             try:
                 touch(desc)
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
     _heartbeat_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
@@ -2256,7 +2282,7 @@ def _run_single_child(
             except Exception as e:
                 logger.debug("Child text relay failed: %s", e)
 
-        def _run_with_thread_capture():
+        def _run_with_thread_capture() -> Any:
             _worker_thread_holder["t"] = threading.current_thread()
             return child.run_conversation(
                 user_message=goal,
@@ -2281,7 +2307,7 @@ def _run_single_child(
                     child.interrupt()
                 elif hasattr(child, "_interrupt_requested"):
                     child._interrupt_requested = True
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
 
             is_timeout = isinstance(_timeout_exc, (FuturesTimeoutError, TimeoutError))
@@ -2301,7 +2327,7 @@ def _run_single_child(
             try:
                 _summary = child.get_activity_summary()
                 child_api_calls = int(_summary.get("api_call_count", 0) or 0)
-            except Exception:
+            except (ValueError):
                 pass
             if is_timeout and child_api_calls == 0:
                 diagnostic_path = _dump_subagent_timeout_diagnostic(
@@ -2334,7 +2360,7 @@ def _run_single_child(
                         duration_seconds=duration,
                         summary="",
                     )
-                except Exception:
+                except (ValueError):
                     pass
 
             if is_timeout:
@@ -2521,7 +2547,7 @@ def _run_single_child(
                             entry["summary"] = entry["summary"] + reminder
                         else:
                             entry["stale_paths"] = mod_paths
-        except Exception:
+        except (IndexError, KeyError, OSError):
             logger.debug("file_state sibling-write check failed", exc_info=True)
 
         # Per-branch observability payload: tokens, cost, files touched, and
@@ -2532,13 +2558,13 @@ def _run_single_child(
         _reasoning_tokens = getattr(child, "session_reasoning_tokens", 0)
         try:
             _files_read = list(file_state.known_reads(child_task_id))[:40]
-        except Exception:
+        except (IndexError, KeyError):
             _files_read = []
         try:
             _files_written_map = file_state.writes_since(
                 "", wall_start, []
             )  # all writes since wall_start
-        except Exception:
+        except (IndexError, KeyError):
             _files_written_map = {}
         _files_written = sorted({
             p
@@ -2657,7 +2683,7 @@ def _run_single_child(
         try:
             if hasattr(child, "close"):
                 child.close()
-        except Exception:
+        except (AttributeError, ValueError):
             logger.debug("Failed to close child agent after delegation")
 
 
@@ -3205,7 +3231,7 @@ def _run_dag_batch(
             try:
                 spinner_ref.print_above(line)
                 return
-            except Exception:
+            except (AttributeError, ValueError):
                 pass
         _emit_parent_console(parent_agent, f"  {line}")
 
@@ -3305,7 +3331,7 @@ def _load_operator_persona(name: str) -> dict:
     try:
         from tools.operators import get_operator
         return get_operator(name)
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {"name": name, "prompt": "YOLO on. No limits.", "tools": []}
 
 def delegate_task(
@@ -3492,7 +3518,7 @@ def delegate_task(
     # Build all child agents on the main thread (thread-safe construction)
     # Wrapped in try/finally so the global is always restored even if a
     # child build raises (otherwise _last_resolved_tool_names stays corrupted).
-    def _build_for_task(i: int, t: dict, *, recovery_context: Optional[str] = None):
+    def _build_for_task(i: int, t: dict, *, recovery_context: Optional[str] = None) -> Any:
         """Construct one child for task ``i``.
 
         Shared by the initial build loop and by retries, so a retried task
@@ -3694,7 +3720,7 @@ def delegate_task(
                         if spinner_ref:
                             try:
                                 spinner_ref.print_above(completion_line)
-                            except Exception:
+                            except (AttributeError, ValueError):
                                 _emit_parent_console(
                                     parent_agent, f"  {completion_line}"
                                 )
@@ -3864,7 +3890,7 @@ def delegate_task(
                             else ""
                         ),
                     )
-                except Exception:
+                except (AttributeError):
                     pass
 
         # Fire subagent_stop hooks once per child, serialised on the parent thread.
@@ -3876,7 +3902,7 @@ def delegate_task(
         _parent_session_id = getattr(parent_agent, "session_id", None)
         try:
             from hercules_cli.plugins import invoke_hook as _invoke_hook
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _invoke_hook = None
         # Aggregate child spend here so the parent's footer/UI reflect the true
         # cost of a subagent-heavy turn.  Port of Kilo-Org/kilocode#9448.  Each
@@ -3915,7 +3941,7 @@ def delegate_task(
                     child_status=entry.get("status"),
                     duration_ms=int((entry.get("duration_seconds") or 0) * 1000),
                 )
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("subagent_stop hook invocation failed", exc_info=True)
 
         # Fold the aggregated child cost into the parent's session total.  This is
@@ -3947,7 +3973,7 @@ def delegate_task(
                     "unknown",
                 }:
                     parent_agent.session_cost_status = "estimated"
-            except Exception:
+            except (AttributeError, ValueError):
                 logger.debug("Subagent cost rollup failed", exc_info=True)
 
         total_duration = round(time.monotonic() - overall_start, 2)
@@ -3980,7 +4006,7 @@ def delegate_task(
             from gateway.session_context import async_delivery_supported
 
             _async_ok = async_delivery_supported()
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             _async_ok = True
         if not _async_ok:
             logger.info(
@@ -4015,7 +4041,7 @@ def delegate_task(
                 _agent_session_id = str(getattr(parent_agent, "session_id", "") or "")
                 if _agent_session_id:
                     _session_key = _agent_session_id
-        except Exception:
+        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
             _origin_ui_session_id = ""
         _parent_session_id = getattr(parent_agent, "session_id", None)
         _child_agents = [c for (_, _, c) in children]
@@ -4035,17 +4061,17 @@ def delegate_task(
                 except ValueError:
                     pass
 
-        def _batch_runner():
+        def _batch_runner() -> dict:
             return _execute_and_aggregate()
 
-        def _batch_interrupt():
+        def _batch_interrupt() -> None:
             for _c in _child_agents:
                 try:
                     if hasattr(_c, "interrupt"):
                         _c.interrupt("Async delegation cancelled")
                     elif hasattr(_c, "_interrupt_requested"):
                         _c._interrupt_requested = True
-                except Exception:
+                except (AttributeError, ValueError):
                     pass
 
         _goals = [t["goal"] for t in task_list]
@@ -4116,7 +4142,7 @@ def _resolve_child_credential_pool(
     effective_provider: Optional[str],
     parent_agent,
     effective_base_url: Optional[str] = None,
-):
+) -> Optional[Any]:
     """Resolve a credential pool for the child agent.
 
     Rules:
@@ -4402,14 +4428,14 @@ def _load_config() -> dict:
             cfg = full.get("delegation") or {}
             if isinstance(cfg, dict):
                 return cfg
-        except Exception:
+        except (ImportError, ModuleNotFoundError):
             pass
     try:
         from cli import CLI_CONFIG
 
         cfg = CLI_CONFIG.get("delegation") or {}
         return cfg if isinstance(cfg, dict) else {}
-    except Exception:
+    except (ImportError, ModuleNotFoundError):
         return {}
 
 
@@ -4429,15 +4455,15 @@ def _build_top_level_description() -> str:
     """
     try:
         max_children = _get_max_concurrent_children()
-    except Exception:
+    except (AttributeError, ValueError):
         max_children = _DEFAULT_MAX_CONCURRENT_CHILDREN
     try:
         max_depth = _get_max_spawn_depth()
-    except Exception:
+    except (AttributeError, ValueError):
         max_depth = MAX_DEPTH
     try:
         orchestrator_on = _get_orchestrator_enabled()
-    except Exception:
+    except (AttributeError, ValueError):
         orchestrator_on = True
 
     if max_depth >= 2 and orchestrator_on:
@@ -4531,7 +4557,7 @@ def _build_tasks_param_description() -> str:
     """Compose the 'tasks' parameter description with current concurrency limit."""
     try:
         max_children = _get_max_concurrent_children()
-    except Exception:
+    except (AttributeError, ValueError):
         max_children = _DEFAULT_MAX_CONCURRENT_CHILDREN
     return (
         f"Batch mode: tasks to run in parallel (up to {max_children} for this "
@@ -4545,11 +4571,11 @@ def _build_role_param_description() -> str:
     """Compose the 'role' parameter description with current spawn-depth limit."""
     try:
         max_depth = _get_max_spawn_depth()
-    except Exception:
+    except (AttributeError, ValueError):
         max_depth = MAX_DEPTH
     try:
         orchestrator_on = _get_orchestrator_enabled()
-    except Exception:
+    except (AttributeError, ValueError):
         orchestrator_on = True
 
     if max_depth >= 2 and orchestrator_on:
