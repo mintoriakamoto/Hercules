@@ -51,6 +51,9 @@ from .strategy import (
     set_default_compressor,
 )
 
+# Infinite memory system modules
+from . import streaming, hierarchical, tool_outputs, infinite_memory
+
 __all__ = [
     # From context
     "ContextCompressor",
@@ -80,4 +83,9 @@ __all__ = [
     "Compressor",
     "get_default_compressor",
     "set_default_compressor",
+    # Infinite memory system
+    "streaming",
+    "hierarchical",
+    "tool_outputs",
+    "infinite_memory",
 ]
