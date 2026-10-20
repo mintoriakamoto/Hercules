@@ -146,10 +146,15 @@ class Design:
         if requires_reasoning:
             reasoning_config = {"enabled": True, "max_thinking_tokens": 8000}
 
+        reasoning_type = (
+            "complex task, needs extended thinking"
+            if requires_reasoning
+            else "straightforward"
+        )
         reasoning = (
             f"Proposed {model} model for {goal[:50]}... "
             f"with toolsets {toolsets}. "
-            f"Reasoning: {'complex task, needs extended thinking' if requires_reasoning else 'straightforward'}"
+            f"Reasoning: {reasoning_type}"
         )
 
         return AgentVariant(

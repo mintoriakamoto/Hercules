@@ -159,10 +159,12 @@ def record_context_access(
         conn = _connect()
         try:
             # Check if item already has a score
-            cursor = conn.execute(
-                "SELECT relevance_score, reference_count, mean_query_length FROM context_item_scores WHERE item_id = ?",
-                (item_id,),
+            query = (
+                "SELECT relevance_score, reference_count, "
+                "mean_query_length FROM context_item_scores "
+                "WHERE item_id = ?"
             )
+            cursor = conn.execute(query, (item_id,))
             existing = cursor.fetchone()
 
             if existing:
@@ -195,7 +197,9 @@ def record_context_access(
                 conn.execute(
                     """
                     INSERT INTO context_item_scores
-                    (item_id, session_id, context_type, compression_level, reference_count, relevance_score, last_accessed, created_at, mean_query_length)
+                    (item_id, session_id, context_type, compression_level,
+                     reference_count, relevance_score, last_accessed,
+                     created_at, mean_query_length)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (

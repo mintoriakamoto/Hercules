@@ -336,7 +336,10 @@ class EnsembleVotingEngine:
             strategy=EnsembleStrategy.WEIGHTED,
             agreement_level=agreement_level,
             execution_time_ms=max(v.execution_time_ms for v in votes),
-            reasoning=f"Weighted voting: {winner.model_name} won with {agreement_level:.1%} support",
+            reasoning=(
+                f"Weighted voting: {winner.model_name} won with "
+                f"{agreement_level:.1%} support"
+            ),
             confidence=winner.confidence
         )
 
@@ -361,14 +364,21 @@ class EnsembleVotingEngine:
 
         agreement_level = len(best_vote_indices) / len(votes)
 
+        avg_confidence = (
+            sum(votes[i].confidence for i in best_vote_indices)
+            / len(best_vote_indices)
+        )
         return EnsembleVerdictResult(
             winning_response=winner.response,
             winning_model=winner.model_name,
             strategy=EnsembleStrategy.MAJORITY,
             agreement_level=agreement_level,
             execution_time_ms=max(v.execution_time_ms for v in votes),
-            reasoning=f"Majority vote: {winner.model_name} won with {len(best_vote_indices)}/{len(votes)} votes",
-            confidence=sum(votes[i].confidence for i in best_vote_indices) / len(best_vote_indices)
+            reasoning=(
+                f"Majority vote: {winner.model_name} won with "
+                f"{len(best_vote_indices)}/{len(votes)} votes"
+            ),
+            confidence=avg_confidence
         )
 
     def get_voting_history(self, limit: int = 100) -> List[Dict[str, Any]]:
