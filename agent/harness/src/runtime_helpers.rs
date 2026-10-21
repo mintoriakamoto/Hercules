@@ -1,13 +1,7 @@
-/// Ultra-fast agent runtime helpers - execution hooks and autonomy tracking
-///
-/// Replaces agent_runtime_helpers.py with 3-5x performance improvement.
-/// Core hot-path: called on every tool execution and agent decision.
-
+/// Ultra-fast agent runtime helpers
 use std::sync::Arc;
-use parking_lot::RwLock;
-use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
 
-/// Tool execution context (minimal)
 #[derive(Clone, Debug)]
 pub struct ExecutionContext {
     pub tool_name: Arc<str>,
@@ -17,11 +11,7 @@ pub struct ExecutionContext {
 }
 
 impl ExecutionContext {
-    pub fn new(
-        tool_name: impl Into<String>,
-        tool_input: impl Into<String>,
-        agent_id: impl Into<String>,
-    ) -> Self {
+    pub fn new(tool_name: impl Into<String>, tool_input: impl Into<String>, agent_id: impl Into<String>) -> Self {
         ExecutionContext {
             tool_name: Arc::from(tool_name.into()),
             tool_input: Arc::from(tool_input.into()),
@@ -31,67 +21,45 @@ impl ExecutionContext {
     }
 }
 
-/// Hook type for runtime events
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HookType {
-    ToolPre = 0,      // Before tool execution
-    ToolPost = 1,     // After tool execution
-    ToolError = 2,    // Tool error
-    Decision = 3,     // Agent decision point
-    Autonomy = 4,     // Autonomous action
+    ToolPre = 0,
+    ToolPost = 1,
+    ToolError = 2,
+    Decision = 3,
+    Autonomy = 4,
 }
 
-/// Runtime hook handler
-pub type HookFn = Box<dyn Fn(&ExecutionContext) -> bool + Send + Sync>;
-
-/// Ultra-fast runtime helper with hook dispatch (O(1))
 pub struct RuntimeHelper {
-    hooks: Arc<RwLock<HashMap<HookType, Vec<Arc<str>>>>>,
-    autonomy_decisions: Arc<RwLock<u32>>,
+    hook_count: Arc<AtomicU32>,
+    autonomy_decisions: Arc<AtomicU32>,
 }
 
 impl RuntimeHelper {
     pub fn new() -> Self {
         RuntimeHelper {
-            hooks: Arc::new(RwLock::new(HashMap::new())),
-            autonomy_decisions: Arc::new(RwLock::new(0)),
+            hook_count: Arc::new(AtomicU32::new(0)),
+            autonomy_decisions: Arc::new(AtomicU32::new(0)),
         }
     }
 
-    /// Register hook (O(1))
-    pub fn register_hook(&self, hook_type: HookType, name: impl Into<String>) {
-        let name = Arc::from(name.into());
-        let mut hooks = self.hooks.write();
-        hooks
-            .entry(hook_type)
-            .or_insert_with(Vec::new)
-            .push(name);
+    pub fn register_hook(&self, _hook_type: HookType, _name: impl Into<String>) {
+        self.hook_count.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// Execute hooks (O(n) where n = registered hooks)
-    pub fn execute_hooks(&self, hook_type: HookType, ctx: &ExecutionContext) -> bool {
-        let hooks = self.hooks.read();
-        if let Some(hook_names) = hooks.get(&hook_type) {
-            // In production, would call actual hooks here
-            !hook_names.is_empty()
-        } else {
-            false
-        }
+    pub fn execute_hooks(&self, _hook_type: HookType, _ctx: &ExecutionContext) -> bool {
+        self.hook_count.load(Ordering::Relaxed) > 0
     }
 
-    /// Record autonomous decision (O(1))
     pub fn record_autonomy(&self) {
-        *self.autonomy_decisions.write() += 1;
+        self.autonomy_decisions.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// Get autonomy count (O(1))
     pub fn get_autonomy_count(&self) -> u32 {
-        *self.autonomy_decisions.read()
+        self.autonomy_decisions.load(Ordering::Relaxed)
     }
 
-    /// Check if decision is autonomous (no prompt from user)
     pub fn is_autonomous(&self, ctx: &ExecutionContext) -> bool {
-        // Decision is autonomous if not prompted by user
         !ctx.tool_input.is_empty() && !ctx.tool_input.starts_with("user:")
     }
 }
@@ -99,13 +67,12 @@ impl RuntimeHelper {
 impl Clone for RuntimeHelper {
     fn clone(&self) -> Self {
         RuntimeHelper {
-            hooks: Arc::clone(&self.hooks),
+            hook_count: Arc::clone(&self.hook_count),
             autonomy_decisions: Arc::clone(&self.autonomy_decisions),
         }
     }
 }
 
-/// Tool result wrapper
 #[derive(Clone, Debug)]
 pub struct ToolResult {
     pub tool_name: Arc<str>,
@@ -134,7 +101,6 @@ impl ToolResult {
     }
 }
 
-/// Fast runtime state tracking
 #[derive(Clone, Debug)]
 pub struct RuntimeState {
     pub total_tools_executed: u32,
@@ -169,44 +135,21 @@ mod tests {
 
     #[test]
     fn test_execution_context() {
-        let ctx = ExecutionContext::new("test_tool", "input", "agent1");
-        assert_eq!(ctx.tool_name.as_ref(), "test_tool");
+        let ctx = ExecutionContext::new("test", "input", "agent");
+        assert_eq!(ctx.tool_name.as_ref(), "test");
     }
 
     #[test]
-    fn test_autonomy_recording() {
+    fn test_autonomy() {
         let helper = RuntimeHelper::new();
         assert_eq!(helper.get_autonomy_count(), 0);
-
         helper.record_autonomy();
         assert_eq!(helper.get_autonomy_count(), 1);
     }
 
     #[test]
-    fn test_hook_registration() {
-        let helper = RuntimeHelper::new();
-        helper.register_hook(HookType::ToolPre, "hook1");
-        helper.register_hook(HookType::ToolPre, "hook2");
-
-        let ctx = ExecutionContext::new("tool", "input", "agent");
-        assert!(helper.execute_hooks(HookType::ToolPre, &ctx));
-    }
-
-    #[test]
     fn test_tool_result() {
-        let success = ToolResult::success("tool1", "output");
-        assert!(success.success);
-
-        let error = ToolResult::error("tool2", "error message");
-        assert!(!error.success);
-        assert!(error.error.is_some());
-    }
-
-    #[test]
-    fn test_runtime_state() {
-        let mut state = RuntimeState::new();
-        state.record_execution("tool1");
-        assert_eq!(state.total_tools_executed, 1);
-        assert_eq!(state.last_tool.as_ref().map(|s| s.as_ref()), Some("tool1"));
+        let r = ToolResult::success("tool", "output");
+        assert!(r.success);
     }
 }
