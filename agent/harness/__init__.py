@@ -46,6 +46,12 @@ from agent.harness.message_bus import (
     MessageBus,
     MessageBusPool,
 )
+from agent.harness.consciousness_metrics import (
+    ConsciousnessMetrics,
+    ConsciousnessScore,
+    ConsciousnessProperty,
+    PropertyEvidence,
+)
 
 __all__ = [
     "Agent",
@@ -74,4 +80,8 @@ __all__ = [
     "MessageType",
     "MessageBus",
     "MessageBusPool",
+    "ConsciousnessMetrics",
+    "ConsciousnessScore",
+    "ConsciousnessProperty",
+    "PropertyEvidence",
 ]
