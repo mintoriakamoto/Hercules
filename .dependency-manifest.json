@@ -1,0 +1,91 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-10-21",
+  "tiers": {
+    "core": {
+      "description": "Required - agent runtime, no external deps except anthropic",
+      "packages": [
+        {
+          "name": "anthropic",
+          "version": ">=0.25.0",
+          "reason": "AI model API"
+        },
+        {
+          "name": "pydantic",
+          "version": ">=2.0.0",
+          "reason": "Data validation and models"
+        }
+      ]
+    },
+    "execution": {
+      "description": "Core execution layer - inference, tools, compression",
+      "packages": [
+        {
+          "name": "stdlib",
+          "modules": ["asyncio", "json", "time", "collections"],
+          "reason": "Async runtime, serialization, timing"
+        }
+      ]
+    },
+    "gateway": {
+      "description": "Platform adapters - messaging, auth",
+      "optional": true,
+      "packages": [
+        {
+          "name": "httpx",
+          "version": ">=0.24.0",
+          "reason": "Platform authentication"
+        },
+        {
+          "name": "aiohttp",
+          "version": ">=3.8.0",
+          "reason": "Async HTTP for platform APIs"
+        }
+      ]
+    },
+    "integrations": {
+      "description": "Third-party platform integrations",
+      "optional": true,
+      "packages": [
+        {
+          "name": "slack-sdk",
+          "version": ">=3.20.0",
+          "reason": "Slack platform adapter"
+        },
+        {
+          "name": "discord.py",
+          "version": ">=2.3.0",
+          "reason": "Discord platform adapter"
+        }
+      ]
+    },
+    "dev": {
+      "description": "Development and testing",
+      "optional": true,
+      "packages": [
+        {
+          "name": "pytest",
+          "version": ">=7.4.0",
+          "reason": "Test framework"
+        },
+        {
+          "name": "pylint",
+          "version": ">=3.0.0",
+          "reason": "Code linting"
+        }
+      ]
+    }
+  },
+  "dependency_graph": {
+    "core": [],
+    "execution": ["core"],
+    "gateway": ["execution"],
+    "integrations": ["gateway"],
+    "dev": ["core", "execution"]
+  },
+  "forbidden_imports": {
+    "agent.compression": ["hercules_cli.auth"],
+    "agent.execution": ["hercules_cli"],
+    "agent.core": ["httpx", "slack_sdk", "discord"]
+  }
+}
