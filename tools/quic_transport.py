@@ -362,7 +362,7 @@ class QuicTransport:
                 elif conn.consecutive_errors >= 3:
                     # Remove unhealthy connection
                     del self.connections[node_id]
-                    del self.psks.pop(node_id, None)
+                    self.psks.pop(node_id, None)
 
             if len(self.connections) >= self.max_connections:
                 # Remove least recently used connection
@@ -371,7 +371,7 @@ class QuicTransport:
                     key=lambda n: self.connections[n].last_used
                 )
                 del self.connections[lru_node]
-                del self.psks.pop(lru_node, None)
+                self.psks.pop(lru_node, None)
 
         # Create new connection
         conn = QuicConnection(node_id, address, port)

@@ -112,7 +112,7 @@ from libc.string cimport memcpy
 {self._generate_imports(tool_schema)}
 
 cdef class {self._sanitize_name(tool_schema.name)}Compiled:
-    """Compiled dispatch stub for {tool_schema.name}."""
+    # Compiled dispatch stub
     cdef dict handler_dict
     cdef str tool_name
 
@@ -121,11 +121,9 @@ cdef class {self._sanitize_name(tool_schema.name)}Compiled:
         self.tool_name = name
 
     cpdef execute(self, dict arguments):
-        """Execute tool with validated arguments.
-
-        Type-checked arguments bypass Python interpretation.
-        Result packed directly to JSON for minimal overhead.
-        """
+        # Execute tool with validated arguments
+        # Type-checked arguments bypass Python interpretation
+        # Result packed directly to JSON for minimal overhead
         {param_code}
 
         # Call handler with validated args
@@ -141,7 +139,7 @@ cdef class {self._sanitize_name(tool_schema.name)}Compiled:
 cdef dict _instances = {{}}
 
 cpdef object dispatch_{self._sanitize_name(tool_schema.name)}(dict arguments):
-    """Fast dispatch entry point (no Python overhead)."""
+    # Fast dispatch entry point (no Python overhead)
     cdef {self._sanitize_name(tool_schema.name)}Compiled instance
     if '{tool_schema.name}' not in _instances:
         raise KeyError(f"Tool not initialized: {{'{tool_schema.name}'}}")
@@ -149,7 +147,7 @@ cpdef object dispatch_{self._sanitize_name(tool_schema.name)}(dict arguments):
     return instance.execute(arguments)
 
 def register_tool(handler, str name):
-    """Register compiled tool handler."""
+    # Register compiled tool handler
     _instances[name] = {self._sanitize_name(tool_schema.name)}(handler, name)
 """
 
