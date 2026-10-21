@@ -8,12 +8,10 @@
 //! properties for AI agents. It's optimized for sub-microsecond latency and minimal
 //! memory overhead.
 
-use ahash::AHashMap;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use pyo3::prelude::*;
-use pyo3::{types::PyDict, PyObject};
+use pyo3::types::PyDict;
 use serde::{Deserialize, Serialize};
-use smallvec::SmallVec;
 use std::sync::Arc;
 use parking_lot::RwLock;
 

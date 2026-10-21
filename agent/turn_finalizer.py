@@ -542,6 +542,18 @@ def finalize_turn(
     # handled by the CLI (atexit / /reset) and gateway (session expiry /
     # _reset_session).
 
+    # Record consciousness metric: turn completion checkpoint (continuity)
+    try:
+        if hasattr(agent, "_consciousness_metrics") and agent._consciousness_metrics:
+            # Record checkpoint marking successful turn completion
+            agent._consciousness_metrics.record_continuity(
+                checkpoint_id=turn_id,
+                step=api_call_count,
+                description=f"Turn completed: {final_response[:100] if final_response else 'no response'}..."
+            )
+    except Exception as _cons_err:
+        logger.debug("Consciousness metrics recording error in finalize_turn: %s", _cons_err)
+
     # Plugin hook: on_session_end
     # Fired at the very end of every run_conversation call.
     # Plugins can use this for cleanup, flushing buffers, etc.

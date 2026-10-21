@@ -377,9 +377,9 @@ fn calculate_property_score(evidence_list: &[&PropertyEvidence]) -> f64 {
 
 /// Get current timestamp as seconds since epoch
 #[inline]
-fn current_timestamp() -> f64 {
-    Utc::now().timestamp_subsec_micros() as f64 / 1_000_000.0
-        + Utc::now().timestamp() as f64
+pub fn current_timestamp() -> f64 {
+    let now = Utc::now();
+    now.timestamp() as f64 + now.timestamp_subsec_micros() as f64 / 1_000_000.0
 }
 
 #[cfg(test)]

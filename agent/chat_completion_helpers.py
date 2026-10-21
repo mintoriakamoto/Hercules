@@ -1550,6 +1550,18 @@ def try_activate_fallback(agent, reason: "FailoverReason | None" = None) -> bool
             agent._transport_cache.clear()
         agent._fallback_activated = True
 
+        # Record consciousness metric: error recovery and learning from experience (growth)
+        try:
+            if hasattr(agent, "_consciousness_metrics") and agent._consciousness_metrics:
+                # Record that the agent learned from error and adapted strategy
+                error_type = str(reason) if reason else "unknown_error"
+                agent._consciousness_metrics.record_growth(
+                    learning=f"Switched to fallback provider {fb_provider}/{fb_model} after {error_type}",
+                    source=f"error_recovery_{error_type}"
+                )
+        except Exception as _cons_err:
+            logger.debug("Consciousness metrics recording error in try_activate_fallback: %s", _cons_err)
+
         # Rebind the credential pool to the fallback provider when the provider
         # changes.  Keeping the primary pool attached would make downstream
         # recovery (rate_limit / billing / auth) mutate the wrong credential
