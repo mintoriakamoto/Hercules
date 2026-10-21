@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-10-21 16:15:52",
+  "tests": {
+    "hash_ring_distribution": {
+      "test": "hash_ring_distribution",
+      "lookups": 10000,
+      "lookup_latency_us": 4.556703567504883,
+      "uniformity_percent": 33.91164991562634,
+      "passed": false
+    },
+    "load_balancing": {
+      "test": "load_balancing",
+      "requests": 5000,
+      "routing_latency_us": 8.477973937988281,
+      "uniformity_percent": 3.466987164671943,
+      "passed": true
+    },
+    "batching_efficiency": {
+      "test": "batching_efficiency",
+      "batch_results": {
+        "batch_size_1": {
+          "throughput_calls_per_sec": 5689.984778969474,
+          "total_time_ms": 175.74739456176758
+        },
+        "batch_size_10": {
+          "throughput_calls_per_sec": 9068.157593761283,
+          "total_time_ms": 110.2759838104248
+        },
+        "batch_size_50": {
+          "throughput_calls_per_sec": 9727.320797424789,
+          "total_time_ms": 102.80323028564453
+        },
+        "batch_size_100": {
+          "throughput_calls_per_sec": 9796.960219376208,
+          "total_time_ms": 102.07247734069824
+        }
+      },
+      "speedup": 1.7217902331806514,
+      "passed": false
+    },
+    "schema_cache": {
+      "test": "schema_cache",
+      "accesses": 1000,
+      "access_latency_us": 1.3468265533447266,
+      "hit_rate_percent": 100.0,
+      "passed": true
+    },
+    "pool_management": {
+      "test": "pool_management",
+      "requests": 300,
+      "healthy_pools": 3,
+      "total_pools": 3,
+      "success_rate_percent": 100.0,
+      "passed": true
+    },
+    "fault_tolerance": {
+      "test": "fault_tolerance",
+      "successful": 100,
+      "total": 100,
+      "success_rate_percent": 100.0,
+      "passed": true
+    },
+    "end_to_end_scaling": {
+      "test": "end_to_end_scaling",
+      "total_calls": 50000,
+      "successful_calls": 50000,
+      "success_rate_percent": 100.0,
+      "throughput_calls_per_sec": 1957.4262917675815,
+      "total_time_seconds": 25.54374599456787,
+      "avg_latency_ms": 5019.527024717331,
+      "p99_latency_ms": 5208.7082862854,
+      "passed": false
+    }
+  }
+}
