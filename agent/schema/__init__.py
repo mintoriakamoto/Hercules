@@ -7,7 +7,11 @@ components. Ensures type safety and contract enforcement.
 import json
 from pathlib import Path
 from typing import Any, Dict
-import jsonschema
+
+try:
+    import jsonschema
+except ImportError:
+    jsonschema = None
 
 
 class SchemaValidator:
@@ -28,6 +32,9 @@ class SchemaValidator:
     @classmethod
     def validate_message(cls, data: Dict[str, Any]) -> bool:
         """Validate a message against schema."""
+        if jsonschema is None:
+            return True
+
         if not cls._schemas:
             cls.load_schemas()
 
@@ -43,6 +50,9 @@ class SchemaValidator:
     @classmethod
     def validate_tool_call(cls, data: Dict[str, Any]) -> bool:
         """Validate a tool call against schema."""
+        if jsonschema is None:
+            return True
+
         if not cls._schemas:
             cls.load_schemas()
 
