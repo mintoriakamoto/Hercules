@@ -26,6 +26,10 @@ mod agent_algebra;
 mod message_bus;
 mod agent_core;
 mod chat_helpers;
+mod runtime_helpers;
+mod approval;
+mod tools;
+mod conversation;
 
 pub use metrics::{ConsciousnessMetrics, ConsciousnessProperty};
 pub use evidence::PropertyEvidence;
