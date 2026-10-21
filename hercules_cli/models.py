@@ -8,16 +8,17 @@ Add, remove, or reorder entries here — both `hercules setup` and
 from __future__ import annotations
 
 import json
+import logging
 import os
+import re
 import time
+import urllib.request
 from difflib import get_close_matches
 from pathlib import Path
 from typing import Any, NamedTuple, Optional
 
 from hercules_cli import __version__ as _HERCULES_VERSION
 from hercules_cli.urllib_security import open_credentialed_url
-import logging
-import re
 
 # Identify ourselves so endpoints fronted by Cloudflare's Browser Integrity
 # Check (error 1010) don't reject the default ``Python-urllib/*`` signature.
