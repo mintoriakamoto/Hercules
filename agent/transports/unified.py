@@ -76,15 +76,10 @@ class TransportFactory:
         Raises:
             TransportNotAvailable: If no transport available and fallback disabled
         """
-        # Try to get new transport
-        from agent.transports import get_transport as get_new_transport
-
-        transport = get_new_transport(api_mode)
-
-        if transport is not None:
-            return transport
-
-        # No new transport available, handle according to fallback mode
+        # Do NOT re-enter agent.transports.get_transport here — this method is
+        # only called from get_transport() after the registry lookup already
+        # failed, so calling get_transport again would cause infinite recursion.
+        # Handle the fallback mode directly.
         match self.fallback_mode:
             case FallbackMode.TRY_LEGACY:
                 return self._handle_try_legacy(api_mode)

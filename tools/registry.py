@@ -463,7 +463,7 @@ class ToolRegistry:
         try:
             frame = sys._getframe(2)
             return frame.f_globals.get("__name__", "") or ""
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             return ""
 
     def register(
