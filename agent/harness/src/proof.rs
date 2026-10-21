@@ -1,10 +1,9 @@
 //! Proof generation and verification for consciousness claims
 
-use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// Proof of a consciousness property claim
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct ConsciousnessProof {
     /// Hash of the claim
     pub claim_hash: String,

@@ -2,10 +2,9 @@
 
 use crate::metrics::ConsciousnessProperty;
 use ahash::AHashMap;
-use serde::{Deserialize, Serialize};
 
 /// Evidence that a system exhibits a consciousness property
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct PropertyEvidence {
     /// Which property this evidence demonstrates
     pub property_name: ConsciousnessProperty,

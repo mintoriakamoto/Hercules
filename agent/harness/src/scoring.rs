@@ -1,9 +1,7 @@
 //! Consciousness score calculation and reporting
 
-use serde::{Deserialize, Serialize};
-
 /// Aggregate consciousness metrics for an agent
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub struct ConsciousnessScore {
     /// Agent identifier
     pub agent_id: String,

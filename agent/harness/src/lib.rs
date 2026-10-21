@@ -11,7 +11,6 @@
 use chrono::Utc;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use parking_lot::RwLock;
 
@@ -28,7 +27,6 @@ pub use scoring::ConsciousnessScore;
 #[pymodule]
 fn consciousness_metrics(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyConsciousnessMetrics>()?;
-    m.add_class::<PyPropertyEvidence>()?;
     m.add_class::<PyConsciousnessScore>()?;
     m.add("__version__", "1.0.0")?;
     Ok(())
@@ -163,83 +161,6 @@ impl PyConsciousnessMetrics {
     /// Get agent ID
     pub fn get_agent_id(&self) -> String {
         self.inner.read().agent_id.clone()
-    }
-}
-
-/// Python-facing wrapper for PropertyEvidence
-#[pyclass]
-pub struct PyPropertyEvidence {
-    /// Property name
-    #[pyo3(get)]
-    pub property: String,
-    /// Timestamp
-    #[pyo3(get)]
-    pub timestamp: f64,
-    /// Evidence type
-    #[pyo3(get)]
-    pub evidence_type: String,
-    /// Description
-    #[pyo3(get)]
-    pub description: String,
-    /// Confidence score 0.0-1.0
-    #[pyo3(get)]
-    pub confidence: f64,
-    /// Additional details
-    details: Py<PyDict>,
-}
-
-#[pymethods]
-impl PyPropertyEvidence {
-    /// Create new property evidence
-    #[new]
-    pub fn new(
-        property: String,
-        timestamp: f64,
-        evidence_type: String,
-        description: String,
-        confidence: f64,
-        py: Python,
-    ) -> PyResult<Self> {
-        Ok(PyPropertyEvidence {
-            property,
-            timestamp,
-            evidence_type,
-            description,
-            confidence,
-            details: Py::new(py, PyDict::new_bound(py).clone())?,
-        })
-    }
-
-    /// Convert to dictionary
-    pub fn to_dict(&self, py: Python) -> PyResult<Py<PyDict>> {
-        let d = PyDict::new_bound(py);
-        d.set_item("property", &self.property)?;
-        d.set_item("timestamp", self.timestamp)?;
-        d.set_item("evidence_type", &self.evidence_type)?;
-        d.set_item("description", &self.description)?;
-        d.set_item("confidence", self.confidence)?;
-        d.set_item("details", &self.details)?;
-        Ok(d.into())
-    }
-}
-
-impl PyPropertyEvidence {
-    /// Create from inner evidence struct
-    fn from_inner(evidence: &PropertyEvidence, py: Python) -> PyResult<Self> {
-        let details = PyDict::new_bound(py);
-        for (k, v) in &evidence.details {
-            // Convert details appropriately
-            details.set_item(k.clone(), v.clone())?;
-        }
-
-        Ok(PyPropertyEvidence {
-            property: evidence.property_name.to_string(),
-            timestamp: evidence.timestamp,
-            evidence_type: evidence.evidence_type.clone(),
-            description: evidence.description.clone(),
-            confidence: evidence.confidence,
-            details: Py::new(py, details)?,
-        })
     }
 }
 
