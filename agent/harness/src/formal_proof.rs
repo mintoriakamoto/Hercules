@@ -76,7 +76,7 @@ impl ProofBuilder {
         if let Some(interned) = self.string_pool.get(&s) {
             interned.clone()
         } else {
-            let arc = Arc::from(s.clone());
+            let arc: IStr = Arc::from(s.clone());
             self.string_pool.insert(s, arc.clone());
             arc
         }
@@ -84,12 +84,14 @@ impl ProofBuilder {
 
     /// Add precondition (O(1) with interning)
     pub fn add_precondition(&mut self, condition: impl Into<String>) {
-        self.preconditions.push(self.intern(condition));
+        let interned = self.intern(condition);
+        self.preconditions.push(interned);
     }
 
     /// Add postcondition
     pub fn add_postcondition(&mut self, condition: impl Into<String>) {
-        self.postconditions.push(self.intern(condition));
+        let interned = self.intern(condition);
+        self.postconditions.push(interned);
     }
 
     /// Add proof step (fast: <1ms including evidence linking)
@@ -123,9 +125,10 @@ impl ProofBuilder {
         data: HashMap<String, String>,
         confidence: f32,
     ) {
+        let claim_str = self.intern(claim);
         if let Some(step) = self.steps.iter_mut().find(|s| s.step_num == step_num) {
             let evidence = Evidence {
-                claim: self.intern(claim),
+                claim: claim_str,
                 evidence_type,
                 data: Arc::new(data),
                 confidence,

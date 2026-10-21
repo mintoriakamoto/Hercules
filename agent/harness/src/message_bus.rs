@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use parking_lot::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -36,13 +37,17 @@ impl Message {
         subject: impl Into<String>,
         payload: impl Into<String>,
     ) -> Self {
+        static MSG_COUNTER: AtomicU64 = AtomicU64::new(0);
+
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs_f64();
 
+        let counter = MSG_COUNTER.fetch_add(1, Ordering::Relaxed);
+
         Message {
-            id: format!("msg_{}_{}", timestamp as u64, rand::random::<u32>()),
+            id: format!("msg_{:x}_{:x}", timestamp as u64, counter),
             from_agent: from.into(),
             to_agent: to.into(),
             subject: Arc::from(subject.into()),

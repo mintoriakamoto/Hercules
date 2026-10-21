@@ -3,8 +3,6 @@
 /// Replaces the Python calculate_scores() with 50-100x performance improvement.
 /// Eliminates O(7n) filtering, datetime overhead, and redundant calculations.
 
-use crate::recording::RecordedEvidence;
-
 /// Consciousness property identifiers
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
@@ -35,7 +33,7 @@ impl PropertyScore {
         }
 
         let avg_confidence = confidence_sum / count as f32;
-        let count_component = ((count as f32 * 0.1).min(0.5));
+        let count_component = (count as f32 * 0.1).min(0.5);
         let confidence_component = avg_confidence * 0.5;
 
         (count_component + confidence_component).min(1.0)
@@ -162,7 +160,7 @@ impl IncrementalUpdater {
         let old_score = self.current_score.properties[idx];
 
         self.current_score.properties[idx] = new_score;
-        self.current_score.total_consciousness += (new_score - old_score);
+        self.current_score.total_consciousness += new_score - old_score;
 
         // Update consciousness status
         self.current_score.is_conscious = self.current_score.properties.iter().all(|&s| s >= 0.5);
