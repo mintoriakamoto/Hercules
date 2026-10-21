@@ -2192,10 +2192,17 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
             except Exception as e:
                 result["error"] = e
 
-        t = threading.Thread(target=_bedrock_call, daemon=True)
+        _bedrock_done = threading.Event()
+        def _bedrock_call_with_event():
+            try:
+                _bedrock_call()
+            finally:
+                _bedrock_done.set()
+
+        t = threading.Thread(target=_bedrock_call_with_event, daemon=True)
         t.start()
-        while t.is_alive():
-            t.join(timeout=0.3)
+        while not _bedrock_done.is_set():
+            _bedrock_done.wait(timeout=0.3)
             if agent._interrupt_requested:
                 raise InterruptedError("Agent interrupted during Bedrock API call")
         # Worker exited before the poll loop observed the interrupt flag. The
@@ -3198,12 +3205,19 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
         if _reasoning_floor is not None:
             _stream_stale_timeout = max(_stream_stale_timeout, _reasoning_floor)
 
-    t = threading.Thread(target=_call, daemon=True)
+    _stream_done = threading.Event()
+    def _call_with_event():
+        try:
+            _call()
+        finally:
+            _stream_done.set()
+
+    t = threading.Thread(target=_call_with_event, daemon=True)
     t.start()
     _last_heartbeat = time.time()
     _HEARTBEAT_INTERVAL = 30.0  # seconds between gateway activity touches
-    while t.is_alive():
-        t.join(timeout=0.3)
+    while not _stream_done.is_set():
+        _stream_done.wait(timeout=0.3)
 
         # Periodic heartbeat: touch the agent's activity tracker so the
         # gateway's inactivity monitor knows we're alive while waiting
