@@ -578,17 +578,24 @@ def interruptible_api_call(agent, api_kwargs: dict):
     _call_start = time.time()
     agent._touch_activity("waiting for non-streaming API response")
 
-    t = threading.Thread(target=_call, daemon=True)
+    _worker_done = threading.Event()
+    def _call_with_event():
+        try:
+            _call()
+        finally:
+            _worker_done.set()
+
+    t = threading.Thread(target=_call_with_event, daemon=True)
     t.start()
-    _poll_count = 0
-    while t.is_alive():
-        t.join(timeout=0.3)
-        _poll_count += 1
+    _last_activity_touch = _call_start
+
+    while not _worker_done.is_set():
+        _elapsed = time.time() - _call_start
 
         # Touch activity every ~30s so the gateway's inactivity
         # monitor knows we're alive while waiting for the response.
-        if _poll_count % 100 == 0:  # 100 × 0.3s = 30s
-            _elapsed = time.time() - _call_start
+        if _elapsed - (_last_activity_touch - _call_start) >= 30.0:
+            _last_activity_touch = time.time()
             agent._touch_activity(
                 f"waiting for non-streaming response ({int(_elapsed)}s elapsed)"
             )
@@ -641,7 +648,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
                 f"codex stream killed after {int(_elapsed)}s with no first byte"
             )
             # Wait briefly for the worker to notice the closed connection.
-            t.join(timeout=2.0)
+            _worker_done.wait(timeout=2.0)
             if result["error"] is None and result["response"] is None:
                 if _silent_hint:
                     result["error"] = TimeoutError(
@@ -686,7 +693,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
             agent._touch_activity(
                 f"codex stream killed after {int(_event_stale_elapsed)}s with no SSE events"
             )
-            t.join(timeout=2.0)
+            _worker_done.wait(timeout=2.0)
             if result["error"] is None and result["response"] is None:
                 result["error"] = TimeoutError(
                     f"Codex stream produced no SSE events for {int(_event_stale_elapsed)}s "
@@ -740,7 +747,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
                 f"stale non-streaming call killed after {int(_elapsed)}s"
             )
             # Wait briefly for the thread to notice the closed connection.
-            t.join(timeout=2.0)
+            _worker_done.wait(timeout=2.0)
             if result["error"] is None and result["response"] is None:
                 if _silent_hint:
                     result["error"] = TimeoutError(

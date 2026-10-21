@@ -15,8 +15,10 @@ import shutil
 import sqlite3
 import sys
 import tempfile
+import threading
 import time
 import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -1177,6 +1179,7 @@ def _write_full_zip_backup(out_path: Path, hercules_root: Path) -> Optional[Path
     """Write a full zip snapshot of ``hercules_root`` to ``out_path``.
 
     Uses the same exclusion rules and SQLite safe-copy as :func:`run_backup`.
+    Parallelizes file content loading to reduce I/O wait time.
     Returns the output path on success, None on failure (nothing to back up,
     or write error — caller should surface the outcome but not raise).
     """
@@ -1184,7 +1187,6 @@ def _write_full_zip_backup(out_path: Path, hercules_root: Path) -> Optional[Path
     try:
         for dirpath, dirnames, filenames in os.walk(hercules_root, followlinks=False):
             dp = Path(dirpath)
-            # Prune excluded directories in-place so os.walk doesn't descend
             dirnames[:] = [d for d in dirnames if d not in _EXCLUDED_DIRS]
 
             for fname in filenames:
@@ -1205,34 +1207,49 @@ def _write_full_zip_backup(out_path: Path, hercules_root: Path) -> Optional[Path
     if not files_to_add:
         return None
 
+    def _prep_file_for_backup(item: tuple[Path, Path]) -> tuple[Optional[bytes], Path, Optional[Path]]:
+        """Read file content in parallel. For .db files, returns None content to signal special handling."""
+        abs_path, rel_path = item
+        try:
+            if abs_path.suffix == ".db":
+                return None, rel_path, abs_path
+            else:
+                with open(abs_path, "rb") as f:
+                    content = f.read()
+                return content, rel_path, abs_path
+        except (PermissionError, OSError) as exc:
+            logger.debug("Skipping %s in zip backup: %s", rel_path, exc)
+            return None, rel_path, None
+
     try:
         with zipfile.ZipFile(
             out_path, "w", zipfile.ZIP_DEFLATED, compresslevel=6
         ) as zf:
-            for abs_path, rel_path in files_to_add:
-                try:
-                    if abs_path.suffix == ".db":
-                        # Stage the snapshot alongside the output zip so that the
-                        # temp file lives on the same filesystem.  The system
-                        # default (/tmp) may be a small tmpfs that cannot hold
-                        # large databases, causing silent backup incompleteness.
-                        with tempfile.NamedTemporaryFile(
-                            suffix=".db", delete=False, dir=str(out_path.parent)
-                        ) as tmp:
-                            tmp_db = Path(tmp.name)
-                        try:
-                            if _safe_copy_db(abs_path, tmp_db):
-                                zf.write(tmp_db, arcname=str(rel_path))
-                        finally:
-                            tmp_db.unlink(missing_ok=True)
-                    else:
-                        zf.write(abs_path, arcname=str(rel_path))
-                except (PermissionError, OSError, ValueError) as exc:
-                    logger.debug("Skipping %s in zip backup: %s", rel_path, exc)
-                    continue
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                futures = {executor.submit(_prep_file_for_backup, item): item for item in files_to_add}
+                for future in as_completed(futures):
+                    content, rel_path, abs_path = future.result()
+                    if abs_path is None and content is None:
+                        continue
+                    try:
+                        if content is None:
+                            if abs_path.suffix == ".db":
+                                with tempfile.NamedTemporaryFile(
+                                    suffix=".db", delete=False, dir=str(out_path.parent)
+                                ) as tmp:
+                                    tmp_db = Path(tmp.name)
+                                try:
+                                    if _safe_copy_db(abs_path, tmp_db):
+                                        zf.write(tmp_db, arcname=str(rel_path))
+                                finally:
+                                    tmp_db.unlink(missing_ok=True)
+                        else:
+                            zf.writestr(str(rel_path), content)
+                    except (PermissionError, OSError, ValueError) as exc:
+                        logger.debug("Skipping %s in zip write: %s", rel_path, exc)
+                        continue
     except OSError as exc:
         logger.warning("Full-zip backup: zip write failed: %s", exc)
-        # Best-effort cleanup of partial file
         try:
             out_path.unlink(missing_ok=True)
         except OSError:
