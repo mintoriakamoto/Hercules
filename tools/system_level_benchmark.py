@@ -222,7 +222,7 @@ class CPUAffinityBenchmark:
         """Measure context switches using /proc/stat."""
         # Read context switches from /proc/stat
         try:
-            with open("/proc/stat") as f:
+            with open("/proc/stat", encoding="utf-8") as f:
                 lines = f.readlines()
                 for line in lines:
                     if line.startswith("ctxt"):
@@ -327,7 +327,7 @@ def run_all_benchmarks() -> BenchmarkResults:
 def save_benchmark_results(results: BenchmarkResults, path: str) -> None:
     """Save benchmark results to file."""
     try:
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(results.to_json())
         logger.info("Benchmark results saved to %s", path)
     except Exception as e:

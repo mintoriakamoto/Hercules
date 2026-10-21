@@ -513,7 +513,7 @@ class DistributedPatternsBenchmark:
             for r in self.results
         ]
 
-        with open(filename, 'w') as f:
+        with open(filename, 'w', encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
         logger.info(f"Exported results to {filename}")

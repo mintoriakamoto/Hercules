@@ -75,21 +75,21 @@ class PowerOptimizer:
                     )
 
                     if os.path.exists(scaling_governor):
-                        with open(scaling_governor) as f:
+                        with open(scaling_governor, encoding="utf-8") as f:
                             original = f.read().strip()
                             _ORIGINAL_GOVERNORS[cpu_id] = original
 
                         # Switch to performance governor
                         if os.access(scaling_governor, os.W_OK):
-                            with open(scaling_governor, "w") as f:
+                            with open(scaling_governor, "w", encoding="utf-8") as f:
                                 f.write("performance\n")
                             logger.debug("CPU%d: switched to performance governor", cpu_id)
 
                     # Lock to maximum frequency
                     if os.path.exists(scaling_max) and os.access(scaling_max, os.W_OK):
-                        with open(scaling_max) as f:
+                        with open(scaling_max, encoding="utf-8") as f:
                             max_freq = f.read().strip()
-                        with open(scaling_max, "w") as f:
+                        with open(scaling_max, "w", encoding="utf-8") as f:
                             f.write(max_freq)
 
                 except (IOError, OSError):
@@ -107,7 +107,7 @@ class PowerOptimizer:
             # Try to set min_perf_pct to 100 (always run at max P-state)
             path = "/sys/devices/system/cpu/intel_pstate/min_perf_pct"
             if os.path.exists(path) and os.access(path, os.W_OK):
-                with open(path, "w") as f:
+                with open(path, "w", encoding="utf-8") as f:
                     f.write("100\n")
                 self.metrics["p_state_ratio"] = 100
                 logger.debug("Intel P-States: set min_perf_pct to 100")
@@ -123,7 +123,7 @@ class PowerOptimizer:
                         f"/sys/devices/system/cpu/cpu{cpu_id}/cpufreq/scaling_governor"
                     )
                     if os.path.exists(scaling_governor) and os.access(scaling_governor, os.W_OK):
-                        with open(scaling_governor, "w") as f:
+                        with open(scaling_governor, "w", encoding="utf-8") as f:
                             f.write(original_gov + "\n")
                 except IOError:
                     pass
@@ -148,14 +148,14 @@ class PowerOptimizer:
                     if "temp1_input" in f
                 ]
                 for temp_file in temp_files:
-                    with open(temp_file) as f:
+                    with open(temp_file, encoding="utf-8") as f:
                         temp_millidegrees = int(f.read().strip())
                         return temp_millidegrees / 1000.0
 
             # Fallback: try thermal_zone
             zone_file = "/sys/class/thermal/thermal_zone0/temp"
             if os.path.exists(zone_file):
-                with open(zone_file) as f:
+                with open(zone_file, encoding="utf-8") as f:
                     return int(f.read().strip()) / 1000.0
 
         except Exception:

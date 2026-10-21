@@ -452,7 +452,7 @@ def main():
 
     if args.save_results:
         output_path = Path("bench_simd_results.json")
-        with open(output_path, 'w') as f:
+        with open(output_path, 'w', encoding="utf-8") as f:
             # Convert some non-serializable values
             json_results = {}
             for key, value in results.items():

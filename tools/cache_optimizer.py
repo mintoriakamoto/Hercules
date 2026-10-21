@@ -63,7 +63,7 @@ class CacheOptimizer:
             # Try to enable transparent huge pages for madvise
             path = "/sys/kernel/mm/transparent_hugepage/enabled"
             if os.path.exists(path) and os.access(path, os.W_OK):
-                with open(path, "w") as f:
+                with open(path, "w", encoding="utf-8") as f:
                     f.write("madvise\n")
                 logger.info("Enabled transparent huge pages")
             else:

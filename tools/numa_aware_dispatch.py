@@ -89,13 +89,13 @@ class NUMATopology:
             # CPUs in this node
             cpulist = os.path.join(node_path, "cpulist")
             if os.path.exists(cpulist):
-                with open(cpulist) as f:
+                with open(cpulist, encoding="utf-8") as f:
                     self.cpus_per_node[i] = self._parse_cpulist(f.read().strip())
 
             # Memory in this node
             meminfo = os.path.join(node_path, "meminfo")
             if os.path.exists(meminfo):
-                with open(meminfo) as f:
+                with open(meminfo, encoding="utf-8") as f:
                     for line in f:
                         if line.startswith("MemTotal:"):
                             kb = int(line.split()[1])

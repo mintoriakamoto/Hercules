@@ -48,7 +48,7 @@ class CPUTopology:
             )
             if os.path.exists(l3_index_file):
                 try:
-                    with open(l3_index_file) as f:
+                    with open(l3_index_file, encoding="utf-8") as f:
                         cpus = self._parse_cpulist(f.read().strip())
                         # All CPUs in this list share the same L3
                         l3_id = min(cpus)  # Use min CPU as cache ID
@@ -62,7 +62,7 @@ class CPUTopology:
             topology_file = os.path.join(cpu_dir, "topology/physical_package_id")
             if os.path.exists(topology_file):
                 try:
-                    with open(topology_file) as f:
+                    with open(topology_file, encoding="utf-8") as f:
                         socket_id = int(f.read().strip())
                         self.cpu_to_socket[cpu_id] = socket_id
                         if socket_id not in self.socket_groups:

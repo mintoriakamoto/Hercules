@@ -471,7 +471,7 @@ async def main():
 
     # Save results
     output_file = Path(__file__).parent / "bench_network_results.json"
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding='utf-8') as f:
         json.dump(results, f, indent=2, default=str)
 
     logger.info(f"\nResults saved to {output_file}")

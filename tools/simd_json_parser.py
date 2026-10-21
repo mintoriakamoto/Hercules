@@ -51,7 +51,7 @@ def detect_cpu_capabilities() -> Dict[str, bool]:
         return capabilities
 
     try:
-        with open("/proc/cpuinfo") as f:
+        with open("/proc/cpuinfo", encoding="utf-8") as f:
             cpuinfo = f.read()
             capabilities["avx2"] = "avx2" in cpuinfo
             capabilities["avx512"] = "avx512" in cpuinfo
