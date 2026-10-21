@@ -128,9 +128,7 @@ class WaitFreeResultCollector:
         with self._results_lock:
             # Check for duplicate (already recorded)
             if tool_id in self._results:
-                existing = self._results[tool_id]
-                if existing.sequence == self._modification_sequence:
-                    return False
+                return False
 
             # Record result
             self._results[tool_id] = entry
