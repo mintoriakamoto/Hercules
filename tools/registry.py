@@ -668,6 +668,7 @@ class ToolRegistry:
     def dispatch(self, name: str, args: dict, **kwargs) -> str | dict:
         """Execute a tool handler by name.
 
+        * Checks for JIT-compiled paths first for hot tools (Phase 2 optimization).
         * Async handlers are bridged automatically via ``_run_async()``.
         * Handler results are normalized to a string or supported multimodal
           envelope before leaving the registry.
@@ -678,12 +679,44 @@ class ToolRegistry:
         if not entry:
             return json.dumps({"error": f"Unknown tool: {name}"})
         try:
+            # Phase 2: Check for JIT-compiled path first
+            try:
+                from tools.jit_compiler import get_compiled_tool, use_compiled_path
+                from tools.jit_profiler import profile_tool_call
+
+                if use_compiled_path(name):
+                    compiled_stub = get_compiled_tool(name)
+                    if compiled_stub is not None:
+                        start = time.perf_counter()
+                        try:
+                            result = compiled_stub.execute(args, **kwargs)
+                            duration_ms = (time.perf_counter() - start) * 1000
+                            profile_tool_call(name, duration_ms, success=True)
+                            return self._normalize_handler_result(name, result)
+                        except Exception as e:
+                            duration_ms = (time.perf_counter() - start) * 1000
+                            profile_tool_call(name, duration_ms, success=False)
+                            raise
+            except (ImportError, ModuleNotFoundError):
+                pass  # JIT not available; fall through to normal dispatch
+
+            # Normal dispatch path (for cold tools or if JIT not compiled)
+            start = time.perf_counter()
             if entry.is_async:
                 from model_tools import _run_async
 
                 result = _run_async(entry.handler(args, **kwargs))
             else:
                 result = entry.handler(args, **kwargs)
+
+            # Record profiling data for Phase 2 JIT decisions
+            try:
+                from tools.jit_profiler import profile_tool_call
+                duration_ms = (time.perf_counter() - start) * 1000
+                profile_tool_call(name, duration_ms, success=True)
+            except (ImportError, ModuleNotFoundError):
+                pass
+
             return self._normalize_handler_result(name, result)
         except Exception as e:
             logger.exception("Tool %s dispatch error: %s", name, e)
