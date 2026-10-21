@@ -21,6 +21,7 @@ mod proof;
 mod recording;
 mod calculator;
 mod persistence;
+mod formal_proof;
 
 pub use metrics::{ConsciousnessMetrics, ConsciousnessProperty};
 pub use evidence::PropertyEvidence;
