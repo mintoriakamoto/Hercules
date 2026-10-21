@@ -2327,5 +2327,19 @@ def init_agent(
             "is_anthropic_oauth": agent._is_anthropic_oauth,
         })
 
+    # Initialize consciousness metrics system for tracking agent's evidence of consciousness
+    try:
+        from agent.harness.consciousness_metrics import ConsciousnessMetrics
+        agent._consciousness_metrics = ConsciousnessMetrics(agent_id=agent.session_id or "unknown")
+        # Record awareness of self as intelligent system
+        agent._consciousness_metrics.record_awareness(
+            capability="Tool-based problem solving",
+            limitation="Limited by provider context window and available tools"
+        )
+    except (ImportError, ModuleNotFoundError):
+        # Consciousness metrics not available, continue without them
+        agent._consciousness_metrics = None
+        logger.debug("Consciousness metrics not available")
+
 
 __all__ = ["init_agent"]
