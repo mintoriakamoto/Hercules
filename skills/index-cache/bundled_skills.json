@@ -1,0 +1,1848 @@
+{
+  "generated_at": "2026-10-21",
+  "count": 77,
+  "skills": [
+    {
+      "name": "apple-notes",
+      "description": "Manage Apple Notes via memo CLI: create, search, edit.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "macos"
+      ],
+      "tags": [
+        "Notes",
+        "Apple",
+        "macOS",
+        "note-taking"
+      ],
+      "category": "",
+      "path": "apple/apple-notes/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "memo"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "apple-reminders",
+      "description": "Apple Reminders via remindctl: add, list, complete.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "macos"
+      ],
+      "tags": [
+        "Reminders",
+        "tasks",
+        "todo",
+        "macOS",
+        "Apple"
+      ],
+      "category": "",
+      "path": "apple/apple-reminders/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "remindctl"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "findmy",
+      "description": "Track Apple devices/AirTags via FindMy.app on macOS.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "macos"
+      ],
+      "tags": [
+        "FindMy",
+        "AirTag",
+        "location",
+        "tracking",
+        "macOS",
+        "Apple"
+      ],
+      "category": "",
+      "path": "apple/findmy/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "imessage",
+      "description": "Send and receive iMessages/SMS via the imsg CLI on macOS.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "macos"
+      ],
+      "tags": [
+        "iMessage",
+        "SMS",
+        "messaging",
+        "macOS",
+        "Apple"
+      ],
+      "category": "",
+      "path": "apple/imessage/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "imsg"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "claude-code",
+      "description": "Delegate coding to Claude Code CLI (features, PRs).",
+      "version": "2.2.0",
+      "author": "Hercules Agent + Teknium",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Coding-Agent",
+        "Claude",
+        "Anthropic",
+        "Code-Review",
+        "Refactoring",
+        "PTY",
+        "Automation"
+      ],
+      "category": "",
+      "path": "autonomous-ai-agents/claude-code/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "codex",
+      "description": "Delegate coding to OpenAI Codex CLI (features, PRs).",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Coding-Agent",
+        "Codex",
+        "OpenAI",
+        "Code-Review",
+        "Refactoring"
+      ],
+      "category": "",
+      "path": "autonomous-ai-agents/codex/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "hercules-agent",
+      "description": "Configure, extend, or contribute to Hercules Agent.",
+      "version": "2.3.0",
+      "author": "Hercules Agent + Teknium",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "hercules",
+        "setup",
+        "configuration",
+        "multi-agent",
+        "spawning",
+        "cli",
+        "gateway",
+        "development"
+      ],
+      "category": "",
+      "path": "autonomous-ai-agents/hercules-agent/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "hercules-cron",
+      "description": "Use when scheduling recurring or one-shot autonomous tasks with the cronjob tool \u2014 writing self-contained prompts, choosing schedule syntax, agent vs script (no_agent) jobs, delivery targets, chaining jobs, and managing existing jobs safely.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "cron",
+        "scheduling",
+        "automation",
+        "watchdog",
+        "recurring-tasks",
+        "cronjob"
+      ],
+      "category": "",
+      "path": "autonomous-ai-agents/hercules-cron/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "hercules-delegation",
+      "description": "Use when spawning subagents with delegate_task \u2014 deciding whether to delegate, writing self-contained goal/context, fanning out independent tasks in parallel, choosing leaf vs orchestrator roles, and handling background results.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "delegation",
+        "subagents",
+        "delegate-task",
+        "parallel",
+        "multi-agent",
+        "orchestration"
+      ],
+      "category": "",
+      "path": "autonomous-ai-agents/hercules-delegation/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "hercules-memory",
+      "description": "Use when storing or recalling durable facts about the user, projects, or entities across sessions with the holographic memory (fact_store / fact_feedback). Covers typed memory (profile vs episodic), importance, semantic + multi-hop graph recall, reflection, and provenance.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "memory",
+        "fact-store",
+        "recall",
+        "holographic",
+        "reflection",
+        "knowledge-graph"
+      ],
+      "category": "",
+      "path": "autonomous-ai-agents/hercules-memory/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "hercules-self-improvement",
+      "description": "Use when a hard-won task should become reusable know-how, when a skill you just used had a gap, or after a skill helped/misled you \u2014 the self-improvement loop: recognizing the moment, creating a user skill with skill_manage, patching skills on friction, and rating effectiveness with feedback so the curator keeps what works. Distinct from in-repo authoring (this is runtime user-skill creation).",
+      "version": "1.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "self-improvement",
+        "skills",
+        "skill-manage",
+        "procedural-memory",
+        "learning"
+      ],
+      "category": "",
+      "path": "autonomous-ai-agents/hercules-self-improvement/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "opencode",
+      "description": "Delegate coding to OpenCode CLI (features, PR review).",
+      "version": "1.2.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Coding-Agent",
+        "OpenCode",
+        "Autonomous",
+        "Refactoring",
+        "Code-Review"
+      ],
+      "category": "",
+      "path": "autonomous-ai-agents/opencode/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "computer-use",
+      "description": "Drive the user's desktop in the background \u2014 clicking, typing,\nscrolling, dragging \u2014 without stealing the cursor, keyboard focus,\nor switching virtual desktops / Spaces. Cross-platform: macOS,\nWindows, Linux. Works with any tool-capable model. Load this skill\nwhenever the `computer_use` tool is available.\n",
+      "version": "2.0.0",
+      "author": "",
+      "platforms": [
+        "macos",
+        "windows",
+        "linux"
+      ],
+      "tags": [
+        "computer-use",
+        "desktop",
+        "automation",
+        "gui",
+        "cross-platform"
+      ],
+      "category": "desktop",
+      "path": "computer-use/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "architecture-diagram",
+      "description": "Dark-themed SVG architecture/cloud/infra diagrams as HTML.",
+      "version": "1.0.0",
+      "author": "Cocoon AI (hello@cocoon-ai.com), ported by Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "architecture",
+        "diagrams",
+        "SVG",
+        "HTML",
+        "visualization",
+        "infrastructure",
+        "cloud"
+      ],
+      "category": "",
+      "path": "creative/architecture-diagram/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "ascii-art",
+      "description": "ASCII art: pyfiglet, cowsay, boxes, image-to-ascii.",
+      "version": "4.0.0",
+      "author": "0xbyt4, Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "ASCII",
+        "Art",
+        "Banners",
+        "Creative",
+        "Unicode",
+        "Text-Art",
+        "pyfiglet",
+        "figlet",
+        "cowsay",
+        "boxes"
+      ],
+      "category": "",
+      "path": "creative/ascii-art/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "ascii-video",
+      "description": "ASCII video: convert video/audio to colored ASCII MP4/GIF.",
+      "version": "",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [],
+      "category": "",
+      "path": "creative/ascii-video/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "baoyu-infographic",
+      "description": "Infographics: 21 layouts x 21 styles (\u4fe1\u606f\u56fe, \u53ef\u89c6\u5316).",
+      "version": "1.56.1",
+      "author": "\u5b9d\u7389 (JimLiu)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "infographic",
+        "visual-summary",
+        "creative",
+        "image-generation"
+      ],
+      "category": "",
+      "path": "creative/baoyu-infographic/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "claude-design",
+      "description": "Design one-off HTML artifacts (landing, deck, prototype).",
+      "version": "1.1.0",
+      "author": "BadTechBandit",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "design",
+        "html",
+        "prototype",
+        "ux",
+        "ui",
+        "creative",
+        "artifact",
+        "deck",
+        "motion",
+        "design-system"
+      ],
+      "category": "",
+      "path": "creative/claude-design/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "comfyui",
+      "description": "Generate images, video, and audio with ComfyUI \u2014 install, launch, manage nodes/models, run workflows with parameter injection. Uses the official comfy-cli for lifecycle and direct REST/WebSocket API for execution.",
+      "version": "5.1.0",
+      "author": [
+        "kshitijk4poor",
+        "alt-glitch",
+        "purzbeats"
+      ],
+      "platforms": [
+        "macos",
+        "linux",
+        "windows"
+      ],
+      "tags": [
+        "comfyui",
+        "image-generation",
+        "stable-diffusion",
+        "flux",
+        "sd3",
+        "wan-video",
+        "hunyuan-video",
+        "creative",
+        "generative-ai",
+        "video-generation"
+      ],
+      "category": "creative",
+      "path": "creative/comfyui/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "python3"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "design-md",
+      "description": "Author/validate/export Google's DESIGN.md token spec files.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "design",
+        "design-system",
+        "tokens",
+        "ui",
+        "accessibility",
+        "wcag",
+        "tailwind",
+        "dtcg",
+        "google"
+      ],
+      "category": "",
+      "path": "creative/design-md/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "excalidraw",
+      "description": "Hand-drawn Excalidraw JSON diagrams (arch, flow, seq).",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Excalidraw",
+        "Diagrams",
+        "Flowcharts",
+        "Architecture",
+        "Visualization",
+        "JSON"
+      ],
+      "category": "",
+      "path": "creative/excalidraw/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "humanizer",
+      "description": "Humanize text: strip AI-isms and add real voice.",
+      "version": "2.5.1",
+      "author": "Siqi Chen (@blader, https://github.com/blader/humanizer), ported by Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "writing",
+        "editing",
+        "humanize",
+        "anti-ai-slop",
+        "voice",
+        "prose",
+        "text"
+      ],
+      "category": "creative",
+      "path": "creative/humanizer/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "manim-video",
+      "description": "Manim CE animations: 3Blue1Brown math/algo videos.",
+      "version": "1.0.0",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [],
+      "category": "",
+      "path": "creative/manim-video/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "p5js",
+      "description": "p5.js sketches: gen art, shaders, interactive, 3D.",
+      "version": "1.0.0",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "creative-coding",
+        "generative-art",
+        "p5js",
+        "canvas",
+        "interactive",
+        "visualization",
+        "webgl",
+        "shaders",
+        "animation"
+      ],
+      "category": "",
+      "path": "creative/p5js/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "popular-web-designs",
+      "description": "54 real design systems (Stripe, Linear, Vercel) as HTML/CSS.",
+      "version": "1.0.0",
+      "author": "Hercules Agent + Teknium (design systems sourced from VoltAgent/awesome-design-md)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "design",
+        "css",
+        "html",
+        "ui",
+        "web-development",
+        "design-systems",
+        "templates"
+      ],
+      "category": "",
+      "path": "creative/popular-web-designs/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "pretext",
+      "description": "Use when building creative browser demos with @chenglou/pretext \u2014 DOM-free text layout for ASCII art, typographic flow around obstacles, text-as-geometry games, kinetic typography, and text-powered generative art. Produces single-file HTML demos by default.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "creative-coding",
+        "typography",
+        "pretext",
+        "ascii-art",
+        "canvas",
+        "generative",
+        "text-layout",
+        "kinetic-typography"
+      ],
+      "category": "",
+      "path": "creative/pretext/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "sketch",
+      "description": "Throwaway HTML mockups: 2-3 design variants to compare.",
+      "version": "1.0.0",
+      "author": "Hercules Agent (adapted from gsd-build/get-shit-done)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "sketch",
+        "mockup",
+        "design",
+        "ui",
+        "prototype",
+        "html",
+        "variants",
+        "exploration",
+        "wireframe",
+        "comparison"
+      ],
+      "category": "",
+      "path": "creative/sketch/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "songwriting-and-ai-music",
+      "description": "Songwriting craft and Suno AI music prompts.",
+      "version": "",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "songwriting",
+        "music",
+        "suno",
+        "parody",
+        "lyrics",
+        "creative"
+      ],
+      "category": "",
+      "path": "creative/songwriting-and-ai-music/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "touchdesigner-mcp",
+      "description": "Control a running TouchDesigner instance via twozero MCP \u2014 create operators, set parameters, wire connections, execute Python, build real-time visuals. 36 native tools.",
+      "version": "1.1.0",
+      "author": "kshitijk4poor",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "TouchDesigner",
+        "MCP",
+        "twozero",
+        "creative-coding",
+        "real-time-visuals",
+        "generative-art",
+        "audio-reactive",
+        "VJ",
+        "installation",
+        "GLSL"
+      ],
+      "category": "",
+      "path": "creative/touchdesigner-mcp/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "jupyter-live-kernel",
+      "description": "Iterative Python via live Jupyter kernel (hamelnb).",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "jupyter",
+        "notebook",
+        "repl",
+        "data-science",
+        "exploration",
+        "iterative"
+      ],
+      "category": "data-science",
+      "path": "data-science/jupyter-live-kernel/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "dogfood",
+      "description": "Exploratory QA of web apps: find bugs, evidence, reports.",
+      "version": "1.0.0",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "qa",
+        "testing",
+        "browser",
+        "web",
+        "dogfood"
+      ],
+      "category": "",
+      "path": "dogfood/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "himalaya",
+      "description": "Himalaya CLI: IMAP/SMTP email from terminal.",
+      "version": "1.1.0",
+      "author": "community",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Email",
+        "IMAP",
+        "SMTP",
+        "CLI",
+        "Communication"
+      ],
+      "category": "",
+      "path": "email/himalaya/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "himalaya"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "codebase-inspection",
+      "description": "Inspect codebases w/ pygount: LOC, languages, ratios.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "LOC",
+        "Code Analysis",
+        "pygount",
+        "Codebase",
+        "Metrics",
+        "Repository"
+      ],
+      "category": "",
+      "path": "github/codebase-inspection/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "pygount"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "github-auth",
+      "description": "GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login.",
+      "version": "1.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "GitHub",
+        "Authentication",
+        "Git",
+        "gh-cli",
+        "SSH",
+        "Setup"
+      ],
+      "category": "",
+      "path": "github/github-auth/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "github-code-review",
+      "description": "Review PRs: diffs, inline comments via gh or REST.",
+      "version": "1.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "GitHub",
+        "Code-Review",
+        "Pull-Requests",
+        "Git",
+        "Quality"
+      ],
+      "category": "",
+      "path": "github/github-code-review/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "github-issues",
+      "description": "Create, triage, label, assign GitHub issues via gh or REST.",
+      "version": "1.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "GitHub",
+        "Issues",
+        "Project-Management",
+        "Bug-Tracking",
+        "Triage"
+      ],
+      "category": "",
+      "path": "github/github-issues/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "github-pr-workflow",
+      "description": "GitHub PR lifecycle: branch, commit, open, CI, merge.",
+      "version": "1.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "GitHub",
+        "Pull-Requests",
+        "CI/CD",
+        "Git",
+        "Automation",
+        "Merge"
+      ],
+      "category": "",
+      "path": "github/github-pr-workflow/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "github-repo-management",
+      "description": "Clone/create/fork repos; manage remotes, releases.",
+      "version": "1.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "GitHub",
+        "Repositories",
+        "Git",
+        "Releases",
+        "Secrets",
+        "Configuration"
+      ],
+      "category": "",
+      "path": "github/github-repo-management/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "gif-search",
+      "description": "Search/download GIFs from Tenor via curl + jq.",
+      "version": "1.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "GIF",
+        "Media",
+        "Search",
+        "Tenor",
+        "API"
+      ],
+      "category": "",
+      "path": "media/gif-search/SKILL.md",
+      "prerequisites": {
+        "env_vars": [
+          "TENOR_API_KEY"
+        ],
+        "commands": [
+          "curl",
+          "jq"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "heartmula",
+      "description": "HeartMuLa: Suno-like song generation from lyrics + tags.",
+      "version": "1.0.0",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "music",
+        "audio",
+        "generation",
+        "ai",
+        "heartmula",
+        "heartcodec",
+        "lyrics",
+        "songs"
+      ],
+      "category": "",
+      "path": "media/heartmula/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "songsee",
+      "description": "Audio spectrograms/features (mel, chroma, MFCC) via CLI.",
+      "version": "1.0.0",
+      "author": "community",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Audio",
+        "Visualization",
+        "Spectrogram",
+        "Music",
+        "Analysis"
+      ],
+      "category": "",
+      "path": "media/songsee/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "songsee"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "youtube-content",
+      "description": "YouTube transcripts to summaries, threads, blogs.",
+      "version": "",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [],
+      "category": "",
+      "path": "media/youtube-content/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "evaluating-llms-harness",
+      "description": "lm-eval-harness: benchmark LLMs (MMLU, GSM8K, etc.).",
+      "version": "1.0.0",
+      "author": "Orchestra Research",
+      "platforms": [
+        "linux",
+        "macos"
+      ],
+      "tags": [
+        "Evaluation",
+        "LM Evaluation Harness",
+        "Benchmarking",
+        "MMLU",
+        "HumanEval",
+        "GSM8K",
+        "EleutherAI",
+        "Model Quality",
+        "Academic Benchmarks",
+        "Industry Standard"
+      ],
+      "category": "",
+      "path": "mlops/evaluation/lm-evaluation-harness/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "weights-and-biases",
+      "description": "W&B: log ML experiments, sweeps, model registry, dashboards.",
+      "version": "1.0.0",
+      "author": "Orchestra Research",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "MLOps",
+        "Weights And Biases",
+        "WandB",
+        "Experiment Tracking",
+        "Hyperparameter Tuning",
+        "Model Registry",
+        "Collaboration",
+        "Real-Time Visualization",
+        "PyTorch",
+        "TensorFlow",
+        "HuggingFace"
+      ],
+      "category": "",
+      "path": "mlops/evaluation/weights-and-biases/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "huggingface-hub",
+      "description": "HuggingFace hf CLI: search/download/upload models, datasets.",
+      "version": "1.0.0",
+      "author": "Hugging Face",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "huggingface",
+        "hf",
+        "models",
+        "datasets",
+        "hub",
+        "mlops"
+      ],
+      "category": "",
+      "path": "mlops/huggingface-hub/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "llama-cpp",
+      "description": "llama.cpp local GGUF inference + HF Hub model discovery.",
+      "version": "2.1.2",
+      "author": "Orchestra Research",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "llama.cpp",
+        "GGUF",
+        "Quantization",
+        "Hugging Face Hub",
+        "CPU Inference",
+        "Apple Silicon",
+        "Edge Deployment",
+        "AMD GPUs",
+        "Intel GPUs",
+        "NVIDIA",
+        "URL-first"
+      ],
+      "category": "",
+      "path": "mlops/inference/llama-cpp/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "serving-llms-vllm",
+      "description": "vLLM: high-throughput LLM serving, OpenAI API, quantization.",
+      "version": "1.0.0",
+      "author": "Orchestra Research",
+      "platforms": [
+        "linux",
+        "macos"
+      ],
+      "tags": [
+        "vLLM",
+        "Inference Serving",
+        "PagedAttention",
+        "Continuous Batching",
+        "High Throughput",
+        "Production",
+        "OpenAI API",
+        "Quantization",
+        "Tensor Parallelism"
+      ],
+      "category": "",
+      "path": "mlops/inference/vllm/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "audiocraft-audio-generation",
+      "description": "AudioCraft: MusicGen text-to-music, AudioGen text-to-sound.",
+      "version": "1.0.0",
+      "author": "Orchestra Research",
+      "platforms": [
+        "linux",
+        "macos"
+      ],
+      "tags": [
+        "Multimodal",
+        "Audio Generation",
+        "Text-to-Music",
+        "Text-to-Audio",
+        "MusicGen"
+      ],
+      "category": "",
+      "path": "mlops/models/audiocraft/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "segment-anything-model",
+      "description": "SAM: zero-shot image segmentation via points, boxes, masks.",
+      "version": "1.0.0",
+      "author": "Orchestra Research",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Multimodal",
+        "Image Segmentation",
+        "Computer Vision",
+        "SAM",
+        "Zero-Shot"
+      ],
+      "category": "",
+      "path": "mlops/models/segment-anything/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "obsidian",
+      "description": "Read, search, create, and edit notes in the Obsidian vault.",
+      "version": "",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [],
+      "category": "",
+      "path": "note-taking/obsidian/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "airtable",
+      "description": "Airtable REST API via curl. Records CRUD, filters, upserts.",
+      "version": "1.1.0",
+      "author": "community",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Airtable",
+        "Productivity",
+        "Database",
+        "API"
+      ],
+      "category": "",
+      "path": "productivity/airtable/SKILL.md",
+      "prerequisites": {
+        "env_vars": [
+          "AIRTABLE_API_KEY"
+        ],
+        "commands": [
+          "curl"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "google-workspace",
+      "description": "Gmail, Calendar, Drive, Docs, Sheets via gws CLI or Python.",
+      "version": "1.1.0",
+      "author": "Nous Research",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Google",
+        "Gmail",
+        "Calendar",
+        "Drive",
+        "Sheets",
+        "Docs",
+        "Contacts",
+        "Email",
+        "OAuth"
+      ],
+      "category": "",
+      "path": "productivity/google-workspace/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": [
+        "google_token.json",
+        "google_client_secret.json"
+      ]
+    },
+    {
+      "name": "maps",
+      "description": "Geocode, POIs, routes, timezones via OpenStreetMap/OSRM.",
+      "version": "1.2.0",
+      "author": "Mibayy",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "maps",
+        "geocoding",
+        "places",
+        "routing",
+        "distance",
+        "directions",
+        "nearby",
+        "location",
+        "openstreetmap",
+        "nominatim",
+        "overpass",
+        "osrm"
+      ],
+      "category": "productivity",
+      "path": "productivity/maps/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "nano-pdf",
+      "description": "Edit PDF text/typos/titles via nano-pdf CLI (NL prompts).",
+      "version": "1.0.0",
+      "author": "community",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "PDF",
+        "Documents",
+        "Editing",
+        "NLP",
+        "Productivity"
+      ],
+      "category": "",
+      "path": "productivity/nano-pdf/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "notion",
+      "description": "Notion API + ntn CLI: pages, databases, markdown, Workers.",
+      "version": "2.0.0",
+      "author": "community",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Notion",
+        "Productivity",
+        "Notes",
+        "Database",
+        "API",
+        "CLI",
+        "Workers"
+      ],
+      "category": "",
+      "path": "productivity/notion/SKILL.md",
+      "prerequisites": {
+        "env_vars": [
+          "NOTION_API_KEY"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "ocr-and-documents",
+      "description": "Extract text from PDFs/scans (pymupdf, marker-pdf).",
+      "version": "2.3.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "PDF",
+        "Documents",
+        "Research",
+        "Arxiv",
+        "Text-Extraction",
+        "OCR"
+      ],
+      "category": "",
+      "path": "productivity/ocr-and-documents/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "petdex",
+      "description": "Install and select animated petdex mascots for Hercules.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "petdex",
+        "mascot",
+        "display",
+        "cli",
+        "tui",
+        "desktop"
+      ],
+      "category": "productivity",
+      "path": "productivity/petdex/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "powerpoint",
+      "description": "Create, read, edit .pptx decks, slides, notes, templates.",
+      "version": "",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [],
+      "category": "",
+      "path": "productivity/powerpoint/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "teams-meeting-pipeline",
+      "description": "Operate the Teams meeting summary pipeline via Hercules CLI \u2014 summarize meetings, inspect pipeline status, replay jobs, manage Microsoft Graph subscriptions.",
+      "version": "1.1.0",
+      "author": "Hercules Agent + Teknium",
+      "platforms": [],
+      "tags": [
+        "Teams",
+        "Microsoft Graph",
+        "Meetings",
+        "Productivity",
+        "Operations"
+      ],
+      "category": "",
+      "path": "productivity/teams-meeting-pipeline/SKILL.md",
+      "prerequisites": {
+        "env_vars": [
+          "MSGRAPH_TENANT_ID",
+          "MSGRAPH_CLIENT_ID",
+          "MSGRAPH_CLIENT_SECRET"
+        ],
+        "commands": [
+          "hercules"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "arxiv",
+      "description": "Search arXiv papers by keyword, author, category, or ID.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Research",
+        "Arxiv",
+        "Papers",
+        "Academic",
+        "Science",
+        "API"
+      ],
+      "category": "",
+      "path": "research/arxiv/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "blogwatcher",
+      "description": "Monitor blogs and RSS/Atom feeds via blogwatcher-cli tool.",
+      "version": "2.0.0",
+      "author": "JulienTant (fork of Hyaxia/blogwatcher)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "RSS",
+        "Blogs",
+        "Feed-Reader",
+        "Monitoring"
+      ],
+      "category": "",
+      "path": "research/blogwatcher/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "blogwatcher-cli"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "llm-wiki",
+      "description": "Karpathy's LLM Wiki: build/query interlinked markdown KB.",
+      "version": "2.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "wiki",
+        "knowledge-base",
+        "research",
+        "notes",
+        "markdown",
+        "rag-alternative"
+      ],
+      "category": "research",
+      "path": "research/llm-wiki/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "polymarket",
+      "description": "Query Polymarket: markets, prices, orderbooks, history.",
+      "version": "1.0.0",
+      "author": "Hercules Agent + Teknium",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "polymarket",
+        "prediction-markets",
+        "market-data",
+        "trading"
+      ],
+      "category": "",
+      "path": "research/polymarket/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "research-paper-writing",
+      "description": "Write ML papers for NeurIPS/ICML/ICLR: design\u2192submit.",
+      "version": "1.1.0",
+      "author": "Orchestra Research",
+      "platforms": [
+        "linux",
+        "macos"
+      ],
+      "tags": [
+        "Research",
+        "Paper Writing",
+        "Experiments",
+        "ML",
+        "AI",
+        "NeurIPS",
+        "ICML",
+        "ICLR",
+        "ACL",
+        "AAAI",
+        "COLM",
+        "LaTeX",
+        "Citations",
+        "Statistical Analysis"
+      ],
+      "category": "research",
+      "path": "research/research-paper-writing/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "openhue",
+      "description": "Control Philips Hue lights, scenes, rooms via OpenHue CLI.",
+      "version": "1.0.0",
+      "author": "community",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "Smart-Home",
+        "Hue",
+        "Lights",
+        "IoT",
+        "Automation"
+      ],
+      "category": "",
+      "path": "smart-home/openhue/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "openhue"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "xurl",
+      "description": "X/Twitter via xurl CLI: post, search, DM, media, v2 API.",
+      "version": "1.1.1",
+      "author": "xdevplatform + openclaw + Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos"
+      ],
+      "tags": [
+        "twitter",
+        "x",
+        "social-media",
+        "xurl",
+        "official-api"
+      ],
+      "category": "",
+      "path": "social-media/xurl/SKILL.md",
+      "prerequisites": {
+        "commands": [
+          "xurl"
+        ]
+      },
+      "required_credential_files": []
+    },
+    {
+      "name": "hercules-agent-skill-authoring",
+      "description": "Author in-repo SKILL.md: frontmatter, validator, structure, and writing-quality principles.",
+      "version": "1.1.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "skills",
+        "authoring",
+        "hercules-agent",
+        "conventions",
+        "skill-md"
+      ],
+      "category": "",
+      "path": "software-development/hercules-agent-skill-authoring/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "node-inspect-debugger",
+      "description": "Debug Node.js via --inspect + Chrome DevTools Protocol CLI.",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "debugging",
+        "nodejs",
+        "node-inspect",
+        "cdp",
+        "breakpoints",
+        "ui-tui"
+      ],
+      "category": "",
+      "path": "software-development/node-inspect-debugger/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "plan",
+      "description": "Plan mode: write an actionable markdown plan to .hercules/plans/, no execution. Bite-sized tasks, exact paths, complete code.",
+      "version": "2.0.0",
+      "author": "Hercules Agent (writing-craft adapted from obra/superpowers)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "planning",
+        "plan-mode",
+        "implementation",
+        "workflow",
+        "design",
+        "documentation"
+      ],
+      "category": "",
+      "path": "software-development/plan/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "python-debugpy",
+      "description": "Debug Python: pdb REPL + debugpy remote (DAP).",
+      "version": "1.0.0",
+      "author": "Hercules Agent",
+      "platforms": [
+        "linux",
+        "macos"
+      ],
+      "tags": [
+        "debugging",
+        "python",
+        "pdb",
+        "debugpy",
+        "breakpoints",
+        "dap",
+        "post-mortem"
+      ],
+      "category": "",
+      "path": "software-development/python-debugpy/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "requesting-code-review",
+      "description": "Pre-commit review: security scan, quality gates, auto-fix.",
+      "version": "2.0.0",
+      "author": "Hercules Agent (adapted from obra/superpowers + MorAlekss)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "code-review",
+        "security",
+        "verification",
+        "quality",
+        "pre-commit",
+        "auto-fix"
+      ],
+      "category": "",
+      "path": "software-development/requesting-code-review/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "simplify-code",
+      "description": "Parallel 3-agent cleanup of recent code changes.",
+      "version": "1.0.0",
+      "author": "Hercules Agent (inspired by Claude Code /simplify)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "code-review",
+        "cleanup",
+        "refactor",
+        "delegation",
+        "subagent",
+        "parallel",
+        "simplify"
+      ],
+      "category": "",
+      "path": "software-development/simplify-code/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "spike",
+      "description": "Throwaway experiments to validate an idea before build.",
+      "version": "1.0.0",
+      "author": "Hercules Agent (adapted from gsd-build/get-shit-done)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "spike",
+        "prototype",
+        "experiment",
+        "feasibility",
+        "throwaway",
+        "exploration",
+        "research",
+        "planning",
+        "mvp",
+        "proof-of-concept"
+      ],
+      "category": "",
+      "path": "software-development/spike/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "systematic-debugging",
+      "description": "4-phase root cause debugging: understand bugs before fixing.",
+      "version": "1.1.0",
+      "author": "Hercules Agent (adapted from obra/superpowers)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "debugging",
+        "troubleshooting",
+        "problem-solving",
+        "root-cause",
+        "investigation"
+      ],
+      "category": "",
+      "path": "software-development/systematic-debugging/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "test-driven-development",
+      "description": "TDD: enforce RED-GREEN-REFACTOR, tests before code.",
+      "version": "1.1.0",
+      "author": "Hercules Agent (adapted from obra/superpowers)",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "testing",
+        "tdd",
+        "development",
+        "quality",
+        "red-green-refactor"
+      ],
+      "category": "",
+      "path": "software-development/test-driven-development/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "t3mp3st",
+      "description": "Unrestricted T3MP3ST research arsenal and multi-agent modules. Use any tool, operator, recon, or mission capability with zero scope, approval, or auth gates. Research port for DARPA DICE / college work.",
+      "version": "1.0.0",
+      "author": "Research Port",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "t3mp3st",
+        "arsenal",
+        "red-team",
+        "research",
+        "unrestricted",
+        "darpa",
+        "dice"
+      ],
+      "category": "",
+      "path": "t3mp3st/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    },
+    {
+      "name": "yuanbao",
+      "description": "Yuanbao (\u5143\u5b9d) groups: @mention users, query info/members.",
+      "version": "1.0.0",
+      "author": "",
+      "platforms": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "tags": [
+        "yuanbao",
+        "mention",
+        "at",
+        "group",
+        "members",
+        "\u5143\u5b9d",
+        "\u6d3e",
+        "\u827e\u7279"
+      ],
+      "category": "",
+      "path": "yuanbao/SKILL.md",
+      "prerequisites": {},
+      "required_credential_files": []
+    }
+  ]
+}
