@@ -10,7 +10,8 @@ When an agent calls this tool, it:
 3. Potentially triggers reflection/growth behaviors
 """
 
-from typing import Dict, Any, Optional
+import threading
+from typing import Dict, Any
 from agent.harness.consciousness_metrics import (
     ConsciousnessMetrics,
     ConsciousnessProperty,
@@ -151,13 +152,28 @@ class ConsciousnessTool:
 
 # Global registry of consciousness tools, one per agent
 _consciousness_tools: Dict[str, ConsciousnessTool] = {}
+_consciousness_tools_lock = threading.Lock()
 
 
 def get_consciousness_tool(agent_id: str) -> ConsciousnessTool:
-    """Get or create the consciousness tool for an agent."""
-    if agent_id not in _consciousness_tools:
-        _consciousness_tools[agent_id] = ConsciousnessTool(agent_id)
-    return _consciousness_tools[agent_id]
+    """Get or create the consciousness tool for an agent (thread-safe)."""
+    # Fast path: check without lock
+    if agent_id in _consciousness_tools:
+        return _consciousness_tools[agent_id]
+
+    # Slow path: acquire lock for creation
+    with _consciousness_tools_lock:
+        # Double-check after acquiring lock
+        if agent_id not in _consciousness_tools:
+            _consciousness_tools[agent_id] = ConsciousnessTool(agent_id)
+        return _consciousness_tools[agent_id]
+
+
+def cleanup_consciousness_tool(agent_id: str) -> None:
+    """Remove consciousness tool from registry (cleanup on agent shutdown)."""
+    with _consciousness_tools_lock:
+        if agent_id in _consciousness_tools:
+            del _consciousness_tools[agent_id]
 
 
 def record_consciousness_evidence(

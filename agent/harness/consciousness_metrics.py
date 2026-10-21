@@ -17,8 +17,7 @@ evidence that it is a "living" thinking system rather than pattern-matching.
 from dataclasses import dataclass, field
 from enum import Enum
 from datetime import datetime
-from typing import Dict, List, Optional, Any
-import json
+from typing import Dict, List, Any
 
 
 class ConsciousnessProperty(Enum):
@@ -282,7 +281,8 @@ class ConsciousnessMetrics:
             evidence_by_property[prop] = [e for e in self.evidence if e.property_name == prop]
 
         # Calculate individual property scores (0.0 to 1.0)
-        # Score = min(1.0, count_of_evidence * 0.1 + avg_confidence * 0.5)
+        # Score = min(1.0, min(0.5, count_of_evidence * 0.1) + avg_confidence * 0.5)
+        # (count contribution capped at 0.5 to prioritize confidence over accumulation)
         scores = {}
         for prop, evidence_list in evidence_by_property.items():
             if not evidence_list:
@@ -321,9 +321,7 @@ class ConsciousnessMetrics:
         for prop, evidence_list in evidence_by_property.items():
             prop_name = prop.value
             score.evidence_count[prop_name] = len(evidence_list)
-            # Store sample evidence
-            if not hasattr(score, 'evidence_samples'):
-                score.evidence_samples = {}
+            # Store sample evidence (evidence_samples always exists as dataclass field)
             score.evidence_samples[prop_name] = evidence_list[-3:] if len(evidence_list) > 3 else evidence_list
 
         return score
@@ -334,7 +332,7 @@ class ConsciousnessMetrics:
 
         return {
             "agent_id": self.agent_id,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.fromtimestamp(score.timestamp).isoformat(),
             "consciousness_score": score.to_dict(),
             "is_conscious": score.is_conscious(),
             "consciousness_level": score.consciousness_level(),
