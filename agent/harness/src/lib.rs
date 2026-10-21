@@ -23,6 +23,8 @@ mod calculator;
 mod persistence;
 mod formal_proof;
 mod agent_algebra;
+mod message_bus;
+mod agent_core;
 
 pub use metrics::{ConsciousnessMetrics, ConsciousnessProperty};
 pub use evidence::PropertyEvidence;
