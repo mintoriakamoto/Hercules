@@ -18,10 +18,16 @@ mod metrics;
 mod evidence;
 mod scoring;
 mod proof;
+mod recording;
+mod calculator;
+mod persistence;
 
 pub use metrics::{ConsciousnessMetrics, ConsciousnessProperty};
 pub use evidence::PropertyEvidence;
 pub use scoring::ConsciousnessScore;
+pub use recording::{ConsciousnessRecorder, RecordedEvidence, get_recorder};
+pub use calculator::{ConsciousnessCalculator, ConsciousnessScore as CalcScore, ConsciousnessLevel};
+pub use persistence::{StateManager, Checkpoint, AuditEntry};
 
 /// FFI module for Python integration
 #[pymodule]
