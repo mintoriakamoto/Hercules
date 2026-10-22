@@ -2266,9 +2266,7 @@ def setup_gateway(config: dict):
                     print_info("  You can try manually: hercules gateway install")
             else:
                 print_info("  You can install later: hercules gateway install")
-                if (
-                    supports_systemd and os.geteuid() == 0
-                ):  # windows-footgun: ok — guarded by supports_systemd (Linux only)
+                if supports_systemd and os.geteuid() == 0:  # windows-footgun: ok — guarded by supports_systemd
                     print_info(
                         "  Or as a boot-time service: hercules gateway install --system"
                     )

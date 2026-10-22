@@ -1106,9 +1106,7 @@ def _run_cua_driver_installer(label: str = "Installing", verbose: bool = True) -
 
         try:
             if not is_windows:
-                os.killpg(
-                    os.getpgid(proc.pid), _signal.SIGKILL
-                )  # windows-footgun: ok — POSIX branch only
+                os.killpg(os.getpgid(proc.pid), _signal.SIGKILL)  # windows-footgun: ok — guarded by not is_windows
             else:
                 proc.kill()
         except (OSError, ProcessLookupError):
