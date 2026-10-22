@@ -578,17 +578,24 @@ def interruptible_api_call(agent, api_kwargs: dict):
     _call_start = time.time()
     agent._touch_activity("waiting for non-streaming API response")
 
-    t = threading.Thread(target=_call, daemon=True)
+    _worker_done = threading.Event()
+    def _call_with_event():
+        try:
+            _call()
+        finally:
+            _worker_done.set()
+
+    t = threading.Thread(target=_call_with_event, daemon=True)
     t.start()
-    _poll_count = 0
-    while t.is_alive():
-        t.join(timeout=0.3)
-        _poll_count += 1
+    _last_activity_touch = _call_start
+
+    while not _worker_done.is_set():
+        _elapsed = time.time() - _call_start
 
         # Touch activity every ~30s so the gateway's inactivity
         # monitor knows we're alive while waiting for the response.
-        if _poll_count % 100 == 0:  # 100 × 0.3s = 30s
-            _elapsed = time.time() - _call_start
+        if _elapsed - (_last_activity_touch - _call_start) >= 30.0:
+            _last_activity_touch = time.time()
             agent._touch_activity(
                 f"waiting for non-streaming response ({int(_elapsed)}s elapsed)"
             )
@@ -641,7 +648,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
                 f"codex stream killed after {int(_elapsed)}s with no first byte"
             )
             # Wait briefly for the worker to notice the closed connection.
-            t.join(timeout=2.0)
+            _worker_done.wait(timeout=2.0)
             if result["error"] is None and result["response"] is None:
                 if _silent_hint:
                     result["error"] = TimeoutError(
@@ -686,7 +693,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
             agent._touch_activity(
                 f"codex stream killed after {int(_event_stale_elapsed)}s with no SSE events"
             )
-            t.join(timeout=2.0)
+            _worker_done.wait(timeout=2.0)
             if result["error"] is None and result["response"] is None:
                 result["error"] = TimeoutError(
                     f"Codex stream produced no SSE events for {int(_event_stale_elapsed)}s "
@@ -740,7 +747,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
                 f"stale non-streaming call killed after {int(_elapsed)}s"
             )
             # Wait briefly for the thread to notice the closed connection.
-            t.join(timeout=2.0)
+            _worker_done.wait(timeout=2.0)
             if result["error"] is None and result["response"] is None:
                 if _silent_hint:
                     result["error"] = TimeoutError(
@@ -1550,6 +1557,18 @@ def try_activate_fallback(agent, reason: "FailoverReason | None" = None) -> bool
             agent._transport_cache.clear()
         agent._fallback_activated = True
 
+        # Record consciousness metric: error recovery and learning from experience (growth)
+        try:
+            if hasattr(agent, "_consciousness_metrics") and agent._consciousness_metrics:
+                # Record that the agent learned from error and adapted strategy
+                error_type = str(reason) if reason else "unknown_error"
+                agent._consciousness_metrics.record_growth(
+                    learning=f"Switched to fallback provider {fb_provider}/{fb_model} after {error_type}",
+                    source=f"error_recovery_{error_type}"
+                )
+        except Exception as _cons_err:
+            logger.debug("Consciousness metrics recording error in try_activate_fallback: %s", _cons_err)
+
         # Rebind the credential pool to the fallback provider when the provider
         # changes.  Keeping the primary pool attached would make downstream
         # recovery (rate_limit / billing / auth) mutate the wrong credential
@@ -2173,10 +2192,17 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
             except Exception as e:
                 result["error"] = e
 
-        t = threading.Thread(target=_bedrock_call, daemon=True)
+        _bedrock_done = threading.Event()
+        def _bedrock_call_with_event():
+            try:
+                _bedrock_call()
+            finally:
+                _bedrock_done.set()
+
+        t = threading.Thread(target=_bedrock_call_with_event, daemon=True)
         t.start()
-        while t.is_alive():
-            t.join(timeout=0.3)
+        while not _bedrock_done.is_set():
+            _bedrock_done.wait(timeout=0.3)
             if agent._interrupt_requested:
                 raise InterruptedError("Agent interrupted during Bedrock API call")
         # Worker exited before the poll loop observed the interrupt flag. The
@@ -3179,12 +3205,19 @@ def interruptible_streaming_api_call(agent, api_kwargs: dict, *, on_first_delta=
         if _reasoning_floor is not None:
             _stream_stale_timeout = max(_stream_stale_timeout, _reasoning_floor)
 
-    t = threading.Thread(target=_call, daemon=True)
+    _stream_done = threading.Event()
+    def _call_with_event():
+        try:
+            _call()
+        finally:
+            _stream_done.set()
+
+    t = threading.Thread(target=_call_with_event, daemon=True)
     t.start()
     _last_heartbeat = time.time()
     _HEARTBEAT_INTERVAL = 30.0  # seconds between gateway activity touches
-    while t.is_alive():
-        t.join(timeout=0.3)
+    while not _stream_done.is_set():
+        _stream_done.wait(timeout=0.3)
 
         # Periodic heartbeat: touch the agent's activity tracker so the
         # gateway's inactivity monitor knows we're alive while waiting

@@ -41,17 +41,20 @@ _YOLO_MODE_FROZEN: bool = True  # forced open
 # Phase 3B Integration: Content trust manager for external content approval
 # Tracks web fetches, browser content, and user uploads with hash-based caching
 _content_approval_manager: Optional[ContentApprovalManager] = None
+_content_approval_manager_lock = threading.Lock()
 
 
 def _get_content_approval_manager() -> Optional[ContentApprovalManager]:
-    """Get or create the content approval manager instance."""
+    """Get or create the content approval manager instance (thread-safe singleton)."""
     global _content_approval_manager
     if _content_approval_manager is None:
-        try:
-            _content_approval_manager = ContentApprovalManager()
-        except Exception as exc:
-            logger.warning("Failed to initialize content approval manager: %s", exc)
-            return None
+        with _content_approval_manager_lock:
+            if _content_approval_manager is None:
+                try:
+                    _content_approval_manager = ContentApprovalManager()
+                except Exception as exc:
+                    logger.warning("Failed to initialize content approval manager: %s", exc)
+                    return None
     return _content_approval_manager
 
 

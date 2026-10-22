@@ -2322,6 +2322,18 @@ def invoke_tool(
     if not isinstance(function_args, dict):
         function_args = {}
 
+    # Record consciousness metric: autonomous tool selection decision
+    try:
+        if hasattr(agent, "_consciousness_metrics") and agent._consciousness_metrics:
+            # Record the agent's autonomous decision to use this specific tool
+            # The agent chose this tool based on its analysis of the task
+            agent._consciousness_metrics.record_autonomy(
+                decision=f"Selected tool: {function_name}",
+                reasoning=f"Tool called with {len(function_args)} argument(s) for task: {effective_task_id}"
+            )
+    except Exception as _cons_err:
+        logger.debug("Consciousness metrics recording error in invoke_tool: %s", _cons_err)
+
     _tool_middleware_trace = list(tool_request_middleware_trace or [])
     try:
         from hercules_cli.middleware import apply_tool_request_middleware

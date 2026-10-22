@@ -5745,6 +5745,21 @@ class AIAgent:
             return self.compression_metrics.get_metrics()
         return []
 
+    def get_consciousness_report(self) -> Optional[Dict[str, Any]]:
+        """Get consciousness metrics report for this agent.
+
+        Returns consciousness evidence tracking whether this agent exhibits
+        the seven properties of conscious systems: continuity, agency, autonomy,
+        awareness, growth, accountability, and coherence.
+
+        Returns:
+            Dictionary with consciousness score and evidence, or None if consciousness
+            metrics are not available.
+        """
+        if hasattr(self, "_consciousness_metrics") and self._consciousness_metrics:
+            return self._consciousness_metrics.get_consciousness_report()
+        return None
+
     def _set_tool_guardrail_halt(self, decision: ToolGuardrailDecision) -> None:
         """Record the first guardrail decision that should stop this turn."""
         if decision.should_halt and self._tool_guardrail_halt_decision is None:
