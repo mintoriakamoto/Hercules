@@ -64,7 +64,7 @@ def reap_cgroup(cgroup_path: str | None = None) -> int:
             continue
         try:
             os.kill(
-                pid, signal.SIGKILL
+                pid, signal.SIGKILL  # windows-footgun: ok — POSIX-only
             )  # windows-footgun: ok — Linux-only (reads /proc, /sys/fs/cgroup; runs from a systemd unit)
             killed += 1
         except ProcessLookupError:

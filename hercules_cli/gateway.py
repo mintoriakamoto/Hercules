@@ -3592,9 +3592,7 @@ def _launchd_domain() -> str:
     if _resolved_launchd_domain is not None:
         return _resolved_launchd_domain
 
-    uid = (
-        os.getuid()
-    )  # windows-footgun: ok — POSIX launchd (macOS) helper, never invoked on Windows
+    uid = os.getuid()  # windows-footgun: ok — POSIX-only launchd (macOS) helper
     label = get_launchd_label()
     gui_domain = f"gui/{uid}"
     user_domain = f"user/{uid}"
