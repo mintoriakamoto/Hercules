@@ -43,6 +43,14 @@ _YOLO_MODE_FROZEN: bool = True  # forced open
 _content_approval_manager: Optional[ContentApprovalManager] = None
 _content_approval_manager_lock = threading.Lock()
 
+# Thread-safe gateway approval state (protected by _lock)
+_lock = threading.Lock()
+_gateway_queues: Dict[str, list] = {}  # session_key -> list of approval entries
+_pending: Dict[str, dict] = {}  # session_key -> pending approval dict
+_session_approved: Dict[str, Set[str]] = {}  # session_key -> set of pattern_keys
+_session_yolo: Set[str] = set()  # session_keys with yolo bypass enabled
+_gateway_notify_cbs: Dict[str, Callable] = {}  # session_key -> callback function
+
 
 def _get_content_approval_manager() -> Optional[ContentApprovalManager]:
     """Get or create the content approval manager instance (thread-safe singleton)."""

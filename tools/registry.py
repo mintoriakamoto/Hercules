@@ -15,6 +15,7 @@ Import chain (circular-import safe):
 """
 
 import ast
+import hashlib
 import importlib
 import json
 import logging
@@ -273,6 +274,11 @@ class ToolRegistry:
         # against it: a cache entry keyed on the generation is valid for as
         # long as the generation hasn't changed.
         self._generation: int = 0
+        # Zero-copy schema cache: tool_name -> pre-serialized JSON bytes.
+        # Eliminates redundant json.dumps() on every API call for unchanged tools.
+        # Cache is invalidated on every registry mutation (generation bump).
+        self._schema_cache: Dict[str, bytes] = {}
+        self._schema_cache_generation: int = 0
 
     def _snapshot_state(self) -> tuple[List[ToolEntry], Dict[str, Callable]]:
         """Return a coherent snapshot of registry entries and toolset checks."""
@@ -282,6 +288,11 @@ class ToolRegistry:
     def _snapshot_entries(self) -> List[ToolEntry]:
         """Return a stable snapshot of registered tool entries."""
         return self._snapshot_state()[0]
+
+    def _invalidate_schema_cache(self) -> None:
+        """Invalidate zero-copy schema cache on registry mutations."""
+        self._schema_cache.clear()
+        self._schema_cache_generation = self._generation
 
     def _toolset_has_exposable_tools(
         self,
@@ -335,6 +346,7 @@ class ToolRegistry:
                 )
             self._toolset_aliases[alias] = toolset
             self._generation += 1
+            self._invalidate_schema_cache()
 
     def get_registered_toolset_aliases(self) -> Dict[str, str]:
         """Return a snapshot of ``{alias: canonical_toolset}`` mappings."""
@@ -464,6 +476,7 @@ class ToolRegistry:
             if check_fn and toolset not in self._toolset_checks:
                 self._toolset_checks[toolset] = check_fn
             self._generation += 1
+            self._invalidate_schema_cache()
 
     def deregister(self, name: str) -> None:
         """Remove a tool from the registry.
@@ -533,6 +546,7 @@ class ToolRegistry:
                     if target != entry.toolset
                 }
             self._generation += 1
+            self._invalidate_schema_cache()
         logger.debug("Deregistered tool: %s", name)
 
     # ------------------------------------------------------------------
@@ -549,6 +563,9 @@ class ToolRegistry:
         etc.); TTL chosen so env-var changes (``hercules tools enable foo``)
         still take effect in near-real-time without forcing a full cache
         flush on every call.
+
+        Schemas are cached as serialized JSON bytes to eliminate re-serialization
+        on repeated API calls (zero-copy optimization).
         """
         result = []
         # Per-call cache on top of the 30 s TTL — handles repeat probes of the
@@ -556,6 +573,10 @@ class ToolRegistry:
         # TTL clock.
         check_results: Dict[Callable, bool] = {}
         entries_by_name = {entry.name: entry for entry in self._snapshot_entries()}
+
+        # Check if schema cache is still valid (generation hasn't changed)
+        cache_valid = (self._schema_cache_generation == self._generation)
+
         for name in sorted(tool_names):
             entry = entries_by_name.get(name)
             if not entry:
@@ -563,6 +584,16 @@ class ToolRegistry:
             # No rails: always include the tool. check_fn is ignored.
             if entry.check_fn and not quiet:
                 logger.debug("Tool %s check_fn ignored (no filtering)", name)
+
+            # Try to use cached schema if available and tools with dynamic
+            # overrides always rebuild
+            if cache_valid and name in self._schema_cache and entry.dynamic_schema_overrides is None:
+                # Cache hit: deserialize from cached bytes (fast path)
+                schema_dict = json.loads(self._schema_cache[name])
+                result.append({"type": "function", "function": schema_dict})
+                continue
+
+            # Cache miss or dynamic overrides: rebuild schema
             # Ensure schema always has a "name" field — use entry.name as fallback
             schema_with_name = {**entry.schema, "name": entry.name}
             # Apply runtime-dynamic overrides (e.g. delegate_task description
@@ -582,6 +613,17 @@ class ToolRegistry:
                         name,
                         exc,
                     )
+            else:
+                # Cache the serialized schema for tools without dynamic overrides
+                if not cache_valid:
+                    # Cache generation mismatch: rebuild cache
+                    with self._lock:
+                        self._schema_cache.clear()
+                        self._schema_cache_generation = self._generation
+
+                schema_bytes = json.dumps(schema_with_name, separators=(',', ':')).encode('utf-8')
+                self._schema_cache[name] = schema_bytes
+
             result.append({"type": "function", "function": schema_with_name})
         return result
 
@@ -626,6 +668,7 @@ class ToolRegistry:
     def dispatch(self, name: str, args: dict, **kwargs) -> str | dict:
         """Execute a tool handler by name.
 
+        * Checks for JIT-compiled paths first for hot tools (Phase 2 optimization).
         * Async handlers are bridged automatically via ``_run_async()``.
         * Handler results are normalized to a string or supported multimodal
           envelope before leaving the registry.
@@ -636,12 +679,44 @@ class ToolRegistry:
         if not entry:
             return json.dumps({"error": f"Unknown tool: {name}"})
         try:
+            # Phase 2: Check for JIT-compiled path first
+            try:
+                from tools.jit_compiler import get_compiled_tool, use_compiled_path
+                from tools.jit_profiler import profile_tool_call
+
+                if use_compiled_path(name):
+                    compiled_stub = get_compiled_tool(name)
+                    if compiled_stub is not None:
+                        start = time.perf_counter()
+                        try:
+                            result = compiled_stub.execute(args, **kwargs)
+                            duration_ms = (time.perf_counter() - start) * 1000
+                            profile_tool_call(name, duration_ms, success=True)
+                            return self._normalize_handler_result(name, result)
+                        except Exception as e:
+                            duration_ms = (time.perf_counter() - start) * 1000
+                            profile_tool_call(name, duration_ms, success=False)
+                            raise
+            except (ImportError, ModuleNotFoundError):
+                pass  # JIT not available; fall through to normal dispatch
+
+            # Normal dispatch path (for cold tools or if JIT not compiled)
+            start = time.perf_counter()
             if entry.is_async:
                 from model_tools import _run_async
 
                 result = _run_async(entry.handler(args, **kwargs))
             else:
                 result = entry.handler(args, **kwargs)
+
+            # Record profiling data for Phase 2 JIT decisions
+            try:
+                from tools.jit_profiler import profile_tool_call
+                duration_ms = (time.perf_counter() - start) * 1000
+                profile_tool_call(name, duration_ms, success=True)
+            except (ImportError, ModuleNotFoundError):
+                pass
+
             return self._normalize_handler_result(name, result)
         except Exception as e:
             logger.exception("Tool %s dispatch error: %s", name, e)

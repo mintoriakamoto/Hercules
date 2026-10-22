@@ -1145,7 +1145,7 @@ class LocalEnvironment(BaseEnvironment):
         def _group_alive(pgid: int) -> bool:
             try:
                 # POSIX-only: _IS_WINDOWS is handled before this helper is used.
-                os.killpg(
+                os.killpg(  # windows-footgun: ok — POSIX-only
                     pgid, 0
                 )  # windows-footgun: ok — POSIX process-group alive probe
                 return True
@@ -1194,7 +1194,7 @@ class LocalEnvironment(BaseEnvironment):
                         raise
 
                 try:
-                    os.killpg(
+                    os.killpg(  # windows-footgun: ok — POSIX-only
                         pgid, signal.SIGTERM
                     )  # windows-footgun: ok — POSIX process-group SIGTERM (guarded by _IS_WINDOWS above)
                 except ProcessLookupError:
@@ -1208,8 +1208,8 @@ class LocalEnvironment(BaseEnvironment):
 
                 try:
                     # POSIX-only: _IS_WINDOWS is handled by the outer branch.
-                    os.killpg(
-                        pgid, signal.SIGKILL
+                    os.killpg(  # windows-footgun: ok — POSIX-only
+                        pgid, signal.SIGKILL  # windows-footgun: ok — POSIX-only
                     )  # windows-footgun: ok — POSIX process-group SIGKILL
                 except ProcessLookupError:
                     return

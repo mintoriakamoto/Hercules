@@ -236,9 +236,7 @@ def uninstall_gateway_service():
 
                 scope = "system" if is_system else "user"
                 try:
-                    if (
-                        is_system and os.geteuid() != 0
-                    ):  # windows-footgun: ok — Linux systemd uninstall path, guarded by `if system == "Linux"` above
+                    if is_system and os.geteuid() != 0:  # windows-footgun: ok — Linux-only path
                         log_warn(
                             f"System gateway service exists at {unit_path} "
                             f"but needs sudo to remove"

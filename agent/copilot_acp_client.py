@@ -91,7 +91,7 @@ def _resolve_home_dir() -> str:
         import pwd
 
         resolved = pwd.getpwuid(
-            os.getuid()
+            os.getuid()  # windows-footgun: ok — POSIX-only
         ).pw_dir.strip()  # windows-footgun: ok — POSIX fallback inside try/except (pwd import fails on Windows)
         if resolved:
             return resolved

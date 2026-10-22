@@ -8821,9 +8821,7 @@ def _ensure_fhs_path_guard() -> None:
     if sys.platform != "linux":
         return
     try:
-        if (
-            os.geteuid() != 0
-        ):  # windows-footgun: ok — Linux FHS helper, guarded by sys.platform == "linux" above + AttributeError catch
+        if os.geteuid() != 0:  # windows-footgun: ok — guarded by sys.platform check
             return
     except AttributeError:
         return
@@ -10723,12 +10721,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 if scope_ in _manage_cmd_cache:
                     return _manage_cmd_cache[scope_]
                 cmd = scope_cmd_ + ["--no-ask-password"]
-                if (
-                    scope_ == "system"
-                    and hasattr(os, "geteuid")
-                    and os.geteuid()
-                    != 0  # windows-footgun: ok — systemd path, Linux-only
-                ):
+                if scope_ == "system" and hasattr(os, "geteuid") and os.geteuid() != 0:  # windows-footgun: ok — guarded by hasattr
                     sudo_cmd = ["sudo", "-n"] + scope_cmd_ + ["--no-ask-password"]
                     sudo_ok = False
                     try:
