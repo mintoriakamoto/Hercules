@@ -1,0 +1,2 @@
+# Install all optional dependencies by default
+# Run: pip install -e ".[all,dev]"
