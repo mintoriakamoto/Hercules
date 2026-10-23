@@ -324,6 +324,45 @@ ml-extended = [
   "lightgbm==4.1.0",
   "catboost==1.2.5",
 ]
+# Fine-tuning and training frameworks — DPO, GRPO, SFT, memory-efficient training.
+fine-tuning = [
+  "trl==0.13.0",
+  "unsloth==2024.1.1",
+  "llm-compressor==0.8.0",
+  "datasets==2.21.0",
+  "accelerate==1.2.1",
+  "deepspeed==0.15.4",
+]
+# Vector databases and RAG frameworks — semantic search, embeddings, retrieval.
+vector-dbs = [
+  "sentence-transformers==3.0.1",
+  "qdrant-client==1.10.1",
+  "pinecone-client==4.1.0",
+  "chromadb==0.6.0",
+  "faiss-cpu==1.8.0",
+]
+# Prompt engineering and structured outputs — guidance, validation, observability.
+prompt-engineering = [
+  "guidance==0.2.0",
+  "instructor==1.8.4",
+  "pydantic-ai==0.25.1",
+  "langfuse==3.10.0",
+]
+# Inference optimization — fast LLM serving, quantization, model conversion.
+inference-optimization = [
+  "vllm==0.6.4",
+  "flash-attn==2.8.1",
+  "onnx==1.16.3",
+  "onnxruntime==1.20.1",
+  "openvino==2024.2.0",
+]
+# Multi-agent orchestration — autonomous agents, workflows, team coordination.
+multi-agent = [
+  "autogen-agentchat==0.3.0",
+  "crewai==0.95.0",
+  "smolagents==1.4.1",
+  "gpt4all==3.5.0",
+]
 all = [
   # Policy (2026-05-12): `[all]` includes only extras that genuinely
   # CAN'T be lazy-installed via `tools/lazy_deps.py` — i.e. things every
@@ -359,6 +398,11 @@ all = [
   "hercules-agent[accelerated]",
   "hercules-agent[ai-llm]",
   "hercules-agent[ml-extended]",
+  "hercules-agent[fine-tuning]",
+  "hercules-agent[vector-dbs]",
+  "hercules-agent[prompt-engineering]",
+  "hercules-agent[inference-optimization]",
+  "hercules-agent[multi-agent]",
 ]
 
 [project.scripts]
