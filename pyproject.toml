@@ -273,7 +273,7 @@ web = ["fastapi==0.133.1", "uvicorn[standard]==0.41.0", "starlette==1.0.1", "pyt
 # Lazy-installed when ML features are first used.
 ml = [
   "huggingface-hub==0.24.3",
-  "transformers==4.41.2",
+  "transformers==4.45.2",
   "torch==2.4.0",
 ]
 # Audio processing — text-to-speech (TTS), speech recognition, and audio handling.
