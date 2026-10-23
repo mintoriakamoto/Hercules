@@ -249,7 +249,8 @@ def resolve_xai_http_credentials(*, force_refresh: bool = False) -> Dict[str, st
                 "api_key": access_token,
                 "base_url": base_url or "https://api.x.ai/v1",
             }
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except (ImportError, ModuleNotFoundError, ValueError, RuntimeError):
+        # AuthError is a RuntimeError; catch to handle missing credentials gracefully
         pass
 
     if not force_refresh:

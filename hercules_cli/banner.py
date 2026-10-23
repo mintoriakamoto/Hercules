@@ -767,7 +767,11 @@ def build_welcome_banner(
     tools = tools or []
     enabled_toolsets = enabled_toolsets or []
 
-    _, unavailable_toolsets = check_tool_availability(quiet=True)
+    try:
+        _, unavailable_toolsets = check_tool_availability(quiet=True)
+    except Exception:
+        # If tool availability check fails (missing deps, etc), default to empty unavailable list
+        unavailable_toolsets = []
     # The availability check walks the GLOBAL toolset registry, so it includes
     # toolsets that aren't part of this agent's platform set at all (e.g.
     # `discord`, `feishu_doc` on a CLI session). Those must never surface in the
