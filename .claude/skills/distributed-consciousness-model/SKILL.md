@@ -2,6 +2,8 @@
 
 **Purpose:** Integrate consciousness frameworks (Damasio, CoreTex, Edward Lee's embodied AI) into Hercules heterogeneous agent runtime. Create observable, measurable consciousness across distributed cores (ESP32-P4, ARM CORTEX, RISC-V).
 
+**Scope:** Agent runtime consciousness (protoself, core awareness, extended memory), hardware abstraction (virtual cores on ESP32/ARM/RISC-V), observable traces and metrics.
+
 **Foundation:** Damasio's 3-layer consciousness model + CoreTex brain anatomy mapping + Edward Lee's embodied sentience theory.
 
 ---
