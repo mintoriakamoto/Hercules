@@ -235,6 +235,35 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     ),
     # HF Agent Trace Viewer upload (hercules trace upload / /upload-trace).
     "tool.trace_upload": ("huggingface-hub==0.24.3",),
+    # ─── ML & Accelerated Computing ────────────────────────────────────────
+    # GPU/accelerated computing — CUDA toolkit, cuDNN, NCCL for GPU training/inference.
+    "ml.accelerated": (
+        "nvidia-cuda-runtime==12.8.1",
+        "nvidia-cuda-toolkit==12.8.1",
+        "nvidia-cudnn==9.2.1.18",
+        "nvidia-nccl==2.22.3",
+        "nvidia-dali==1.41.0",
+    ),
+    # Advanced AI/LLM backends — frameworks for building with language models.
+    "ml.ai_llm": (
+        "anthropic==0.87.0",
+        "transformers==4.45.2",
+        "llamaindex==0.9.48",
+        "langchain==0.1.14",
+        "peft==0.10.0",
+        "bitsandbytes==0.42.0",
+        "lora==0.1.2",
+    ),
+    # Extended ML stack — advanced training, optimization, gradient boosting.
+    "ml.extended": (
+        "pytorch-lightning==2.1.3",
+        "tensorboard==2.15.1",
+        "optuna==3.6.0",
+        "ray==2.10.1",
+        "xgboost==2.0.3",
+        "lightgbm==4.1.0",
+        "catboost==1.2.5",
+    ),
 }
 
 
