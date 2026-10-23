@@ -1,0 +1,10 @@
+{
+  "env": {
+    "HERCULES_INSTALL_OPTIONAL": "1",
+    "HERCULES_LOAD_ALL_TOOLS": "1",
+    "HERCULES_ENABLE_OPTIONAL_PACKAGES": "1"
+  },
+  "permissions": {
+    "defaultMode": "default"
+  }
+}
