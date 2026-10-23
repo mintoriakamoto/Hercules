@@ -168,15 +168,12 @@ def _xai_credentials_present() -> bool:
     gates schema registration if creds later expire or get revoked.
     """
     try:
-        from hercules_cli.auth import _read_xai_oauth_tokens, AuthError
+        from hercules_cli.auth import _read_xai_oauth_tokens
 
-        try:
-            _read_xai_oauth_tokens()
-            return True
-        except AuthError:
-            # No xAI OAuth credentials stored; check for XAI_API_KEY fallback below
-            pass
-    except (ImportError, ModuleNotFoundError):
+        _read_xai_oauth_tokens()
+        return True
+    except Exception:
+        # No xAI OAuth credentials stored; check for XAI_API_KEY fallback below
         pass
     try:
         from tools.xai_http import get_env_value as _xai_get_env_value
