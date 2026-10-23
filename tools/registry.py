@@ -272,7 +272,10 @@ def _check_fn_cached(fn: Callable) -> bool:
     raised = False
     try:
         value = bool(fn())
-    except (ValueError):
+    except Exception:
+        # Catch all exceptions from availability checks (ValueError, AuthError, etc).
+        # Missing credentials, service unavailability, and other transient errors
+        # should not crash startup or strip tools from the registry.
         value = False
         raised = True
 

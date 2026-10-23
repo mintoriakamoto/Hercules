@@ -266,7 +266,8 @@ def resolve_xai_http_credentials(*, force_refresh: bool = False) -> Dict[str, st
                     "api_key": access_token,
                     "base_url": base_url or "https://api.x.ai/v1",
                 }
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except (ImportError, ModuleNotFoundError, ValueError, RuntimeError):
+            # RuntimeError includes AuthError when xAI credentials not configured
             pass
 
     api_key = str(get_env_value("XAI_API_KEY") or "").strip()
