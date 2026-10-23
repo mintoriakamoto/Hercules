@@ -239,7 +239,7 @@ def _enabled_cli_toolsets_for_doctor() -> set[str] | None:
 def _missing_api_key_toolsets_for_summary(unavailable: list[dict]) -> list[dict]:
     """Filter unavailable API-key toolsets to those enabled for the CLI."""
     api_key_unavailable = [
-        item for item in unavailable if item.get("missing_vars") or item.get("env_vars")
+        item for item in unavailable if item.get("env_vars")
     ]
     enabled_toolsets = _enabled_cli_toolsets_for_doctor()
     if enabled_toolsets is None:
