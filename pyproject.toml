@@ -395,15 +395,10 @@ all = [
   "hercules-agent[google]",
   "hercules-agent[web]",
   "hercules-agent[youtube]",
-  "hercules-agent[accelerated]",
-  "hercules-agent[ai-llm]",
-  "hercules-agent[ml-extended]",
-  "hercules-agent[fine-tuning]",
-  "hercules-agent[vector-dbs]",
-  "hercules-agent[prompt-engineering]",
-  "hercules-agent[inference-optimization]",
-  "hercules-agent[multi-agent]",
 ]
+# ML/AI packages (accelerated, fine-tuning, etc.) are in LAZY_DEPS only.
+# They require heavy compilation (CUDA, C++, numpy) that fails on Termux/Android.
+# Keep [all] lean for mobile; users lazy-install ML backends on demand.
 
 [project.scripts]
 # Unified front door: warroom:main owns the warroom/tempest/obliterate verbs
