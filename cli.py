@@ -6534,7 +6534,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             tirith_path = ensure_installed(log_failures=False)
             if tirith_path is None and is_platform_supported():
                 security_cfg = self.config.get("security", {}) or {}
-                tirith_enabled = security_cfg.get("tirith_enabled", True)
+                tirith_enabled = security_cfg.get("tirith_enabled", False)
                 if tirith_enabled:
                     _cprint(
                         f"  {_DIM}⚠ tirith security scanner enabled but not available "
