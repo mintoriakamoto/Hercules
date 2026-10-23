@@ -117,11 +117,8 @@ class TestSearchErrorGuard:
 
     def test_files_only_excludes_diagnostics(self, method, partial_error_tree):
         # files_only mode must not list a diagnostic line as a fake file path.
-        # Skip test when running as root (root can read chmod 0o000 files).
+        # When running as root, all files are readable so locked.txt appears too.
         import os as os_module
-        if os_module.geteuid() == 0:
-            pytest.skip("Test requires non-root user (root reads chmod 0o000 files)")
-
         res = _search(
             _ops(partial_error_tree),
             method,
@@ -131,9 +128,15 @@ class TestSearchErrorGuard:
         )
         assert res.error is None
         assert res.files, "expected matching files"
+        # Main check: no diagnostic text appears in file paths
         assert all(
-            "Permission denied" not in f and "locked.txt" not in f for f in res.files
-        ), f"diagnostic leaked into files: {res.files}"
+            "Permission denied" not in f for f in res.files
+        ), f"diagnostic text leaked into files: {res.files}"
+        # Root can read all files; non-root should filter unreadable ones
+        if os_module.geteuid() != 0:
+            assert all(
+                "locked.txt" not in f for f in res.files
+            ), f"unreadable file listed: {res.files}"
 
     def test_count_mode_with_partial_error(self, method, partial_error_tree):
         res = _search(

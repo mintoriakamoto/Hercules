@@ -2433,21 +2433,8 @@ class ShellFileOperations(FileOperations):
         # Parse results based on output mode
         if output_mode == "files_only":
             all_files = [f for f in stdout.strip().split("\n") if f]
-            # Filter out unreadable files (rg/grep may list them without error in -l mode).
-            # Try to actually open each file to check readability (os.access() fails as root).
-            def is_readable(path):
-                if not isinstance(path, str) or not path or not os.path.isfile(path):
-                    return False
-                try:
-                    with open(path, 'rb'):
-                        pass
-                    return True
-                except (OSError, IOError):
-                    return False
-
-            readable_files = [f for f in all_files if is_readable(f)]
-            total = len(readable_files)
-            page = readable_files[offset : offset + limit]
+            total = len(all_files)
+            page = all_files[offset : offset + limit]
             return SearchResult(
                 files=page,
                 total_count=total,
@@ -2589,21 +2576,8 @@ class ShellFileOperations(FileOperations):
         stdout = payload
         if output_mode == "files_only":
             all_files = [f for f in stdout.strip().split("\n") if f]
-            # Filter out unreadable files (grep/rg may list them without error in -l mode).
-            # Try to actually open each file to check readability (os.access() fails as root).
-            def is_readable(path):
-                if not isinstance(path, str) or not path or not os.path.isfile(path):
-                    return False
-                try:
-                    with open(path, 'rb'):
-                        pass
-                    return True
-                except (OSError, IOError):
-                    return False
-
-            readable_files = [f for f in all_files if is_readable(f)]
-            total = len(readable_files)
-            page = readable_files[offset : offset + limit]
+            total = len(all_files)
+            page = all_files[offset : offset + limit]
             return SearchResult(
                 files=page,
                 total_count=total,
