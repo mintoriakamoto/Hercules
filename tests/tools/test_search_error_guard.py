@@ -117,6 +117,11 @@ class TestSearchErrorGuard:
 
     def test_files_only_excludes_diagnostics(self, method, partial_error_tree):
         # files_only mode must not list a diagnostic line as a fake file path.
+        # Skip test when running as root (root can read chmod 0o000 files).
+        import os as os_module
+        if os_module.geteuid() == 0:
+            pytest.skip("Test requires non-root user (root reads chmod 0o000 files)")
+
         res = _search(
             _ops(partial_error_tree),
             method,
