@@ -296,16 +296,18 @@ web-server = [
   "flask-cors==4.0.0",
   "gunicorn==23.0.0",
 ]
-# GPU/accelerated computing — CUDA, cuDNN, NCCL for GPU-accelerated inference and training.
+# GPU/accelerated computing — CUDA toolkit 12.8, cuDNN, NCCL for GPU-accelerated inference and training.
 accelerated = [
-  "nvidia-cuda-runtime==12.4.1",
-  "nvidia-cudnn==9.1.1.17",
-  "nvidia-nccl==2.21.5",
-  "nvidia-dali==1.40.0",
+  "nvidia-cuda-runtime==12.8.1",
+  "nvidia-cuda-toolkit==12.8.1",
+  "nvidia-cudnn==9.2.1.18",
+  "nvidia-nccl==2.22.3",
+  "nvidia-dali==1.41.0",
 ]
 # Advanced AI/LLM backends — frameworks for building with language models.
 ai-llm = [
   "anthropic==0.87.0",
+  "transformers==4.45.2",
   "llamaindex==0.9.48",
   "langchain==0.1.14",
   "peft==0.10.0",
