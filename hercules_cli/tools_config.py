@@ -172,7 +172,7 @@ def _xai_credentials_present() -> bool:
 
         _read_xai_oauth_tokens()
         return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from tools.xai_http import get_env_value as _xai_get_env_value
@@ -1106,9 +1106,9 @@ def _run_cua_driver_installer(label: str = "Installing", verbose: bool = True) -
 
         try:
             if not is_windows:
-                os.killpg(
+                os.killpg(  # windows-footgun: ok — POSIX branch only
                     os.getpgid(proc.pid), _signal.SIGKILL
-                )  # windows-footgun: ok — POSIX branch only
+                )
             else:
                 proc.kill()
         except (OSError, ProcessLookupError):

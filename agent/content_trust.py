@@ -61,9 +61,11 @@ class ContentApproval:
         """Check if approval applies to current content.
 
         Content must match original hash for approval to apply.
+        Uses timing-safe comparison to prevent hash oracle attacks.
         """
+        import hmac
         current_hash = self._hash_content(current_content)
-        return current_hash == self.content_hash
+        return hmac.compare_digest(current_hash, self.content_hash)
 
     @staticmethod
     def _hash_content(content: str) -> str:

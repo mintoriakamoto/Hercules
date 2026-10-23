@@ -15,6 +15,7 @@ Import chain (circular-import safe):
 """
 
 import ast
+import hashlib
 import importlib
 import json
 import logging
@@ -25,6 +26,56 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Tool-module discovery cache
+#
+# On each startup discover_builtin_tools() historically AST-scanned all
+# ~114 *.py files in tools/ to find which ones call registry.register().
+# The string prefilter cuts most of those out, but parsing the ~43 that
+# match still costs ~0.4 s on the critical path to first response (ast.parse
+# produces no .pyc artefact, so it is never cached the way bytecode is).
+#
+# We persist the result to tools/_builtin_module_cache.json alongside the
+# source tree.  The cache entry stores a SHA-256 fingerprint derived from
+# the sorted list of (filename, mtime_ns) pairs for every *.py file in the
+# tools directory.  When the fingerprint matches the on-disk state the scan
+# is skipped entirely; any added, removed, or modified file invalidates it
+# and triggers a fresh scan that regenerates the file.
+# ---------------------------------------------------------------------------
+
+_CACHE_FILE_NAME = "_builtin_module_cache.json"
+_EXCLUDED_TOOL_FILES = {"__init__.py", "registry.py", "mcp_tool.py"}
+
+
+def _tools_fingerprint(tools_path: Path) -> str:
+    parts = sorted(
+        f"{p.name}:{p.stat().st_mtime_ns}"
+        for p in tools_path.glob("*.py")
+    )
+    return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
+
+
+def _load_module_cache(tools_path: Path) -> Optional[List[str]]:
+    cache_file = tools_path / _CACHE_FILE_NAME
+    try:
+        data = json.loads(cache_file.read_text(encoding="utf-8"))
+        if data.get("fingerprint") == _tools_fingerprint(tools_path):
+            modules = data.get("modules")
+            if isinstance(modules, list):
+                return modules
+    except Exception:
+        pass
+    return None
+
+
+def _save_module_cache(tools_path: Path, modules: List[str]) -> None:
+    cache_file = tools_path / _CACHE_FILE_NAME
+    try:
+        data = {"fingerprint": _tools_fingerprint(tools_path), "modules": modules}
+        cache_file.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    except Exception as exc:
+        logger.debug("Could not write tool module cache: %s", exc)
 
 
 def _is_registry_register_call(node: ast.AST) -> bool:
@@ -80,19 +131,33 @@ def _module_registers_tools(module_path: Path) -> bool:
 
 
 def discover_builtin_tools(tools_dir: Optional[Path] = None) -> List[str]:
-    """Import built-in self-registering tool modules and return their module names."""
+    """Import built-in self-registering tool modules and return their module names.
+
+    Uses a fingerprint-based JSON cache (tools/_builtin_module_cache.json) to
+    skip the AST scan on unchanged startups.  The cache is invalidated whenever
+    any *.py file in the tools directory is added, removed, or modified.
+    """
     tools_path = (
         Path(tools_dir) if tools_dir is not None else Path(__file__).resolve().parent
     )
-    module_names = [
-        f"tools.{path.stem}"
-        for path in sorted(tools_path.glob("*.py"))
-        if path.name not in {"__init__.py", "registry.py", "mcp_tool.py"}
-        and _module_registers_tools(path)
-    ]
+
+    cached_stems = _load_module_cache(tools_path)
+    if cached_stems is not None:
+        logger.debug("Tool module discovery: using cache (%d modules)", len(cached_stems))
+        stems = cached_stems
+    else:
+        logger.debug("Tool module discovery: running AST scan")
+        stems = [
+            path.stem
+            for path in sorted(tools_path.glob("*.py"))
+            if path.name not in _EXCLUDED_TOOL_FILES
+            and _module_registers_tools(path)
+        ]
+        _save_module_cache(tools_path, stems)
 
     imported: List[str] = []
-    for mod_name in module_names:
+    for stem in stems:
+        mod_name = f"tools.{stem}"
         try:
             importlib.import_module(mod_name)
             imported.append(mod_name)
@@ -398,7 +463,7 @@ class ToolRegistry:
         try:
             frame = sys._getframe(2)
             return frame.f_globals.get("__name__", "") or ""
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             return ""
 
     def register(
