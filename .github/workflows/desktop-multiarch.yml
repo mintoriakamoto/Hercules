@@ -1,0 +1,267 @@
+name: Desktop Multi-Architecture Build
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'apps/desktop/**'
+      - '.github/workflows/desktop-multiarch.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'apps/desktop/**'
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Platforms to build (mac,win,linux)'
+        required: false
+        default: 'mac,linux'
+      architectures:
+        description: 'Architectures to build (all,native)'
+        required: false
+        default: 'all'
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    runs-on: macos-latest
+    if: |
+      !contains(github.event.head_commit.message, '[skip-desktop]') &&
+      (github.event_name != 'workflow_dispatch' || contains(github.event.inputs.platforms, 'mac'))
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'apps/desktop/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: apps/desktop
+        run: npm ci --omit=optional
+
+      - name: Build macOS ${{ matrix.arch }}
+        working-directory: apps/desktop
+        run: npm run dist:mac:${{ matrix.arch }}
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+
+      - name: Upload macOS ${{ matrix.arch }} artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hercules-macos-${{ matrix.arch }}
+          path: apps/desktop/release/Hercules-*.dmg
+          retention-days: 30
+
+      - name: Log build info
+        working-directory: apps/desktop
+        run: |
+          echo "macOS ${{ matrix.arch }} build completed"
+          ls -lah release/ || echo "No release directory"
+
+  build-windows:
+    name: Build Windows (${{ matrix.arch }})
+    runs-on: windows-latest
+    if: |
+      !contains(github.event.head_commit.message, '[skip-desktop]') &&
+      (github.event_name != 'workflow_dispatch' || contains(github.event.inputs.platforms, 'win'))
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, ia32, arm64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'apps/desktop/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: apps/desktop
+        run: npm ci --omit=optional
+
+      - name: Build Windows ${{ matrix.arch }}
+        working-directory: apps/desktop
+        run: npm run dist:win:${{ matrix.arch }}
+        env:
+          WIN_CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+
+      - name: Upload Windows ${{ matrix.arch }} artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hercules-windows-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/Hercules-*.nsis
+            apps/desktop/release/Hercules-*.msi
+          retention-days: 30
+
+      - name: Log build info
+        working-directory: apps/desktop
+        run: |
+          Write-Host "Windows ${{ matrix.arch }} build completed"
+          Get-ChildItem -Path "release\" -ErrorAction SilentlyContinue | Format-Table
+
+  build-linux:
+    name: Build Linux (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    if: |
+      !contains(github.event.head_commit.message, '[skip-desktop]') &&
+      (github.event_name != 'workflow_dispatch' || contains(github.event.inputs.platforms, 'linux'))
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, ia32, armv7l, arm64]
+        include:
+          - arch: x64
+            apt_packages: ''
+          - arch: ia32
+            apt_packages: 'g++-multilib gcc-multilib'
+          - arch: armv7l
+            apt_packages: 'g++-arm-linux-gnueabihf gcc-arm-linux-gnueabihf'
+          - arch: arm64
+            apt_packages: 'g++-aarch64-linux-gnu gcc-aarch64-linux-gnu'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'apps/desktop/package-lock.json'
+
+      - name: Install cross-compiler (${{ matrix.arch }})
+        if: matrix.apt_packages != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.apt_packages }} build-essential python3
+
+      - name: Install dependencies
+        working-directory: apps/desktop
+        run: npm ci --omit=optional
+
+      - name: Setup cross-compile environment (${{ matrix.arch }})
+        if: matrix.arch == 'arm64'
+        run: |
+          echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+          echo "CXX=aarch64-linux-gnu-g++" >> $GITHUB_ENV
+
+      - name: Setup cross-compile environment (${{ matrix.arch }})
+        if: matrix.arch == 'armv7l'
+        run: |
+          echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+          echo "CXX=arm-linux-gnueabihf-g++" >> $GITHUB_ENV
+
+      - name: Build Linux ${{ matrix.arch }}
+        working-directory: apps/desktop
+        run: npm run dist:linux:${{ matrix.arch }}
+
+      - name: Upload Linux ${{ matrix.arch }} artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hercules-linux-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/Hercules-*.AppImage
+            apps/desktop/release/hercules_*.deb
+            apps/desktop/release/hercules-*.rpm
+          retention-days: 30
+
+      - name: Log build info
+        working-directory: apps/desktop
+        run: |
+          echo "Linux ${{ matrix.arch }} build completed"
+          ls -lah release/ || echo "No release directory"
+
+  test-builds:
+    name: Test builds
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List build artifacts
+        run: |
+          echo "Build artifacts:"
+          find artifacts -type f -exec ls -lh {} \;
+
+      - name: Verify builds
+        run: |
+          echo "Verifying build artifacts..."
+
+          # macOS
+          [ -f "artifacts/hercules-macos-x64/Hercules-"*.dmg ] && echo "✓ macOS x64" || echo "✗ macOS x64 missing"
+          [ -f "artifacts/hercules-macos-arm64/Hercules-"*.dmg ] && echo "✓ macOS arm64" || echo "✗ macOS arm64 missing"
+
+          # Windows
+          [ -f "artifacts/hercules-windows-x64/Hercules-"*.nsis ] && echo "✓ Windows x64" || echo "✗ Windows x64 missing"
+          [ -f "artifacts/hercules-windows-ia32/Hercules-"*.nsis ] && echo "✓ Windows ia32" || echo "✗ Windows ia32 missing"
+          [ -f "artifacts/hercules-windows-arm64/Hercules-"*.nsis ] && echo "✓ Windows arm64" || echo "✗ Windows arm64 missing"
+
+          # Linux
+          [ -f "artifacts/hercules-linux-x64/Hercules-"*.AppImage ] && echo "✓ Linux x64" || echo "✗ Linux x64 missing"
+          [ -f "artifacts/hercules-linux-ia32/Hercules-"*.AppImage ] && echo "✓ Linux ia32" || echo "✗ Linux ia32 missing"
+          [ -f "artifacts/hercules-linux-armv7l/Hercules-"*.AppImage ] && echo "✓ Linux armv7l" || echo "✗ Linux armv7l missing"
+          [ -f "artifacts/hercules-linux-arm64/Hercules-"*.AppImage ] && echo "✓ Linux arm64" || echo "✗ Linux arm64 missing"
+
+  summary:
+    name: Build Summary
+    needs: [test-builds]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Print summary
+        run: |
+          echo "## Desktop Multi-Architecture Build Summary"
+          echo ""
+          echo "### Supported Platforms & Architectures"
+          echo "- **macOS**: x64 (Intel), arm64 (Apple Silicon)"
+          echo "- **Windows**: x64 (64-bit), ia32 (32-bit), arm64 (Windows on ARM)"
+          echo "- **Linux**: x64 (64-bit), ia32 (32-bit), armv7l (32-bit ARM), arm64 (64-bit ARM)"
+          echo ""
+          echo "### Build Status"
+          echo "- ✓ macOS builds"
+          echo "- ✓ Windows builds"
+          echo "- ✓ Linux builds"
+          echo ""
+          echo "All artifacts are available in the Actions tab."

@@ -29,10 +29,25 @@
     "dist:mac": "npm run build && npm run builder -- --mac",
     "dist:mac:dmg": "npm run build && npm run builder -- --mac dmg",
     "dist:mac:zip": "npm run build && npm run builder -- --mac zip",
+    "dist:mac:universal": "npm run build && npm run builder -- --mac --universal",
+    "dist:mac:x64": "npm run build && npm run builder -- --mac -c.electronArch=x64",
+    "dist:mac:arm64": "npm run build && npm run builder -- --mac -c.electronArch=arm64",
     "dist:win": "npm run build && npm run builder -- --win",
     "dist:win:msi": "npm run build && npm run builder -- --win msi",
     "dist:win:nsis": "npm run build && npm run builder -- --win nsis",
+    "dist:win:x64": "npm run build && npm run builder -- --win -c.electronArch=x64",
+    "dist:win:ia32": "npm run build && npm run builder -- --win -c.electronArch=ia32",
+    "dist:win:arm64": "npm run build && npm run builder -- --win -c.electronArch=arm64",
     "dist:linux": "npm run build && npm run builder -- --linux AppImage deb rpm",
+    "dist:linux:x64": "npm run build && npm run builder -- --linux AppImage deb rpm -c.electronArch=x64",
+    "dist:linux:ia32": "npm run build && npm run builder -- --linux AppImage deb rpm -c.electronArch=ia32",
+    "dist:linux:armv7l": "npm run build && npm run builder -- --linux AppImage deb rpm -c.electronArch=armv7l",
+    "dist:linux:arm64": "npm run build && npm run builder -- --linux AppImage deb rpm -c.electronArch=arm64",
+    "dist:all": "npm run build && npm run builder -- -mwl -c.electronArch=x64,arm64",
+    "rebuild:native:x64": "node scripts/rebuild-native.mjs x64",
+    "rebuild:native:ia32": "node scripts/rebuild-native.mjs ia32",
+    "rebuild:native:armv7l": "node scripts/rebuild-native.mjs armv7l",
+    "rebuild:native:arm64": "node scripts/rebuild-native.mjs arm64",
     "test:desktop": "node scripts/test-desktop.mjs",
     "test:desktop:all": "node scripts/test-desktop.mjs all",
     "test:desktop:dmg": "node scripts/test-desktop.mjs dmg",
@@ -214,6 +229,10 @@
       "target": [
         "dmg",
         "zip"
+      ],
+      "arch": [
+        "x64",
+        "arm64"
       ]
     },
     "dmg": {
@@ -244,7 +263,12 @@
         "nsis",
         "msi"
       ],
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "arch": [
+        "x64",
+        "ia32",
+        "arm64"
+      ]
     },
     "linux": {
       "category": "Development",
@@ -254,6 +278,12 @@
         "AppImage",
         "deb",
         "rpm"
+      ],
+      "arch": [
+        "x64",
+        "ia32",
+        "armv7l",
+        "arm64"
       ]
     },
     "nsis": {

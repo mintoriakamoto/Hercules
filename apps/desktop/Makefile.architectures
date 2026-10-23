@@ -1,0 +1,132 @@
+# Multi-architecture build Makefile for Hercules Desktop
+# Usage: make build-all-mac, make build-linux-arm64, etc.
+
+.PHONY: help
+help:
+	@echo "Hercules Desktop Multi-Architecture Build"
+	@echo ""
+	@echo "macOS targets:"
+	@echo "  make build-mac-x64          - Intel Mac (x64)"
+	@echo "  make build-mac-arm64        - Apple Silicon Mac (arm64)"
+	@echo "  make build-mac-universal    - Universal (both Intel + ARM)"
+	@echo "  make build-all-mac          - All macOS architectures"
+	@echo ""
+	@echo "Windows targets:"
+	@echo "  make build-win-x64          - 64-bit Windows"
+	@echo "  make build-win-ia32         - 32-bit Windows"
+	@echo "  make build-win-arm64        - Windows on ARM"
+	@echo "  make build-all-win          - All Windows architectures"
+	@echo ""
+	@echo "Linux targets:"
+	@echo "  make build-linux-x64        - 64-bit Linux (x86_64)"
+	@echo "  make build-linux-ia32       - 32-bit Linux (i686)"
+	@echo "  make build-linux-armv7l     - 32-bit ARM Linux"
+	@echo "  make build-linux-arm64      - 64-bit ARM Linux"
+	@echo "  make build-all-linux        - All Linux architectures"
+	@echo ""
+	@echo "Overall:"
+	@echo "  make build-all              - All platforms, all architectures"
+	@echo "  make install                - Install dependencies"
+	@echo "  make clean                  - Clean build artifacts"
+	@echo "  make rebuild-natives        - Rebuild native modules for all arches"
+
+# macOS builds
+.PHONY: build-mac-x64 build-mac-arm64 build-mac-universal build-all-mac
+build-mac-x64:
+	npm run dist:mac:x64
+
+build-mac-arm64:
+	npm run dist:mac:arm64
+
+build-mac-universal:
+	npm run dist:mac:universal
+
+build-all-mac: build-mac-x64 build-mac-arm64
+	@echo "✓ Built macOS x64 and arm64"
+
+# Windows builds
+.PHONY: build-win-x64 build-win-ia32 build-win-arm64 build-all-win
+build-win-x64:
+	npm run dist:win:x64
+
+build-win-ia32:
+	npm run dist:win:ia32
+
+build-win-arm64:
+	npm run dist:win:arm64
+
+build-all-win: build-win-x64 build-win-ia32
+	@echo "✓ Built Windows x64 and ia32"
+
+# Linux builds
+.PHONY: build-linux-x64 build-linux-ia32 build-linux-armv7l build-linux-arm64 build-all-linux
+build-linux-x64:
+	npm run dist:linux:x64
+
+build-linux-ia32:
+	npm run dist:linux:ia32
+
+build-linux-armv7l:
+	npm run dist:linux:armv7l
+
+build-linux-arm64:
+	npm run dist:linux:arm64
+
+build-all-linux: build-linux-x64 build-linux-ia32 build-linux-armv7l build-linux-arm64
+	@echo "✓ Built Linux x64, ia32, armv7l, and arm64"
+
+# Overall targets
+.PHONY: build-all
+build-all: build-all-mac build-all-win build-all-linux
+	@echo "✓ Built all platforms and architectures"
+
+.PHONY: install
+install:
+	npm ci
+	@echo "✓ Dependencies installed"
+
+.PHONY: clean
+clean:
+	rm -rf dist/ release/ build/
+	@echo "✓ Cleaned build artifacts"
+
+# Native module compilation
+.PHONY: rebuild-natives rebuild-natives-x64 rebuild-natives-ia32 rebuild-natives-armv7l rebuild-natives-arm64
+rebuild-natives-x64:
+	npm run rebuild:native:x64
+
+rebuild-natives-ia32:
+	npm run rebuild:native:ia32
+
+rebuild-natives-armv7l:
+	npm run rebuild:native:armv7l
+
+rebuild-natives-arm64:
+	npm run rebuild:native:arm64
+
+rebuild-natives: rebuild-natives-x64 rebuild-natives-ia32 rebuild-natives-armv7l rebuild-natives-arm64
+	@echo "✓ Rebuilt native modules for all architectures"
+
+# Quick targets (current machine only)
+.PHONY: build-quick build-current
+build-quick:
+	npm run build && npm run dist
+
+build-current: build-quick
+	@echo "✓ Built for current machine architecture"
+
+# Info
+.PHONY: info status
+info:
+	@echo "Hercules Desktop Build Configuration:"
+	@echo "Node: $$(node --version)"
+	@echo "npm: $$(npm --version)"
+	@echo "Electron: $$(grep -A1 '"electron"' package.json | grep -oP '\d+\.\d+\.\d+')"
+	@echo ""
+	@echo "Current system:"
+	@uname -a
+
+status: info
+	@echo ""
+	@echo "Build artifacts in release/:"
+	@ls -lah release/ 2>/dev/null || echo "  (none yet)"
