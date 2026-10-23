@@ -3,8 +3,7 @@ import {
   BranchPickerPrimitive,
   ErrorPrimitive,
   MessagePrimitive,
-  useAuiState,
-  useMessageRuntime
+  useAuiState
 } from '@assistant-ui/react'
 import { useStore } from '@nanostores/react'
 import { type FC, useCallback, useMemo, useState } from 'react'
@@ -53,7 +52,6 @@ export const AssistantMessage: FC<{
   onDismissError?: (messageId: string) => void
 }> = ({ onBranchInNewChat, onDismissError }) => {
   const messageId = useAuiState(s => s.message.id)
-  const messageRuntime = useMessageRuntime()
   const { t } = useI18n()
 
   // PERF: this component must NOT subscribe to the streaming text. Every
@@ -81,7 +79,8 @@ export const AssistantMessage: FC<{
     return pickPrimaryPreviewTarget(extractPreviewTargets(completedText))
   }, [completedText])
 
-  const getMessageText = useCallback(() => messageContentText(messageRuntime.getState().content), [messageRuntime])
+  const messageContent = useAuiState(s => s.message.content)
+  const getMessageText = useCallback(() => messageContentText(messageContent), [messageContent])
 
   const enterRef = useEnterAnimation(isRunning, `assistant-message:${messageId}`)
 

@@ -1,4 +1,4 @@
-import { useAui, useAuiState, useComposerRuntime } from '@assistant-ui/react'
+import { useAui, useAuiState } from '@assistant-ui/react'
 import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 
 import { SLASH_COMMAND_RE } from '@/lib/chat-runtime'
@@ -49,7 +49,6 @@ export function useComposerDraft({
   sessionId
 }: UseComposerDraftArgs) {
   const aui = useAui()
-  const composerRuntime = useComposerRuntime()
 
   // Coarse edges only — these flip rarely (empty↔non-empty, the `?` help sigil,
   // steerable-vs-slash), so typing within a line costs no render.
@@ -211,7 +210,7 @@ export function useComposerDraft({
   }, [setComposerText])
 
   // Imperative draft sync — the spine of the "work only when work is to be
-  // performed" model. Subscribing to the composer runtime directly (not
+  // performed" model. Subscribing to composer text changes (not
   // `useAuiState(text)` + a `[draft]` effect) keeps per-keystroke text out of
   // React, so typing never re-renders the chrome. On each change we (1) mirror
   // text into draftRef, (2) repaint the editor only when the change came from
@@ -219,9 +218,10 @@ export function useComposerDraft({
   // source otherwise), and (3) schedule the debounced per-session stash.
   // Browsing history / editing a queued prompt suppress the stash so recalled
   // text never clobbers the draft.
+  const composerText = useAuiState(s => s.composer.text)
   useEffect(() => {
     const sync = () => {
-      const text = composerRuntime.getState().text
+      const text = composerText
       draftRef.current = text
 
       const editor = editorRef.current
@@ -253,13 +253,12 @@ export function useComposerDraft({
       }, DRAFT_PERSIST_DEBOUNCE_MS)
     }
 
-    const unsubscribe = composerRuntime.subscribe(sync)
+    sync()
 
     return () => {
-      unsubscribe()
       window.clearTimeout(draftPersistTimerRef.current)
     }
-  }, [composerRuntime, queueEditRef])
+  }, [composerText, queueEditRef])
 
   const insertText = (text: string) => {
     const base = draftRef.current
