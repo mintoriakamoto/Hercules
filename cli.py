@@ -6893,7 +6893,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             available, unavailable = check_tool_availability()
 
             # Filter to only those missing API keys (not system deps)
-            api_key_missing = [u for u in unavailable if u["missing_vars"]]
+            api_key_missing = [u for u in unavailable if u.get("env_vars")]
 
             if api_key_missing:
                 self._console_print()
@@ -6905,7 +6905,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     if len(item["tools"]) > 2:
                         tools_str += f", +{len(item['tools']) - 2} more"
                     self._console_print(
-                        f"   [dim]• {item['name']}[/] [dim italic]({', '.join(item['missing_vars'])})[/]"
+                        f"   [dim]• {item['name']}[/] [dim italic]({', '.join(item.get('env_vars', []))})[/]"
                     )
                 self._console_print("[dim]   Run 'hercules setup' to configure[/]")
         except (ImportError, ModuleNotFoundError):

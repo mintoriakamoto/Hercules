@@ -56,8 +56,8 @@ class TestProviderEnvDetection:
 class TestDoctorToolAvailabilitySummary:
     def test_missing_api_key_summary_ignores_disabled_toolsets(self, monkeypatch):
         unavailable = [
-            {"name": "rl", "missing_vars": ["TINKER_API_KEY"]},
-            {"name": "web", "missing_vars": ["EXA_API_KEY"]},
+            {"name": "rl", "env_vars": ["TINKER_API_KEY"], "tools": []},
+            {"name": "web", "env_vars": ["EXA_API_KEY"], "tools": []},
         ]
         monkeypatch.setattr(doctor, "_enabled_cli_toolsets_for_doctor", lambda: {"web"})
 
@@ -69,8 +69,8 @@ class TestDoctorToolAvailabilitySummary:
         self, monkeypatch
     ):
         unavailable = [
-            {"name": "rl", "missing_vars": ["TINKER_API_KEY"]},
-            {"name": "web", "missing_vars": ["EXA_API_KEY"]},
+            {"name": "rl", "env_vars": ["TINKER_API_KEY"], "tools": []},
+            {"name": "web", "env_vars": ["EXA_API_KEY"], "tools": []},
         ]
         monkeypatch.setattr(doctor, "_enabled_cli_toolsets_for_doctor", lambda: None)
 

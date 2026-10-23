@@ -2611,7 +2611,7 @@ def run_doctor(args):
             check_ok(info.get("name", tid), _doctor_tool_availability_detail(tid))
 
         for item in unavailable:
-            env_vars = item.get("missing_vars") or item.get("env_vars") or []
+            env_vars = item.get("env_vars") or []
             if env_vars:
                 vars_str = ", ".join(env_vars)
                 check_warn(item["name"], f"(missing {vars_str})")
