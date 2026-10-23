@@ -9,7 +9,7 @@ Implements:
 
 from enum import Enum
 from dataclasses import dataclass
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any, Dict
 
 
 class AutonomyLevel(Enum):

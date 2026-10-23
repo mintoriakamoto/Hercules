@@ -315,7 +315,7 @@ def _rasterize_svg_to_png(svg_path: Path, out_path: Path) -> bool:
                 )
                 if out_path.exists() and out_path.stat().st_size > 0:
                     return True
-            except (subprocess.CalledProcessError):
+            except _subprocess.CalledProcessError:
                 continue
     return False
 

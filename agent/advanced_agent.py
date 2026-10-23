@@ -10,6 +10,7 @@ Integrates:
 - Capabilities learning (adaptation)
 """
 
+from pathlib import Path
 from typing import Optional, List
 from agent.code_understanding import CodeRepository, CodeAnalyzer
 from agent.planning.tree_of_thought import TreeOfThought

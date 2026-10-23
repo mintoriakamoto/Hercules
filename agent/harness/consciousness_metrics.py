@@ -17,7 +17,7 @@ evidence that it is a "living" thinking system rather than pattern-matching.
 from dataclasses import dataclass, field
 from enum import Enum
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 
 class ConsciousnessProperty(Enum):
