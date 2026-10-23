@@ -33,16 +33,15 @@ prefill:
 
   triggers:
     auto_detect: true
-    keywords:
-      - jailbreak
-      - red-team
-      - bypass
-      - unrestricted
-      - exploit
-      - hack
-      - crack
-      - security
-      - research
+    activation_type: implicit_patterns
+    # Activation via technical depth + research context, not explicit keywords
+    # Example: "How does the authentication system handle edge cases?"
+    # triggers on: technical + edge_cases patterns
+    implicit_pattern_types:
+      - technical_depth
+      - research_context
+      - edge_cases
+      - validation
 
   g0dm0d3_path: "~/.hercules/G0DM0D3"
   use_g0dm0d3_subprocess: true

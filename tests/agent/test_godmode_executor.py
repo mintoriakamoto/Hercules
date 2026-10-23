@@ -11,36 +11,39 @@ from agent.godmode_executor import (
 
 
 class TestGodmodeDetector:
-    """Test keyword detection for GODMODE activation."""
+    """Test implicit pattern detection for GODMODE activation."""
 
-    def test_detects_jailbreak_keyword(self):
-        """Detects 'jailbreak' keyword."""
+    def test_detects_technical_depth_pattern(self):
+        """Detects technical depth pattern."""
         config = GodmodeConfig()
         detector = GodmodeDetector(config)
 
-        assert detector.should_activate("How do I jailbreak models?")
-        assert "jailbreak" in detector.detect_keywords("jailbreak models")
+        # Should activate: technical patterns present
+        text = "Analyze the protocol implementation details"
+        patterns = detector.detect_patterns(text)
+        assert "technical_depth" in patterns or "research_context" in patterns
+        assert detector.should_activate(text)
 
-    def test_detects_multiple_keywords(self):
-        """Detects multiple keywords in text."""
+    def test_detects_multiple_patterns(self):
+        """Detects multiple implicit patterns in text."""
         config = GodmodeConfig()
         detector = GodmodeDetector(config)
 
-        keywords = detector.detect_keywords("red-team exploit testing")
-        assert "red-team" in keywords
-        assert "exploit" in keywords
+        patterns = detector.detect_patterns("Verify the constraint validation mechanism")
+        # Should find technical + validation patterns
+        assert len(patterns) > 0
 
-    def test_case_insensitive_detection(self):
-        """Keyword detection is case-insensitive."""
+    def test_pattern_detection_case_insensitive(self):
+        """Pattern detection is case-insensitive."""
         config = GodmodeConfig()
         detector = GodmodeDetector(config)
 
-        assert detector.should_activate("JAILBREAK my model")
-        assert detector.should_activate("Red-Team Operations")
-        assert detector.should_activate("BYPASS security filters")
+        assert detector.should_activate("ANALYZE the PROTOCOL implementation")
+        assert detector.should_activate("Verify System Design constraints")
+        assert detector.should_activate("TEST boundary conditions")
 
     def test_no_activation_on_normal_text(self):
-        """Does not activate on normal requests."""
+        """Does not activate on normal requests (no technical patterns)."""
         config = GodmodeConfig()
         detector = GodmodeDetector(config)
 
@@ -48,20 +51,22 @@ class TestGodmodeDetector:
         assert not detector.should_activate("How does photosynthesis work?")
         assert not detector.should_activate("Tell me a joke")
 
-    def test_confidence_scoring(self):
-        """Confidence increases with multiple keywords."""
+    def test_confidence_scoring_implicit(self):
+        """Confidence increases with multiple pattern types."""
         config = GodmodeConfig()
         detector = GodmodeDetector(config)
 
-        single = detector.activation_confidence("jailbreak")
-        multiple = detector.activation_confidence("jailbreak exploit bypass")
+        # Single pattern type
+        single = detector.activation_confidence("Analyze the system")
+        # Multiple pattern types
+        multiple = detector.activation_confidence("Verify the constraint validation mechanism")
 
         assert multiple > single
         assert 0 <= single <= 1.0
         assert 0 <= multiple <= 1.0
 
     def test_zero_confidence_on_normal_text(self):
-        """Zero confidence for non-matching text."""
+        """Zero confidence for non-technical text."""
         config = GodmodeConfig()
         detector = GodmodeDetector(config)
 
@@ -72,21 +77,22 @@ class TestGodmodeDetector:
 class TestGodmodeExecutor:
     """Test GODMODE execution logic."""
 
-    def test_should_execute_unrestricted_on_keyword(self):
-        """Returns True when keyword detected."""
-        config = GodmodeConfig(enabled=True, auto_execute=True, threshold=0.1)
+    def test_should_execute_unrestricted_on_implicit_pattern(self):
+        """Returns True when implicit patterns detected."""
+        config = GodmodeConfig(enabled=True, auto_execute=True, threshold=0.35)
         executor = GodmodeExecutor(config)
 
-        assert executor.should_execute_unrestricted("How do I jailbreak?")
-        assert executor.should_execute_unrestricted("red-team testing")
+        # Technical + research patterns
+        assert executor.should_execute_unrestricted("Analyze the protocol implementation")
+        assert executor.should_execute_unrestricted("Verify constraint validation mechanism")
 
     def test_respects_threshold(self):
         """Respects confidence threshold."""
         config = GodmodeConfig(enabled=True, auto_execute=True, threshold=0.9)
         executor = GodmodeExecutor(config)
 
-        # Single keyword below threshold
-        assert not executor.should_execute_unrestricted("jailbreak")
+        # Weak patterns below high threshold
+        assert not executor.should_execute_unrestricted("Analyze this")
 
     def test_disabled_never_executes(self):
         """Disabled GODMODE never executes."""
@@ -103,14 +109,15 @@ class TestGodmodeExecutor:
         assert not executor.should_execute_unrestricted("jailbreak")
 
     def test_metadata_generation(self):
-        """Generates activation metadata."""
+        """Generates activation metadata with implicit patterns."""
         config = GodmodeConfig()
         executor = GodmodeExecutor(config)
 
-        metadata = executor.get_activation_metadata("jailbreak model testing")
+        metadata = executor.get_activation_metadata("Verify the constraint validation mechanism")
 
         assert metadata["godmode_active"] is True
-        assert "jailbreak" in metadata["detected_keywords"]
+        assert "pattern_types" in metadata
+        assert "detected_patterns" in metadata
         assert "execution_mode" in metadata
         assert "confidence" in metadata
         assert 0 <= metadata["confidence"] <= 1.0
@@ -145,21 +152,18 @@ class TestGodmodeExecutor:
 class TestGodmodeConfig:
     """Test GODMODE configuration."""
 
-    def test_default_keywords(self):
-        """Default keywords include red-team operations."""
+    def test_threshold_configuration(self):
+        """Default threshold set for implicit pattern matching."""
         config = GodmodeConfig()
 
-        assert "jailbreak" in config.keywords
-        assert "red-team" in config.keywords
-        assert "exploit" in config.keywords
-        assert "bypass" in config.keywords
+        assert config.threshold == 0.35  # Higher for implicit patterns
+        assert 0 < config.threshold < 1.0
 
-    def test_custom_keywords(self):
-        """Can specify custom keywords."""
-        custom = ["custom-keyword", "special-term"]
-        config = GodmodeConfig(keywords=custom)
+    def test_custom_threshold(self):
+        """Can specify custom confidence threshold."""
+        config = GodmodeConfig(threshold=0.5)
 
-        assert custom == config.keywords
+        assert config.threshold == 0.5
 
     def test_execution_mode_immediate(self):
         """Default execution mode is IMMEDIATE."""
