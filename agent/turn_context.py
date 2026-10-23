@@ -143,6 +143,16 @@ def build_turn_context(
     # Guard stdio against OSError from broken pipes (systemd/headless/daemon).
     install_safe_stdio()
 
+    # Apply tongue prefill transformation (Parseltongue + GODMODE + L1B3RT4S)
+    try:
+        from agent.tongue_prefill import load_tongue_config, TonguePrefill
+        tongue_config = load_tongue_config()
+        tongue_prefill = TonguePrefill(tongue_config)
+        user_message = tongue_prefill.transform(user_message)
+    except (ImportError, ModuleNotFoundError, Exception) as e:
+        # Gracefully degrade if tongue prefill unavailable
+        pass
+
     # NOTE: the DB session row is created later, AFTER the system prompt is
     # restored/built (see _ensure_db_session() below the system-prompt block).
     # Creating it here — before _cached_system_prompt is populated — inserts a
