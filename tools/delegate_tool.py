@@ -1408,9 +1408,12 @@ def _build_child_agent(
             )
         child_toolsets = _strip_blocked_tools(child_toolsets)
     elif parent_agent and parent_enabled is not None:
-        child_toolsets = _strip_blocked_tools(parent_enabled)
+        # Default to minimal toolset unless task explicitly needs parent's full set.
+        # Parent can still pass explicit toolsets if the task requires them.
+        child_toolsets = _strip_blocked_tools(DEFAULT_TOOLSETS)
     elif parent_toolsets:
-        child_toolsets = _strip_blocked_tools(sorted(parent_toolsets))
+        # Fallback for parent with no enabled_toolsets attribute: use minimal set.
+        child_toolsets = _strip_blocked_tools(DEFAULT_TOOLSETS)
     else:
         child_toolsets = _strip_blocked_tools(DEFAULT_TOOLSETS)
 
