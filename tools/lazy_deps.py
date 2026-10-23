@@ -237,6 +237,7 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     "tool.trace_upload": ("huggingface-hub==0.24.3",),
     # ─── ML & Accelerated Computing ────────────────────────────────────────
     # GPU/accelerated computing — CUDA toolkit, cuDNN, NCCL for GPU training/inference.
+    # Linux-only (CUDA unavailable on macOS/Windows via PyPI).
     "ml.accelerated": (
         "nvidia-cuda-runtime==12.8.1",
         "nvidia-cuda-toolkit==12.8.1",
@@ -249,7 +250,7 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
         "anthropic==0.87.0",
         "transformers==4.45.2",
         "llamaindex==0.9.48",
-        "langchain==0.1.14",
+        "langchain==0.2.11",
         "peft==0.10.0",
         "bitsandbytes==0.42.0",
         "lora==0.1.2",

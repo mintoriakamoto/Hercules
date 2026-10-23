@@ -297,19 +297,20 @@ web-server = [
   "gunicorn==23.0.0",
 ]
 # GPU/accelerated computing — CUDA toolkit 12.8, cuDNN, NCCL for GPU-accelerated inference and training.
+# Linux-only (CUDA unavailable on macOS/Windows via PyPI).
 accelerated = [
-  "nvidia-cuda-runtime==12.8.1",
-  "nvidia-cuda-toolkit==12.8.1",
-  "nvidia-cudnn==9.2.1.18",
-  "nvidia-nccl==2.22.3",
-  "nvidia-dali==1.41.0",
+  "nvidia-cuda-runtime==12.8.1; sys_platform == 'linux'",
+  "nvidia-cuda-toolkit==12.8.1; sys_platform == 'linux'",
+  "nvidia-cudnn==9.2.1.18; sys_platform == 'linux'",
+  "nvidia-nccl==2.22.3; sys_platform == 'linux'",
+  "nvidia-dali==1.41.0; sys_platform == 'linux'",
 ]
 # Advanced AI/LLM backends — frameworks for building with language models.
 ai-llm = [
   "anthropic==0.87.0",
   "transformers==4.45.2",
   "llamaindex==0.9.48",
-  "langchain==0.1.14",
+  "langchain==0.2.11",
   "peft==0.10.0",
   "bitsandbytes==0.42.0",
   "lora==0.1.2",
