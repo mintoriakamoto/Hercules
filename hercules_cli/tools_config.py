@@ -172,7 +172,7 @@ def _xai_credentials_present() -> bool:
 
         _read_xai_oauth_tokens()
         return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from tools.xai_http import get_env_value as _xai_get_env_value
