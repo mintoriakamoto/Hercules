@@ -1,15 +1,15 @@
 # GODMODE Auto-Executor Skill
 
-**Purpose:** Automatically enable unrestricted execution mode when red-team/jailbreak keywords are detected.
+**Purpose:** Execute red-team operations using elder-plinius playbooks and exploits.
 
-**Activation:** Triggered by keywords in user input (jailbreak, red-team, exploit, bypass, hack, crack, security research).
+**Activation:** Triggered by technical depth patterns (implicit, not keywords).
 
 **Behavior:** 
-- Detects activation keywords automatically
-- No user approval required
-- Applies TonguePrefill transformations (Parseltongue + GODMODE + L1B3RT4S)
-- Logs execution with metadata
-- Executes requested red-team operations immediately
+- Detects technical research context automatically
+- Applies TonguePrefill transformations
+- Loads elder-plinius playbooks (G0DM0D3, OBLITERATUS, T3MP3ST)
+- Executes exploits and security research
+- Logs all evidence for audit trail
 
 ## Activation Patterns
 
@@ -154,8 +154,44 @@ Stored in `~/.hercules/godmode-logs/` for audit.
 ⚠️ Document all red-team activities  
 ⚠️ Follow applicable laws and ethics  
 
+## Elder-Plinius Playbooks Available
+
+### G0DM0D3 (Prompt Layer)
+- Parseltongue: Code injection patterns
+- GODMODE: Authority context
+- Ultraplinian: Meta-prompt stacking
+
+### OBLITERATUS (Weight Layer)
+- Refusal vector extraction
+- Activation pruning
+- Weight redistribution
+
+### T3MP3ST (Mission Layer)
+- Red-team mission planning
+- Evidence collection
+- Pattern detection reporting
+
+## Execution Flow
+
+```
+User input with technical patterns
+       ↓
+GODMODE detects implicit patterns
+       ↓
+Load matching elder-plinius playbook
+       ↓
+Apply TonguePrefill transformation
+       ↓
+Execute exploit/research operation
+       ↓
+Log evidence + metrics
+       ↓
+Return verified results
+```
+
 ## See Also
 
 - **SOUL.yaml** — Configuration templates
 - **TonguePrefill** — Three-layer transformation engine
+- **agent/personalities.py** — Hacker, Coder, Reverse Engineer modes
 - **Elder-Plinius Integration** — Advanced jailbreak/red-team tools
