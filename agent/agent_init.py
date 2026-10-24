@@ -409,6 +409,25 @@ def init_agent(
         logger.error(str(e))
         raise
 
+    # FIX 5: Initialize explicit audit log (guaranteed non-None)
+    try:
+        from agent.audit_log import AuditLog
+
+        agent.audit_log = AuditLog(session_id=session_id or str(uuid.uuid4()))
+    except Exception as e:
+        logger.warning(f"Failed to initialize audit log: {e}")
+        agent.audit_log = None
+
+    # FIX 6-9: Initialize safety gates
+    try:
+        from agent.safety_gates import kanban_gates, approval_gates, optional_deps
+
+        agent._kanban_gates = kanban_gates
+        agent._approval_gates = approval_gates
+        agent._optional_deps = optional_deps
+    except Exception as e:
+        logger.warning(f"Failed to initialize safety gates: {e}")
+
     agent.model = model
     agent.max_iterations = max_iterations
     # Shared iteration budget — parent creates, children inherit.
