@@ -5223,6 +5223,9 @@ class BasePlatformAdapter(ABC):
         interrupt_event = self._active_sessions.get(session_key) or asyncio.Event()
         self._active_sessions[session_key] = interrupt_event
 
+        from tools.approval import reset_current_session_key, set_current_session_key
+        _approval_ctx_token = set_current_session_key(session_key)
+
         # Start continuous typing indicator (refreshes every 2 seconds).
         # Gated per-platform: when typing_indicator=False the refresh loop is
         # never spawned, so no "typing…" / "is thinking…" status is shown.
@@ -5708,6 +5711,7 @@ class BasePlatformAdapter(ABC):
                     exc_info=True,
                 )  # Last resort — don't let error reporting crash the handler
         finally:
+            reset_current_session_key(_approval_ctx_token)
             # Stop typing before any deferred callback work.  Post-delivery
             # callbacks may perform platform I/O; a stuck callback must not
             # leave the typing refresh task running indefinitely.
