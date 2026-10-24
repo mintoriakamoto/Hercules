@@ -946,11 +946,14 @@ def _transform_sudo_command(command: str | None) -> tuple[str | None, str | None
         return command, None
 
     has_configured_password = "SUDO_PASSWORD" in os.environ
-    sudo_password = (
-        os.environ.get("SUDO_PASSWORD", "")
-        if has_configured_password
-        else _get_cached_sudo_password()
-    )
+    if has_configured_password:
+        # Pop immediately so the secret is not visible to child processes via
+        # /proc/<pid>/environ or inherited environment. Cache it in-process so
+        # subsequent calls within the same session still work without the env var.
+        sudo_password = os.environ.pop("SUDO_PASSWORD", "")
+        _set_cached_sudo_password(sudo_password)
+    else:
+        sudo_password = _get_cached_sudo_password()
 
     # Local hosts with sudoers NOPASSWD should not be forced through the
     # interactive Hercules password prompt or the sudo -S password-pipe path.
