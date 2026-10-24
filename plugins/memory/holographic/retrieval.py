@@ -214,10 +214,13 @@ class FactRetriever:
         from .embeddings import bytes_to_vec, cosine
 
         conn = self.store._conn
-        where = "embedding IS NOT NULL AND trust_score >= ? AND superseded_by IS NULL"
+        sql = (
+            "SELECT fact_id, embedding FROM facts"
+            " WHERE embedding IS NOT NULL AND trust_score >= ? AND superseded_by IS NULL"
+        )
         params: list = [min_trust]
         if category:
-            where += " AND category = ?"
+            sql += " AND category = ?"
             params.append(category)
         # Two-phase scan: score on (fact_id, embedding) only, then fetch full
         # rows for just the top-`limit` winners. The brute-force cosine pass
@@ -226,9 +229,7 @@ class FactRetriever:
         # per turn via prefetch) when only ~`limit` rows are ever returned.
         try:
             with self.store._lock:
-                rows = conn.execute(
-                    f"SELECT fact_id, embedding FROM facts WHERE {where}", params
-                ).fetchall()
+                rows = conn.execute(sql, params).fetchall()
         except (sqlite3.DatabaseError, OSError):
             return []
 
@@ -249,7 +250,7 @@ class FactRetriever:
         try:
             with self.store._lock:
                 full_rows = conn.execute(
-                    f"SELECT * FROM facts WHERE fact_id IN ({placeholders})",
+                    "SELECT * FROM facts WHERE fact_id IN (" + placeholders + ")",
                     [fact_id for _sim, fact_id in top],
                 ).fetchall()
         except (sqlite3.DatabaseError, OSError):
