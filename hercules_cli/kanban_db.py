@@ -2229,7 +2229,7 @@ def _rebuild_drifted_tables(conn: sqlite3.Connection) -> None:
             create_sql, index_sqls = _REBUILD_SPECS[table]
             old_cols = [c["name"] for c in conn.execute(f"PRAGMA table_info({table})")]
             _log.info("kanban migration: rebuilding %s to match current schema", table)
-            conn.execute(f"ALTER TABLE {table} RENAME TO {table}_legacy")
+            conn.execute(f'ALTER TABLE "{table}" RENAME TO "{table}_legacy"')
             conn.execute(create_sql)
             new_cols = {c["name"] for c in conn.execute(f"PRAGMA table_info({table})")}
             if table == "kanban_notify_subs":
@@ -2237,19 +2237,19 @@ def _rebuild_drifted_tables(conn: sqlite3.Connection) -> None:
                 shared = [c for c in old_cols if c in new_cols and c != "last_event_id"]
                 cols_csv = ", ".join(shared)
                 conn.execute(
-                    f"INSERT INTO {table} ({cols_csv}, last_event_id) "
+                    f'INSERT INTO "{table}" ({cols_csv}, last_event_id) '
                     f"SELECT {cols_csv}, COALESCE(CAST(last_event_id AS INTEGER), 0) "
-                    f"FROM {table}_legacy"
+                    f'FROM "{table}_legacy"'
                 )
             else:
                 # Drop the legacy TEXT id; AUTOINCREMENT reassigns it.
                 shared = [c for c in old_cols if c in new_cols and c != "id"]
                 cols_csv = ", ".join(shared)
                 conn.execute(
-                    f"INSERT INTO {table} ({cols_csv}) "
-                    f"SELECT {cols_csv} FROM {table}_legacy"
+                    f'INSERT INTO "{table}" ({cols_csv}) '
+                    f'SELECT {cols_csv} FROM "{table}_legacy"'
                 )
-            conn.execute(f"DROP TABLE {table}_legacy")
+            conn.execute(f'DROP TABLE "{table}_legacy"')
             for index_sql in index_sqls:
                 conn.execute(index_sql)
         conn.execute("COMMIT")
