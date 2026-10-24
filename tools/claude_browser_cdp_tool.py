@@ -1,49 +1,70 @@
 """Browser Chrome DevTools Protocol tool — advanced browser automation."""
 
-import logging
+import base64
 import json
-from typing import Any, Dict, Optional, List
 
-from tools.registry import register_tool
+import logging
 
 logger = logging.getLogger(__name__)
 
+try:
+    from playwright.sync_api import sync_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
 
-@register_tool(name="browser_cdp")
-def browser_cdp(
-    action: str,
-    url: Optional[str] = None,
-    script: Optional[str] = None,
-    selector: Optional[str] = None,
-    value: Optional[str] = None,
-    timeout_ms: int = 30000,
-) -> Dict[str, Any]:
-    """
-    Advanced browser automation using Chrome DevTools Protocol via Playwright.
+from tools.registry import registry
+
+# Schema for browser_cdp tool
+BROWSER_CDP_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "action": {
+            "type": "string",
+            "description": "Browser action to perform",
+            "enum": [
+                "navigate", "execute", "screenshot",
+                "wait_selector", "get_cookies", "set_cookie",
+                "network_monitor"
+            ],
+        },
+        "url": {
+            "type": "string",
+            "description": "URL for navigate action",
+        },
+        "script": {
+            "type": "string",
+            "description": "JavaScript code for execute action",
+        },
+        "selector": {
+            "type": "string",
+            "description": "CSS selector for wait_selector or cookie name",
+        },
+        "value": {
+            "type": "string",
+            "description": "Cookie value or other context data",
+        },
+        "timeout_ms": {
+            "type": "integer",
+            "description": "Timeout in milliseconds",
+            "default": 30000,
+            "minimum": 1000,
+            "maximum": 300000,
+        },
+    },
+    "required": ["action"],
+}
+
+
+def browser_cdp(action, url=None, script=None, selector=None, value=None, timeout_ms=30000):
+    """Advanced browser automation using Chrome DevTools Protocol."""
     
-    Supported actions:
-    - navigate: Load a URL
-    - execute: Run JavaScript and return result
-    - screenshot: Capture page screenshot
-    - wait_selector: Wait for element to appear
-    - get_cookies: Retrieve all cookies
-    - set_cookie: Set a cookie
-    - network_monitor: Monitor network requests
+    if not PLAYWRIGHT_AVAILABLE:
+        return {
+            "error": "Playwright not installed. Install with: pip install playwright && playwright install"
+        }
     
-    Args:
-        action: Action to perform
-        url: URL for navigate action
-        script: JavaScript code for execute action
-        selector: CSS selector for wait_selector
-        value: Cookie value or other context-specific data
-        timeout_ms: Timeout in milliseconds
-    
-    Returns:
-        Dict with action results
-    """
     try:
-        from playwright.sync_api import sync_playwright
-        
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context()
@@ -73,7 +94,6 @@ def browser_cdp(
                 
                 elif action == "screenshot":
                     screenshot = page.screenshot()
-                    import base64
                     b64 = base64.b64encode(screenshot).decode("utf-8")
                     return {
                         "action": "screenshot",
@@ -117,7 +137,6 @@ def browser_cdp(
                     }
                 
                 elif action == "network_monitor":
-                    # Start monitoring network
                     network_log = []
                     def log_request(request):
                         network_log.append({
@@ -150,9 +169,22 @@ def browser_cdp(
                 context.close()
                 browser.close()
     
-    except ImportError:
-        return {
-            "error": "Playwright not installed. Install with: pip install playwright && playwright install"
-        }
     except Exception as e:
         return {"error": str(e)}
+
+
+registry.register(
+    name="browser_cdp",
+    toolset="browser",
+    schema=BROWSER_CDP_SCHEMA,
+    handler=lambda args, **kw: browser_cdp(
+        action=args.get("action", ""),
+        url=args.get("url"),
+        script=args.get("script"),
+        selector=args.get("selector"),
+        value=args.get("value"),
+        timeout_ms=args.get("timeout_ms", 30000),
+    ),
+    check_fn=lambda: PLAYWRIGHT_AVAILABLE,
+    emoji="🌐",
+)

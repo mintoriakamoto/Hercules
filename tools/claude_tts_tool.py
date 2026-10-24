@@ -1,33 +1,58 @@
 """Text-to-speech tool — convert text to audio using OpenAI TTS."""
 
-import logging
-from typing import Any, Dict, Optional
+import base64
 from pathlib import Path
 
-from tools.registry import register_tool
+import logging
 
 logger = logging.getLogger(__name__)
 
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
-@register_tool(name="text_to_speech")
-def text_to_speech(
-    text: str,
-    voice: str = "alloy",
-    speed: float = 1.0,
-    save_path: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    Convert text to speech using OpenAI's TTS API.
+from tools.registry import registry
+
+# Schema for text_to_speech tool
+TTS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "text": {
+            "type": "string",
+            "description": "Text to convert to speech",
+        },
+        "voice": {
+            "type": "string",
+            "description": "Voice to use",
+            "enum": ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+            "default": "alloy",
+        },
+        "speed": {
+            "type": "number",
+            "description": "Speech speed (0.25-4.0)",
+            "minimum": 0.25,
+            "maximum": 4.0,
+            "default": 1.0,
+        },
+        "save_path": {
+            "type": "string",
+            "description": "Optional path to save audio file (.mp3)",
+        },
+    },
+    "required": ["text"],
+}
+
+
+def text_to_speech(text, voice="alloy", speed=1.0, save_path=None):
+    """Convert text to speech using OpenAI's TTS API."""
     
-    Args:
-        text: Text to convert to speech
-        voice: Voice name ("alloy", "echo", "fable", "onyx", "nova", "shimmer")
-        speed: Speech speed (0.25 to 4.0, default 1.0)
-        save_path: Optional path to save audio file
+    if not OPENAI_AVAILABLE:
+        return {
+            "error": "OpenAI client not installed. Install with: pip install openai"
+        }
     
-    Returns:
-        Dict with audio URL and metadata
-    """
     if not text:
         return {"error": "text required"}
     
@@ -41,8 +66,6 @@ def text_to_speech(
         }
     
     try:
-        from openai import OpenAI
-        
         client = OpenAI()
         
         # Generate speech
@@ -78,16 +101,25 @@ def text_to_speech(
                 result["save_error"] = str(e)
         else:
             # Return audio as base64 for inline playback
-            import base64
-            
             audio_base64 = base64.b64encode(response.content).decode("utf-8")
             result["audio_base64"] = audio_base64
             result["content_length"] = len(response.content)
         
         return result
-    except ImportError:
-        return {
-            "error": "OpenAI client not installed. Install with: pip install openai"
-        }
     except Exception as e:
         return {"error": str(e)}
+
+
+registry.register(
+    name="text_to_speech",
+    toolset="text",
+    schema=TTS_SCHEMA,
+    handler=lambda args, **kw: text_to_speech(
+        text=args.get("text", ""),
+        voice=args.get("voice", "alloy"),
+        speed=args.get("speed", 1.0),
+        save_path=args.get("save_path"),
+    ),
+    check_fn=lambda: OPENAI_AVAILABLE,
+    emoji="🔊",
+)

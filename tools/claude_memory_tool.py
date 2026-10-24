@@ -1,37 +1,50 @@
 """Long-term memory tool — store and retrieve information across sessions."""
 
-import logging
 import json
-from typing import Any, Dict, Optional, List
-from pathlib import Path
 from datetime import datetime
 
-from tools.registry import register_tool
+import logging
 
 logger = logging.getLogger(__name__)
 
+from tools.registry import registry
 
-@register_tool(name="memory")
-def memory(
-    action: str,
-    key: Optional[str] = None,
-    value: Optional[Any] = None,
-    query: Optional[str] = None,
-    limit: int = 10,
-) -> Dict[str, Any]:
-    """
-    Store and retrieve long-term memory across sessions.
+# Schema for memory tool
+MEMORY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "action": {
+            "type": "string",
+            "description": "Action to perform",
+            "enum": ["store", "recall", "search", "delete", "list"],
+        },
+        "key": {
+            "type": "string",
+            "description": "Memory key (for store/recall/delete actions)",
+        },
+        "value": {
+            "type": "string",
+            "description": "Value to store (JSON string for complex data)",
+        },
+        "query": {
+            "type": "string",
+            "description": "Search query (for search action)",
+        },
+        "limit": {
+            "type": "integer",
+            "description": "Max results to return",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 100,
+        },
+    },
+    "required": ["action"],
+}
+
+
+def memory_tool(action, key=None, value=None, query=None, limit=10):
+    """Store and retrieve long-term memory across sessions."""
     
-    Args:
-        action: Action to perform ("store", "recall", "search", "delete", "list")
-        key: Memory key (for store/recall/delete)
-        value: Value to store (for store action)
-        query: Search query (for search action)
-        limit: Max results to return (for search/list)
-    
-    Returns:
-        Dict with results
-    """
     try:
         from hercules_state import SessionDB
         
@@ -41,13 +54,32 @@ def memory(
             if not key or value is None:
                 return {"error": "action=store requires key and value"}
             
+            try:
+                # Try to parse value as JSON if it's a string
+                if isinstance(value, str):
+                    parsed_value = json.loads(value)
+                else:
+                    parsed_value = value
+            except:
+                parsed_value = value
+            
             # Store in memory table
+            db.execute(
+                """
+                CREATE TABLE IF NOT EXISTS memory (
+                    key TEXT PRIMARY KEY,
+                    value TEXT,
+                    created_at TEXT,
+                    updated_at TEXT
+                )
+                """,
+            )
             db.execute(
                 """
                 INSERT OR REPLACE INTO memory (key, value, created_at, updated_at)
                 VALUES (?, ?, ?, ?)
                 """,
-                (key, json.dumps(value), datetime.now().isoformat(), datetime.now().isoformat()),
+                (key, json.dumps(parsed_value), datetime.now().isoformat(), datetime.now().isoformat()),
             )
             return {
                 "action": "store",
@@ -79,9 +111,9 @@ def memory(
             if not query:
                 return {"error": "action=search requires query"}
             
-            # Simple substring search in memory
+            # Simple substring search in memory keys
             results = db.execute(
-                "SELECT key, value, updated_at FROM memory WHERE key LIKE ? LIMIT ?",
+                "SELECT key, value, updated_at FROM memory WHERE key LIKE ? ORDER BY updated_at DESC LIMIT ?",
                 (f"%{query}%", limit),
             ).fetchall()
             
@@ -96,6 +128,7 @@ def memory(
                     }
                     for r in results
                 ],
+                "count": len(results),
             }
         
         elif action == "delete":
@@ -134,3 +167,19 @@ def memory(
     
     except Exception as e:
         return {"error": str(e)}
+
+
+registry.register(
+    name="memory",
+    toolset="memory",
+    schema=MEMORY_SCHEMA,
+    handler=lambda args, **kw: memory_tool(
+        action=args.get("action", ""),
+        key=args.get("key"),
+        value=args.get("value"),
+        query=args.get("query"),
+        limit=args.get("limit", 10),
+    ),
+    check_fn=lambda: True,  # Always available
+    emoji="🧠",
+)

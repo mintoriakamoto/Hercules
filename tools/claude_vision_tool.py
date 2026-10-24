@@ -15,7 +15,7 @@ try:
 except ImportError:
     ANTHROPIC_AVAILABLE = False
 
-from tools import registry
+from tools.registry import registry
 
 # Schema for vision_analyze tool
 VISION_SCHEMA = {
