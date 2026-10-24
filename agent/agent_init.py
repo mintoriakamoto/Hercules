@@ -52,6 +52,7 @@ from agent.tool_guardrails import (
     ToolGuardrailDecision,
 )
 from hercules_cli.config import cfg_get
+from hercules_cli.config_loader import ConfigLoader, ConfigError
 from hercules_cli.timeouts import get_provider_request_timeout
 from hercules_constants import get_hercules_home
 from utils import base_url_host_matches, is_truthy_value
@@ -391,6 +392,22 @@ def init_agent(
             remain skipped.
     """
     _install_safe_stdio()
+
+    # FIX 2: Validate API configuration with helpful error messages
+    try:
+        config = ConfigLoader.load(
+            model=model or None,
+            api_key=api_key,
+            provider=provider,
+            base_url=base_url,
+        )
+        model = config["model"]
+        api_key = config["api_key"]
+        provider = config["provider"]
+        base_url = config["base_url"]
+    except ConfigError as e:
+        logger.error(str(e))
+        raise
 
     agent.model = model
     agent.max_iterations = max_iterations

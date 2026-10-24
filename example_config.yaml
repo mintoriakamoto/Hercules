@@ -1,0 +1,63 @@
+# Hercules API Configuration
+#
+# SETUP INSTRUCTIONS:
+# 1. Copy this file to ~/.hercules/config.yaml
+# 2. Edit it with your API credentials
+# 3. Run: hercules doctor
+#
+# Your API configuration persists across all Hercules sessions.
+
+# ============================================================================
+# REQUIRED: Model to use
+# ============================================================================
+
+# Anthropic Claude models
+model: claude-opus-4-20250514
+# Alternatives:
+# model: claude-sonnet-4-20250514
+# model: claude-haiku-3-5-20241022
+
+# ============================================================================
+# REQUIRED: API provider (unless using Ollama)
+# ============================================================================
+
+provider: anthropic
+# Options:
+#   - anthropic: Use Anthropic's Claude API
+#   - openrouter: Use OpenRouter (supports 100+ models)
+#   - ollama: Use local Ollama server (no API key needed)
+
+# ============================================================================
+# REQUIRED: API key (not needed for Ollama)
+# ============================================================================
+
+# For Anthropic: Get from https://console.anthropic.com/
+# For OpenRouter: Get from https://openrouter.ai/
+api_key: sk-ant-YOUR_API_KEY_HERE
+
+# ============================================================================
+# OPTIONAL: Custom API endpoint
+# ============================================================================
+
+# Only change if using a custom proxy or self-hosted API
+# base_url: https://api.anthropic.com
+
+# ============================================================================
+# OPTIONAL: Model-specific parameters
+# ============================================================================
+
+# Maximum tokens in a response
+# max_tokens: 4096
+
+# Temperature (0.0 = deterministic, 1.0 = creative)
+# temperature: 0.7
+
+# ============================================================================
+# OPTIONAL: Tool settings
+# ============================================================================
+
+# List of tool categories to enable (comma-separated)
+# enabled_toolsets: terminal,code,web
+
+# List of tool categories to disable
+# disabled_toolsets: destructive
