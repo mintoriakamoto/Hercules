@@ -25,6 +25,7 @@ import stat
 import sys
 import base64
 import hashlib
+import hmac
 import subprocess
 import threading
 import time
@@ -762,7 +763,7 @@ def _resolve_zai_base_url(api_key: str, default_url: str, env_override: str) -> 
     cached = state.get("detected_endpoint")
     if isinstance(cached, dict) and cached.get("base_url"):
         key_hash = cached.get("key_hash", "")
-        if key_hash == hashlib.sha256(api_key.encode()).hexdigest()[:16]:
+        if hmac.compare_digest(key_hash, hashlib.sha256(api_key.encode()).hexdigest()):
             logger.debug("Z.AI: using cached endpoint %s", cached["base_url"])
             return cached["base_url"]
 
@@ -770,7 +771,7 @@ def _resolve_zai_base_url(api_key: str, default_url: str, env_override: str) -> 
     detected = detect_zai_endpoint(api_key)
     if detected and detected.get("base_url"):
         # Persist the detection result keyed on the API key hash.
-        key_hash = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+        key_hash = hashlib.sha256(api_key.encode()).hexdigest()
         detected_endpoint = {
             "base_url": detected["base_url"],
             "endpoint_id": detected.get("id", ""),

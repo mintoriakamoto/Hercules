@@ -128,5 +128,5 @@ class AuditLog:
 
             return log_file
         except Exception as e:
-            logger.error(f"Failed to write audit log: {e}")
+            logger.error("Failed to write audit log: %s", e)
             return None

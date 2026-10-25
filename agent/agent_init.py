@@ -415,7 +415,7 @@ def init_agent(
 
         agent.audit_log = AuditLog(session_id=session_id or str(uuid.uuid4()))
     except Exception as e:
-        logger.warning(f"Failed to initialize audit log: {e}")
+        logger.warning("Failed to initialize audit log: %s", e)
         agent.audit_log = None
 
     # FIX 6-9: Initialize safety gates
@@ -426,7 +426,7 @@ def init_agent(
         agent._approval_gates = approval_gates
         agent._optional_deps = optional_deps
     except Exception as e:
-        logger.warning(f"Failed to initialize safety gates: {e}")
+        logger.warning("Failed to initialize safety gates: %s", e)
 
     agent.model = model
     agent.max_iterations = max_iterations

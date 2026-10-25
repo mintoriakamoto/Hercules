@@ -277,7 +277,7 @@ class ParallelInference:
         try:
             return await fn(args)
         except Exception as e:
-            logger.debug(f"Model call failed: {e}")
+            logger.debug("Model call failed: %s", e)
             raise
 
 
