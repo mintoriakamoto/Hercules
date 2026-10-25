@@ -231,8 +231,11 @@ def compress_tool_output(
             )
             conn.commit()
             logger.debug(
-                f"Cached {tool_name} output: {original_size} -> {compressed_size} bytes "
-                f"({compression_ratio:.1%} ratio)"
+                "Cached %s output: %d -> %d bytes (%.1f%% ratio)",
+                tool_name,
+                original_size,
+                compressed_size,
+                compression_ratio * 100,
             )
             return True
         except Exception as e:
