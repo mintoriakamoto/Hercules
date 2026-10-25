@@ -83,7 +83,7 @@ def verify_layer_1_architecture() -> Tuple[List[str], int]:
     cli_path = Path('/home/user/Hercules/hercules_cli')
     for py_file in cli_path.glob('*.py'):
         try:
-            with open(py_file) as f:
+            with open(py_file, encoding="utf-8") as f:
                 tree = ast.parse(f.read())
 
             # Look for module-level imports that might cause cycles
@@ -134,7 +134,7 @@ def verify_layer_3_performance() -> Tuple[List[str], int]:
     cache_file = Path('/home/user/Hercules/tools/_builtin_module_cache.json')
     if cache_file.exists():
         try:
-            with open(cache_file) as f:
+            with open(cache_file, encoding="utf-8") as f:
                 cache = json.load(f)
             if 'fingerprints' in cache:
                 # Cache exists - good
@@ -150,7 +150,7 @@ def verify_layer_3_performance() -> Tuple[List[str], int]:
     skill_cache = Path('/home/user/Hercules/skills/index-cache/bundled_skills.json')
     if skill_cache.exists():
         try:
-            with open(skill_cache) as f:
+            with open(skill_cache, encoding="utf-8") as f:
                 skills = json.load(f)
             # Should have bundled skills
         except:
@@ -166,7 +166,7 @@ def verify_layer_4_security() -> Tuple[List[str], int]:
     # Check approval.py inversion
     approval_path = Path('/home/user/Hercules/tools/approval.py')
     if approval_path.exists():
-        with open(approval_path) as f:
+        with open(approval_path, encoding="utf-8") as f:
             content = f.read()
 
         # Look for _YOLO_MODE_FROZEN
@@ -254,7 +254,7 @@ def verify_layer_7_documentation() -> Tuple[List[str], int]:
         issues.append("CLAUDE.md missing (architecture documentation)")
     else:
         # Check if it mentions key modules
-        with open(claude_md) as f:
+        with open(claude_md, encoding="utf-8") as f:
             content = f.read()
 
         required_docs = ['run_agent.py', 'agent/', 'tools/', 'gateway/']

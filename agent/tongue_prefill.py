@@ -283,7 +283,7 @@ def load_tongue_config(soul_path: Optional[str] = None) -> TongueConfig:
     if soul_path.exists():
         try:
             import yaml
-            with open(soul_path) as f:
+            with open(soul_path, encoding="utf-8") as f:
                 soul_dict = yaml.safe_load(f) or {}
             config = TongueConfig.from_soul_config(soul_dict)
             logger.debug(f"Loaded TongueConfig from {soul_path}")

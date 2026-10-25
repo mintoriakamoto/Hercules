@@ -19,7 +19,7 @@ def parse_imports(filepath: Path) -> Set[str]:
     """Extract all imports from a Python file."""
     imports = set()
     try:
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             tree = ast.parse(f.read())
         
         for node in ast.walk(tree):
@@ -43,7 +43,7 @@ def validate_dependency_structure():
         print("✗ No dependency manifest found")
         return False
 
-    with open(manifest_path) as f:
+    with open(manifest_path, encoding="utf-8") as f:
         manifest = json.load(f)
 
     forbidden = manifest.get("forbidden_imports", {})

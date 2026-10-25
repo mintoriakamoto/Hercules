@@ -200,7 +200,7 @@ def load_godmode_config(soul_path: Optional[str] = None) -> GodmodeConfig:
     if soul_path.exists():
         try:
             import yaml
-            with open(soul_path) as f:
+            with open(soul_path, encoding="utf-8") as f:
                 soul_dict = yaml.safe_load(f) or {}
 
             godmode_config = soul_dict.get("godmode", {})
