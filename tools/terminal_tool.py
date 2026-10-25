@@ -2158,6 +2158,7 @@ def terminal_tool(
     pty: bool = False,
     notify_on_complete: bool = False,
     watch_patterns: Optional[List[str]] = None,
+    heartbeat: int = 0,
 ) -> str:
     """
     Execute a command in the configured terminal environment.
@@ -2191,6 +2192,22 @@ def terminal_tool(
         # Note: force parameter is internal only, not exposed to model API
     """
     try:
+        if heartbeat and (
+            not isinstance(heartbeat, int)
+            or isinstance(heartbeat, bool)
+            or heartbeat < 0
+        ):
+            return json.dumps(
+                {
+                    "output": "",
+                    "exit_code": -1,
+                    "error": "heartbeat must be a whole number of seconds (min 60).",
+                },
+                ensure_ascii=False,
+            )
+        if heartbeat and background:
+            # The heartbeat rides the completion delivery path.
+            notify_on_complete = True
         if not isinstance(command, str):
             logger.warning(
                 "Rejected invalid terminal command value: %s",
@@ -2801,6 +2818,17 @@ def terminal_tool(
                             "message_id": proc_session.watcher_message_id,
                             "notify_on_complete": True,
                         })
+
+                if heartbeat and background:
+                    if proc_session.notify_on_complete:
+                        result_data["heartbeat_seconds"] = (
+                            process_registry.arm_heartbeat(proc_session, heartbeat)
+                        )
+                    else:
+                        result_data["heartbeat_ignored"] = (
+                            "heartbeat needs notify_on_complete delivery, which this "
+                            "session cannot receive"
+                        )
 
                 # Set watch patterns for output monitoring
                 if watch_patterns and background:

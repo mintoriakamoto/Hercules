@@ -20,7 +20,14 @@ __all__ = [
     "is_extractable_document",
 ]
 
-EXTRACTABLE_EXTENSIONS = frozenset({".ipynb", ".docx", ".xlsx"})
+EXTRACTABLE_EXTENSIONS = frozenset({
+    ".ipynb",
+    ".docx",
+    ".xlsx",
+    ".db",
+    ".sqlite",
+    ".sqlite3",
+})
 MAX_XLSX_BYTES = 50 * 1024 * 1024
 _MAX_XLSX_ROWS_PER_SHEET = 5000
 _MAX_XLSX_COLS = 256
@@ -52,6 +59,8 @@ def extract_document_text(path: str) -> str:
         return _extract_docx(path)
     if ext == ".xlsx":
         return _extract_xlsx(path)
+    if ext in (".db", ".sqlite", ".sqlite3"):
+        return _extract_sqlite(path)
     raise ExtractionError(f"Unsupported document type: {path!r}")
 
 
@@ -272,3 +281,81 @@ def _cell_value(cell: ET.Element, shared: list[str], s: str) -> str:
     if typ == "e":
         return value or "#ERROR"
     return value
+
+
+_SQLITE_MAGIC = b"SQLite format 3\x00"
+_SQLITE_PREVIEW_ROWS = 5
+_SQLITE_MAX_TABLES = 200
+_SQLITE_CELL_CHARS = 80
+
+
+def _extract_sqlite(path: str) -> str:
+    """Render a SQLite file as a schema overview: per table the CREATE
+    statement, row count and first rows. A ``.db`` that is not SQLite raises
+    ExtractionError so read_file reports the real type."""
+    import sqlite3
+
+    try:
+        with open(path, "rb") as fh:
+            magic = fh.read(len(_SQLITE_MAGIC))
+    except OSError as exc:
+        raise ExtractionError(f"SQLite read failed: {exc}") from exc
+    if magic != _SQLITE_MAGIC:
+        raise ExtractionError("not a SQLite database (magic bytes do not match)")
+    # Read-only URI: never create or mutate. immutable=1 also skips WAL/journal
+    # sidecars, so a live database another process has open is read without locks.
+    uri = Path(path).resolve().as_uri() + "?mode=ro&immutable=1"
+    try:
+        con = sqlite3.connect(uri, uri=True)
+    except sqlite3.Error as exc:
+        raise ExtractionError(f"SQLite read failed: {exc}") from exc
+    try:
+        objs = con.execute(
+            "SELECT type, name, sql FROM sqlite_master WHERE sql IS NOT NULL "
+            "ORDER BY type DESC, name"
+        ).fetchall()
+        tables = [o for o in objs if o[0] == "table"]
+        others = [o for o in objs if o[0] != "table"]
+        out = [
+            "# SQLite database",
+            "",
+            f"{len(tables)} table(s), {len(others)} index/view/trigger(s)",
+        ]
+        for _, name, sql in tables[:_SQLITE_MAX_TABLES]:
+            quoted = '"' + name.replace('"', '""') + '"'
+            count = con.execute(f"SELECT COUNT(*) FROM {quoted}").fetchone()[0]
+            out += ["", f"## {name}  ({count:,} rows)", sql.strip()]
+            cur = con.execute(f"SELECT * FROM {quoted} LIMIT {_SQLITE_PREVIEW_ROWS}")
+            cols = [d[0] for d in cur.description]
+            rows = cur.fetchall()
+            if rows:
+                out.append("| " + " | ".join(cols) + " |")
+                out.append("|" + "---|" * len(cols))
+                for row in rows:
+                    out.append("| " + " | ".join(_sqlite_cell(v) for v in row) + " |")
+        if len(tables) > _SQLITE_MAX_TABLES:
+            out.append(f"\n... {len(tables) - _SQLITE_MAX_TABLES} more tables omitted")
+        if others:
+            out += ["", "## Indexes / views / triggers"]
+            out += [f"- {kind} {name}" for kind, name, _ in others]
+        out += [
+            "",
+            "Query it with the terminal: sqlite3 <path> 'SELECT ...' "
+            "(or Python's sqlite3 module).",
+        ]
+        return "\n".join(out)
+    except sqlite3.Error as exc:
+        raise ExtractionError(f"SQLite read failed: {exc}") from exc
+    finally:
+        con.close()
+
+
+def _sqlite_cell(value) -> str:
+    if value is None:
+        return "NULL"
+    if isinstance(value, (bytes, bytearray)):
+        return f"<blob {len(value)} bytes>"
+    text = str(value).replace("|", "\\|").replace("\n", " ")
+    if len(text) <= _SQLITE_CELL_CHARS:
+        return text
+    return text[: _SQLITE_CELL_CHARS - 1] + "…"

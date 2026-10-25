@@ -80,6 +80,27 @@ class TestRepairToolCallArguments:
         # Truncated in the middle of a string key — bracket closing won't help
         assert _repair_tool_call_arguments('{"truncated": "val', "t") == "{}"
 
+    def test_braces_inside_string_values_do_not_skew_the_balance(self):
+        # A "}" inside a value is not structure; naive counting dropped this to "{}".
+        result = _repair_tool_call_arguments('{"code": "}", "x": 1', "t")
+        assert json.loads(result) == {"code": "}", "x": 1}
+
+    def test_braces_inside_values_offset_the_count_the_other_way(self):
+        result = _repair_tool_call_arguments('{"code": "if (x) {", "y": 2', "t")
+        assert json.loads(result) == {"code": "if (x) {", "y": 2}
+
+    def test_truncated_nested_array_closes_in_stack_order(self):
+        result = _repair_tool_call_arguments('{"items": [{"n": 1}, {"n": 2', "t")
+        assert json.loads(result) == {"items": [{"n": 1}, {"n": 2}]}
+
+    def test_truncated_flat_array_closes_correctly(self):
+        result = _repair_tool_call_arguments('{"a": [1, 2', "t")
+        assert json.loads(result) == {"a": [1, 2]}
+
+    def test_escaped_quote_inside_string_is_not_a_terminator(self):
+        result = _repair_tool_call_arguments('{"x": "a\\"}b"', "t")
+        assert json.loads(result) == {"x": 'a"}b'}
+
     # -- Valid JSON passthrough (this path is via except, but still works) --
 
     def test_already_valid_json_passes_through(self):
