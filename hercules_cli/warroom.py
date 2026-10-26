@@ -183,11 +183,18 @@ def _delegate(args: list[str]) -> int:
     """Hand a non-warroom invocation to the real Hercules CLI."""
     # Lazy: hercules_cli.main is 14.7k lines and imports this package's
     # siblings, so a module-level import here would cycle.
-    from hercules_cli.main import main as _hercules_main
-
+    #
+    # Set sys.argv BEFORE the import. hercules_cli.main calls
+    # _apply_profile_override() at module level, which scans sys.argv for
+    # -p/--profile. If we import first, the override runs against the
+    # original argv (or an incomplete one) and the flag is left for
+    # argparse, which then treats the profile name as the command
+    # ("invalid choice: 'live'"). Setting argv first makes the pre-parser
+    # see the correct arguments.
     argv_backup = sys.argv
     sys.argv = [argv_backup[0], *args]
     try:
+        from hercules_cli.main import main as _hercules_main
         return int(_hercules_main() or 0)
     except SystemExit as exc:
         if exc.code is None:
