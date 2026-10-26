@@ -177,9 +177,9 @@ class GodmodeExecutor:
         self.execution_log.append(log_entry)
 
         if self.config.log_evidence:
-            logger.info(f"GODMODE activation: {log_entry['execution_id']}")
-            logger.debug(f"Keywords: {metadata.get('detected_keywords', [])}")
-            logger.debug(f"Confidence: {metadata.get('confidence', 0):.2f}")
+            logger.info("GODMODE activation: %s", log_entry["execution_id"])
+            logger.debug("Keywords: %s", metadata.get("detected_keywords", []))
+            logger.debug("Confidence: %.2f", metadata.get("confidence", 0))
 
     def get_execution_log(self) -> list:
         """Return execution log."""
@@ -200,7 +200,7 @@ def load_godmode_config(soul_path: Optional[str] = None) -> GodmodeConfig:
     if soul_path.exists():
         try:
             import yaml
-            with open(soul_path) as f:
+            with open(soul_path, encoding="utf-8") as f:
                 soul_dict = yaml.safe_load(f) or {}
 
             godmode_config = soul_dict.get("godmode", {})
@@ -224,8 +224,8 @@ def load_godmode_config(soul_path: Optional[str] = None) -> GodmodeConfig:
             config.log_evidence = logging_config.get("log_evidence", True)
             config.compress_logs = logging_config.get("compress_logs", True)
 
-            logger.debug(f"Loaded GodmodeConfig from {soul_path}")
+            logger.debug("Loaded GodmodeConfig from %s", soul_path)
         except Exception as e:
-            logger.warning(f"Failed to load GODMODE config: {e}, using defaults")
+            logger.warning("Failed to load GODMODE config: %s, using defaults", e)
 
     return config

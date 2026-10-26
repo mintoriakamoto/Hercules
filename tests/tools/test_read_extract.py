@@ -361,3 +361,42 @@ class TestReadFileToolIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSqliteExtraction(unittest.TestCase):
+    def test_sqlite_reads_as_schema_overview(self):
+        import sqlite3
+
+        from tools.file_tools import read_file_tool
+
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "shop.db")
+            con = sqlite3.connect(db)
+            con.executescript(
+                "CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT, blob BLOB);"
+                "CREATE INDEX ix_name ON users(name);"
+                "INSERT INTO users VALUES(1,'ann|pipe',x'0011'),(2,'bob',NULL);"
+            )
+            con.commit()
+            con.close()
+
+            content = json.loads(read_file_tool(db))["content"]
+            self.assertIn("## users  (2 rows)", content)
+            self.assertIn("CREATE TABLE users", content)
+            self.assertIn("<blob 2 bytes>", content)
+            self.assertIn("ann\\|pipe", content)
+            self.assertIn("index ix_name", content)
+
+    def test_non_sqlite_db_is_refused_not_read_as_text(self):
+        from tools.file_tools import read_file_tool
+        from tools.read_extract import ExtractionError, extract_document_text
+
+        with tempfile.TemporaryDirectory() as d:
+            fake = os.path.join(d, "notdb.db")
+            with open(fake, "wb") as fh:
+                fh.write(b"hello, not a database")
+            with self.assertRaisesRegex(ExtractionError, "not a SQLite database"):
+                extract_document_text(fake)
+            self.assertIn(
+                "Cannot read binary file", json.loads(read_file_tool(fake))["error"]
+            )

@@ -8547,6 +8547,10 @@ def _notification_event_dedup_key(evt: dict) -> tuple:
             evt.get("message", ""),
             evt.get("suppressed", 0),
         )
+    if evt_type == "heartbeat":
+        # Each heartbeat is a distinct event; key by sequence so later beats
+        # from the same process are not suppressed.
+        return (evt_sid, evt_type, evt.get("seq", 0))
     if evt_type == "async_delegation":
         # Async-delegation completions have no process session_id; without
         # this the fallthrough keys every one as ("", "async_delegation")

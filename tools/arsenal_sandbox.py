@@ -301,7 +301,7 @@ class ArsenalSandbox:
 
     def _audit_log(self, record: SandboxExecution):
         """Write immutable audit log entry."""
-        with open(self.audit_log, "a") as f:
+        with open(self.audit_log, "a", encoding="utf-8") as f:
             f.write(json.dumps(record.to_dict()) + "\n")
 
         logger.info(f"Arsenal audit: {record.tool_name} "

@@ -59,7 +59,7 @@ def test_imports() -> Tuple[int, int, List[str]]:
 
     for py_file in py_files[:50]:  # Test first 50 to avoid timeout
         try:
-            with open(py_file) as f:
+            with open(py_file, encoding="utf-8") as f:
                 ast.parse(f.read())
             passed += 1
         except SyntaxError as e:
@@ -115,7 +115,7 @@ def test_capability_modules() -> Tuple[int, int, List[str]]:
         full_path = Path('/home/user/Hercules') / filepath
         try:
             if full_path.exists():
-                with open(full_path) as f:
+                with open(full_path, encoding="utf-8") as f:
                     ast.parse(f.read())
                 passed += 1
             else:
@@ -142,7 +142,7 @@ def test_skills() -> Tuple[int, int, List[str]]:
 
     for skill_file in skill_files:
         try:
-            with open(skill_file) as f:
+            with open(skill_file, encoding="utf-8") as f:
                 content = f.read()
 
             # Check for required sections
@@ -175,7 +175,7 @@ def test_cache_files() -> Tuple[int, int, List[str]]:
     for cache_file in cache_files:
         full_path = Path('/home/user/Hercules') / cache_file
         try:
-            with open(full_path) as f:
+            with open(full_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             # Check file age (should be recent)

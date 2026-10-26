@@ -37,7 +37,7 @@ class KanbanGates:
     def register_board(self, board_id: str, owner_id: str) -> None:
         """Register board ownership."""
         self.board_owners[board_id] = owner_id
-        logger.info(f"Registered board {board_id} to {owner_id}")
+        logger.info("Registered board %s to %s", board_id, owner_id)
 
 
 class ApprovalGates:
@@ -65,10 +65,10 @@ class ApprovalGates:
             result = invoke_hook(hook_name, context=context)
             return result
         except ImportError:
-            logger.warning(f"Approval hooks unavailable; defaulting to {default}")
+            logger.warning("Approval hooks unavailable; defaulting to %s", default)
             return default
         except Exception as e:
-            logger.error(f"Approval hook {hook_name} FAILED: {e}; defaulting to {default}")
+            logger.error("Approval hook %s FAILED: %s; defaulting to %s", hook_name, e, default)
             return default
 
 

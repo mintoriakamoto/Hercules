@@ -16,7 +16,7 @@ class CodeAnalyzer:
 
     def __init__(self, filepath: Path):
         self.filepath = filepath
-        self.content = filepath.read_text()
+        self.content = filepath.read_text(encoding="utf-8")
         self.tree = ast.parse(self.content)
         self._analyze()
 

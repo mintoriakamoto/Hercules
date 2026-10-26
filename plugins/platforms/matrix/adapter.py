@@ -647,6 +647,63 @@ def _handle_generated_matrix_recovery_key(mxid: str, recovery_key: str) -> None:
         )
 
 
+# --- LaTeX math ($...$, $$...$$) -> Element data-mx-maths markup ---
+# Element typesets <div|span data-mx-maths="TEX"> at display time. The sanitizer
+# allowlists tags/attrs, so math is swapped for plain-text sentinel tokens before
+# Markdown conversion (protecting TeX from escaping) and expanded back after
+# sanitization. Code spans and fenced blocks are never tokenized, so shell
+# variables like ``$HOME`` in code stay literal.
+_TEX_TOKEN_RE = re.compile(r"HERCULESTEX(?:DISPLAY|INLINE)(\d+)HERCULESTEXEND")
+_TEX_DISPLAY_TOKEN = "HERCULESTEXDISPLAY%dHERCULESTEXEND"
+_TEX_INLINE_TOKEN = "HERCULESTEXINLINE%dHERCULESTEXEND"
+_TEX_CODE_SPLIT_RE = re.compile(r"(```.*?```|`[^`\n]+`)", re.DOTALL)
+
+
+def _latex_to_tokens(text: str) -> tuple[str, list[tuple[str, str]]]:
+    """Replace ``$$...$$`` / ``$...$`` outside code with sentinel tokens.
+
+    Returns the tokenized text plus an ordered ``(tag, tex)`` store, where tag
+    is ``div`` for display math and ``span`` for inline math. Dollars that do
+    not form a pair (prices, literals) are left untouched.
+    """
+    if not text or "$" not in text:
+        return text, []
+    store: list[tuple[str, str]] = []
+
+    def _sub_display(match: re.Match[str]) -> str:
+        store.append(("div", match.group(1).strip()))
+        return _TEX_DISPLAY_TOKEN % (len(store) - 1)
+
+    def _sub_inline(match: re.Match[str]) -> str:
+        store.append(("span", match.group(1).strip()))
+        return _TEX_INLINE_TOKEN % (len(store) - 1)
+
+    parts = _TEX_CODE_SPLIT_RE.split(text)
+    for idx, part in enumerate(parts):
+        if idx % 2 == 1 or "$" not in part:
+            continue
+        part = re.sub(r"\$\$([^\n$]+?)\$\$", _sub_display, part)
+        parts[idx] = re.sub(r"(?<![\\$\w])\$([^\n$]+?)\$(?!\w)", _sub_inline, part)
+    return "".join(parts), store
+
+
+def _tokens_to_mx_maths(html: str, store: list[tuple[str, str]]) -> str:
+    """Expand sentinel tokens into ``data-mx-maths`` markup (TeX HTML-escaped)."""
+    if not store:
+        return html
+
+    def _expand(match: re.Match[str]) -> str:
+        idx = int(match.group(1))
+        if idx >= len(store):
+            # User-typed text that collides with the sentinel format.
+            return match.group(0)
+        tag, tex = store[idx]
+        escaped = _html_escape(tex, quote=True)
+        return f'<{tag} data-mx-maths="{escaped}">{escaped}</{tag}>'
+
+    return _TEX_TOKEN_RE.sub(_expand, html)
+
+
 def _sanitize_matrix_html(html: str) -> str:
     sanitizer = _MatrixHtmlSanitizer()
     try:
@@ -4295,6 +4352,7 @@ class MatrixAdapter(BasePlatformAdapter):
         Matrix HTML spec allows.
         """
         text = _pre_sanitize_matrix_markdown(text)
+        text, tex_store = _latex_to_tokens(text)
         try:
             import markdown as _md
 
@@ -4309,11 +4367,13 @@ class MatrixAdapter(BasePlatformAdapter):
 
             if html.count("<p>") == 1:
                 html = html.replace("<p>", "").replace("</p>", "")
-            return _sanitize_matrix_html(html)
+            return _tokens_to_mx_maths(_sanitize_matrix_html(html), tex_store)
         except ImportError:
             pass
 
-        return _sanitize_matrix_html(self._markdown_to_html_fallback(text))
+        return _tokens_to_mx_maths(
+            _sanitize_matrix_html(self._markdown_to_html_fallback(text)), tex_store
+        )
 
     # ------------------------------------------------------------------
     # Regex-based Markdown -> HTML (no extra dependencies)

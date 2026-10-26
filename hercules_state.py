@@ -5998,7 +5998,7 @@ class SessionDB:
 
         def _do(conn):
             cursor = conn.execute(
-                f"SELECT s.id FROM sessions s WHERE {where}", where_params
+                "SELECT s.id FROM sessions s WHERE " + where, where_params
             )
             session_ids = {row["id"] for row in cursor.fetchall()}
 

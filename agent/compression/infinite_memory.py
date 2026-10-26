@@ -181,13 +181,16 @@ class InfiniteMemoryManager:
             streaming.save_snapshot(snapshot)
             self.pending_snapshots.append(snapshot)
             logger.info(
-                f"Created context snapshot {snapshot.snapshot_id}: "
-                f"{snapshot.turn_count} turns, {snapshot.total_chars:,} chars -> "
-                f"{snapshot.summary_chars:,} chars ({snapshot.compression_ratio:.1%})"
+                "Created context snapshot %s: %d turns, %d chars -> %d chars (%.1f%% ratio)",
+                snapshot.snapshot_id,
+                snapshot.turn_count,
+                snapshot.total_chars,
+                snapshot.summary_chars,
+                snapshot.compression_ratio * 100,
             )
             return snapshot
         except Exception as e:
-            logger.error(f"Failed to create snapshot: {e}", exc_info=True)
+            logger.error("Failed to create snapshot: %s", e, exc_info=True)
             return None
 
     def build_hierarchy(
@@ -250,7 +253,7 @@ class InfiniteMemoryManager:
                 "estimated_cost": costs.get(f"level_{level}", 0),
             }
         except Exception as e:
-            logger.error(f"Failed to fetch context at level {level}: {e}", exc_info=True)
+            logger.error("Failed to fetch context at level %s: %s", level, e, exc_info=True)
             return [], {"error": str(e)}
 
     def get_compression_recommendation(self) -> Dict[str, Any]:

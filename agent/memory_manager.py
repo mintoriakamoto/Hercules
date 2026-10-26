@@ -25,6 +25,7 @@ Usage in run_agent.py:
 
 from __future__ import annotations
 
+import atexit
 import json
 import logging
 import re
@@ -670,6 +671,12 @@ class MemoryManager:
                         max_workers=1,
                         thread_name_prefix="mem-sync",
                     )
+                    # Flush with a short timeout on normal exit so in-flight
+                    # writes are not silently dropped.  Daemon threads are
+                    # killed unconditionally otherwise; 2 s is enough for disk
+                    # I/O but won't block if a provider is wedged on a network
+                    # call.
+                    atexit.register(self.flush_pending, 2.0)
                 except Exception as e:  # pragma: no cover - resource exhaustion
                     logger.warning("Failed to create memory sync executor: %s", e)
                     return None

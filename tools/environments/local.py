@@ -483,6 +483,8 @@ _ALWAYS_STRIP_KEYS: frozenset[str] = frozenset({
     "HASS_TOKEN",
     "EMAIL_PASSWORD",
     "HERCULES_DASHBOARD_SESSION_TOKEN",
+    "HERCULES_DASHBOARD_DRAIN_SECRET",
+    "API_SERVER_KEY",
     # Remote-compute / infrastructure secrets
     "MODAL_TOKEN_ID",
     "MODAL_TOKEN_SECRET",

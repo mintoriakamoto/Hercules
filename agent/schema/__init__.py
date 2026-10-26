@@ -24,7 +24,7 @@ class SchemaValidator:
         """Load all schemas from schema directory."""
         schema_dir = Path(__file__).parent
         for schema_file in schema_dir.glob("*.schema.json"):
-            with open(schema_file) as f:
+            with open(schema_file, encoding="utf-8") as f:
                 schema_data = json.load(f)
                 schema_name = schema_file.stem
                 cls._schemas[schema_name] = schema_data

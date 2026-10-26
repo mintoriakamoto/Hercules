@@ -31,7 +31,7 @@ support.
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 
 # Sources that are excluded from session browsing/searching by default.
@@ -55,6 +55,9 @@ _DEMOTED_SESSION_SOURCES = ("cron",)
 # interactive matches buried under a wall of cron hits, so this is well above
 # the handful of distinct sessions a typical query returns.
 _DISCOVER_SCAN_LIMIT = 300
+# exclude_session_ids: ids already inspected this task; capped so a runaway
+# list can't fan out lineage walks.
+_EXCLUDE_SESSION_IDS_CAP = 20
 
 
 def _format_timestamp(ts: Union[int, float, str, None]) -> str:
@@ -532,6 +535,74 @@ def _title_match_result(
     if lineage_root and lineage_root != session_id:
         entry["parent_session_id"] = lineage_root
     return entry
+
+
+def _parse_iso_bound(value: Optional[str]) -> Optional[int]:
+    """Parse an ISO date/datetime into a UTC unix timestamp.
+
+    A date-only value (``YYYY-MM-DD``) is midnight UTC on that day; naive
+    datetimes are taken as UTC. Raises ``ValueError`` on unparseable input.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        raise ValueError(f"invalid ISO timestamp: {value!r}") from None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return int(parsed.timestamp())
+
+
+def _coerce_started_ts(value: Any) -> Optional[int]:
+    """``sessions.started_at`` as an int unix timestamp (numeric or ISO text)."""
+    if value is None or value == "" or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    text = str(value).strip()
+    try:
+        return int(float(text))
+    except (TypeError, ValueError):
+        pass
+    try:
+        return _parse_iso_bound(text)
+    except ValueError:
+        return None
+
+
+def _in_time_window(
+    started_ts: Optional[int], after_ts: Optional[int], before_ts: Optional[int]
+) -> bool:
+    """``after_ts <= started_ts < before_ts``; an unknown start fails any bound."""
+    if after_ts is None and before_ts is None:
+        return True
+    if started_ts is None:
+        return False
+    return (after_ts is None or started_ts >= after_ts) and (
+        before_ts is None or started_ts < before_ts
+    )
+
+
+def _normalize_exclude_session_ids(raw: Any) -> List[str]:
+    """Deduped, stripped session ids from a str or list, capped."""
+    if isinstance(raw, str):
+        items = [raw]
+    elif isinstance(raw, (list, tuple)):
+        items = list(raw)
+    else:
+        items = []
+    out: List[str] = []
+    for item in items:
+        sid = item.strip() if isinstance(item, str) else ""
+        if sid and sid not in out:
+            out.append(sid)
+        if len(out) >= _EXCLUDE_SESSION_IDS_CAP:
+            break
+    return out
 
 
 def _discover(
