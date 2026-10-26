@@ -327,7 +327,7 @@ fine-tuning = [
 ]
 # Vector databases and RAG frameworks — semantic search, embeddings, retrieval.
 vector-dbs = [
-  "sentence-transformers==3.0.1",
+  "sentence-transformers==5.6.0",
   "qdrant-client==1.12.2",
   "pinecone-client==4.1.0",
   "chromadb==1.5.9",
