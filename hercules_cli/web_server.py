@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 import hashlib
 import hmac
 import inspect
+import ipaddress
 import importlib.util
 import json
 import logging
@@ -6365,6 +6366,45 @@ def _parse_model_ids(resp: "Any") -> List[str]:
     return ids
 
 
+def _is_safe_outbound_base_url(raw: str) -> bool:
+    """Return True only for public http(s) endpoints.
+
+    Blocks localhost and non-public IP literals to reduce SSRF risk.
+    """
+    try:
+        parsed = urllib.parse.urlsplit((raw or "").strip())
+    except Exception:
+        return False
+
+    if parsed.scheme not in ("http", "https"):
+        return False
+
+    host = parsed.hostname
+    if not host:
+        return False
+
+    host_l = host.lower()
+    if host_l == "localhost" or host_l.endswith(".localhost"):
+        return False
+
+    try:
+        ip = ipaddress.ip_address(host_l)
+    except ValueError:
+        # Hostname (not an IP literal). Allow; DNS-level controls are out of scope here.
+        return True
+
+    if (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    ):
+        return False
+    return True
+
+
 @app.post("/api/providers/validate")
 async def validate_provider_credential(body: EnvVarUpdate, request: Request):
     """Live-probe a provider credential before it's saved.
@@ -6387,6 +6427,12 @@ async def validate_provider_credential(body: EnvVarUpdate, request: Request):
     # ids the endpoint advertises (OpenAI ``/v1/models`` shape) so the GUI can
     # auto-pick a default without asking the user to type a model name.
     if key == "OPENAI_BASE_URL":
+        if not _is_safe_outbound_base_url(value):
+            return {
+                "ok": False,
+                "reachable": True,
+                "message": "Only public http(s) base URLs are allowed.",
+            }
         url = value.rstrip("/") + "/models"
         # Send the optional API key so endpoints that require auth on
         # ``/v1/models`` (many hosted OpenAI-compatible servers) still enumerate
