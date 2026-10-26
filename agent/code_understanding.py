@@ -95,11 +95,12 @@ class CodeAnalyzer:
             "classes": list(self.classes.keys()),
             "imports": list(self.imports),
             "exports": list(self.exports),
-            "total_complexity": sum(self.complexity.values()),
+            "total_complexity": sum(
+                f["complexity"] for f in self.functions.values()
+            ),
             "avg_complexity": (
-                sum(self.complexity.values()) / len(self.complexity)
-                if self.complexity
-                else 0
+                sum(f["complexity"] for f in self.functions.values()) /
+                len(self.functions) if self.functions else 0
             ),
         }
 
@@ -148,20 +149,23 @@ class CodeRepository:
 
     def get_complexity_report(self) -> Dict[str, Any]:
         """Generate complexity analysis report."""
+        def _file_complexity(analyzer: "CodeAnalyzer") -> int:
+            return analyzer._cyclomatic_complexity(analyzer.tree)
+
         files_by_complexity = sorted(
             self.files.items(),
-            key=lambda x: x[1]._cyclomatic_complexity,
-            reverse=True
+            key=lambda x: _file_complexity(x[1]),
+            reverse=True,
         )
 
         return {
             "most_complex_files": [
-                (f, analyzer._cyclomatic_complexity)
+                (f, _file_complexity(analyzer))
                 for f, analyzer in files_by_complexity[:10]
             ],
             "total_files": len(self.files),
             "avg_file_complexity": (
-                sum(f._cyclomatic_complexity for f in self.files.values()) /
+                sum(_file_complexity(a) for a in self.files.values()) /
                 len(self.files) if self.files else 0
             ),
         }

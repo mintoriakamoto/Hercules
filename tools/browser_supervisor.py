@@ -28,8 +28,12 @@ import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-import websockets
-from websockets.asyncio.client import ClientConnection
+try:
+    import websockets
+    from websockets.asyncio.client import ClientConnection
+except ImportError:
+    websockets = None  # type: ignore[assignment]
+    ClientConnection = None  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 

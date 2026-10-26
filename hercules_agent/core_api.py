@@ -234,9 +234,7 @@ def run_conversation(
     Returns:
         Agent's response
     """
-    # This will integrate with agent.run_conversation_step()
-    # or similar when implementation is complete
-    raise NotImplementedError("Integration point for conversation execution")
+    return agent.chat(user_message)
 
 
 __all__ = [
