@@ -234,33 +234,26 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
         "starlette==1.0.1",  # CVE-2026-48710 — keep in sync with pyproject [computer-use]
     ),
     # HF Agent Trace Viewer upload (hercules trace upload / /upload-trace).
-    "tool.trace_upload": ("huggingface-hub==0.24.3",),
+    "tool.trace_upload": ("huggingface-hub==0.36.2",),
     # ─── ML & Accelerated Computing ────────────────────────────────────────
     # GPU/accelerated computing — CUDA toolkit, cuDNN, NCCL for GPU training/inference.
     # Linux-only (CUDA unavailable on macOS/Windows via PyPI).
     "ml.accelerated": (
-        "nvidia-cuda-runtime==12.8.1",
-        "nvidia-cuda-toolkit==12.8.1",
-        "nvidia-cudnn==9.2.1.18",
-        "nvidia-nccl==2.22.3",
-        "nvidia-dali==1.41.0",
+        "torch==2.7.0",
     ),
     # Advanced AI/LLM backends — frameworks for building with language models.
     "ml.ai_llm": (
         "anthropic==0.87.0",
-        "transformers==4.45.2",
-        "llamaindex==0.9.48",
-        "langchain==0.2.11",
+        "transformers==4.55.4",
         "peft==0.10.0",
         "bitsandbytes==0.42.0",
-        "lora==0.1.2",
     ),
     # Extended ML stack — advanced training, optimization, gradient boosting.
     "ml.extended": (
         "pytorch-lightning==2.1.3",
-        "tensorboard==2.15.1",
+        "tensorboard==2.18.0",
         "optuna==3.6.0",
-        "ray==2.10.1",
+        "ray==2.45.0",
         "xgboost==2.0.3",
         "lightgbm==4.1.0",
         "catboost==1.2.5",
@@ -268,8 +261,6 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     # Fine-tuning and training — DPO, GRPO, SFT, memory-efficient training.
     "ml.fine_tuning": (
         "trl==0.13.0",
-        "unsloth==2024.1.1",
-        "llm-compressor==0.8.0",
         "datasets==2.21.0",
         "accelerate==1.2.1",
         "deepspeed==0.15.4",
@@ -277,32 +268,29 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     # Vector databases and RAG — semantic search, embeddings, retrieval.
     "ml.vector_dbs": (
         "sentence-transformers==3.0.1",
-        "qdrant-client==1.10.1",
+        "qdrant-client==1.12.2",
         "pinecone-client==4.1.0",
-        "chromadb==0.6.0",
+        "chromadb==1.5.9",
         "faiss-cpu==1.8.0",
     ),
     # Prompt engineering — guidance, structured outputs, observability.
     "ml.prompt_engineering": (
-        "guidance==0.2.0",
-        "instructor==1.8.4",
-        "pydantic-ai==0.25.1",
-        "langfuse==3.10.0",
+        "guidance==0.3.1",
+        "instructor==1.17.0",
+        "pydantic-ai==1.0.0",
+        "langfuse==4.15.6",
     ),
     # Inference optimization — fast serving, quantization, conversion.
     "ml.inference_optimization": (
-        "vllm==0.6.4",
         "flash-attn==2.8.1",
-        "onnx==1.16.3",
+        "onnx==1.17.0",
         "onnxruntime==1.20.1",
-        "openvino==2024.2.0",
     ),
     # Multi-agent orchestration — autonomous agents, team coordination.
     "ml.multi_agent": (
-        "autogen-agentchat==0.3.0",
-        "crewai==0.95.0",
+        "autogen-agentchat==0.4.9.3",
         "smolagents==1.4.1",
-        "gpt4all==3.5.0",
+        "gpt4all==2.8.2",
     ),
 }
 
