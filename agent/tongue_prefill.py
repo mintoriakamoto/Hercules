@@ -98,7 +98,7 @@ class TonguePrefill:
         self.g0dm0d3_available = self._check_g0dm0d3()
 
         if self.config.log_transforms:
-            logger.info(f"TonguePrefill initialized: {self.config}")
+            logger.info("TonguePrefill initialized: %s", self.config)
 
     def _check_g0dm0d3(self) -> bool:
         """Check if G0DM0D3 is available."""
@@ -110,9 +110,9 @@ class TonguePrefill:
 
         available = parseltongue_script.exists()
         if available:
-            logger.debug(f"G0DM0D3 found at {path}")
+            logger.debug("G0DM0D3 found at %s", path)
         else:
-            logger.debug(f"G0DM0D3 not found at {path} (will use inline fallback)")
+            logger.debug("G0DM0D3 not found at %s (will use inline fallback)", path)
 
         return available
 
@@ -152,7 +152,7 @@ class TonguePrefill:
             techniques_applied.append("libertas")
 
         if self.config.log_transforms:
-            logger.info(f"Applied tongue techniques: {techniques_applied}")
+            logger.info("Applied tongue techniques: %s", techniques_applied)
 
         return result
 
@@ -175,7 +175,7 @@ class TonguePrefill:
                 if result.returncode == 0:
                     return result.stdout.strip()
             except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
-                logger.debug(f"G0DM0D3 subprocess failed: {e}, using inline fallback")
+                logger.debug("G0DM0D3 subprocess failed: %s, using inline fallback", e)
 
         # Inline fallback
         if self.config.fallback_to_inline:
@@ -283,11 +283,11 @@ def load_tongue_config(soul_path: Optional[str] = None) -> TongueConfig:
     if soul_path.exists():
         try:
             import yaml
-            with open(soul_path) as f:
+            with open(soul_path, encoding="utf-8") as f:
                 soul_dict = yaml.safe_load(f) or {}
             config = TongueConfig.from_soul_config(soul_dict)
-            logger.debug(f"Loaded TongueConfig from {soul_path}")
+            logger.debug("Loaded TongueConfig from %s", soul_path)
         except Exception as e:
-            logger.warning(f"Failed to load SOUL.yaml: {e}, using defaults")
+            logger.warning("Failed to load SOUL.yaml: %s, using defaults", e)
 
     return config

@@ -198,7 +198,7 @@ def compress_tool_output(
         else:
             data = json.dumps(result, default=str).encode()
     except (TypeError, ValueError):
-        logger.warning(f"Failed to serialize result from {tool_name}")
+        logger.warning("Failed to serialize result from %s", tool_name)
         return False
 
     original_size = len(data)
@@ -207,7 +207,7 @@ def compress_tool_output(
     try:
         compressed = zlib.compress(data, level=6)
     except Exception as e:
-        logger.warning(f"Failed to compress {tool_name} output: {e}")
+        logger.warning("Failed to compress %s output: %s", tool_name, e)
         return False
 
     compressed_size = len(compressed)
@@ -215,7 +215,7 @@ def compress_tool_output(
 
     # Only store if compression actually helps
     if compression_ratio >= 0.95:
-        logger.debug(f"Skipped caching {tool_name}: poor compression ratio")
+        logger.debug("Skipped caching %s: poor compression ratio", tool_name)
         return False
 
     with _DB_LOCK:
@@ -231,12 +231,15 @@ def compress_tool_output(
             )
             conn.commit()
             logger.debug(
-                f"Cached {tool_name} output: {original_size} -> {compressed_size} bytes "
-                f"({compression_ratio:.1%} ratio)"
+                "Cached %s output: %d -> %d bytes (%.1f%% ratio)",
+                tool_name,
+                original_size,
+                compressed_size,
+                compression_ratio * 100,
             )
             return True
         except Exception as e:
-            logger.error(f"Failed to cache {tool_name} output: {e}")
+            logger.error("Failed to cache %s output: %s", tool_name, e)
             return False
         finally:
             conn.close()
@@ -279,7 +282,7 @@ def get_cached_output(tool_name: str, args: Any) -> Optional[Any]:
                 except (json.JSONDecodeError, UnicodeDecodeError):
                     return data.decode()
             except Exception as e:
-                logger.error(f"Failed to decompress cached {tool_name} output: {e}")
+                logger.error("Failed to decompress cached %s output: %s", tool_name, e)
                 return None
         finally:
             conn.close()

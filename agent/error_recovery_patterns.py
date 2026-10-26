@@ -256,21 +256,21 @@ def safe_get(
     """
     try:
         if not isinstance(obj, dict):
-            logger.debug(f"safe_get called on non-dict: {type(obj)}")
+            logger.debug("safe_get called on non-dict: %s", type(obj))
             return default
 
         value = obj.get(key, default)
 
         if expected_type and value is not None and not isinstance(value, expected_type):
             logger.debug(
-                f"type mismatch for key '{key}': expected {expected_type.__name__}, "
-                f"got {type(value).__name__}"
+                "type mismatch for key '%s': expected %s, got %s",
+                key, expected_type.__name__, type(value).__name__,
             )
             return default
 
         return value
     except Exception as e:
-        logger.debug(f"error in safe_get for key '{key}': {e}")
+        logger.debug("error in safe_get for key '%s': %s", key, e)
         return default
 
 
@@ -287,9 +287,9 @@ def safe_close(resource: Any, resource_name: str = "resource") -> None:
     try:
         if hasattr(resource, "close"):
             resource.close()
-            logger.debug(f"closed {resource_name}")
+            logger.debug("closed %s", resource_name)
     except Exception as e:
-        logger.warning(f"error closing {resource_name}: {e}")
+        logger.warning("error closing %s: %s", resource_name, e)
 
 
 # Context manager for safe resource handling
@@ -355,10 +355,10 @@ class FallbackChain:
         for func, name in self.functions:
             try:
                 result = func(*args, **kwargs)
-                self.logger.debug(f"fallback chain succeeded: {name}")
+                self.logger.debug("fallback chain succeeded: %s", name)
                 return result
             except Exception as e:
-                self.logger.debug(f"fallback '{name}' failed: {type(e).__name__}: {e}")
+                self.logger.debug("fallback '%s' failed: %s: %s", name, type(e).__name__, e)
 
-        self.logger.warning(f"all {len(self.functions)} fallbacks failed")
+        self.logger.warning("all %d fallbacks failed", len(self.functions))
         return default

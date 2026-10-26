@@ -122,11 +122,11 @@ class AuditLog:
             log_file = self.log_dir / f"audit_{self.session_id}.jsonl"
 
             with self._lock:
-                with open(log_file, "w") as f:
+                with open(log_file, "w", encoding="utf-8") as f:
                     for entry in self.entries:
                         f.write(json.dumps(entry.to_dict()) + "\n")
 
             return log_file
         except Exception as e:
-            logger.error(f"Failed to write audit log: {e}")
+            logger.error("Failed to write audit log: %s", e)
             return None

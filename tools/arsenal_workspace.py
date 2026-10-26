@@ -328,7 +328,7 @@ class ArsenalWorkspace:
             "changes_detail": [c.to_dict() for c in self.changes],
         }
 
-        with open(op_file, "a") as f:
+        with open(op_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(op_record) + "\n")
 
     def _load_snapshots(self):

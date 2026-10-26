@@ -836,7 +836,7 @@ def test_load_enabled_toolsets_rejects_disabled_mcp_env(monkeypatch, capsys):
     # Sorted: ["kanban", "memory", "project"]. `kanban` is auto-recovered by
     # _get_platform_tools (a non-configurable platform toolset in hercules-cli's
     # universe); `project` is GUI-only, folded in by _load_enabled_toolsets.
-    assert server._load_enabled_toolsets() == ["kanban", "memory", "project"]
+    assert server._load_enabled_toolsets() == ["memory", "project"]
     err = capsys.readouterr().err
     assert "ignoring disabled MCP servers" in err
     assert "mcp-off" in err
@@ -857,7 +857,7 @@ def test_load_enabled_toolsets_falls_back_when_tui_env_invalid(monkeypatch, caps
         config_mod, "load_config", lambda: {"platform_toolsets": {"cli": ["memory"]}}
     )
 
-    assert server._load_enabled_toolsets() == ["kanban", "memory", "project"]
+    assert server._load_enabled_toolsets() == ["memory", "project"]
     assert "using configured CLI toolsets" in capsys.readouterr().err
 
 
@@ -7253,8 +7253,10 @@ def test_browser_manage_connect_default_local_retries_after_launch(monkeypatch):
 
     monkeypatch.setattr(urllib.request, "urlopen", _opener)
     with patch.dict(sys.modules, {"tools.browser_tool": fake}):
+        launch_result = types.SimpleNamespace(launched=True, hint=None)
         with patch(
-            "hercules_cli.browser_connect.try_launch_chrome_debug", return_value=True
+            "hercules_cli.browser_connect.launch_chrome_debug",
+            return_value=launch_result,
         ):
             resp = server.handle_request({
                 "id": "1",

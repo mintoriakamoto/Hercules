@@ -5,6 +5,10 @@
     "HERCULES_ENABLE_OPTIONAL_PACKAGES": "1"
   },
   "permissions": {
-    "defaultMode": "default"
+    "defaultMode": "default",
+    "allow": [
+      "mcp__github__actions_list",
+      "mcp__github__get_job_logs"
+    ]
   }
 }

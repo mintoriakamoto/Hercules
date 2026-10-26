@@ -415,7 +415,7 @@ def init_agent(
 
         agent.audit_log = AuditLog(session_id=session_id or str(uuid.uuid4()))
     except Exception as e:
-        logger.warning(f"Failed to initialize audit log: {e}")
+        logger.warning("Failed to initialize audit log: %s", e)
         agent.audit_log = None
 
     # FIX 6-9: Initialize safety gates
@@ -426,7 +426,7 @@ def init_agent(
         agent._approval_gates = approval_gates
         agent._optional_deps = optional_deps
     except Exception as e:
-        logger.warning(f"Failed to initialize safety gates: {e}")
+        logger.warning("Failed to initialize safety gates: %s", e)
 
     agent.model = model
     agent.max_iterations = max_iterations
@@ -1718,6 +1718,19 @@ def init_agent(
     except (TypeError, ValueError):
         _api_retries = 3
     agent._api_max_retries = _api_retries
+    # Bounded auto-recovery cycles once retries AND the fallback chain are spent
+    # on a transient outage (agent/turn_recovery_autorecover.py). 0 disables.
+    from agent.turn_recovery_autorecover import DEFAULT_AUTO_RECOVERY_CYCLES
+
+    try:
+        agent._auto_recovery_cycles = max(
+            int(
+                _agent_section.get("auto_recovery_cycles", DEFAULT_AUTO_RECOVERY_CYCLES)
+            ),
+            0,
+        )
+    except (TypeError, ValueError):
+        agent._auto_recovery_cycles = DEFAULT_AUTO_RECOVERY_CYCLES
 
     # Initialize context compressor for automatic context management
     # Compresses conversation when approaching model's context limit

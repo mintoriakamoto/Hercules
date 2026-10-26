@@ -98,7 +98,7 @@ _DEFAULT_CONFIG = ValidationConfig()
 def _log_validation_failure(field: str, reason: str, config: ValidationConfig) -> None:
     """Log validation failure at appropriate level."""
     if config.log_failures:
-        logger.warning(f"Validation failed: {field} - {reason}")
+        logger.warning("Validation failed: %s - %s", field, reason)
 
 
 def validate_string(

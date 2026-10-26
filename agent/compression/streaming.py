@@ -246,12 +246,12 @@ def save_snapshot(snapshot: ContextSnapshot) -> str:
 
     # Save synchronously for now; could be async in future
     try:
-        with open(snapshot_path, "w") as f:
+        with open(snapshot_path, "w", encoding="utf-8") as f:
             json.dump(snapshot.to_dict(), f, indent=2)
-        logger.debug(f"Saved context snapshot: {snapshot_path}")
+        logger.debug("Saved context snapshot: %s", snapshot_path)
         return str(snapshot_path)
     except Exception as e:
-        logger.error(f"Failed to save snapshot: {e}", exc_info=True)
+        logger.error("Failed to save snapshot: %s", e, exc_info=True)
         raise
 
 
@@ -271,11 +271,11 @@ def load_snapshot(snapshot_id: str) -> Optional[ContextSnapshot]:
         return None
 
     try:
-        with open(snapshot_path, "r") as f:
+        with open(snapshot_path, "r", encoding="utf-8") as f:
             data = json.load(f)
         return ContextSnapshot.from_dict(data)
     except Exception as e:
-        logger.error(f"Failed to load snapshot {snapshot_id}: {e}", exc_info=True)
+        logger.error("Failed to load snapshot %s: %s", snapshot_id, e, exc_info=True)
         return None
 
 
@@ -321,7 +321,7 @@ def cleanup_old_snapshots(max_age_days: int = 7) -> int:
                 snapshot_file.unlink()
                 removed += 1
             except Exception as e:
-                logger.warning(f"Failed to remove old snapshot: {e}")
+                logger.warning("Failed to remove old snapshot: %s", e)
 
     return removed
 

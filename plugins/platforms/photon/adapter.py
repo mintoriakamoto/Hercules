@@ -457,8 +457,8 @@ class PhotonAdapter(BasePlatformAdapter):
 
         # Start consuming the inbound gRPC stream from the sidecar.
         self._inbound_running = True
-        self._inbound_task = asyncio.get_event_loop().create_task(self._inbound_loop())
-        self._sidecar_health_task = asyncio.get_event_loop().create_task(
+        self._inbound_task = asyncio.create_task(self._inbound_loop())
+        self._sidecar_health_task = asyncio.create_task(
             self._monitor_sidecar_health()
         )
 
@@ -993,8 +993,7 @@ class PhotonAdapter(BasePlatformAdapter):
         )
 
         # Pump sidecar stderr/stdout into our logger so users see crashes.
-        loop = asyncio.get_event_loop()
-        self._sidecar_supervisor_task = loop.create_task(
+        self._sidecar_supervisor_task = asyncio.create_task(
             self._supervise_sidecar(self._sidecar_proc)
         )
 
@@ -1027,7 +1026,7 @@ class PhotonAdapter(BasePlatformAdapter):
         if proc.stdout is None:  # subprocess was launched without stdout=PIPE
             return
         stdout = proc.stdout
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             while True:
                 line = await loop.run_in_executor(None, stdout.readline)

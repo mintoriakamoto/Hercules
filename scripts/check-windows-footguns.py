@@ -29,6 +29,7 @@ Suppress an intentional use (e.g. tests or platform-gated code) with:
 from __future__ import annotations
 
 import argparse
+import ast
 import os
 import re
 import subprocess
@@ -408,6 +409,41 @@ def _find_unquoted_hash(line: str) -> int | None:
     return None
 
 
+def _suppressed_lines(text: str) -> set[int]:
+    """Lines covered by a ``# windows-footgun: ok`` marker.
+
+    A marker covers the smallest statement containing it, so it survives a
+    formatter wrapping the call across lines. For compound statements only
+    the header counts, never the body.
+    """
+    lines = text.splitlines()
+    marked = {i for i, ln in enumerate(lines, start=1) if SUPPRESS_MARKER.search(ln)}
+    if not marked:
+        return set()
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return marked
+    spans: list[tuple[int, int]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.stmt) or node.end_lineno is None:
+            continue
+        body = getattr(node, "body", None)
+        if isinstance(body, list) and body and isinstance(body[0], ast.stmt):
+            spans.append((node.lineno, max(node.lineno, body[0].lineno - 1)))
+        else:
+            spans.append((node.lineno, node.end_lineno))
+    covered = set(marked)
+    for m in marked:
+        best = None
+        for start, end in spans:
+            if start <= m <= end and (best is None or end - start < best[1] - best[0]):
+                best = (start, end)
+        if best:
+            covered.update(range(best[0], best[1] + 1))
+    return covered
+
+
 def scan_file(path: Path, footguns: list[Footgun]) -> list[tuple[int, str, Footgun]]:
     """Return a list of (line_number, line, footgun) for unsuppressed matches."""
     try:
@@ -415,6 +451,7 @@ def scan_file(path: Path, footguns: list[Footgun]) -> list[tuple[int, str, Footg
     except OSError:
         return []
     matches: list[tuple[int, str, Footgun]] = []
+    suppressed = _suppressed_lines(text)
 
     # Track whether we're inside a triple-quoted string (docstring/raw block).
     # Simple state machine — handles both ''' and """, toggled by the FIRST
@@ -457,7 +494,7 @@ def scan_file(path: Path, footguns: list[Footgun]) -> list[tuple[int, str, Footg
                     code_for_scan = "".join(parts[::2])
                     break
 
-        if SUPPRESS_MARKER.search(line):
+        if i in suppressed:
             continue
         # Skip if the line has an obvious guard — e.g. hasattr/getattr/
         # shutil.which or a platform check. False negatives are acceptable;
