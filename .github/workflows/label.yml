@@ -6,7 +6,9 @@
 # https://github.com/actions/labeler
 
 name: Labeler
-on: [pull_request_target]
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
 
 jobs:
   label:
@@ -16,12 +18,13 @@ jobs:
       pull-requests: write
 
     steps:
-    - name: Check out repo
+    - name: Check out base branch
       uses: actions/checkout@v4
       with:
+        ref: ${{ github.base_ref }}
         fetch-depth: 0
 
-    - name: Apply labels
+    - name: Apply labels based on files changed
       uses: actions/labeler@v5
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
