@@ -10,13 +10,20 @@ on: [pull_request_target]
 
 jobs:
   label:
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
 
     steps:
-    - uses: actions/labeler@v4
+    - name: Check out repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Apply labels
+      uses: actions/labeler@v5
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        configuration-path: .github/labeler.yml
+        sync-labels: false
