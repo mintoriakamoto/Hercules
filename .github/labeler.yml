@@ -51,4 +51,6 @@
 'area: config':
   - '**/*.yaml'
   - '**/*.yml'
+  - '**/package.json'
+  - '**/package-lock.json'
   - config/**/*
