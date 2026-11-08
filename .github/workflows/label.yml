@@ -17,9 +17,6 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.0
-
-    - uses: actions/labeler@ac9175f8a1f3625fd4fff7f6e60039f8c179ea94 # v4.0.2
+    - uses: actions/labeler@v4
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        configuration-path: .github/labeler.yml
