@@ -190,13 +190,13 @@ def _locate_session_db(session_id: str):
     try:
         from hercules_cli import profiles as profiles_mod
         from hercules_state import SessionDB
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None, None
 
     targets = [("default", profiles_mod.get_profile_dir("default"))]
     try:
         targets += [(info.name, info.path) for info in profiles_mod.list_profiles()]
-    except (IndexError, KeyError):
+    except Exception:
         logging.debug("list_profiles failed during session locate", exc_info=True)
 
     seen: set = set()
@@ -208,12 +208,12 @@ def _locate_session_db(session_id: str):
         seen.add(key)
         try:
             pdb = SessionDB(db_path=db_path, read_only=True)
-        except (AttributeError, ValueError):
+        except Exception:
             continue
         try:
             if pdb.get_session(session_id):
                 return pdb, name
-        except (AttributeError, ValueError):
+        except Exception:
             logging.debug(
                 "get_session probe failed for %s in %s", session_id, name, exc_info=True
             )
@@ -412,7 +412,7 @@ def _scroll(
                         )
                         try:
                             session_meta = db.get_session(owning) or session_meta
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
                         session_id = owning
                 except Exception as e:
@@ -464,7 +464,7 @@ def _title_match_result(
 
     try:
         session_id = db.resolve_session_by_title(title_query)
-    except (AttributeError, ValueError):
+    except Exception:
         logging.debug(
             "resolve_session_by_title failed for %r", title_query, exc_info=True
         )
@@ -478,7 +478,7 @@ def _title_match_result(
 
     try:
         session_meta = db.get_session(lineage_root) or db.get_session(session_id) or {}
-    except (AttributeError, ValueError):
+    except Exception:
         logging.debug(
             "get_session failed for title match %s", session_id, exc_info=True
         )
@@ -488,7 +488,7 @@ def _title_match_result(
 
     try:
         messages = db.get_messages(session_id)
-    except (AttributeError, ValueError):
+    except Exception:
         logging.debug(
             "get_messages failed for title match %s", session_id, exc_info=True
         )
@@ -498,7 +498,7 @@ def _title_match_result(
     if anchor_id is not None:
         try:
             view = db.get_anchored_view(session_id, anchor_id, window=5, bookend=3)
-        except (AttributeError, ValueError):
+        except Exception:
             logging.debug(
                 "get_anchored_view failed for title match %s/%s",
                 session_id,
@@ -605,6 +605,14 @@ def _normalize_exclude_session_ids(raw: Any) -> List[str]:
     return out
 
 
+def _session_started_ts(db, session_id: str) -> Optional[int]:
+    try:
+        meta = db.get_session(session_id) or {}
+    except Exception:
+        meta = {}
+    return _coerce_started_ts(meta.get("started_at"))
+
+
 def _discover(
     db,
     query: str,
@@ -612,13 +620,31 @@ def _discover(
     limit: int,
     sort: Optional[str],
     current_session_id: str = None,
+    after_ts: Optional[int] = None,
+    before_ts: Optional[int] = None,
+    exclude_session_ids: Optional[List[str]] = None,
 ) -> str:
     """Discovery shape: FTS5 + anchored window + bookends per hit. Single call."""
     role_list = role_filter if role_filter else ["user", "assistant"]
     current_lineage_root = (
         _resolve_to_parent(db, current_session_id) if current_session_id else None
     )
+    # Excluded ids plus their lineage roots, so a child id also hides its parent chain.
+    excluded_roots: set = set()
+    for sid in exclude_session_ids or []:
+        excluded_roots.add(sid)
+        excluded_roots.add(_resolve_to_parent(db, sid) or sid)
     title_result = _title_match_result(db, query, current_lineage_root)
+    if title_result:
+        title_sid = title_result.get("session_id")
+        title_root = title_result.get("_lineage_root") or title_sid
+        title_started = _session_started_ts(db, title_root)
+        if title_started is None and title_sid:
+            title_started = _session_started_ts(db, title_sid)
+        if {title_sid, title_root} & excluded_roots or not _in_time_window(
+            title_started, after_ts, before_ts
+        ):
+            title_result = None
 
     try:
         raw_results = db.search_messages(
@@ -676,6 +702,14 @@ def _discover(
             continue
         if current_session_id and raw_sid == current_session_id:
             continue
+        if raw_sid in excluded_roots or resolved_sid in excluded_roots:
+            continue
+        if after_ts is not None or before_ts is not None:
+            started_ts = _coerce_started_ts(r.get("session_started"))
+            if started_ts is None:
+                started_ts = _session_started_ts(db, raw_sid)
+            if not _in_time_window(started_ts, after_ts, before_ts):
+                continue
         if resolved_sid not in seen_sessions:
             row = dict(r)
             row["_lineage_root"] = resolved_sid
@@ -702,7 +736,7 @@ def _discover(
 
         try:
             session_meta = db.get_session(lineage_root) or {}
-        except (AttributeError, ValueError):
+        except Exception:
             session_meta = {}
 
         entry = {
@@ -757,6 +791,10 @@ def session_search(
     sort: str = None,
     # Cross-profile (any shape)
     profile: str = None,
+    # Discovery shape (appended so positional order stays frozen)
+    after: str = None,
+    before: str = None,
+    exclude_session_ids: Optional[List[str]] = None,
 ) -> str:
     """Single-shape tool. Mode inferred from which args are set.
 
@@ -774,7 +812,7 @@ def session_search(
             from hercules_state import SessionDB
 
             db = SessionDB()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logging.debug("SessionDB unavailable for session_search", exc_info=True)
             from hercules_state import format_session_db_unavailable
 
@@ -861,6 +899,11 @@ def session_search(
         if candidate in ("newest", "oldest"):
             sort_norm = candidate
 
+    try:
+        after_ts, before_ts = _parse_iso_bound(after), _parse_iso_bound(before)
+    except ValueError as e:
+        return tool_error(str(e), success=False)
+
     return _discover(
         db=db,
         query=query.strip(),
@@ -868,6 +911,9 @@ def session_search(
         limit=limit,
         sort=sort_norm,
         current_session_id=current_session_id,
+        after_ts=after_ts,
+        before_ts=before_ts,
+        exclude_session_ids=_normalize_exclude_session_ids(exclude_session_ids),
     )
 
 
@@ -1014,6 +1060,32 @@ SESSION_SEARCH_SCHEMA = {
                     "behaviour) or 'tool' to search tool output only."
                 ),
             },
+            "after": {
+                "type": "string",
+                "description": (
+                    "Discovery shape only. Inclusive lower bound on session start "
+                    "time (ISO date or datetime, e.g. 2026-06-01). Use only when the "
+                    "user names a time frame. sort is a ranking bias, not a bound."
+                ),
+            },
+            "before": {
+                "type": "string",
+                "description": (
+                    "Discovery shape only. Exclusive upper bound on session start "
+                    "time (ISO date or datetime, e.g. 2026-07-01). A date-only value "
+                    "is midnight UTC that day. Use only when the user names a time "
+                    "frame."
+                ),
+            },
+            "exclude_session_ids": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "Discovery shape only. Session ids already inspected this task. "
+                    "Those sessions and their lineage are omitted so a later query "
+                    "explores instead of repeating the same hit. Cap 20."
+                ),
+            },
             "profile": {
                 "type": "string",
                 "description": (
@@ -1045,6 +1117,9 @@ registry.register(
         window=args.get("window", 5),
         sort=args.get("sort"),
         profile=args.get("profile"),
+        after=args.get("after"),
+        before=args.get("before"),
+        exclude_session_ids=args.get("exclude_session_ids"),
         db=kw.get("db"),
         current_session_id=kw.get("current_session_id"),
     ),

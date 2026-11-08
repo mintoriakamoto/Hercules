@@ -130,7 +130,7 @@ def _resolve_skill_commands_platform() -> Optional[str]:
         resolved_platform = os.getenv("HERCULES_PLATFORM") or get_session_env(
             "HERCULES_SESSION_PLATFORM"
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         resolved_platform = os.getenv("HERCULES_PLATFORM")
     return resolved_platform or None
 
@@ -152,7 +152,7 @@ def _load_skill_payload(
         loaded_skill = json.loads(
             skill_view(normalized, task_id=task_id, preprocess=False)
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     if not loaded_skill.get("success"):
@@ -171,7 +171,7 @@ def _load_skill_payload(
     elif skill_path:
         try:
             skill_dir = SKILLS_DIR / Path(skill_path).parent
-        except (OSError, ZeroDivisionError):
+        except Exception:
             skill_dir = None
 
     return loaded_skill, skill_dir, skill_name
@@ -214,7 +214,7 @@ def _inject_skill_config(loaded_skill: dict[str, Any], parts: list[str]) -> None
             lines.append(f"  {key} = {display_val}")
         lines.append("]")
         parts.extend(lines)
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass  # Non-critical — skill still loads without config injection
 
 
@@ -390,9 +390,9 @@ def scan_skill_commands() -> Dict[str, Dict[str, Any]]:
                         "skill_md_path": str(skill_md),
                         "skill_dir": str(skill_md.parent),
                     }
-                except (ValueError):
+                except Exception:
                     continue
-    except (ValueError):
+    except Exception:
         pass
     return _skill_commands
 
@@ -528,7 +528,7 @@ def build_skill_invocation_message(
         from tools.skill_usage import bump_use
 
         bump_use(skill_name)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass  # Non-critical — skill invocation proceeds regardless
 
     activation_note = (
@@ -637,7 +637,7 @@ def build_stacked_skill_invocation_message(
             from tools.skill_usage import bump_use
 
             bump_use(skill_name)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Non-critical
 
         # NOTE: must start with "[Loaded as part of the " — that prefix is
@@ -713,7 +713,7 @@ def build_preloaded_skills_prompt(
         from agent.skill_utils import get_disabled_skill_names
 
         disabled_names = get_disabled_skill_names()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         disabled_names = set()
 
     seen: set[str] = set()
@@ -739,7 +739,7 @@ def build_preloaded_skills_prompt(
             from tools.skill_usage import bump_use
 
             bump_use(skill_name)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Non-critical
 
         activation_note = activation_note_template.format(name=skill_name)
@@ -787,7 +787,5 @@ def build_auto_load_prompt(
     if not names:
         return "", [], []
     return build_preloaded_skills_prompt(
-        names,
-        task_id=task_id,
-        activation_note_template=_AUTO_LOAD_ACTIVATION_NOTE,
+        names, task_id=task_id, activation_note_template=_AUTO_LOAD_ACTIVATION_NOTE
     )

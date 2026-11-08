@@ -2,7 +2,7 @@
 # setuptools>=77. Keep this floor in lockstep with the `license` form in
 # [project]; an older build backend rejects the string form.
 [build-system]
-requires = ["setuptools>=77.0,<85"]
+requires = ["setuptools>=77.0,<83"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -157,11 +157,11 @@ edge-tts = ["edge-tts==7.2.7"]
 modal = ["modal==1.3.4"]
 daytona = ["daytona==0.155.0"]
 hindsight = ["hindsight-client==0.6.1"]
-dev = ["debugpy==1.8.20", "pytest==9.0.2", "pytest-asyncio==1.3.0", "pytest-xdist==3.6.1", "mcp==1.26.0", "starlette==1.0.1", "ty==0.0.21", "ruff==0.15.10", "setuptools==84.1.0"]  # starlette: CVE-2026-48710; setuptools: latest <82 (torch >=2.11 caps setuptools<82); pytest-xdist: parallel test execution for Ryzen 9950X (14 workers)
-messaging = ["python-telegram-bot[webhooks]==22.6", "discord.py[voice]==2.7.1", "aiohttp==3.14.4", "brotlicffi==1.2.0.1", "slack-bolt==1.27.0", "slack-sdk==3.40.1", "qrcode==7.4.2"]  # aiohttp 3.14.1: CVE-2026-34513/34518/34519/34520/34525 + 34993(RCE)/47265
+dev = ["debugpy==1.8.20", "pytest==9.0.2", "pytest-asyncio==1.3.0", "pytest-xdist==3.6.1", "mcp==1.26.0", "starlette==1.0.1", "ty==0.0.21", "ruff==0.15.10", "setuptools==81.0.0"]  # starlette: CVE-2026-48710; setuptools: latest <82 (torch >=2.11 caps setuptools<82); pytest-xdist: parallel test execution for Ryzen 9950X (14 workers)
+messaging = ["python-telegram-bot[webhooks]==22.6", "discord.py[voice]==2.7.1", "aiohttp==3.14.3", "brotlicffi==1.2.0.1", "slack-bolt==1.27.0", "slack-sdk==3.40.1", "qrcode==7.4.2"]  # aiohttp 3.14.3: GHSA-cq5v-8q36-5273; 3.14.1: CVE-2026-34513/34518/34519/34520/34525 + 34993(RCE)/47265
 cron = []  # croniter is now a core dependency; this extra kept for back-compat
-slack = ["slack-bolt==1.27.0", "slack-sdk==3.40.1", "aiohttp==3.14.4"]
-matrix = ["mautrix[encryption]==0.21.0", "aiosqlite==0.22.1", "asyncpg==0.31.0", "aiohttp-socks==0.11.0", "aiohttp==3.14.4"]  # aiohttp 3.14.1: CVE-2026-34993(RCE)/47265 + 34513/34518/34519/34520/34525 (mautrix/aiohttp-socks only cap aiohttp<4 / >=3.10, so pin the patched floor directly)
+slack = ["slack-bolt==1.27.0", "slack-sdk==3.40.1", "aiohttp==3.14.3"]
+matrix = ["mautrix[encryption]==0.21.0", "aiosqlite==0.22.1", "asyncpg==0.31.0", "aiohttp-socks==0.11.0", "aiohttp==3.14.3"]  # aiohttp 3.14.3: GHSA-cq5v-8q36-5273; 3.14.1: CVE-2026-34993(RCE)/47265 + 34513/34518/34519/34520/34525 (mautrix/aiohttp-socks only cap aiohttp<4 / >=3.10, so pin the patched floor directly)
 # WeCom callback-mode adapter — parses untrusted XML POST bodies from
 # WeCom-controlled callback endpoints, so we use defusedxml (drop-in
 # replacement for stdlib xml.etree.ElementTree) to block billion-laughs
@@ -205,9 +205,9 @@ vision = ["opencv-python==4.10.0.84"]
 # a vulnerable pre-1.0.1 transitive. Bump in lockstep with uv.lock.
 mcp = ["mcp==1.26.0", "starlette==1.0.1"]  # starlette: CVE-2026-48710
 nemo-relay = ["nemo-relay==0.3"]
-homeassistant = ["aiohttp==3.14.4"]
-sms = ["aiohttp==3.14.4"]
-teams = ["microsoft-teams-apps==2.0.13.4", "aiohttp==3.14.4"]  # aiohttp 3.14.1: CVE-2026-34993(RCE)/47265 + 34513/34518/34519/34520/34525
+homeassistant = ["aiohttp==3.14.3"]
+sms = ["aiohttp==3.14.3"]
+teams = ["microsoft-teams-apps==2.0.13.4", "aiohttp==3.14.3"]  # aiohttp 3.14.3: GHSA-cq5v-8q36-5273; 3.14.1: CVE-2026-34993(RCE)/47265 + 34513/34518/34519/34520/34525
 # Computer use — macOS background desktop control via cua-driver (MCP stdio).
 # The cua-driver binary itself is installed via `hercules tools` post-setup
 # (curl install script); this extra just pins the MCP client used to talk
@@ -268,13 +268,13 @@ youtube = [
 # `hercules dashboard` (localhost SPA + API).  Not in core to keep the default install lean.
 # starlette==1.0.1 pinned for CVE-2026-48710 (BadHost) — fastapi pulls Starlette
 # transitively and pre-1.0.1 is the vulnerable range. See the mcp extra above.
-web = ["fastapi==0.133.1", "uvicorn[standard]==0.41.0", "starlette==1.0.1", "python-multipart==0.0.27"]
+web = ["fastapi==0.133.1", "uvicorn[standard]==0.41.0", "starlette==1.0.1", "python-multipart==0.0.32"]  # python-multipart 0.0.32: GHSA-5rvq-cxj2-64vf
 # Machine learning backends — for AI model inference, embeddings, and fine-tuning.
 # Lazy-installed when ML features are first used.
 ml = [
-  "huggingface-hub==0.36.2",
-  "transformers==4.55.4",
-  "torch==2.7.0",
+  "huggingface-hub==0.24.3",
+  "transformers==4.41.2",
+  "torch==2.4.0",
 ]
 # Audio processing — text-to-speech (TTS), speech recognition, and audio handling.
 # Lazy-installed when audio features are first used.
@@ -293,64 +293,8 @@ data = [
 # Lazy-installed when needed for building custom services.
 web-server = [
   "Flask==3.0.0",
-  "flask-cors==4.0.0",
+  "flask-cors==4.0.2",  # GHSA-hxwh-jpp2-84pm (CORS regex/path mismatch)
   "gunicorn==23.0.0",
-]
-# GPU/accelerated computing — CUDA toolkit 12.8, cuDNN, NCCL for GPU-accelerated inference and training.
-# Linux-only (CUDA unavailable on macOS/Windows via PyPI).
-accelerated = [
-  "torch==2.7.0",
-]
-# Advanced AI/LLM backends — frameworks for building with language models.
-ai-llm = [
-  "anthropic==0.87.0",
-  "transformers==4.55.4",
-  "peft==0.10.0",
-  "bitsandbytes==0.42.0",
-]
-# Extended ML stack — advanced training, optimization, and gradient boosting.
-ml-extended = [
-  "pytorch-lightning==2.1.3",
-  "tensorboard==2.18.0",
-  "optuna==3.6.0",
-  "ray==2.45.0",
-  "xgboost==2.0.3",
-  "lightgbm==4.1.0",
-  "catboost==1.2.5",
-]
-# Fine-tuning and training frameworks — DPO, GRPO, SFT, memory-efficient training.
-fine-tuning = [
-  "trl==0.13.0",
-  "datasets==5.0.1",
-  "accelerate==1.2.1",
-  "deepspeed==0.15.4",
-]
-# Vector databases and RAG frameworks — semantic search, embeddings, retrieval.
-vector-dbs = [
-  "sentence-transformers==3.0.1",
-  "qdrant-client==1.12.2",
-  "pinecone-client==4.1.0",
-  "chromadb==1.5.9",
-  "faiss-cpu==1.8.0",
-]
-# Prompt engineering and structured outputs — guidance, validation, observability.
-prompt-engineering = [
-  "guidance==0.3.1",
-  "instructor==1.17.0",
-  "pydantic-ai==1.0.0",
-  "langfuse==4.15.6",
-]
-# Inference optimization — fast LLM serving, quantization, model conversion.
-inference-optimization = [
-  "flash-attn==2.8.1",
-  "onnx==1.17.0",
-  "onnxruntime==1.20.1",
-]
-# Multi-agent orchestration — autonomous agents, workflows, team coordination.
-multi-agent = [
-  "autogen-agentchat==0.4.9.3",
-  "smolagents==1.4.1",
-  "gpt4all==2.8.2",
 ]
 all = [
   # Policy (2026-05-12): `[all]` includes only extras that genuinely
@@ -385,9 +329,6 @@ all = [
   "hercules-agent[web]",
   "hercules-agent[youtube]",
 ]
-# ML/AI packages (accelerated, fine-tuning, etc.) are in LAZY_DEPS only.
-# They require heavy compilation (CUDA, C++, numpy) that fails on Termux/Android.
-# Keep [all] lean for mobile; users lazy-install ML backends on demand.
 
 [project.scripts]
 # Unified front door: warroom:main owns the warroom/tempest/obliterate verbs
