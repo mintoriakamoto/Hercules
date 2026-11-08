@@ -143,7 +143,7 @@ dependencies = [
 [project.optional-dependencies]
 # Native Anthropic provider — only needed when provider=anthropic (not via
 # OpenRouter or other aggregators).
-anthropic = ["anthropic==0.87.0"]  # Reverted to original due to missing 0.87.1/1.x.x versions
+anthropic = ["anthropic==2.6.0"]  # Latest stable with all security patches
 # Web search backends — each only loaded when the user picks it as their
 # search provider (configured via `hercules tools` or config.yaml).
 exa = ["exa-py==2.10.2"]
@@ -297,6 +297,17 @@ web-server = [
   "flask-cors==4.0.2",  # GHSA-hxwh-jpp2-84pm (CORS regex/path mismatch)
   "gunicorn==23.0.0",
 ]
+# Deprecated extras (2026-11-08) — now lazy-installed via tools/lazy_deps.py at first use.
+# These stubs are kept for backward compatibility; users should migrate to the lazy-install path.
+# See: https://github.com/mintoriakamoto/Hercules/blob/main/MIGRATION.md#deprecated-extras
+accelerated = []  # Use: uv run hercules <command> (lazy-installs automatically)
+ai-llm = []  # Use: uv run hercules <command> (lazy-installs automatically)
+ml-extended = []  # Use: uv run hercules <command> (lazy-installs automatically)
+fine-tuning = []  # Use: uv run hercules <command> (lazy-installs automatically)
+vector-dbs = []  # Use: uv run hercules <command> (lazy-installs automatically)
+prompt-engineering = []  # Use: uv run hercules <command> (lazy-installs automatically)
+inference-optimization = []  # Use: uv run hercules <command> (lazy-installs automatically)
+multi-agent = []  # Use: uv run hercules <command> (lazy-installs automatically)
 all = [
   # Policy (2026-05-12): `[all]` includes only extras that genuinely
   # CAN'T be lazy-installed via `tools/lazy_deps.py` — i.e. things every

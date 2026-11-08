@@ -97,7 +97,7 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     # ─── Inference providers ───────────────────────────────────────────────
     # Native Anthropic SDK — needed when provider=anthropic (not via
     # OpenRouter / aggregators which use the openai SDK).
-    "provider.anthropic": ("anthropic==0.87.0",),  # CVE-2026-34450, CVE-2026-34452
+    "provider.anthropic": ("anthropic==2.6.0",),  # Latest stable with all security patches
     # AWS Bedrock provider
     "provider.bedrock": ("boto3==1.42.89",),
     # Google Vertex AI provider — OAuth2 token minting for the Gemini
@@ -243,7 +243,7 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     ),
     # Advanced AI/LLM backends — frameworks for building with language models.
     "ml.ai_llm": (
-        "anthropic==0.87.0",
+        "anthropic==2.6.0",
         "transformers==4.55.4",
         "peft==0.10.0",
         "bitsandbytes==0.42.0",
