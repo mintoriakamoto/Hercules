@@ -80,7 +80,7 @@ jobs:
       # absorbs transient install-time fetch flakes (same pattern as CI).
       - uses: ./.github/actions/retry
         with:
-          command: npm ci
+          command: npm ci --legacy-peer-deps
       - name: Build installers (${{ matrix.dist }})
         run: npm run --prefix apps/desktop ${{ matrix.dist }}
         env:

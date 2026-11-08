@@ -56,10 +56,10 @@ jobs:
           node-version: "22"
 
       - name: Build web dashboard
-        run: cd web && npm ci && npm run build
+        run: cd web && npm ci --legacy-peer-deps && npm run build
 
       - name: Build TUI bundle
-        run: cd ui-tui && npm ci && npm run build
+        run: cd ui-tui && npm ci --legacy-peer-deps && npm run build
 
       - name: Bundle TUI into hercules_cli
         run: |

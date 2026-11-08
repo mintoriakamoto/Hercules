@@ -53,7 +53,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/desktop
-        run: npm install --omit=optional
+        run: npm install --omit=optional --legacy-peer-deps
 
       - name: Build macOS ${{ matrix.arch }}
         working-directory: apps/desktop
@@ -102,7 +102,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/desktop
-        run: npm install --omit=optional
+        run: npm install --omit=optional --legacy-peer-deps
 
       - name: Build Windows ${{ matrix.arch }}
         working-directory: apps/desktop
@@ -166,7 +166,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/desktop
-        run: npm install --omit=optional
+        run: npm install --omit=optional --legacy-peer-deps
 
       - name: Setup cross-compile environment (${{ matrix.arch }})
         if: matrix.arch == 'arm64'

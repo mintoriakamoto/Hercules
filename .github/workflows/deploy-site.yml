@@ -153,7 +153,7 @@ jobs:
         run: python3 website/scripts/generate-skill-docs.py
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
         working-directory: website
 
       - name: Build Docusaurus
