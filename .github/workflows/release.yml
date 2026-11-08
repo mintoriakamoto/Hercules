@@ -65,10 +65,10 @@ jobs:
       # Same asset-bundling sequence as upload_to_pypi.yml so a release wheel
       # is identical to a PyPI wheel.
       - name: Build web dashboard
-        run: cd web && npm ci --legacy-peer-deps && npm run build
+        run: cd web && npm ci && npm run build
 
       - name: Build TUI bundle
-        run: cd ui-tui && npm ci --legacy-peer-deps && npm run build
+        run: cd ui-tui && npm ci && npm run build
 
       - name: Bundle TUI into hercules_cli
         run: |
