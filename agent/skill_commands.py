@@ -130,7 +130,8 @@ def _resolve_skill_commands_platform() -> Optional[str]:
         resolved_platform = os.getenv("HERCULES_PLATFORM") or get_session_env(
             "HERCULES_SESSION_PLATFORM"
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError) as e:
+        logger.debug("Failed to import get_session_env: %s", e)
         resolved_platform = os.getenv("HERCULES_PLATFORM")
     return resolved_platform or None
 
@@ -152,7 +153,8 @@ def _load_skill_payload(
         loaded_skill = json.loads(
             skill_view(normalized, task_id=task_id, preprocess=False)
         )
-    except Exception:
+    except (ImportError, ModuleNotFoundError, ValueError, json.JSONDecodeError) as e:
+        logger.debug("Failed to load skill payload for %s: %s", raw_identifier, e)
         return None
 
     if not loaded_skill.get("success"):
@@ -171,7 +173,8 @@ def _load_skill_payload(
     elif skill_path:
         try:
             skill_dir = SKILLS_DIR / Path(skill_path).parent
-        except Exception:
+        except (ValueError, TypeError) as e:
+            logger.debug("Failed to resolve skill directory from path %s: %s", skill_path, e)
             skill_dir = None
 
     return loaded_skill, skill_dir, skill_name
@@ -214,8 +217,8 @@ def _inject_skill_config(loaded_skill: dict[str, Any], parts: list[str]) -> None
             lines.append(f"  {key} = {display_val}")
         lines.append("]")
         parts.extend(lines)
-    except Exception:
-        pass  # Non-critical — skill still loads without config injection
+    except (ImportError, ModuleNotFoundError, ValueError, KeyError) as e:
+        logger.debug("Failed to inject skill config: %s", e)  # Non-critical — skill still loads without config injection
 
 
 def _build_skill_message(
@@ -390,10 +393,11 @@ def scan_skill_commands() -> Dict[str, Dict[str, Any]]:
                         "skill_md_path": str(skill_md),
                         "skill_dir": str(skill_md.parent),
                     }
-                except Exception:
+                except (OSError, UnicodeDecodeError, ValueError, KeyError) as e:
+                    logger.debug("Failed to process skill file %s: %s", skill_md, e)
                     continue
-    except Exception:
-        pass
+    except (ImportError, ModuleNotFoundError) as e:
+        logger.debug("Failed to scan skill commands: %s", e)
     return _skill_commands
 
 
@@ -528,8 +532,8 @@ def build_skill_invocation_message(
         from tools.skill_usage import bump_use
 
         bump_use(skill_name)
-    except Exception:
-        pass  # Non-critical — skill invocation proceeds regardless
+    except (ImportError, ModuleNotFoundError) as e:
+        logger.debug("Failed to bump skill usage for %s: %s", skill_name, e)  # Non-critical — skill invocation proceeds regardless
 
     activation_note = (
         f'[IMPORTANT: The user has invoked the "{skill_name}" skill, indicating they want '
@@ -637,8 +641,8 @@ def build_stacked_skill_invocation_message(
             from tools.skill_usage import bump_use
 
             bump_use(skill_name)
-        except Exception:
-            pass  # Non-critical
+        except (ImportError, ModuleNotFoundError) as e:
+            logger.debug("Failed to bump skill usage for %s: %s", skill_name, e)  # Non-critical
 
         # NOTE: must start with "[Loaded as part of the " — that prefix is
         # the bundle block marker the memory-scaffolding extractor cuts on.
@@ -713,7 +717,8 @@ def build_preloaded_skills_prompt(
         from agent.skill_utils import get_disabled_skill_names
 
         disabled_names = get_disabled_skill_names()
-    except Exception:
+    except (ImportError, ModuleNotFoundError) as e:
+        logger.debug("Failed to get disabled skill names: %s", e)
         disabled_names = set()
 
     seen: set[str] = set()
@@ -739,8 +744,8 @@ def build_preloaded_skills_prompt(
             from tools.skill_usage import bump_use
 
             bump_use(skill_name)
-        except Exception:
-            pass  # Non-critical
+        except (ImportError, ModuleNotFoundError) as e:
+            logger.debug("Failed to bump skill usage for %s: %s", skill_name, e)  # Non-critical
 
         activation_note = activation_note_template.format(name=skill_name)
         prompt_parts.append(
@@ -764,7 +769,8 @@ def resolve_auto_load_skills(user_config: dict | None = None) -> list[str]:
             from hercules_cli.config import load_config_readonly
 
             user_config = load_config_readonly()
-        except Exception:
+        except (ImportError, ModuleNotFoundError, IOError) as e:
+            logger.debug("Failed to load config for auto_load skills: %s", e)
             return []
     skills_block = user_config.get("skills") if isinstance(user_config, dict) else None
     auto_load = (

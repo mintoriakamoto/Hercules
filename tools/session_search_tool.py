@@ -190,14 +190,15 @@ def _locate_session_db(session_id: str):
     try:
         from hercules_cli import profiles as profiles_mod
         from hercules_state import SessionDB
-    except Exception:
+    except (ImportError, ModuleNotFoundError) as e:
+        logging.debug("Failed to import profiles or SessionDB: %s", e, exc_info=True)
         return None, None
 
     targets = [("default", profiles_mod.get_profile_dir("default"))]
     try:
         targets += [(info.name, info.path) for info in profiles_mod.list_profiles()]
-    except Exception:
-        logging.debug("list_profiles failed during session locate", exc_info=True)
+    except (OSError, AttributeError) as e:
+        logging.debug("list_profiles failed during session locate: %s", e, exc_info=True)
 
     seen: set = set()
     for name, home in targets:
@@ -208,14 +209,15 @@ def _locate_session_db(session_id: str):
         seen.add(key)
         try:
             pdb = SessionDB(db_path=db_path, read_only=True)
-        except Exception:
+        except (IOError, OSError, ValueError) as e:
+            logging.debug("Failed to open session DB at %s: %s", db_path, e, exc_info=True)
             continue
         try:
             if pdb.get_session(session_id):
                 return pdb, name
-        except Exception:
+        except (OSError, KeyError, AttributeError) as e:
             logging.debug(
-                "get_session probe failed for %s in %s", session_id, name, exc_info=True
+                "get_session probe failed for %s in %s: %s", session_id, name, e, exc_info=True
             )
         pdb.close()
 
@@ -412,8 +414,8 @@ def _scroll(
                         )
                         try:
                             session_meta = db.get_session(owning) or session_meta
-                        except Exception:
-                            pass
+                        except (OSError, KeyError, AttributeError) as e:
+                            logging.debug("get_session failed during rebind for %s: %s", owning, e)
                         session_id = owning
                 except Exception as e:
                     logging.debug(
@@ -464,9 +466,9 @@ def _title_match_result(
 
     try:
         session_id = db.resolve_session_by_title(title_query)
-    except Exception:
+    except (OSError, KeyError, AttributeError, ValueError) as e:
         logging.debug(
-            "resolve_session_by_title failed for %r", title_query, exc_info=True
+            "resolve_session_by_title failed for %r: %s", title_query, e, exc_info=True
         )
         return None
     if not session_id:
@@ -478,9 +480,9 @@ def _title_match_result(
 
     try:
         session_meta = db.get_session(lineage_root) or db.get_session(session_id) or {}
-    except Exception:
+    except (OSError, KeyError, AttributeError) as e:
         logging.debug(
-            "get_session failed for title match %s", session_id, exc_info=True
+            "get_session failed for title match %s: %s", session_id, e, exc_info=True
         )
         session_meta = {}
     if session_meta.get("source") in _HIDDEN_SESSION_SOURCES:
@@ -488,9 +490,9 @@ def _title_match_result(
 
     try:
         messages = db.get_messages(session_id)
-    except Exception:
+    except (OSError, KeyError, AttributeError) as e:
         logging.debug(
-            "get_messages failed for title match %s", session_id, exc_info=True
+            "get_messages failed for title match %s: %s", session_id, e, exc_info=True
         )
         messages = []
 
@@ -498,11 +500,12 @@ def _title_match_result(
     if anchor_id is not None:
         try:
             view = db.get_anchored_view(session_id, anchor_id, window=5, bookend=3)
-        except Exception:
+        except (OSError, KeyError, AttributeError, TypeError) as e:
             logging.debug(
-                "get_anchored_view failed for title match %s/%s",
+                "get_anchored_view failed for title match %s/%s: %s",
                 session_id,
                 anchor_id,
+                e,
                 exc_info=True,
             )
             view = {}
@@ -608,7 +611,8 @@ def _normalize_exclude_session_ids(raw: Any) -> List[str]:
 def _session_started_ts(db, session_id: str) -> Optional[int]:
     try:
         meta = db.get_session(session_id) or {}
-    except Exception:
+    except (OSError, KeyError, AttributeError) as e:
+        logging.debug("get_session failed for %s: %s", session_id, e, exc_info=True)
         meta = {}
     return _coerce_started_ts(meta.get("started_at"))
 
@@ -736,7 +740,8 @@ def _discover(
 
         try:
             session_meta = db.get_session(lineage_root) or {}
-        except Exception:
+        except (OSError, KeyError, AttributeError) as e:
+            logging.debug("get_session failed for %s: %s", lineage_root, e, exc_info=True)
             session_meta = {}
 
         entry = {
