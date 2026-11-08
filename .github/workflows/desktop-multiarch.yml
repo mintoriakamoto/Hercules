@@ -49,11 +49,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: 'apps/desktop/package-lock.json'
+          cache-dependency-path: 'apps/desktop/package.json'
 
       - name: Install dependencies
         working-directory: apps/desktop
-        run: npm ci --omit=optional
+        run: npm install --omit=optional
 
       - name: Build macOS ${{ matrix.arch }}
         working-directory: apps/desktop
@@ -98,11 +98,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: 'apps/desktop/package-lock.json'
+          cache-dependency-path: 'apps/desktop/package.json'
 
       - name: Install dependencies
         working-directory: apps/desktop
-        run: npm ci --omit=optional
+        run: npm install --omit=optional
 
       - name: Build Windows ${{ matrix.arch }}
         working-directory: apps/desktop
@@ -156,7 +156,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: 'apps/desktop/package-lock.json'
+          cache-dependency-path: 'apps/desktop/package.json'
 
       - name: Install cross-compiler (${{ matrix.arch }})
         if: matrix.apt_packages != ''
@@ -166,7 +166,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: apps/desktop
-        run: npm ci --omit=optional
+        run: npm install --omit=optional
 
       - name: Setup cross-compile environment (${{ matrix.arch }})
         if: matrix.arch == 'arm64'
