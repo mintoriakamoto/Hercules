@@ -271,10 +271,11 @@ youtube = [
 web = ["fastapi==0.133.1", "uvicorn[standard]==0.41.0", "starlette==1.0.1", "python-multipart==0.0.32"]  # python-multipart 0.0.32: GHSA-5rvq-cxj2-64vf
 # Machine learning backends — for AI model inference, embeddings, and fine-tuning.
 # Lazy-installed when ML features are first used.
+# Versions patched for CVE-2025-32434 (torch), CVE-2024-11392/11393/11394 (transformers)
 ml = [
-  "huggingface-hub==0.24.3",
-  "transformers==4.41.2",
-  "torch==2.4.0",
+  "huggingface-hub==0.36.2",
+  "transformers==4.55.4",
+  "torch==2.7.0",
 ]
 # Audio processing — text-to-speech (TTS), speech recognition, and audio handling.
 # Lazy-installed when audio features are first used.
