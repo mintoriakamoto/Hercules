@@ -31,6 +31,7 @@ function settledClarifyProps(
     isError: false,
     result,
     resume: vi.fn(),
+    respondToApproval: vi.fn(),
     status: { type: 'complete' },
     toolCallId,
     toolName: 'clarify',
