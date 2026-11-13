@@ -2106,7 +2106,8 @@ def _get_cron_approval_mode() -> str:
         if mode in {"approve", "off", "allow", "yes"}:
             return "approve"
         return "deny"
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception as exc:
+        logger.warning("Cron approval mode unreadable (%s); defaulting to deny", exc)
         return "deny"
 
 
