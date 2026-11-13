@@ -135,7 +135,7 @@ class IncrementalExternalStoreThreadRuntimeCore extends ExternalStoreThreadRunti
     }
 
     if (hasUpcomingMessage(isRunning, messages)) {
-      self._assistantOptimisticId = this.repository.appendOptimisticMessage(messages.at(-1)?.id ?? null, {
+      self._assistantOptimisticId = (this.repository as unknown as { appendOptimisticMessage: (parentId: string | null, msg: { role: string; content: unknown[] }) => string }).appendOptimisticMessage(messages.at(-1)?.id ?? null, {
         role: 'assistant',
         content: []
       })
