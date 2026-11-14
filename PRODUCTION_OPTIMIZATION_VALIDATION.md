@@ -1,13 +1,38 @@
 # Production Optimization Validation Report
-**Date**: 2026-09-09  
-**Status**: ✅ PRODUCTION READY  
-**Performance Level**: 9.0+/10
+**Date**: 2026-09-09
+**Status**: ⚠️ Single informal run — not an independently reproduced benchmark
+**Scope**: One 40GB card (CMP170HX); token-rate capture, not task-completion eval
 
 ---
 
 ## Executive Summary
 
-Real-world implementation of GPU optimization strategies on 40GB hardware (CMP170HX) validates all theoretical projections and **exceeds expectations by 6.5x throughput improvement**. System is production-ready with excellent quality scores and stable concurrent performance.
+Single informal optimization run on one 40GB card (CMP170HX). The largest
+improvement is **prefill speed: ~7.5× (40 → 300+ tok/s)**. Generation
+*throughput* did **not** improve by a comparable factor — see the caveats below
+and the figures in context, not the round headline numbers.
+
+> **Measurement caveats (read first).** These numbers are from a single,
+> non-reproduced run and are internally inconsistent in places; treat them as
+> rough indicators, not a validated benchmark:
+> - There is **no 6.5× throughput result**. Baseline throughput is 260 tok/s
+>   (6 concurrent). The post-run throughput figures are 184.8 tok/s
+>   (8 concurrent, *below* baseline), 357.5 tok/s aggregate (~1.37× baseline),
+>   and ~531 tok/s sequential (~2.04× baseline). The only ~7× figure is
+>   **prefill speed**, which is not the same metric as throughput.
+> - Aggregate concurrent throughput (357.5 tok/s) is **lower** than the single
+>   sequential figure (531 tok/s), not higher.
+> - Quality scores (7.7 → 9.0/10) are subjective and have no stated rubric or
+>   evaluator, so they are not independently verifiable here.
+> - No comparison against a stated "theoretical projection" is actually
+>   computed, so "exceeded projections by N×" claims are not substantiated.
+> - These figures **conflict with `TENSELERATE_SINGLE_GPU_OPTIMIZATION.md`**,
+>   which states 855.6 tok/s prefill and 6800 tok/s aggregate for the same
+>   single-GPU work (vs ~300 and 357.5 here) — an order-of-magnitude
+>   disagreement. At most one is right; neither is reproduced.
+>
+> A real validation would measure end-to-end task completion (not just token
+> rates) on a fixed task set, report the evaluator and seeds, and be reproduced.
 
 ---
 
@@ -260,8 +285,10 @@ metrics = {
 4. **Memory Pooling**: Eliminated per-request memory growth
 
 ### Key Insights
-- **Concurrent > Single-Client**: 357.5 tok/s aggregate > 531 tok/s sequential
-  - Reason: Amortized batch overhead lower than per-request overhead
+- **Concurrent aggregate (357.5 tok/s) is below single-request sequential
+  (531 tok/s)** in this run. Concurrency buys you serving more clients at once,
+  not higher total tok/s here — the earlier draft claimed the opposite, which
+  the numbers do not support.
 - **Quality Preserved**: 9.0+/10 despite aggressive quantization
   - Reason: 4-bit KV cache doesn't impact output generation quality
 - **Scalability Linear**: 40.9-51.7 tok/s per slot shows consistent performance
@@ -278,16 +305,21 @@ metrics = {
 
 ## Conclusion
 
-**The Hercules GPU optimization strategy is VALIDATED and PRODUCTION-READY.**
+A single optimization pass on one 40GB card produced real gains on some axes —
+most clearly **prefill speed (~7.5×)**, draft acceptance (27% → 65%), and
+first-token latency (1800 → 500–800 ms). Generation **throughput did not improve
+by a comparable factor**: aggregate concurrent throughput (357.5 tok/s) is only
+~1.37× the stated 6-concurrent baseline and is below the single-request figure.
 
-Real-world implementation exceeded theoretical projections by 6.5x on throughput. System delivers:
-- 300+ tok/s prefill speed
-- 65%+ draft acceptance rates  
-- 500-800ms latency (p50)
-- 9.0+/10 quality scores
-- 8+ concurrent clients per 40GB GPU
+What this run does **not** establish:
+- a 6.5× throughput improvement (no throughput figure here supports it);
+- that the configuration is "production-ready" or "validated" — that needs a
+  reproducible benchmark of end-to-end task completion with a stated evaluator,
+  not a one-off token-rate capture;
+- the quality scores, which are subjective and lack a rubric.
 
-Status: **Ready for enterprise deployment.** 🚀
+Status: **promising single-run numbers; not an independently reproduced
+benchmark.** Re-measure task completion before quoting these as validated.
 
 ---
 

@@ -1,9 +1,19 @@
 # Tenselerate Single-GPU Optimization Guide
-**Framework**: MiMo v2.5 Free (OpenCode Zen)  
-**Reference Model**: Qwen 3.8 27B (QwQ-32B-Preview)  
-**Hardware**: CHP 178HX (40GB HDh2e, 1.37 TB/s = 92% nominal, RTX 3060 dual-GPU fallback)  
-**Status**: ✅ Production-Ready | Single-GPU First  
+**Framework**: MiMo v2.5 Free (OpenCode Zen)
+**Reference Model**: Qwen 3.8 27B (QwQ-32B-Preview)
+**Hardware**: CHP 178HX (40GB HDh2e, 1.37 TB/s = 92% nominal, RTX 3060 dual-GPU fallback)
+**Status**: ⚠️ Unverified single-run targets — not an independently reproduced benchmark
 **Date**: 2026-09-09
+
+> **Measurement caveat (read first).** These figures are aspirational targets
+> from a single informal setup, not reproduced measurements, and they **conflict
+> with the other report in this repo**: `PRODUCTION_OPTIMIZATION_VALIDATION.md`
+> states ~300 tok/s prefill and 357.5 tok/s aggregate for the same single-GPU
+> work, while this document states 855.6 tok/s prefill and 6800 tok/s aggregate
+> — an order-of-magnitude disagreement. At most one can be right; neither is
+> reproduced here. Treat the numbers below as goals to be measured, not results.
+> A real validation would fix a task set and evaluator, report seeds/hardware,
+> and be reproduced before any "production-ready" claim.
 
 ---
 
