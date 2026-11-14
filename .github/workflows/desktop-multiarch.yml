@@ -66,7 +66,7 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
 
       - name: Upload macOS ${{ matrix.arch }} artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hercules-macos-${{ matrix.arch }}
           path: apps/desktop/release/Hercules-*.dmg
@@ -112,7 +112,7 @@ jobs:
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
 
       - name: Upload Windows ${{ matrix.arch }} artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hercules-windows-${{ matrix.arch }}
           path: |
@@ -185,7 +185,7 @@ jobs:
         run: npm run dist:linux:${{ matrix.arch }}
 
       - name: Upload Linux ${{ matrix.arch }} artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hercules-linux-${{ matrix.arch }}
           path: |
