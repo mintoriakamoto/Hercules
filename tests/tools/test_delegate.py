@@ -3874,7 +3874,14 @@ class TestProofChecks(unittest.TestCase):
         entry = result["results"][0]
         self.assertEqual(entry["proof"]["verdict"], "unchecked")
         self.assertIn("backend down", entry["proof"]["error"])
-        self.assertEqual(entry["status"], "completed", "unchecked is not refuted")
+        # A proof that could not be evaluated must NOT leave the child's
+        # self-reported "completed" standing as verified -- it becomes
+        # "unverified" (distinct from "refuted", which means the proof ran
+        # and failed) so dependents don't build on an unproven claim.
+        self.assertEqual(entry["status"], "unverified")
+        self.assertNotEqual(
+            entry["status"], "completed", "an unevaluated proof must not read as verified"
+        )
 
     @patch("tools.terminal_tool.terminal_tool")
     @patch("tools.delegate_tool._run_single_child")
