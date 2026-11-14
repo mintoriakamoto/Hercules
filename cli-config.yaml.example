@@ -151,6 +151,11 @@ model:
 # or a bare hostname (e.g. "gpu-box"). A "custom" provider pointed at a public
 # URL is still rejected — the check is on the endpoint, not the provider name.
 #
+# This also covers AUXILIARY traffic — compression, memory, title generation,
+# session search, and vision. In local-only mode an auxiliary task that would
+# resolve to a cloud endpoint is treated as unavailable (that side task degrades)
+# rather than silently reaching a hosted API. There is no cloud fallback.
+#
 # Works with any OpenAI-compatible local server: Ollama, vLLM, llama.cpp
 # (llama-server), ExLlamaV2 via TabbyAPI, LM Studio. Example pairing:
 #
