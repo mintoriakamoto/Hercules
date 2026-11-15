@@ -1738,8 +1738,14 @@ class TestDelegationProviderIntegration(unittest.TestCase):
 
     @patch("tools.delegate_tool._load_config")
     @patch("tools.delegate_tool._resolve_delegation_credentials")
-    def test_empty_config_uses_task_aware_routing(self, mock_creds, mock_cfg):
-        """When delegation config is empty, child uses task-aware model routing."""
+    def test_empty_config_inherits_parent_model(self, mock_creds, mock_cfg):
+        """Empty delegation config -> child inherits the parent's model.
+
+        Task-aware routing is opt-in (``enable_task_routing``). Its tier table is
+        cloud model names while the child inherits the parent's base_url, so routing
+        by default would pair a cloud name with a local endpoint that can't serve it.
+        The child must inherit the parent's model, coherent with that endpoint.
+        """
         mock_cfg.return_value = {"max_iterations": 45, "model": "", "provider": ""}
         mock_creds.return_value = {
             "model": None,
@@ -1750,7 +1756,9 @@ class TestDelegationProviderIntegration(unittest.TestCase):
         }
         parent = _make_mock_parent(depth=0)
 
-        with patch("run_agent.AIAgent") as MockAgent:
+        with patch("run_agent.AIAgent") as MockAgent, patch(
+            "tools.delegate_tool.route_task_to_model"
+        ) as mock_route:
             mock_child = MagicMock()
             mock_child.run_conversation.return_value = {
                 "final_response": "done",
@@ -1762,13 +1770,53 @@ class TestDelegationProviderIntegration(unittest.TestCase):
             delegate_task(goal="Test inherit", parent_agent=parent)
 
             _, kwargs = MockAgent.call_args
-            # With task-aware routing, simple tasks route to cheaper models
-            # (e.g., "Test inherit" -> haiku for cost optimization)
-            self.assertIsNotNone(kwargs["model"])
-            # The routed model should be different from the parent's for simple tasks
-            self.assertNotEqual(kwargs["model"], parent.model)
+            self.assertEqual(kwargs["model"], parent.model)
             self.assertEqual(kwargs["provider"], parent.provider)
             self.assertEqual(kwargs["base_url"], parent.base_url)
+            # The cloud router must not even run when routing is not opted into.
+            mock_route.assert_not_called()
+
+    @patch("tools.delegate_tool._load_config")
+    @patch("tools.delegate_tool._resolve_delegation_credentials")
+    def test_enable_task_routing_opts_into_routing(self, mock_creds, mock_cfg):
+        """With ``enable_task_routing`` set, the child uses the task-aware router."""
+        mock_cfg.return_value = {
+            "max_iterations": 45,
+            "model": "",
+            "provider": "",
+            "enable_task_routing": True,
+        }
+        mock_creds.return_value = {
+            "model": None,
+            "provider": None,
+            "base_url": None,
+            "api_key": None,
+            "api_mode": None,
+        }
+        parent = _make_mock_parent(depth=0)
+        decision = types.SimpleNamespace(
+            recommended_tier=types.SimpleNamespace(value="economy"),
+            confidence=0.9,
+            cost_savings_estimate=50.0,
+        )
+
+        with patch("run_agent.AIAgent") as MockAgent, patch(
+            "tools.delegate_tool.route_task_to_model",
+            return_value=("claude-haiku-4-5-20251001", decision),
+        ) as mock_route:
+            mock_child = MagicMock()
+            mock_child.run_conversation.return_value = {
+                "final_response": "done",
+                "completed": True,
+                "api_calls": 1,
+            }
+            MockAgent.return_value = mock_child
+
+            delegate_task(goal="Simple task", parent_agent=parent)
+
+            mock_route.assert_called_once()
+            _, kwargs = MockAgent.call_args
+            self.assertEqual(kwargs["model"], "claude-haiku-4-5-20251001")
 
     @patch("tools.delegate_tool._load_config")
     @patch("tools.delegate_tool._resolve_delegation_credentials")

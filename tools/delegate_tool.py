@@ -1366,6 +1366,51 @@ def _inherit_parent_base_url(
     return fallback_base_url or None
 
 
+def _select_child_model(
+    explicit_model: Optional[str],
+    goal: Optional[str],
+    child_toolsets,
+    parent_agent,
+    delegation_cfg: dict,
+) -> Optional[str]:
+    """Pick the model a delegated child runs on.
+
+    Order: an explicit model wins; otherwise opt-in task-aware routing; otherwise
+    inherit the parent's model.
+
+    Routing is opt-in (``delegation.enable_task_routing``, default off) because the
+    router's tier table is cloud model names (claude-*, gpt-*) while the child
+    inherits the parent's ``base_url``. On a local-model deployment that would pair
+    a cloud name with a local endpoint that cannot serve it, so the child 404s.
+    Inheriting the parent's model keeps model and endpoint coherent by default.
+    """
+    if explicit_model:
+        return explicit_model
+    if is_truthy_value(delegation_cfg.get("enable_task_routing"), default=False):
+        try:
+            routed_model, decision = route_task_to_model(
+                goal or "", available_tools=len(child_toolsets)
+            )
+            logger.debug(
+                "Delegated task routing: %s → %s (tier=%s, confidence=%.2f, savings=%.1f%%)",
+                (goal or "")[:50],
+                routed_model,
+                decision.recommended_tier.value,
+                decision.confidence,
+                decision.cost_savings_estimate or 0,
+            )
+            return routed_model
+        except Exception as e:
+            logger.warning(
+                "Task routing failed (falling back to parent model %s): %s",
+                parent_agent.model,
+                str(e)[:200],
+                exc_info=True,
+            )
+            return parent_agent.model
+    return parent_agent.model
+
+
 def _build_child_agent(
     task_index: int,
     goal: str,
@@ -1525,30 +1570,9 @@ def _build_child_agent(
 
     # Resolve effective credentials: config override > parent inherit
     # Use task-aware model routing if no explicit model provided
-    if model:
-        effective_model = model
-    else:
-        try:
-            routed_model, decision = route_task_to_model(
-                goal or "", available_tools=len(child_toolsets)
-            )
-            effective_model = routed_model
-            logger.debug(
-                "Delegated task routing: %s → %s (tier=%s, confidence=%.2f, savings=%.1f%%)",
-                (goal or "")[:50],
-                routed_model,
-                decision.recommended_tier.value,
-                decision.confidence,
-                decision.cost_savings_estimate or 0,
-            )
-        except Exception as e:
-            logger.warning(
-                "Task routing failed (falling back to parent model %s): %s",
-                parent_agent.model,
-                str(e)[:200],
-                exc_info=True,
-            )
-            effective_model = parent_agent.model
+    effective_model = _select_child_model(
+        model, goal, child_toolsets, parent_agent, delegation_cfg
+    )
     effective_provider = override_provider or getattr(parent_agent, "provider", None)
     effective_base_url = override_base_url or parent_agent.base_url
     if not override_base_url:
