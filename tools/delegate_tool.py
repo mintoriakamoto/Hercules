@@ -646,6 +646,13 @@ def _run_proof_checks(results, task_list, parent_agent) -> None:
                 "verdict": "unchecked",
                 "error": str(exc)[:300],
             }
+            # A declared proof that could not be evaluated has NOT shown the
+            # claim passing, so the child's self-reported "completed" must not
+            # stand as verified -- otherwise an unevaluated claim reads as proven
+            # and dependents build on it. Distinct from "refuted" (proof ran and
+            # failed): the checker itself broke, which is not evidence the work
+            # is wrong, so it is not handed to the repair loop.
+            entry["status"] = "unverified"
             continue
         met = proof.is_met(observed)
         entry["proof"] = {
