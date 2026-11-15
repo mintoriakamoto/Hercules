@@ -42,6 +42,18 @@ class ConfigLoader:
             "optional_fields": ["api_key", "base_url"],
             "default_base_url": "http://localhost:11434"
         },
+        # Ours. Codex is the Responses transport already in hercules_cli.providers.
+        # Tenselerate is the local llama-server. Neither is an upstream gate.
+        "openai-codex": {
+            "required_fields": ["model", "api_key"],
+            "optional_fields": ["base_url"],
+            "default_base_url": "https://chatgpt.com/backend-api/codex"
+        },
+        "tenselerate": {
+            "required_fields": ["model"],
+            "optional_fields": ["api_key", "base_url"],
+            "default_base_url": "http://127.0.0.1:8080"
+        },
     }
 
     @staticmethod
@@ -162,7 +174,12 @@ class ConfigLoader:
 
         # Check API key (optional for some providers like Ollama)
         provider = config.get("provider", "anthropic").lower()
-        if provider != "ollama" and not config.get("api_key"):
+        spec = ConfigLoader.SUPPORTED_PROVIDERS.get(provider)
+        # Unknown names still require a key, so the unknown-provider test that
+        # passes a key is unchanged. Known names follow required_fields:
+        # ollama and tenselerate do not require one.
+        needs_key = spec is None or "api_key" in spec.get("required_fields", [])
+        if needs_key and not config.get("api_key"):
             raise ConfigError(
                 f"No API key for {provider}. Provider '{provider}' requires authentication.\n\n"
                 "Set it via one of these methods:\n\n"
@@ -185,10 +202,10 @@ class ConfigLoader:
 # OpenRouter models: See https://openrouter.ai/models
 model: claude-opus-4-20250514
 
-# API provider: anthropic, openrouter, or ollama
+# API provider: anthropic, openrouter, ollama, openai-codex, or tenselerate
 provider: anthropic
 
-# API key (required for Anthropic and OpenRouter, optional for Ollama)
+# API key (required for Anthropic, OpenRouter, and Codex; optional for Ollama and Tenselerate)
 api_key: sk-ant-...
 
 # Optional: Custom API base URL (uncomment if needed)

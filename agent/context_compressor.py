@@ -21,6 +21,10 @@ from agent.compression.context import (
     SUMMARY_PREFIX,
     LEGACY_SUMMARY_PREFIX,
     estimate_messages_tokens_rough,
+    _content_has_images,
+    _is_image_part,
+    _strip_historical_media,
+    _strip_images_from_content,
 )
 
 __all__ = [
@@ -32,4 +36,8 @@ __all__ = [
     "SUMMARY_PREFIX",
     "LEGACY_SUMMARY_PREFIX",
     "estimate_messages_tokens_rough",
+    "_content_has_images",
+    "_is_image_part",
+    "_strip_historical_media",
+    "_strip_images_from_content",
 ]
