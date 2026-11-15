@@ -4450,7 +4450,89 @@ def _normalize_resolved_model(
         return model_name
 
 
+def _aux_endpoint_blocked_by_local_only(client: Any) -> bool:
+    """True when ``providers.local_only`` is on and *client* is not local.
+
+    Auxiliary traffic (compression, memory, titles, session search, vision)
+    resolves its own clients and never passed through the main provider gate, so
+    in local-only mode it could still reach cloud. Reuse the same authority the
+    main path uses (``hercules_cli.runtime_provider``). Imported lazily: that
+    module imports back into the agent/CLI core, so a module-level import here
+    would create a cycle (see CLAUDE.md). Fails open (returns False) if the gate
+    cannot be consulted, matching the gate's own fail-safe.
+    """
+    if client is None:
+        return False
+    try:
+        from hercules_cli.runtime_provider import (
+            _is_local_endpoint,
+            local_only_mode_enabled,
+        )
+    except (ImportError, ModuleNotFoundError):
+        return False
+    if not local_only_mode_enabled():
+        return False
+    base_url = str(getattr(client, "base_url", "") or "")
+    return not _is_local_endpoint(base_url)
+
+
+def _close_aux_client_quietly(client: Any) -> None:
+    """Best-effort close of a resolved client we are about to discard."""
+    close_fn = getattr(client, "close", None)
+    if callable(close_fn):
+        try:
+            close_fn()
+        except Exception:
+            pass
+
+
 def resolve_provider_client(
+    provider: str,
+    model: Optional[str] = None,
+    async_mode: bool = False,
+    raw_codex: bool = False,
+    explicit_base_url: Optional[str] = None,
+    explicit_api_key: Optional[str] = None,
+    api_mode: Optional[str] = None,
+    main_runtime: Optional[Dict[str, Any]] = None,
+    is_vision: bool = False,
+    task: Optional[str] = None,
+) -> Tuple[Optional[Any], Optional[str]]:
+    """Enforce local-only, then delegate to the resolver.
+
+    Thin wrapper over :func:`_resolve_provider_client_impl`. When
+    ``providers.local_only`` is set and the resolved client points at a non-local
+    endpoint, treat it as unavailable — return ``(None, None)`` so the existing
+    graceful-degradation and fallback paths (which already handle unavailable
+    auth) skip it instead of silently reaching cloud. There is no cloud fallback
+    in this mode. When the mode is off, this is a pass-through.
+    """
+    client, resolved_model = _resolve_provider_client_impl(
+        provider,
+        model=model,
+        async_mode=async_mode,
+        raw_codex=raw_codex,
+        explicit_base_url=explicit_base_url,
+        explicit_api_key=explicit_api_key,
+        api_mode=api_mode,
+        main_runtime=main_runtime,
+        is_vision=is_vision,
+        task=task,
+    )
+    if _aux_endpoint_blocked_by_local_only(client):
+        logger.warning(
+            "local-only mode (providers.local_only): auxiliary provider '%s' "
+            "resolved a non-local endpoint (%s); treating as unavailable — no "
+            "cloud fallback.",
+            provider,
+            str(getattr(client, "base_url", "") or "") or "unknown",
+        )
+        _close_aux_client_quietly(client)
+        return None, None
+    return client, resolved_model
+
+
+def _resolve_provider_client_impl(
     provider: str,
     model: Optional[str] = None,
     async_mode: bool = False,
@@ -5480,6 +5562,16 @@ def resolve_vision_provider_client(
         resolved_provider: str, sync_client: Any, default_model: Optional[str]
     ):
         if sync_client is None:
+            return resolved_provider, None, None
+        if _aux_endpoint_blocked_by_local_only(sync_client):
+            logger.warning(
+                "local-only mode (providers.local_only): vision provider '%s' "
+                "resolved a non-local endpoint (%s); treating as unavailable — "
+                "no cloud fallback.",
+                resolved_provider,
+                str(getattr(sync_client, "base_url", "") or "") or "unknown",
+            )
+            _close_aux_client_quietly(sync_client)
             return resolved_provider, None, None
         final_model = resolved_model or default_model
         if async_mode:
