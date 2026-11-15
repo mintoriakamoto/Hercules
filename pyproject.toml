@@ -274,7 +274,7 @@ web = ["fastapi==0.133.1", "uvicorn[standard]==0.41.0", "starlette==1.0.1", "pyt
 ml = [
   "huggingface-hub==0.36.2",
   "transformers==4.55.4",
-  "torch==2.7.0",
+  "torch==2.13.0",
 ]
 # Audio processing — text-to-speech (TTS), speech recognition, and audio handling.
 # Lazy-installed when audio features are first used.
@@ -299,7 +299,7 @@ web-server = [
 # GPU/accelerated computing — CUDA toolkit 12.8, cuDNN, NCCL for GPU-accelerated inference and training.
 # Linux-only (CUDA unavailable on macOS/Windows via PyPI).
 accelerated = [
-  "torch==2.7.0",
+  "torch==2.13.0",
 ]
 # Advanced AI/LLM backends — frameworks for building with language models.
 ai-llm = [
