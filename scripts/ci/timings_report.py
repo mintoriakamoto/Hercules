@@ -23,6 +23,8 @@ import json
 import os
 import sys
 import time
+import urllib.parse
+import urllib.request
 from datetime import datetime
 from html import escape
 import urllib.error

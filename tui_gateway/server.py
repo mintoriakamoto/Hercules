@@ -17,6 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+import requests
+
 from hercules_constants import (
     get_hercules_home,
     get_hercules_home_override,
