@@ -310,7 +310,7 @@ ai-llm = [
 ]
 # Extended ML stack — advanced training, optimization, and gradient boosting.
 ml-extended = [
-  "pytorch-lightning==2.1.3",
+  "pytorch-lightning==2.6.1",
   "tensorboard==2.18.0",
   "optuna==3.6.0",
   "ray==2.45.0",
