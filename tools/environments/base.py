@@ -89,7 +89,7 @@ def get_sandbox_dir() -> Path:
     if custom:
         p = Path(custom)
     else:
-        p = get_hercules_home() / "sandboxes"
+        p = Path(get_hercules_home()) / "sandboxes"
     p.mkdir(parents=True, exist_ok=True)
     return p
 
