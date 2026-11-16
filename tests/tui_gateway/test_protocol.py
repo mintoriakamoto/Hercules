@@ -6,6 +6,7 @@ import sys
 import threading
 import time
 import types
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,7 +26,7 @@ def server():
         "sys.modules",
         {
             "hercules_constants": MagicMock(
-                get_hercules_home=MagicMock(return_value="/tmp/hercules_test")
+                get_hercules_home=MagicMock(return_value=Path("/tmp/hercules_test"))
             ),
             "hercules_cli.env_loader": MagicMock(),
             "hercules_cli.banner": MagicMock(),
