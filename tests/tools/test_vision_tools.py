@@ -73,7 +73,7 @@ class TestValidateImageUrl:
                 _validate_image_url("https://img.example.com/pic?w=200&h=200") is True
             )
 
-def test_valid_url_with_port(self):
+    def test_valid_url_with_port(self):
         with patch(
             "tools.url_safety.socket.getaddrinfo",
             return_value=[
