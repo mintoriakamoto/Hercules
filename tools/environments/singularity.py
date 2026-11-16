@@ -14,6 +14,8 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
+from pathlib import Path
+
 from hercules_constants import get_hercules_home
 from tools.environments.base import (
     BaseEnvironment,
@@ -24,7 +26,7 @@ from tools.environments.base import (
 
 logger = logging.getLogger(__name__)
 
-_SNAPSHOT_STORE = get_hercules_home() / "singularity_snapshots.json"
+_SNAPSHOT_STORE = Path(get_hercules_home()) / "singularity_snapshots.json"
 
 
 def _find_singularity_executable() -> str:
