@@ -288,22 +288,39 @@ def _resolve_agent_runtime(model, api_key, provider, base_url):
         or model_cfg.get("model")
         or ""
     )
-    if not resolved_model:
+    if not resolved_model and not (provider or api_key or base_url):
         raise AuthError(
             "No model specified. Hercules needs a model to run.\n\n"
             "Set model.default in ~/.hercules/config.yaml, pass model=, or set HERCULES_MODEL."
         )
-    runtime = resolve_runtime_provider(
-        requested=provider or None,
-        explicit_api_key=api_key,
-        explicit_base_url=base_url,
-        target_model=resolved_model,
-    )
+    from hercules_cli.auth import AuthError
+
+    try:
+        runtime = resolve_runtime_provider(
+            requested=provider or None,
+            explicit_api_key=api_key,
+            explicit_base_url=base_url,
+            target_model=resolved_model,
+        )
+    except AuthError:
+        # The caller supplied a provider, key or endpoint, so those values are used as
+        # given. A named provider whose credentials cannot be probed here (for example
+        # an external CLI that is not installed) keeps working. Explicit credentials
+        # with no provider mean OpenRouter, as the resolver documents. Nothing supplied
+        # and nothing configured still fails.
+        if not (provider or api_key or base_url):
+            raise
+        return resolved_model, api_key or "", provider or "openrouter", base_url or ""
+    runtime_url = str(runtime.get("base_url") or "")
+    # External-process providers (acp://, acp+tcp://) have no HTTP endpoint; the
+    # transport handles them, so the runtime URL is not passed to the HTTP client.
+    if not runtime_url.lower().startswith(("http://", "https://")):
+        runtime_url = ""
     return (
         resolved_model,
         runtime.get("api_key") or api_key or "",
         runtime["provider"],
-        runtime.get("base_url") or base_url or "",
+        base_url or runtime_url,
     )
 
 
