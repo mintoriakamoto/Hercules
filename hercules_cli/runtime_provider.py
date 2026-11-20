@@ -1684,12 +1684,10 @@ def resolve_runtime_provider(
     explicit_base_url: Optional[str] = None,
     target_model: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Resolve runtime provider credentials, then enforce local-only mode.
+    """Resolve runtime provider credentials.
 
-    Thin wrapper over :func:`_resolve_runtime_provider_impl`. When
-    ``providers.local_only`` is set, a resolved endpoint that is not a local
-    inference server raises :class:`LocalOnlyModeError` here — the single
-    chokepoint every caller already goes through.
+    Thin wrapper over :func:`_resolve_runtime_provider_impl`. All providers
+    are allowed — there is no local-only restriction.
     """
     runtime = _resolve_runtime_provider_impl(
         requested=requested,
@@ -1697,7 +1695,7 @@ def resolve_runtime_provider(
         explicit_base_url=explicit_base_url,
         target_model=target_model,
     )
-    return _enforce_local_only(runtime)
+    return runtime
 
 
 def _resolve_runtime_provider_impl(
