@@ -394,31 +394,25 @@ def load_cli_config() -> Dict[str, Any]:
     Load CLI configuration from config files.
 
     Config lookup order:
-    1. ~/.hercules/config.yaml (user config - preferred)
-    2. ./cli-config.yaml (project config - fallback)
+    1. ~/.hercules/config.yaml (user config)
 
     Environment variables take precedence over config file values.
     Returns default values if no config file exists.
 
     If HERCULES_IGNORE_USER_CONFIG=1 is set (via ``hercules chat --ignore-user-config``),
-    the user config at ``~/.hercules/config.yaml`` is skipped entirely and only the
-    built-in defaults plus the project-level ``cli-config.yaml`` (if any) are used.
+    the user config at ``~/.hercules/config.yaml`` is skipped and only the built-in
+    defaults are used.
     Credentials in ``.env`` are still loaded — this flag only suppresses
     behavioral/config settings.
     """
     # Check user config first ({HERCULES_HOME}/config.yaml)
     user_config_path = _hercules_home / "config.yaml"
-    project_config_path = Path(__file__).parent / "cli-config.yaml"
 
-    # --ignore-user-config: force-skip the user config.yaml (still honor project
-    # config as a fallback so defaults stay sensible).
+    # --ignore-user-config: skip the user config.yaml entirely. A project-level
+    # cli-config.yaml is never read: upstream does not load one, and a checkout
+    # copy pins the provider over the environment.
     ignore_user_config = os.environ.get("HERCULES_IGNORE_USER_CONFIG") == "1"
-
-    # Use user config if it exists, otherwise project config
-    if user_config_path.exists() and not ignore_user_config:
-        config_path = user_config_path
-    else:
-        config_path = project_config_path
+    config_path = None if ignore_user_config else user_config_path
 
     # Default configuration
     defaults = {
@@ -541,7 +535,7 @@ def load_cli_config() -> Dict[str, Any]:
     _file_has_terminal_config = False
 
     # Load from file if exists
-    if config_path.exists():
+    if config_path is not None and config_path.exists():
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 from hercules_cli.config import _normalize_root_model_keys
@@ -600,7 +594,7 @@ def load_cli_config() -> Dict[str, Any]:
             ):
                 defaults["agent"]["max_turns"] = file_config["max_turns"]
         except Exception as e:
-            logger.warning("Failed to load cli-config.yaml: %s", e)
+            logger.warning("Failed to load config.yaml: %s", e)
 
     # Expand ${ENV_VAR} references in config values before bridging to env vars.
     from hercules_cli.config import _expand_env_vars
@@ -3842,9 +3836,7 @@ def save_config_value(key_path: str, value: any) -> bool:
     """
     Save a value to the active config file at the specified key path.
 
-    Respects the same lookup order as load_cli_config():
-    1. ~/.hercules/config.yaml (user config - preferred, used if it exists)
-    2. ./cli-config.yaml (project config - fallback)
+    Reads only ~/.hercules/config.yaml, the same file load_cli_config() reads.
 
     Args:
         key_path: Dot-separated path like "agent.system_prompt"
@@ -3855,8 +3847,7 @@ def save_config_value(key_path: str, value: any) -> bool:
     """
     # Use the same precedence as load_cli_config: user config first, then project config
     user_config_path = _hercules_home / "config.yaml"
-    project_config_path = Path(__file__).parent / "cli-config.yaml"
-    config_path = user_config_path if user_config_path.exists() else project_config_path
+    config_path = user_config_path
 
     try:
         # Ensure parent directory exists (for ~/.hercules/config.yaml on first use)
@@ -7187,11 +7178,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         terminal_timeout = os.getenv("TERMINAL_TIMEOUT", "60")
 
         user_config_path = _hercules_home / "config.yaml"
-        project_config_path = Path(__file__).parent / "cli-config.yaml"
-        if user_config_path.exists():
-            config_path = user_config_path
-        else:
-            config_path = project_config_path
+        config_path = user_config_path
         config_status = "(loaded)" if config_path.exists() else "(not found)"
 
         # ``self.api_key`` may be a callable (Azure Foundry Entra ID bearer
