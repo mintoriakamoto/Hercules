@@ -52,7 +52,6 @@ from agent.tool_guardrails import (
     ToolGuardrailDecision,
 )
 from hercules_cli.config import cfg_get
-from hercules_cli.config_loader import ConfigLoader, ConfigError
 from hercules_cli.timeouts import get_provider_request_timeout
 from hercules_constants import get_hercules_home
 from utils import base_url_host_matches, is_truthy_value
@@ -268,6 +267,46 @@ def _merge_custom_provider_extra_body(
     agent.request_overrides = overrides
 
 
+def _resolve_agent_runtime(model, api_key, provider, base_url):
+    """Return ``(model, api_key, provider, base_url)`` from the runtime resolver.
+
+    Explicit arguments win, then ``HERCULES_MODEL``, then the configured default
+    model. Provider keys and endpoints come from the same resolver the CLI uses.
+    """
+    from hercules_cli.auth import AuthError
+    from hercules_cli.config import load_config
+    from hercules_cli.runtime_provider import resolve_runtime_provider
+
+    model_cfg = load_config().get("model")
+    if isinstance(model_cfg, str):
+        model_cfg = {"default": model_cfg}
+    model_cfg = model_cfg or {}
+    resolved_model = (
+        model
+        or os.getenv("HERCULES_MODEL", "").strip()
+        or model_cfg.get("default")
+        or model_cfg.get("model")
+        or ""
+    )
+    if not resolved_model:
+        raise AuthError(
+            "No model specified. Hercules needs a model to run.\n\n"
+            "Set model.default in ~/.hercules/config.yaml, pass model=, or set HERCULES_MODEL."
+        )
+    runtime = resolve_runtime_provider(
+        requested=provider or None,
+        explicit_api_key=api_key,
+        explicit_base_url=base_url,
+        target_model=resolved_model,
+    )
+    return (
+        resolved_model,
+        runtime.get("api_key") or api_key or "",
+        runtime["provider"],
+        runtime.get("base_url") or base_url or "",
+    )
+
+
 def init_agent(
     agent,
     base_url: Optional[str] = None,
@@ -393,19 +432,14 @@ def init_agent(
     """
     _install_safe_stdio()
 
-    # FIX 2: Validate API configuration with helpful error messages
+    # Resolve model, key, provider and endpoint with the same resolver the CLI uses.
+    from hercules_cli.auth import AuthError
+
     try:
-        config = ConfigLoader.load(
-            model=model or None,
-            api_key=api_key,
-            provider=provider,
-            base_url=base_url,
+        model, api_key, provider, base_url = _resolve_agent_runtime(
+            model, api_key, provider, base_url
         )
-        model = config["model"]
-        api_key = config["api_key"]
-        provider = config["provider"]
-        base_url = config["base_url"]
-    except ConfigError as e:
+    except AuthError as e:
         logger.error(str(e))
         raise
 

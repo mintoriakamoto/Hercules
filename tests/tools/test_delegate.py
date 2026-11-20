@@ -1738,8 +1738,8 @@ class TestDelegationProviderIntegration(unittest.TestCase):
 
     @patch("tools.delegate_tool._load_config")
     @patch("tools.delegate_tool._resolve_delegation_credentials")
-    def test_empty_config_uses_task_aware_routing(self, mock_creds, mock_cfg):
-        """When delegation config is empty, child uses task-aware model routing."""
+    def test_empty_config_inherits_parent_model(self, mock_creds, mock_cfg):
+        """With no delegation model configured, the child runs the parent's model."""
         mock_cfg.return_value = {"max_iterations": 45, "model": "", "provider": ""}
         mock_creds.return_value = {
             "model": None,
@@ -1762,11 +1762,7 @@ class TestDelegationProviderIntegration(unittest.TestCase):
             delegate_task(goal="Test inherit", parent_agent=parent)
 
             _, kwargs = MockAgent.call_args
-            # With task-aware routing, simple tasks route to cheaper models
-            # (e.g., "Test inherit" -> haiku for cost optimization)
-            self.assertIsNotNone(kwargs["model"])
-            # The routed model should be different from the parent's for simple tasks
-            self.assertNotEqual(kwargs["model"], parent.model)
+            self.assertEqual(kwargs["model"], parent.model)
             self.assertEqual(kwargs["provider"], parent.provider)
             self.assertEqual(kwargs["base_url"], parent.base_url)
 

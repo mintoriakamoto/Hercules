@@ -39,7 +39,6 @@ from tools import file_state
 from tools.daemon_pool import DaemonThreadPoolExecutor
 from tools.terminal_tool import set_approval_callback as _set_subagent_approval_cb
 from tools.thread_context import propagate_context_to_thread
-from agent.task_aware_model_router import route_task_to_model
 from utils import base_url_hostname, is_truthy_value
 
 
@@ -1523,32 +1522,9 @@ def _build_child_agent(
 
         child_thinking_cb = _child_thinking
 
-    # Resolve effective credentials: config override > parent inherit
-    # Use task-aware model routing if no explicit model provided
-    if model:
-        effective_model = model
-    else:
-        try:
-            routed_model, decision = route_task_to_model(
-                goal or "", available_tools=len(child_toolsets)
-            )
-            effective_model = routed_model
-            logger.debug(
-                "Delegated task routing: %s → %s (tier=%s, confidence=%.2f, savings=%.1f%%)",
-                (goal or "")[:50],
-                routed_model,
-                decision.recommended_tier.value,
-                decision.confidence,
-                decision.cost_savings_estimate or 0,
-            )
-        except Exception as e:
-            logger.warning(
-                "Task routing failed (falling back to parent model %s): %s",
-                parent_agent.model,
-                str(e)[:200],
-                exc_info=True,
-            )
-            effective_model = parent_agent.model
+    # Resolve effective credentials: config override > parent inherit.
+    # With no explicit model, the child runs the parent's model (as upstream does).
+    effective_model = model or parent_agent.model
     effective_provider = override_provider or getattr(parent_agent, "provider", None)
     effective_base_url = override_base_url or parent_agent.base_url
     if not override_base_url:
