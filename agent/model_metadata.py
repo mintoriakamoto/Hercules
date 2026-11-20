@@ -775,7 +775,7 @@ def detect_local_server_type(base_url: str, api_key: str = "") -> Optional[str]:
                 r = client.get(f"{lmstudio_url}/api/v1/models")
                 if r.status_code == 200:
                     result = "lm-studio"
-            except (ZeroDivisionError):
+            except (httpx.HTTPError, OSError, ValueError):
                 pass
             if result is None:
                 # Ollama exposes /api/tags and responds with {"models": [...]}
@@ -788,9 +788,9 @@ def detect_local_server_type(base_url: str, api_key: str = "") -> Optional[str]:
                             data = r.json()
                             if "models" in data:
                                 result = "ollama"
-                        except (ValueError):
+                        except (httpx.HTTPError, OSError, ValueError):
                             pass
-                except (ValueError):
+                except (httpx.HTTPError, OSError, ValueError):
                     pass
             if result is None:
                 # llama.cpp exposes /v1/props (older builds used /props without the /v1 prefix)
@@ -802,7 +802,7 @@ def detect_local_server_type(base_url: str, api_key: str = "") -> Optional[str]:
                         )  # fallback for older builds
                     if r.status_code == 200 and "default_generation_settings" in r.text:
                         result = "llamacpp"
-                except (ZeroDivisionError):
+                except (httpx.HTTPError, OSError, ValueError):
                     pass
             if result is None:
                 # vLLM: /version
@@ -812,9 +812,9 @@ def detect_local_server_type(base_url: str, api_key: str = "") -> Optional[str]:
                         data = r.json()
                         if "version" in data:
                             result = "vllm"
-                except (ValueError):
+                except (httpx.HTTPError, OSError, ValueError):
                     pass
-    except (ValueError):
+    except (httpx.HTTPError, OSError, ValueError):
         pass
 
     if result is not None:

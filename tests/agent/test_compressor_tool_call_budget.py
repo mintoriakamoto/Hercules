@@ -79,7 +79,7 @@ class TestToolCallEnvelopeEstimate:
 @pytest.fixture()
 def compressor():
     with patch(
-        "agent.context_compressor.get_model_context_length", return_value=100000
+        "agent.compression.context.get_model_context_length", return_value=100000
     ):
         return ContextCompressor(
             model="test/model",

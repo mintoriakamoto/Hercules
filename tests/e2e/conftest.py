@@ -179,7 +179,7 @@ def make_event(
 
 def make_runner(
     platform: Platform, session_entry: SessionEntry = None
-) -> "GatewayRunner":
+) -> "GatewayRunner":  # noqa: F821
     """Create a GatewayRunner with mocked internals for e2e testing.
 
     Skips __init__ to avoid filesystem/network side effects.

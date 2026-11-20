@@ -30,6 +30,7 @@ import time
 from collections import defaultdict
 from contextlib import suppress
 from typing import Callable, Dict, List, Optional, Any, Tuple
+import requests
 
 logger = logging.getLogger(__name__)
 

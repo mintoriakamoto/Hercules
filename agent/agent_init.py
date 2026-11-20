@@ -28,6 +28,8 @@ import time
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+import httpx
+import requests
 
 if TYPE_CHECKING:
     from agent.rate_limit_tracker import RateLimitState
@@ -1649,6 +1651,12 @@ def init_agent(
     if not isinstance(_agent_section, dict):
         _agent_section = {}
     agent._tool_use_enforcement = _agent_section.get("tool_use_enforcement", "auto")
+
+    # Per-call model routing (agent/transports/model_router.py) picks from a
+    # hard-coded list of hosted model names. Opt-in: ``agent.model_routing``.
+    agent.enable_model_routing = is_truthy_value(
+        _agent_section.get("model_routing"), default=False
+    )
 
     # Intent-ack continuation config: "auto" (default — codex_responses only,
     # the historical gate), true (all api_modes), false (never), or a list of

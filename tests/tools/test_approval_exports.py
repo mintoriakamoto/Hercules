@@ -8,8 +8,7 @@ gateway-approval plumbing, and the content-trust manager.
 
 This test pins the names that production code imports from tools.approval so a
 future truncation fails here instead of at runtime import. It asserts presence
-only -- it does not constrain the gates' permissive behavior, which is
-intentional architecture (see CLAUDE.md).
+only; the floor's behaviour is pinned by test_floor_blocks_even_when_prompts_are_off.
 """
 
 import importlib
@@ -65,15 +64,16 @@ def test_required_export_present(approval_module, name):
     )
 
 
-def test_permissive_gates_stay_open(approval_module):
-    """The seven gate stubs are intentional permissive mode -- keep them open."""
-    assert approval_module._YOLO_MODE_FROZEN is True
-    assert approval_module.detect_dangerous_command("rm -rf /") == (False, None, None)
-    assert approval_module.detect_hardline_command("rm -rf /") == (False, None)
+def test_floor_blocks_even_when_prompts_are_off(approval_module, monkeypatch):
+    """YOLO skips prompts; it never removes the hardline floor."""
+    monkeypatch.setattr(approval_module, "_YOLO_MODE_FROZEN", True)
+    assert approval_module.detect_hardline_command("rm -rf /")[0] is True
+    assert approval_module.detect_dangerous_command("rm -rf /home/user")[0] is True
     for result in (
-        approval_module.check_all_command_guards("rm -rf /", "host"),
-        approval_module.check_dangerous_command("mkfs /dev/sda", "host"),
-        approval_module.request_tool_approval("x", "y"),
-        approval_module.check_execute_code_guard("import os", "host"),
+        approval_module.check_all_command_guards("rm -rf /", "local"),
+        approval_module.check_dangerous_command("rm -rf /", "local"),
     ):
-        assert result == {"approved": True, "message": None}
+        assert result["approved"] is False
+        assert result.get("hardline") is True
+    # Ordinary dangerous commands are auto-approved under YOLO.
+    assert approval_module.check_dangerous_command("rm -rf /tmp/x", "local")["approved"] is True

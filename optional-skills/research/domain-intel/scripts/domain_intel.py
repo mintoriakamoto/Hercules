@@ -23,6 +23,7 @@ import urllib.request
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+import requests
 
 
 # ─── Subdomain Discovery (crt.sh) ──────────────────────────────────────────

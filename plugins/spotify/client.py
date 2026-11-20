@@ -12,6 +12,7 @@ from hercules_cli.auth import (
     AuthError,
     resolve_spotify_runtime_credentials,
 )
+import requests
 
 
 class SpotifyError(RuntimeError):

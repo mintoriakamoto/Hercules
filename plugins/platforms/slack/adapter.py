@@ -17,6 +17,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Any, Tuple, List
+import requests
 
 try:
     from slack_bolt.async_app import AsyncApp

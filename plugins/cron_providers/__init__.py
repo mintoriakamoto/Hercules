@@ -33,6 +33,10 @@ import logging
 import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from cron.scheduler_provider import CronScheduler
 
 logger = logging.getLogger(__name__)
 

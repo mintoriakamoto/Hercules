@@ -39,6 +39,8 @@ from hercules_cli.browser_connect import (
     launch_chrome_debug,
     manual_chrome_debug_command,
 )
+import httpx
+import requests
 
 
 class CLICommandsMixin:

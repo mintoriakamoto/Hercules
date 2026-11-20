@@ -26,7 +26,7 @@ def _compressor(monkeypatch, *, context_length: int = 200_000):
     from agent.context_compressor import ContextCompressor
 
     monkeypatch.setattr(
-        "agent.context_compressor.get_model_context_length",
+        "agent.compression.context.get_model_context_length",
         lambda *a, **k: context_length,
     )
     return ContextCompressor(

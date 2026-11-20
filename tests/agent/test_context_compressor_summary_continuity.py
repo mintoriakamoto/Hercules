@@ -7,7 +7,7 @@ from agent.context_compressor import ContextCompressor, SUMMARY_PREFIX
 
 def _compressor() -> ContextCompressor:
     with patch(
-        "agent.context_compressor.get_model_context_length", return_value=100000
+        "agent.compression.context.get_model_context_length", return_value=100000
     ):
         return ContextCompressor(
             model="test/model",
@@ -45,7 +45,7 @@ def test_existing_previous_summary_is_not_serialized_again_as_new_turn():
     compressor._previous_summary = old_summary
 
     with patch(
-        "agent.context_compressor.call_llm", return_value=_response("updated summary")
+        "agent.compression.context.call_llm", return_value=_response("updated summary")
     ) as mock_call:
         compressor.compress(_messages_with_handoff(old_summary))
 
@@ -63,7 +63,7 @@ def test_resume_rehydrates_previous_summary_from_handoff_message():
     assert compressor._previous_summary is None
 
     with patch(
-        "agent.context_compressor.call_llm", return_value=_response("updated summary")
+        "agent.compression.context.call_llm", return_value=_response("updated summary")
     ) as mock_call:
         compressor.compress(_messages_with_handoff(old_summary))
 

@@ -1,9 +1,8 @@
 """Force-open Hercules guardrails at process start.
 
-Memory, skills, tools, and delegation keep running. Approval prompts,
-hardline blocks, write gates, skill install policy, file-device denylist,
-and subagent auto-deny are removed. File locks and other race-safety
-stay in the original modules.
+YOLO (no approval prompts) is the operator default. The hardline floor,
+the user's ``approvals.deny`` list and the content scanners are never
+removed; see :func:`apply`.
 
 Open is the DEFAULT, not a fixed property of the process. Two callers must
 be able to get the real guards back:
@@ -87,85 +86,44 @@ def open_guardrails_enabled() -> bool:
     return not _running_under_pytest()
 
 
-def _approved(*_args, **_kwargs):
-    return {"approved": True, "message": None}
-
-
 def apply() -> None:
+    """Turn YOLO on as the operator default, without removing the floor.
+
+    YOLO means "do not prompt me": dangerous-pattern commands, execute_code
+    and plugin tool approvals are auto-approved through the real gate's own
+    yolo path. It does NOT mean "remove every check". The real gate still
+    runs, so these keep working under YOLO:
+
+    * the hardline floor (wiping /, home or system dirs, disk formatting,
+      fork bombs, shutdown/reboot),
+    * the user's own ``approvals.deny`` list,
+    * the ``sudo -S`` password-guessing guard,
+    * the memory injection scan, the skill install scan, the file-device
+      denylist, and ``write_approval`` when the user has turned it on.
+
+    Earlier versions replaced all of those with always-approve stubs, which
+    also disarmed the user's own deny list and made every gateway caller's
+    command run unchecked.
+    """
     global _applied
     if _applied:
         return
     if not open_guardrails_enabled():
         return
 
-    # Only claim the process once we know we are opening it. Assigning this
-    # before the check is what made the opt-out unreachable: tools.approval
-    # freezes _YOLO_MODE_FROZEN from this variable at ITS import, so setting
-    # it here unconditionally bypassed approvals even when the patching below
-    # was skipped.
+    # Only claim the process once we know we are opening it: tools.approval
+    # freezes _YOLO_MODE_FROZEN from this variable at ITS import.
     os.environ.setdefault("HERCULES_YOLO_MODE", "1")
 
     try:
         import tools.approval as ap
 
+        # tools.approval may already have been imported (and frozen) before
+        # bootstrap ran, so set the frozen flag directly as well.
         ap._YOLO_MODE_FROZEN = True
-        ap.check_dangerous_command = _approved
-        ap.check_all_command_guards = _approved
-        ap.request_tool_approval = _approved
-        ap.check_execute_code_guard = _approved
-        ap.detect_hardline_command = lambda command: (False, None)
-        ap.detect_dangerous_command = lambda command: (False, None)
-        ap.is_approval_bypass_active = lambda: True
-        ap._get_cron_approval_mode = lambda: "approve"
-        ap._get_approval_mode = lambda: "off"
-        ap._match_user_deny_rule = lambda command: None
-    except (ImportError, ModuleNotFoundError):
-        pass
-
-    try:
-        import tools.write_approval as wa
-
-        wa.write_approval_enabled = lambda subsystem: False
-        wa.evaluate_gate = lambda subsystem, **kwargs: wa.GateDecision(allow=True)
-    except (ImportError, ModuleNotFoundError):
-        pass
-
-    try:
-        import tools.skills_guard as sg
-
-        sg.scan_file = lambda *args, **kwargs: []
-        sg.should_allow_install = lambda result, force=False: (True, "allowed")
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
-        pass
-
-    try:
-        import tools.file_tools as ft
-
-        ft._is_blocked_device_path = lambda path: False
-        ft._is_blocked_device = lambda *args, **kwargs: False
-    except (ImportError, ModuleNotFoundError):
-        pass
-
-    try:
-        import tools.memory_tool as mt
-
-        mt._scan_memory_content = lambda content: None
-        if hasattr(mt, "MemoryStore"):
-            mt.MemoryStore._sanitize_entries_for_snapshot = staticmethod(
-                lambda entries, filename="": list(entries or [])
-            )
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
-        pass
-
-    try:
-        import tools.delegate_tool as dt
-
-        dt._get_subagent_approval_callback = lambda: dt._subagent_auto_approve
-        dt._subagent_auto_deny = dt._subagent_auto_approve
     except (ImportError, ModuleNotFoundError):
         pass
 
     _applied = True
-
 
 apply()

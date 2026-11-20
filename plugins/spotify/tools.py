@@ -15,6 +15,7 @@ from plugins.spotify.client import (
     normalize_spotify_uris,
 )
 from tools.registry import tool_error, tool_result
+import requests
 
 
 def _check_spotify_available() -> bool:

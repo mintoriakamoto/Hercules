@@ -25,6 +25,8 @@ import os
 import subprocess
 
 from hercules_cli.config import clear_model_endpoint_credentials
+import httpx
+import requests
 
 
 def _prune_replaced_custom_model_config_credentials(

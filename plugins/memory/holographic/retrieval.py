@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+import sqlite3
 
 if TYPE_CHECKING:
     import numpy as np

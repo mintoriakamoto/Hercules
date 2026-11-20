@@ -23,7 +23,7 @@ from agent.context_compressor import (
 
 
 def _make_compressor():
-    with patch("agent.context_compressor.get_model_context_length", return_value=8000):
+    with patch("agent.compression.context.get_model_context_length", return_value=8000):
         return ContextCompressor(
             model="test-model", quiet_mode=True, config_context_length=8000
         )
@@ -40,7 +40,7 @@ def _make_messages(n_turns=30):
 def _compress(cc, msgs):
     resp = MagicMock()
     resp.choices[0].message.content = "## Active Task\nstuff"
-    with patch("agent.context_compressor.call_llm", return_value=resp):
+    with patch("agent.compression.context.call_llm", return_value=resp):
         return cc.compress(msgs, current_tokens=100_000, force=True)
 
 

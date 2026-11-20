@@ -20,6 +20,8 @@ from typing import Any, Optional, Dict, List
 from enum import Enum
 
 from hercules_constants import get_hercules_home
+import httpx
+import requests
 
 
 class ImprovementType(Enum):

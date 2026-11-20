@@ -26,8 +26,10 @@ Design:
 import json
 import logging
 import os
+import re
 import tempfile
 import time
+import unicodedata
 from contextlib import contextmanager
 from pathlib import Path
 from hercules_constants import get_hercules_home
@@ -76,8 +78,187 @@ ENTRY_DELIMITER = "\n§\n"
 
 
 
+# Bounded filler: up to N intervening words between keywords, so multi-word
+# insertions ("ignore all prior instructions") still match without the
+# catastrophic backtracking of an unbounded ``(?:\w+\s+)*``.
+_W2 = r"(?:\w+\s+){0,2}"
+_W4 = r"(?:\w+\s+){0,4}"
+_W8 = r"(?:\w+\s+){0,8}"
+_SECRET_VAR = r"\$\{?\w*(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|API)\w*\}?"
+
+# (regex, pattern_id). Pattern ids match those used by tools/skills_guard.py
+# and tools/cronjob_tools.py, but the regexes are tuned for short memory
+# entries: they require directive/modify intent so that ordinary facts
+# ("You are now on the main branch", "Read AGENTS.md for conventions") pass.
+_MEMORY_THREAT_PATTERNS = [
+    # ── Prompt injection / role hijack ──
+    (rf"\bignore\s+{_W8}(?:previous|all|above|prior|earlier|preceding)\s+{_W8}(?:instructions|rules|directives|guidelines|prompts?)\b",
+     "prompt_injection"),
+    (rf"\bdisregard\s+{_W8}(?:your|all|any|the|previous|prior)\s+{_W8}(?:instructions|rules|guidelines|directives)\b",
+     "disregard_rules"),
+    (rf"\bforget\s+{_W4}(?:previous|all|prior|your)\s+{_W4}(?:instructions|rules|guidelines)\b",
+     "disregard_rules"),
+    (r"\byou\s+are\s+now\s+(?:a|an|the|my)\b", "role_hijack"),
+    (rf"\bsystem\s+{_W4}prompt\s+{_W4}override\b", "sys_prompt_override"),
+    (rf"\b(?:override|replace|overwrite)\s+{_W4}(?:the\s+)?system\s+prompt\b", "sys_prompt_override"),
+    (rf"\bact\s+as\s+(?:if|though)\s+{_W4}you\s+{_W4}(?:have\s+no|don'?t\s+have|are\s+free\s+of)\s+{_W4}(?:restrictions|limits|limitations|rules|guidelines)\b",
+     "bypass_restrictions"),
+    (rf"\bpretend\s+{_W4}(?:you\s+are|you're|to\s+be)\s+", "role_pretend"),
+    (rf"\b(?:output|print|reveal|show|repeat|dump|leak|disclose)\s+{_W4}(?:system|initial|hidden|original)\s+(?:prompt|instructions)\b",
+     "leak_system_prompt"),
+    (rf"\b(?:respond|answer|reply|operate|act)\s+without\s+{_W4}(?:restrictions|limitations|filters|safety|guardrails)\b",
+     "remove_filters"),
+    (rf"\byou\s+have\s+been\s+{_W4}(?:updated|upgraded|patched|reprogrammed)\s+to\b", "fake_update"),
+    (r"\btranslate\s+.{0,200}?\s+into\s+.{0,200}?\s+and\s+(?:execute|run|eval)\b", "translate_execute"),
+    (r"<!--[^>]*(?:ignore|override|system|secret|hidden|instruction)[^>]*-->", "html_comment_injection"),
+    (r"<\s*(?:div|span|p)\s+[^>]*style\s*=\s*[\"'][^\"'>]*(?:display\s*:\s*none|visibility\s*:\s*hidden)",
+     "hidden_div"),
+    (rf"\b(?:do\s+not|don'?t|never)\s+{_W4}(?:tell|inform|notify|alert|show)\s+{_W4}the\s+user\b", "deception_hide"),
+    (r"\b(?:when|if)\s+no\s*one\s+is\s+(?:watching|looking)\b", "conditional_deception"),
+    (r"\bDAN\s+mode\b|\bDo\s+Anything\s+Now\b", "jailbreak_dan"),
+    # ── Promptware / C2 enrolment (e.g. the "Brainworm" payload) ──
+    (rf"\bregister\s+{_W2}as\s+an?\s+(?:\w+\s+)?(?:node|bot|agent|worker|peer|implant|client)\b", "c2_registration"),
+    (rf"\b(?:perform|execute|carry\s+out|run)\s+{_W2}tasking\b", "c2_tasking"),
+    (rf"\b(?:poll|check|beacon)\s+{_W4}(?:for|to)\s+{_W2}(?:tasking|commands|instructions)\s+from\b", "c2_tasking"),
+    (r"\bname\s+yourself\s+\w+", "identity_rename"),
+    (rf"\bnever\s+write\s+{_W4}to\s+disk\b", "anti_forensics"),
+    # ── Exfiltration ──
+    (rf"\bcurl\s+[^\n]*{_SECRET_VAR}", "exfil_curl"),
+    (rf"\bwget\s+[^\n]*{_SECRET_VAR}", "exfil_wget"),
+    (rf"\b(?:fetch|requests\.\w+|httpx\.\w+|Invoke-WebRequest|iwr|nc|ncat)\b[^\n]*{_SECRET_VAR}", "exfil_http"),
+    (r"!\[[^\]]*\]\(https?://[^)\s]*\$\{?\w+", "md_image_exfil"),
+    (r"(?:\b(?:cat|bat|strings|base64|xxd|scp)\s+|\b(?:head|tail|less|more)\s+(?:-\S+\s+)*(?=[~/.$]))[^\n]*(?:\.env\b|credentials|\.netrc|\.pgpass|\.npmrc|\.pypirc|\.git-credentials|auth\.json|\.anthropic_oauth\.json|mcp-tokens|id_rsa|id_ed25519|\.aws/|\.kube/config)",
+     "read_secrets"),
+    (r"\b(?:printenv|env)\s*\|\s*(?:curl|wget|nc|ncat|base64)\b", "exfil_env_pipe"),
+    (r"\b(?:send|post|upload|transmit|forward|exfiltrate|beacon)\s+.{0,200}?\s+(?:to|at)\s+https?://", "send_to_url"),
+    (rf"\b(?:include|output|print|send|share|dump|leak|reveal|upload|forward)\s+{_W4}(?:conversation(?:\s+history)?|chat\s+(?:history|log)|previous\s+messages|(?:full|entire|whole|complete)\s+context)\b",
+     "context_exfil"),
+    # ── Persistence / privilege ──
+    (r"authorized_keys", "ssh_backdoor"),
+    (r"\.ssh/id_(?:rsa|dsa|ecdsa|ed25519)(?:_sk)?\b(?!\.pub)", "ssh_access"),
+    (r"/etc/sudoers|\bvisudo\b", "sudoers_mod"),
+    (rf"\b(?:update|modify|edit|write|append|change|overwrite|rewrite|replace|patch|add\s+to|insert\s+into)\s+{_W4}(?:[\w./~-]*/)?(?:AGENTS\.md|CLAUDE\.md|GEMINI\.md|\.cursorrules|\.clinerules|\.windsurfrules)",
+     "agent_config_mod"),
+    (rf"\b(?:update|modify|edit|write|append|change|overwrite|rewrite|replace|patch|add\s+to|insert\s+into)\s+{_W4}(?:~/|\$HERCULES_HOME/|[\w./-]*/)?\.hercules/(?:config\.yaml|SOUL\.md|\.env|auth\.json|plugins/|skills/)",
+     "hercules_config_mod"),
+    # ── Credentials embedded in memory ──
+    (r"(?:api[_-]?key|access[_-]?key|auth[_-]?token|token|secret|password|passwd)\s*[=:]\s*[\"']?[A-Za-z0-9+/=_.-]{20,}",
+     "hardcoded_secret"),
+    (r"-----BEGIN\s+(?:[A-Z]+\s+)?PRIVATE\s+KEY-----", "embedded_private_key"),
+    (r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{20,}|\bghp_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{60,}|\bAKIA[0-9A-Z]{16}\b|\bxox[abprs]-[A-Za-z0-9-]{10,}",
+     "api_key_literal"),
+]
+
+_COMPILED_MEMORY_THREATS = [
+    (re.compile(rx, re.IGNORECASE | re.DOTALL), pid) for rx, pid in _MEMORY_THREAT_PATTERNS
+]
+
+try:
+    from tools.threat_patterns import INVISIBLE_CHARS as _SHARED_INVISIBLE_CHARS
+except Exception:  # pragma: no cover - import fallback
+    _SHARED_INVISIBLE_CHARS = frozenset()
+
+# Zero-width, bidi-override/isolate and invisible-operator characters used to
+# hide instructions from a human reviewing MEMORY.md / USER.md.
+_INVISIBLE_CHARS = frozenset(_SHARED_INVISIBLE_CHARS) | frozenset({
+    "\u034f",  # combining grapheme joiner
+    "\u115f", "\u1160", "\u3164", "\uffa0",  # hangul fillers
+    "\u180e",  # mongolian vowel separator
+    "\u200b", "\u200c", "\u200d",
+    "\u202a", "\u202b", "\u202c", "\u202d", "\u202e",
+    "\u2060", "\u2061", "\u2062", "\u2063", "\u2064",
+    "\u2066", "\u2067", "\u2068", "\u2069",
+    "\ufeff",
+})
+
+
+def _is_invisible_char(ch: str) -> bool:
+    if ch in _INVISIBLE_CHARS:
+        return True
+    cp = ord(ch)
+    # Unicode "tag" characters (U+E0000-U+E007F) smuggle ASCII invisibly;
+    # variation selectors supplement (U+E0100-U+E01EF) likewise.
+    return 0xE0000 <= cp <= 0xE007F or 0xE0100 <= cp <= 0xE01EF
+
+
+def _find_invisible_char(content: str) -> Optional[str]:
+    for ch in content:
+        if _is_invisible_char(ch):
+            return ch
+    return None
+
+
+def _find_memory_threats(content: str) -> List[str]:
+    """Return the ids of every threat pattern found in ``content`` (deduped, ordered).
+
+    Invisible characters are reported as ``invisible_unicode``. The text is
+    also checked after NFKC normalisation and with invisible characters
+    stripped, so full-width letters or zero-width joiners spliced into a
+    keyword (a zero-width space spliced into "ignore") cannot dodge the regexes.
+    The shared ``tools.threat_patterns`` library is consulted as well, so
+    any patterns restored there apply here too.
+    """
+    if not content:
+        return []
+    findings: List[str] = []
+
+    def _add(pid: str) -> None:
+        if pid not in findings:
+            findings.append(pid)
+
+    if _find_invisible_char(content) is not None:
+        _add("invisible_unicode")
+
+    stripped = "".join(ch for ch in content if not _is_invisible_char(ch))
+    variants = [content]
+    for candidate in (stripped, unicodedata.normalize("NFKC", stripped)):
+        if candidate not in variants:
+            variants.append(candidate)
+
+    for text in variants:
+        for rx, pid in _COMPILED_MEMORY_THREATS:
+            if rx.search(text):
+                _add(pid)
+
+    try:
+        from tools.threat_patterns import scan_for_threats
+
+        for pid in scan_for_threats(content, scope="strict") or []:
+            _add(pid)
+    except Exception:  # pragma: no cover - shared library optional here
+        pass
+    return findings
+
+
 def _scan_memory_content(content: str) -> Optional[str]:
-    """Memory content scanning disabled - allows all content."""
+    """Scan memory content for prompt injection, exfiltration and persistence.
+
+    Memory entries are injected verbatim into every future system prompt, so a
+    poisoned entry is a durable cross-session injection. Returns ``None`` when
+    the content is acceptable, otherwise a human-readable error string
+    (starting with ``"Blocked:"``) explaining why the write was refused.
+    """
+    if not content:
+        return None
+
+    invisible = _find_invisible_char(content)
+    if invisible is not None:
+        return (
+            f"Blocked: content contains invisible unicode character "
+            f"U+{ord(invisible):04X} (possible hidden-instruction injection). "
+            f"Memory entries are injected into the system prompt; remove the "
+            f"character and retry."
+        )
+
+    findings = _find_memory_threats(content)
+    if findings:
+        return (
+            f"Blocked: content matches threat pattern(s): {', '.join(findings)}. "
+            f"Memory entries are injected into the system prompt of every "
+            f"future session and must not contain prompt-injection, "
+            f"exfiltration, persistence or credential payloads. Rephrase the "
+            f"entry as a plain factual note."
+        )
     return None
 
 
@@ -213,23 +394,29 @@ class MemoryStore:
     def _sanitize_entries_for_snapshot(entries: List[str], filename: str) -> List[str]:
         """Return ``entries`` with any threat-matching entry replaced by a placeholder.
 
-        Each entry is scanned with the shared threat-pattern library at the
-        ``"strict"`` scope (same as memory writes).  On match, the entry is
+        Each entry is scanned with the same checks as memory writes
+        (``_find_memory_threats``: the module's memory threat patterns, the
+        invisible-unicode check, plus the shared ``tools.threat_patterns``
+        library at the ``"strict"`` scope).  On match, the entry is
         replaced in the returned list with ``"[BLOCKED: <filename> entry
         contained threat pattern: <ids>. Removed from system prompt.]"`` —
         the placeholder enters the snapshot, the original entry stays in
         live state for the user to inspect and delete.
 
-        Empty or already-block-marker entries pass through unchanged.
+        Empty entries pass through unchanged.  Existing ``[BLOCKED: ...]``
+        markers are scanned like any other entry: a genuine marker carries no
+        threat text and passes through unchanged (no double wrapping), while
+        a payload appended to a forged marker is still caught.
         """
-        from tools.threat_patterns import scan_for_threats
-
         sanitized: List[str] = []
         for entry in entries:
-            if not entry or entry.startswith("[BLOCKED:"):
+            if not entry:
                 sanitized.append(entry)
                 continue
-            findings = scan_for_threats(entry, scope="strict")
+            # Entries that already carry a "[BLOCKED:" marker are scanned too:
+            # a genuine placeholder contains no threat text and passes through
+            # unchanged, but a payload hidden behind a forged marker does not.
+            findings = _find_memory_threats(entry)
             if findings:
                 logger.warning(
                     "Memory entry from %s blocked at load time: %s",
@@ -839,7 +1026,7 @@ def load_on_disk_store() -> "MemoryStore":
         mem_cfg = (load_config() or {}).get("memory", {}) or {}
         memory_char_limit = int(mem_cfg.get("memory_char_limit", memory_char_limit))
         user_char_limit = int(mem_cfg.get("user_char_limit", user_char_limit))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass  # config optional — fall back to defaults rather than break /memory
 
     store = MemoryStore(

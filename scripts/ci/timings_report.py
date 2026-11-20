@@ -25,6 +25,9 @@ import sys
 import time
 from datetime import datetime
 from html import escape
+import urllib.error
+import urllib.parse
+import urllib.request
 
 API_BASE = "https://api.github.com"
 

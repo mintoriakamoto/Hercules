@@ -22,6 +22,7 @@ import os
 from typing import Optional
 import json
 import logging
+import httpx
 
 
 def relay_url() -> Optional[str]:

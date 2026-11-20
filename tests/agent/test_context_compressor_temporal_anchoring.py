@@ -20,7 +20,7 @@ from agent.context_compressor import ContextCompressor, HISTORICAL_TASK_HEADING
 
 def _compressor() -> ContextCompressor:
     with patch(
-        "agent.context_compressor.get_model_context_length", return_value=100000
+        "agent.compression.context.get_model_context_length", return_value=100000
     ):
         return ContextCompressor(
             model="test/model",
@@ -57,7 +57,7 @@ def test_first_compaction_prompt_contains_dated_anchoring_rule():
     with (
         patch.object(hercules_time, "now", _fixed_now),
         patch(
-            "agent.context_compressor.call_llm", return_value=_response("summary")
+            "agent.compression.context.call_llm", return_value=_response("summary")
         ) as mock_call,
     ):
         compressor._generate_summary(_turns())
@@ -78,7 +78,7 @@ def test_iterative_update_prompt_also_contains_anchoring_rule():
     with (
         patch.object(hercules_time, "now", _fixed_now),
         patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             return_value=_response("updated summary"),
         ) as mock_call,
     ):
@@ -99,7 +99,7 @@ def test_clock_failure_omits_rule_but_compaction_still_runs():
     with (
         patch.object(hercules_time, "now", _boom),
         patch(
-            "agent.context_compressor.call_llm", return_value=_response("summary")
+            "agent.compression.context.call_llm", return_value=_response("summary")
         ) as mock_call,
     ):
         result = compressor._generate_summary(_turns())
@@ -120,7 +120,7 @@ def test_anchoring_rule_uses_date_from_hercules_time_now():
     with (
         patch.object(hercules_time, "now", lambda: fixed),
         patch(
-            "agent.context_compressor.call_llm", return_value=_response("summary")
+            "agent.compression.context.call_llm", return_value=_response("summary")
         ) as mock_call,
     ):
         compressor._generate_summary(_turns())

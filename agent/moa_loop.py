@@ -16,6 +16,8 @@ from typing import Any
 from agent.auxiliary_client import call_llm
 from agent.transports import get_transport
 import json
+import httpx
+import requests
 
 logger = logging.getLogger(__name__)
 
