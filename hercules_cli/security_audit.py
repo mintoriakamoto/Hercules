@@ -29,6 +29,8 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from hercules_constants import get_hercules_home
+import urllib.error
+import urllib.request
 
 OSV_BATCH_URL = "https://api.osv.dev/v1/querybatch"
 OSV_VULN_URL = "https://api.osv.dev/v1/vulns/{vid}"

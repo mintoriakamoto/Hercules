@@ -17,7 +17,7 @@ from hercules_state import SessionDB
 def compressor():
     """Create a ContextCompressor with mocked dependencies."""
     with patch(
-        "agent.context_compressor.get_model_context_length", return_value=100000
+        "agent.compression.context.get_model_context_length", return_value=100000
     ):
         c = ContextCompressor(
             model="test/model",
@@ -137,7 +137,7 @@ class TestCompress:
             10
         )
         with patch(
-            "agent.context_compressor.call_llm", side_effect=RuntimeError("no provider")
+            "agent.compression.context.call_llm", side_effect=RuntimeError("no provider")
         ):
             result = compressor.compress(msgs)
         assert len(result) < len(msgs)
@@ -155,7 +155,7 @@ class TestCompress:
         future turn does not see only "messages were removed" after compaction.
         """
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test/model",
@@ -194,7 +194,7 @@ class TestCompress:
         with (
             patch.object(c, "_find_tail_cut_by_tokens", return_value=5),
             patch(
-                "agent.context_compressor.call_llm",
+                "agent.compression.context.call_llm",
                 side_effect=RuntimeError("provider down"),
             ),
         ):
@@ -222,7 +222,7 @@ class TestCompress:
         work.
         """
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test/model", quiet_mode=True)
 
@@ -282,7 +282,7 @@ class TestCompress:
         should_compress() fire below its window (at the 85% trigger), not only
         at 100%."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=64000
+            "agent.compression.context.get_model_context_length", return_value=64000
         ):
             c = ContextCompressor(model="small-64k", quiet_mode=True)
             c.context_length = 64000
@@ -342,7 +342,7 @@ class TestCompress:
         # yields a harmless positive int rather than crashing — the threshold
         # is computed cleanly with a 1-token reservation.
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=200000
+            "agent.compression.context.get_model_context_length", return_value=200000
         ):
             c = ContextCompressor(model="m", quiet_mode=True, max_tokens=MagicMock())
         assert isinstance(c.max_tokens, int)
@@ -381,7 +381,7 @@ class TestCompress:
             for i in range(10)
         ]
         with patch(
-            "agent.context_compressor.call_llm", side_effect=RuntimeError("no provider")
+            "agent.compression.context.call_llm", side_effect=RuntimeError("no provider")
         ):
             result = compressor.compress(msgs)
         assert len(result) < len(msgs)
@@ -409,7 +409,7 @@ class TestCompress:
         with (
             patch.object(_cc, "_fresh_compaction_message_copy", lambda m: m.copy()),
             patch(
-                "agent.context_compressor.call_llm",
+                "agent.compression.context.call_llm",
                 side_effect=RuntimeError("no provider"),
             ),
         ):
@@ -426,7 +426,7 @@ class TestCompress:
         fossilize (grow immortal) across a long, repeatedly-compressed
         session. The system prompt is always protected separately."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=3)
 
@@ -449,7 +449,7 @@ class TestCompress:
         """Even if compression_count was reset, an existing handoff summary
         means the early turns are already captured — decay still applies."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=3)
         c.compression_count = 0
@@ -468,7 +468,7 @@ class TestTailBudgetCodexReplayFields:
         oversized tail and immediately starts the next session near the limit.
         """
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test/model",
@@ -545,7 +545,7 @@ class TestTailBudgetCodexReplayFields:
     def test_tail_cut_counts_each_hidden_replay_field(self, field_name, field_value):
         """Each provider replay/reasoning field should affect tail budgeting."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test/model",
@@ -584,7 +584,7 @@ class TestGenerateSummaryNoneContent:
         ].message.content = "[CONTEXT SUMMARY]: tool calls happened"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -600,7 +600,7 @@ class TestGenerateSummaryNoneContent:
             {"role": "user", "content": "thanks"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             summary = c._generate_summary(messages)
         assert isinstance(summary, str)
         assert summary.startswith(SUMMARY_PREFIX)
@@ -608,7 +608,7 @@ class TestGenerateSummaryNoneContent:
     def test_none_content_in_system_message_compress(self):
         """System message with content=None should not crash during compress."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -631,7 +631,7 @@ class TestNonStringContent:
         mock_response.choices[0].message.content = {"text": "some summary"}
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -640,7 +640,7 @@ class TestNonStringContent:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             summary = c._generate_summary(messages)
         assert isinstance(summary, str)
         assert summary.startswith(SUMMARY_PREFIX)
@@ -657,7 +657,7 @@ class TestNonStringContent:
         mock_response.choices[0].message.content = None
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             # summary_model == model here, so no fallback path: straight to cooldown.
             c = ContextCompressor(model="test", quiet_mode=True)
@@ -667,7 +667,7 @@ class TestNonStringContent:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             summary = c._generate_summary(messages)
         # Empty content → failure → None (drop turns), NOT a prefix-only summary.
         assert summary is None
@@ -683,7 +683,7 @@ class TestNonStringContent:
         mock_response.choices[0].message.content = "   \n  "
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -692,7 +692,7 @@ class TestNonStringContent:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             summary = c._generate_summary(messages)
         assert summary is None
         assert c._summary_failure_cooldown_until > 0
@@ -706,7 +706,7 @@ class TestNonStringContent:
         mock_response.choices[0].message.content = ""
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="glm-5",
@@ -720,7 +720,7 @@ class TestNonStringContent:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", return_value=mock_response
+            "agent.compression.context.call_llm", return_value=mock_response
         ) as mock_call:
             summary = c._generate_summary(messages)
         # Two calls: aux model (glm-5.1) then fallback to main (glm-5).
@@ -735,7 +735,7 @@ class TestNonStringContent:
         mock_response.choices[0].message = "plain summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -744,7 +744,7 @@ class TestNonStringContent:
             {"role": "assistant", "content": "ok"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             summary = c._generate_summary(messages)
 
         assert summary == f"{SUMMARY_PREFIX}\nplain summary text"
@@ -755,7 +755,7 @@ class TestNonStringContent:
         mock_response.choices[0].message.content = "ok"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -765,7 +765,7 @@ class TestNonStringContent:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", return_value=mock_response
+            "agent.compression.context.call_llm", return_value=mock_response
         ) as mock_call:
             c._generate_summary(messages)
 
@@ -778,7 +778,7 @@ class TestNonStringContent:
         mock_response.choices[0].message.content = "ok"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -788,7 +788,7 @@ class TestNonStringContent:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", return_value=mock_response
+            "agent.compression.context.call_llm", return_value=mock_response
         ) as mock_call:
             c._generate_summary(messages)
 
@@ -806,7 +806,7 @@ class TestNonStringContent:
         mock_response.choices[0].message.content = "ok"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="gpt-5.4",
@@ -823,7 +823,7 @@ class TestNonStringContent:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", return_value=mock_response
+            "agent.compression.context.call_llm", return_value=mock_response
         ) as mock_call:
             c._generate_summary(messages)
 
@@ -839,7 +839,7 @@ class TestNonStringContent:
 class TestSummaryFailureCooldown:
     def test_summary_failure_enters_cooldown_and_skips_retry(self):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -849,7 +849,7 @@ class TestSummaryFailureCooldown:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", side_effect=Exception("boom")
+            "agent.compression.context.call_llm", side_effect=Exception("boom")
         ) as mock_call:
             first = c._generate_summary(messages)
             second = c._generate_summary(messages)
@@ -886,11 +886,11 @@ class TestAuthFailureAborts:
 
     def test_generate_summary_flags_auth_failure(self):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         with patch(
-            "agent.context_compressor.call_llm", side_effect=self._auth_err(401)
+            "agent.compression.context.call_llm", side_effect=self._auth_err(401)
         ):
             result = c._generate_summary(self._msgs())
         assert result is None
@@ -898,11 +898,11 @@ class TestAuthFailureAborts:
 
     def test_403_also_flags_auth_failure(self):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         with patch(
-            "agent.context_compressor.call_llm", side_effect=self._auth_err(403)
+            "agent.compression.context.call_llm", side_effect=self._auth_err(403)
         ):
             c._generate_summary(self._msgs())
         assert c._last_summary_auth_failure is True
@@ -911,7 +911,7 @@ class TestAuthFailureAborts:
         """abort_on_summary_failure=False (the default), but a 401 must still
         abort: messages returned unchanged, _last_compress_aborted=True."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -922,7 +922,7 @@ class TestAuthFailureAborts:
             )
         msgs = self._msgs(12)
         with patch(
-            "agent.context_compressor.call_llm", side_effect=self._auth_err(401)
+            "agent.compression.context.call_llm", side_effect=self._auth_err(401)
         ):
             result = c.compress(msgs, current_tokens=999999, force=True)
         # Session must NOT be compressed/rotated — same messages back.
@@ -938,7 +938,7 @@ class TestAuthFailureAborts:
         keeps the historical behavior: insert a static fallback + drop the
         middle window (does NOT abort)."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -949,7 +949,7 @@ class TestAuthFailureAborts:
             )
         msgs = self._msgs(12)
         with patch(
-            "agent.context_compressor.call_llm", side_effect=Exception("boom 500")
+            "agent.compression.context.call_llm", side_effect=Exception("boom 500")
         ):
             result = c.compress(msgs, current_tokens=999999, force=True)
         assert c._last_summary_auth_failure is False
@@ -960,11 +960,11 @@ class TestAuthFailureAborts:
         """A connection/network error on the summary call flags
         _last_summary_network_failure (#29559)."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=ConnectionError("Connection error."),
         ):
             result = c._generate_summary(self._msgs())
@@ -978,7 +978,7 @@ class TestAuthFailureAborts:
         _last_compress_aborted=True — NOT drop the middle window. Retrying once
         the network recovers beats discarding context for a transient blip."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -989,7 +989,7 @@ class TestAuthFailureAborts:
             )
         msgs = self._msgs(12)
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=ConnectionError("Connection error."),
         ):
             result = c.compress(msgs, current_tokens=999999, force=True)
@@ -1009,7 +1009,7 @@ class TestAuthFailureAborts:
         mock_ok.choices = [MagicMock()]
         mock_ok.choices[0].message.content = "summary via main model"
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1017,7 +1017,7 @@ class TestAuthFailureAborts:
                 quiet_mode=True,
             )
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=[self._auth_err(401), mock_ok],
         ) as mock_call:
             result = c._generate_summary(self._msgs())
@@ -1050,7 +1050,7 @@ class TestSummaryFallbackToMainModel:
         err_404.status_code = 404
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1059,7 +1059,7 @@ class TestSummaryFallbackToMainModel:
             )
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=[err_404, mock_ok],
         ) as mock_call:
             result = c._generate_summary(self._msgs())
@@ -1092,7 +1092,7 @@ class TestSummaryFallbackToMainModel:
         err_400.status_code = 400
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1101,7 +1101,7 @@ class TestSummaryFallbackToMainModel:
             )
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=[err_400, mock_ok],
         ) as mock_call:
             result = c._generate_summary(self._msgs())
@@ -1122,7 +1122,7 @@ class TestSummaryFallbackToMainModel:
         err = Exception("500 internal error")
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1131,7 +1131,7 @@ class TestSummaryFallbackToMainModel:
             )
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=err,
         ) as mock_call:
             result = c._generate_summary(self._msgs())
@@ -1149,7 +1149,7 @@ class TestSummaryFallbackToMainModel:
         err2 = Exception("500 main model also exploded")
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1158,7 +1158,7 @@ class TestSummaryFallbackToMainModel:
             )
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=[err1, err2],
         ) as mock_call:
             result = c._generate_summary(self._msgs())
@@ -1186,7 +1186,7 @@ class TestSummaryFallbackToMainModel:
         )
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1195,7 +1195,7 @@ class TestSummaryFallbackToMainModel:
             )
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=[err_json, mock_ok],
         ) as mock_call:
             result = c._generate_summary(self._msgs())
@@ -1226,7 +1226,7 @@ class TestSummaryFallbackToMainModel:
         err_wrapped = Exception("Expecting value: line 1 column 1 (char 0)")
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1235,7 +1235,7 @@ class TestSummaryFallbackToMainModel:
             )
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=[err_wrapped, mock_ok],
         ) as mock_call:
             result = c._generate_summary(self._msgs())
@@ -1254,7 +1254,7 @@ class TestSummaryFallbackToMainModel:
         err_json = _json.JSONDecodeError("Expecting value", "<html/>", 0)
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1264,7 +1264,7 @@ class TestSummaryFallbackToMainModel:
 
         with (
             patch(
-                "agent.context_compressor.call_llm",
+                "agent.compression.context.call_llm",
                 side_effect=err_json,
             ),
             patch("agent.context_compressor.time.monotonic", return_value=1000.0),
@@ -1304,7 +1304,7 @@ class TestStreamingClosedFallback:
         err = Exception("RemoteProtocolError: incomplete chunked read")
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1314,11 +1314,11 @@ class TestStreamingClosedFallback:
 
         with (
             patch(
-                "agent.context_compressor.call_llm",
+                "agent.compression.context.call_llm",
                 side_effect=[err, mock_ok],
             ) as mock_call,
             patch(
-                "agent.context_compressor._is_connection_error",
+                "agent.compression.context._is_connection_error",
                 return_value=True,
             ),
         ):
@@ -1339,7 +1339,7 @@ class TestStreamingClosedFallback:
         err = Exception("peer closed connection without sending complete message body")
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1349,11 +1349,11 @@ class TestStreamingClosedFallback:
 
         with (
             patch(
-                "agent.context_compressor.call_llm",
+                "agent.compression.context.call_llm",
                 side_effect=[err, mock_ok],
             ) as mock_call,
             patch(
-                "agent.context_compressor._is_connection_error",
+                "agent.compression.context._is_connection_error",
                 return_value=True,
             ),
         ):
@@ -1368,7 +1368,7 @@ class TestStreamingClosedFallback:
         err = Exception("RemoteProtocolError: response ended prematurely")
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1378,11 +1378,11 @@ class TestStreamingClosedFallback:
 
         with (
             patch(
-                "agent.context_compressor.call_llm",
+                "agent.compression.context.call_llm",
                 side_effect=err,
             ),
             patch(
-                "agent.context_compressor._is_connection_error",
+                "agent.compression.context._is_connection_error",
                 return_value=True,
             ),
             patch("agent.context_compressor.time.monotonic", return_value=1000.0),
@@ -1399,7 +1399,7 @@ class TestStreamingClosedFallback:
         err = Exception("Internal Server Error: something unexpected happened")
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1408,11 +1408,11 @@ class TestStreamingClosedFallback:
 
         with (
             patch(
-                "agent.context_compressor.call_llm",
+                "agent.compression.context.call_llm",
                 side_effect=err,
             ),
             patch(
-                "agent.context_compressor._is_connection_error",
+                "agent.compression.context._is_connection_error",
                 return_value=False,
             ),
             patch("agent.context_compressor.time.monotonic", return_value=1000.0),
@@ -1450,7 +1450,7 @@ class TestAuxModelFallbackSurfacedToCallers:
         err_400.status_code = 400
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1461,7 +1461,7 @@ class TestAuxModelFallbackSurfacedToCallers:
             )
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=[err_400, mock_ok],
         ):
             result = c.compress(self._make_msgs())
@@ -1488,7 +1488,7 @@ class TestAuxModelFallbackSurfacedToCallers:
         err_400.status_code = 400
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="main-model",
@@ -1500,7 +1500,7 @@ class TestAuxModelFallbackSurfacedToCallers:
 
         # Call 1: aux fails, retry-on-main succeeds
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=[err_400, mock_ok],
         ):
             c.compress(self._make_msgs())
@@ -1510,7 +1510,7 @@ class TestAuxModelFallbackSurfacedToCallers:
         # first fallback).  Aux-failure fields MUST reset at compress() start
         # so the old warning state doesn't leak into this call.
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             return_value=mock_ok,
         ):
             c.compress(self._make_msgs())
@@ -1526,7 +1526,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
 
     def test_compress_records_fallback_and_dropped_count_on_summary_failure(self):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -1544,7 +1544,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=Exception("404 model not found"),
         ):
             result = c.compress(msgs)
@@ -1564,7 +1564,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
         self,
     ):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1
@@ -1602,7 +1602,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", side_effect=Exception("timeout")
+            "agent.compression.context.call_llm", side_effect=Exception("timeout")
         ):
             result = c.compress(msgs)
 
@@ -1620,7 +1620,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
         self,
     ):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1
@@ -1658,7 +1658,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", side_effect=Exception("timeout")
+            "agent.compression.context.call_llm", side_effect=Exception("timeout")
         ):
             result = c.compress(msgs)
 
@@ -1678,7 +1678,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
 
     def test_summary_failure_fallback_preserves_last_dropped_turns_without_tail(self):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1
@@ -1712,7 +1712,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", side_effect=Exception("timeout")
+            "agent.compression.context.call_llm", side_effect=Exception("timeout")
         ):
             result = c.compress(msgs)
 
@@ -1731,7 +1731,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
 
     def test_summary_failure_fallback_is_bounded(self):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=1, protect_last_n=1
@@ -1750,7 +1750,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
         ]
 
         with patch(
-            "agent.context_compressor.call_llm", side_effect=Exception("timeout")
+            "agent.compression.context.call_llm", side_effect=Exception("timeout")
         ):
             result = c.compress(msgs)
 
@@ -1769,7 +1769,7 @@ class TestSummaryFailureTrackingForGatewayWarning:
         mock_response.choices[0].message.content = "summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -1786,12 +1786,12 @@ class TestSummaryFailureTrackingForGatewayWarning:
             {"role": "user", "content": "msg 7"},
         ]
 
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("boom")):
+        with patch("agent.compression.context.call_llm", side_effect=Exception("boom")):
             c.compress(msgs)
         assert c._last_summary_fallback_used is True
 
         c._summary_failure_cooldown_until = 0.0
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             c.compress(msgs)
         assert c._last_summary_fallback_used is False
         assert c._last_summary_dropped_count == 0
@@ -1817,7 +1817,7 @@ class TestAbortOnSummaryFailure:
 
     def _make_compressor(self):
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             return ContextCompressor(
                 model="test",
@@ -1831,7 +1831,7 @@ class TestAbortOnSummaryFailure:
         c = self._make_compressor()
         msgs = self._make_msgs()
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=Exception("404 model not found"),
         ):
             result = c.compress(msgs)
@@ -1858,12 +1858,12 @@ class TestAbortOnSummaryFailure:
         c = self._make_compressor()
         msgs = self._make_msgs()
 
-        with patch("agent.context_compressor.call_llm", side_effect=Exception("boom")):
+        with patch("agent.compression.context.call_llm", side_effect=Exception("boom")):
             c.compress(msgs)
         assert c._last_compress_aborted is True
 
         c._summary_failure_cooldown_until = 0.0
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             c.compress(msgs)
         assert c._last_compress_aborted is False
         assert c._last_summary_fallback_used is False
@@ -1884,7 +1884,7 @@ class TestAbortOnSummaryFailure:
 
         c._summary_failure_cooldown_until = _time.monotonic() + 999.0
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs, force=True)
 
         assert c._last_compress_aborted is False
@@ -1905,7 +1905,7 @@ class TestAbortOnSummaryFailure:
         msgs = self._make_msgs()
 
         with patch(
-            "agent.context_compressor.call_llm", return_value=mock_response
+            "agent.compression.context.call_llm", return_value=mock_response
         ) as mock_llm:
             result = c.compress(msgs, current_tokens=999999, force=True)
 
@@ -1946,7 +1946,7 @@ class TestAbortOnSummaryFailure:
         msgs = self._make_msgs()
 
         with patch(
-            "agent.context_compressor.call_llm", return_value=mock_response
+            "agent.compression.context.call_llm", return_value=mock_response
         ) as mock_llm:
             result = c.compress(msgs, current_tokens=999999)
 
@@ -1984,7 +1984,7 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -2001,7 +2001,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 7"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         assert isinstance(result[0]["content"], list)
@@ -2019,7 +2019,7 @@ class TestCompressWithClient:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -2029,7 +2029,7 @@ class TestCompressWithClient:
             {"role": "user" if i % 2 == 0 else "assistant", "content": f"msg {i}"}
             for i in range(10)
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         # Should have summary message in the middle
@@ -2047,7 +2047,7 @@ class TestCompressWithClient:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -2086,7 +2086,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "later 4"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         answered_ids = {
@@ -2136,7 +2136,7 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -2154,7 +2154,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 6"},
             {"role": "assistant", "content": "msg 7"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         summary_msg = next(
@@ -2181,7 +2181,7 @@ class TestCompressWithClient:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -2202,7 +2202,7 @@ class TestCompressWithClient:
             {"role": "assistant", "content": "msg 6"},
             {"role": "user", "content": "msg 7"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         summary_msg = next(
@@ -2225,7 +2225,7 @@ class TestCompressWithClient:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -2245,7 +2245,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 6"},
             {"role": "assistant", "content": "msg 7"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
         summary_msg = [
             m for m in result if (m.get("content") or "").startswith(SUMMARY_PREFIX)
@@ -2262,7 +2262,7 @@ class TestCompressWithClient:
         mock_client.chat.completions.create.return_value = mock_response
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -2282,7 +2282,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 6"},
             {"role": "assistant", "content": "msg 7"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
         summary_msg = [m for m in result if m.get(COMPRESSED_SUMMARY_METADATA_KEY)]
         assert len(summary_msg) == 1
@@ -2296,7 +2296,7 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -2325,7 +2325,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 6"},
             {"role": "assistant", "content": "msg 7"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
         # Verify no consecutive user or assistant messages
         for i in range(1, len(result)):
@@ -2347,7 +2347,7 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3
@@ -2369,7 +2369,7 @@ class TestCompressWithClient:
             {"role": "assistant", "content": "msg 7"},
             {"role": "user", "content": "msg 8"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         # Verify no consecutive user or assistant messages
@@ -2391,7 +2391,7 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3
@@ -2409,7 +2409,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 8"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         merged_tail = next(
@@ -2450,7 +2450,7 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "SUMMARY_BODY"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=3
@@ -2471,7 +2471,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 8"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         merged = next(m for m in result if m.get(COMPRESSED_SUMMARY_METADATA_KEY))
@@ -2538,7 +2538,7 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=1, protect_last_n=2
@@ -2561,7 +2561,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 6"},
             {"role": "assistant", "content": "msg 7"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         # Verify no consecutive user or assistant messages
@@ -2584,7 +2584,7 @@ class TestCompressWithClient:
         mock_response.choices[0].message.content = "summary text"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, protect_first_n=2, protect_last_n=2
@@ -2603,7 +2603,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "msg 6"},
             {"role": "assistant", "content": "msg 7"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
         summary_msgs = [
             m for m in result if (m.get("content") or "").startswith(SUMMARY_PREFIX)
@@ -2619,7 +2619,7 @@ class TestCompressWithClient:
         ].message.content = "[CONTEXT SUMMARY]: compressed middle"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -2647,7 +2647,7 @@ class TestCompressWithClient:
             {"role": "user", "content": "latest user"},
         ]
 
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         called_ids = {
@@ -2667,7 +2667,7 @@ class TestSummaryTargetRatio:
     def test_tail_budget_scales_with_context(self):
         """Tail token budget should be threshold_tokens * summary_target_ratio."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=200_000
+            "agent.compression.context.get_model_context_length", return_value=200_000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, summary_target_ratio=0.40
@@ -2676,7 +2676,7 @@ class TestSummaryTargetRatio:
         assert c.tail_token_budget == 60_000
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=1_000_000
+            "agent.compression.context.get_model_context_length", return_value=1_000_000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, summary_target_ratio=0.40
@@ -2687,13 +2687,13 @@ class TestSummaryTargetRatio:
     def test_summary_cap_scales_with_context(self):
         """Max summary tokens should be 5% of context, capped at 10K."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=200_000
+            "agent.compression.context.get_model_context_length", return_value=200_000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.max_summary_tokens == 10_000  # 200K * 0.05
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=1_000_000
+            "agent.compression.context.get_model_context_length", return_value=1_000_000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.max_summary_tokens == 10_000  # capped at 10K ceiling
@@ -2701,7 +2701,7 @@ class TestSummaryTargetRatio:
     def test_ratio_clamped(self):
         """Ratio should be clamped to [0.10, 0.80]."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, summary_target_ratio=0.05
@@ -2709,7 +2709,7 @@ class TestSummaryTargetRatio:
         assert c.summary_target_ratio == 0.10
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             c = ContextCompressor(
                 model="test", quiet_mode=True, summary_target_ratio=0.95
@@ -2719,7 +2719,7 @@ class TestSummaryTargetRatio:
     def test_default_threshold_floored_at_75_percent_below_512k(self):
         """Sub-512K models get the 75% small-context threshold floor."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.threshold_percent == 0.75
@@ -2729,7 +2729,7 @@ class TestSummaryTargetRatio:
     def test_configured_threshold_used_at_512k_and_above(self):
         """At 512K+ the configured (default 50%) percentage is used directly."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=512_000
+            "agent.compression.context.get_model_context_length", return_value=512_000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.threshold_percent == 0.50
@@ -2738,7 +2738,7 @@ class TestSummaryTargetRatio:
     def test_default_protect_last_n_is_20(self):
         """Default protect_last_n should be 20."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.protect_last_n == 20
@@ -2751,7 +2751,7 @@ class TestSummaryTargetRatio:
         messages.
         """
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
         assert c.protect_first_n == 3
@@ -2761,7 +2761,7 @@ class TestSummaryTargetRatio:
         compaction and want NOTHING pinned at head except the system prompt
         (always implicitly protected)."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             c = ContextCompressor(model="test", quiet_mode=True, protect_first_n=0)
         assert c.protect_first_n == 0
@@ -2775,7 +2775,7 @@ class TestSummaryTargetRatio:
         sessions — no user/assistant turn gets pinned verbatim forever just
         because it happened to be early in the session."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             c = ContextCompressor(
                 model="test",
@@ -2813,7 +2813,7 @@ class TestSummaryTargetRatio:
         resolved question kept getting reinserted into every compaction
         summary."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             c = ContextCompressor(
                 model="test",
@@ -2849,7 +2849,7 @@ class TestTokenBudgetTailProtection:
     def budget_compressor(self):
         """Compressor with known token budget for tail protection tests."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=200_000
+            "agent.compression.context.get_model_context_length", return_value=200_000
         ):
             c = ContextCompressor(
                 model="test/model",
@@ -3249,7 +3249,7 @@ class TestUpdateModelBudgets:
         from unittest.mock import patch
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=200_000
+            "agent.compression.context.get_model_context_length", return_value=200_000
         ):
             comp = ContextCompressor("model-a", threshold_percent=0.50, quiet_mode=True)
         old_tail = comp.tail_token_budget
@@ -3267,7 +3267,7 @@ class TestUpdateModelBudgets:
         from unittest.mock import patch
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100_000
+            "agent.compression.context.get_model_context_length", return_value=100_000
         ):
             comp = ContextCompressor("model-a", threshold_percent=0.50, quiet_mode=True)
         comp.update_model("model-b", context_length=10_000)
@@ -3288,7 +3288,7 @@ class TestUpdateModelResetsCalibration:
         from unittest.mock import patch
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=200_000
+            "agent.compression.context.get_model_context_length", return_value=200_000
         ):
             return ContextCompressor(
                 "big-model", threshold_percent=0.50, quiet_mode=True
@@ -3432,7 +3432,7 @@ class TestTruncateToolCallArgsJson:
         import json as _json
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test/model",
@@ -3797,7 +3797,7 @@ class TestCooldownReentryAbort:
         compress within the 30s cooldown must ALSO abort — not drop the
         middle window via the static-fallback path."""
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -3809,7 +3809,7 @@ class TestCooldownReentryAbort:
         msgs = self._msgs(12)
 
         with patch(
-            "agent.context_compressor.call_llm",
+            "agent.compression.context.call_llm",
             side_effect=ConnectionError("Connection error."),
         ):
             first = c.compress(msgs, current_tokens=999999, force=True)
@@ -3831,7 +3831,7 @@ class TestCooldownReentryAbort:
         err = Exception("Error code: 401 - invalid api key")
         err.status_code = 401
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -3842,7 +3842,7 @@ class TestCooldownReentryAbort:
             )
         msgs = self._msgs(12)
 
-        with patch("agent.context_compressor.call_llm", side_effect=err):
+        with patch("agent.compression.context.call_llm", side_effect=err):
             first = c.compress(msgs, current_tokens=999999, force=True)
         assert first == msgs
         assert c._last_compress_aborted is True
@@ -3877,7 +3877,7 @@ class TestDoubleCompactionSummaryRole:
         mock_response.choices[0].message.content = "summary of earlier turns"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -3899,7 +3899,7 @@ class TestDoubleCompactionSummaryRole:
             {"role": "user", "content": "msg 5"},
             {"role": "assistant", "content": "msg 6"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         # The system message must still be at index 0.
@@ -3922,7 +3922,7 @@ class TestDoubleCompactionSummaryRole:
         mock_response.choices[0].message.content = "summary of earlier turns"
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(
                 model="test",
@@ -3944,7 +3944,7 @@ class TestDoubleCompactionSummaryRole:
             {"role": "assistant", "content": "msg 6"},
             {"role": "user", "content": "msg 7"},
         ]
-        with patch("agent.context_compressor.call_llm", return_value=mock_response):
+        with patch("agent.compression.context.call_llm", return_value=mock_response):
             result = c.compress(msgs)
 
         # No standalone summary message should exist (merged into tail).

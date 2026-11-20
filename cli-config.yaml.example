@@ -723,6 +723,12 @@ agent:
   # Recommended: 20-30 for focused tasks, 50-100 for open exploration
   max_turns: 60
 
+  # Automatic per-request model routing (agent/transports/model_router.py).
+  # Off by default: when on, the router may send a request to a different
+  # model than the one you configured, including a hosted model when you
+  # configured a local one.
+  # model_routing: false
+
   # Inactivity timeout for gateway agent runs (seconds, 0 = unlimited).
   # The agent can run indefinitely when actively calling tools or receiving
   # API responses.  Only fires after the agent has been idle for this duration.

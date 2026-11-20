@@ -22,6 +22,7 @@ from ._oss_providers import (
     KNOWN_DIMS,
     validate_oss_config,
 )
+import requests
 
 
 def _curses_select(title: str, items: list[tuple[str, str]], default: int = 0) -> int:

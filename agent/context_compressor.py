@@ -1,43 +1,13 @@
 """DEPRECATED: Use agent.compression.context instead.
 
-This module is maintained for backward compatibility.
-All functionality has been moved to agent/compression/context.py.
-
-The entire compression subsystem has been consolidated into agent/compression/
-while maintaining 100% backward compatibility through these re-exports.
-No code changes are required in existing imports.
+This name is kept for backward compatibility. It is an alias of
+``agent.compression.context`` itself (not a copy of its public names), so
+private helpers stay importable and ``mock.patch("agent.context_compressor.X")``
+patches the code that actually runs.
 """
 
-# Re-export everything from the new location for backward compatibility
-from agent.compression.context import *  # noqa: F401,F403
+import sys
 
-# Explicit re-exports of commonly-used names for IDE/type-checker support
-from agent.compression.context import (
-    ContextCompressor,
-    HISTORICAL_TASK_HEADING,
-    HISTORICAL_IN_PROGRESS_HEADING,
-    HISTORICAL_PENDING_ASKS_HEADING,
-    HISTORICAL_REMAINING_WORK_HEADING,
-    SUMMARY_PREFIX,
-    LEGACY_SUMMARY_PREFIX,
-    estimate_messages_tokens_rough,
-    _content_has_images,
-    _is_image_part,
-    _strip_historical_media,
-    _strip_images_from_content,
-)
+from agent.compression import context as _context
 
-__all__ = [
-    "ContextCompressor",
-    "HISTORICAL_TASK_HEADING",
-    "HISTORICAL_IN_PROGRESS_HEADING",
-    "HISTORICAL_PENDING_ASKS_HEADING",
-    "HISTORICAL_REMAINING_WORK_HEADING",
-    "SUMMARY_PREFIX",
-    "LEGACY_SUMMARY_PREFIX",
-    "estimate_messages_tokens_rough",
-    "_content_has_images",
-    "_is_image_part",
-    "_strip_historical_media",
-    "_strip_images_from_content",
-]
+sys.modules[__name__] = _context

@@ -50,6 +50,7 @@ from utils import (
     base_url_host_matches,
     is_truthy_value,
 )
+import urllib.error
 
 logger = logging.getLogger("gateway.run")
 

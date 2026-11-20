@@ -99,8 +99,117 @@ def get_safe_write_roots() -> set[str]:
     return roots
 
 
+# Hercules-internal directory trees whose every child is security-sensitive:
+#   * mcp-tokens/ holds live MCP OAuth access tokens and client credentials.
+#   * pairing/ is the gateway access-control list ({platform}-approved.json);
+#     writing it grants persistent gateway access without the pairing flow.
+# Denied under the active HERCULES_HOME, the Hercules root, and every profile
+# under <root>/profiles/ (credentials at root are inherited by every profile).
+_HERCULES_PROTECTED_WRITE_DIRS: tuple[str, ...] = ("mcp-tokens", "pairing")
+
+# Per-profile credential files that must never be written by the agent. The
+# active-profile and root copies are also in ``build_write_denied_paths``;
+# this list extends the same protection to sibling profiles.
+_HERCULES_PROTECTED_WRITE_FILES: tuple[str, ...] = (".env", ".anthropic_oauth.json")
+
+
+def _resolve_user_path(path: str) -> str:
+    """Expand ``~`` and resolve symlinks / ``..`` to a canonical absolute path."""
+    return os.path.realpath(os.path.expanduser(str(path)))
+
+
+def _norm(path: str) -> str:
+    """Case-normalise for comparison (no-op on POSIX, folds case on Windows)."""
+    return os.path.normcase(path)
+
+
+def _is_same_or_under(resolved: str, directory: str) -> bool:
+    """True when ``resolved`` equals ``directory`` or lies inside it."""
+    r = _norm(resolved)
+    d = _norm(directory).rstrip(os.sep)
+    if not d:  # filesystem root
+        return True
+    return r == d or r.startswith(d + os.sep)
+
+
+def _hercules_bases() -> list[str]:
+    """Resolved Hercules bases: active HERCULES_HOME, the root, and each profile.
+
+    Every base is a directory whose top level can hold credential stores.
+    Resolution errors drop the affected base rather than raising into the
+    tool path.
+    """
+    bases: list[str] = []
+    for getter in (_hercules_home_path, _hercules_root_path):
+        try:
+            resolved = os.path.realpath(str(getter()))
+        except (OSError, RuntimeError, TypeError, ValueError):
+            continue
+        if resolved not in bases:
+            bases.append(resolved)
+    try:
+        profiles_dir = Path(os.path.realpath(str(_hercules_root_path()))) / "profiles"
+        if profiles_dir.is_dir():
+            for child in profiles_dir.iterdir():
+                if child.is_dir():
+                    resolved = os.path.realpath(str(child))
+                    if resolved not in bases:
+                        bases.append(resolved)
+    except (OSError, RuntimeError, TypeError, ValueError):
+        pass
+    return bases
+
+
 def is_write_denied(path: str) -> bool:
-    """Write safety check disabled - all writes allowed."""
+    """Return True when the agent must not write (create, patch, move, delete) ``path``.
+
+    The path is ``~``-expanded and fully resolved (symlinks, ``..``) before
+    any comparison, so a symlink or traversal cannot launder a protected
+    target. A write is denied when the resolved path:
+
+    1. is one of the exact sensitive paths from ``build_write_denied_paths``
+       (SSH keys/config, ``.netrc``-style credential files, ``/etc/shadow``,
+       ``/etc/passwd``, ``/etc/sudoers``, the Hercules ``.env`` and Anthropic
+       OAuth store under both the active profile and the root);
+    2. is, or lies under, a sensitive directory from
+       ``build_write_denied_prefixes`` (``~/.ssh``, ``~/.aws``, ``~/.gnupg``,
+       ``~/.kube``, ``~/.docker``, ``~/.azure``, gh/gcloud config,
+       ``/etc/sudoers.d``, ``/etc/systemd``);
+    3. is, or lies under, a Hercules-internal protected directory
+       (``mcp-tokens/``, ``pairing/``) or is a profile credential file, for
+       the active HERCULES_HOME, the root and every profile;
+    4. falls outside every ``HERCULES_WRITE_SAFE_ROOT`` directory, when that
+       sandbox is configured. The static deny list always wins over a safe
+       root.
+
+    Fails closed: a path that cannot be resolved is denied.
+    """
+    try:
+        home = os.path.realpath(os.path.expanduser("~"))
+        resolved = _resolve_user_path(path)
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return True
+
+    norm_resolved = _norm(resolved)
+    if norm_resolved in {_norm(p) for p in build_write_denied_paths(home)}:
+        return True
+
+    for prefix in build_write_denied_prefixes(home):
+        if _is_same_or_under(resolved, prefix):
+            return True
+
+    for base in _hercules_bases():
+        for name in _HERCULES_PROTECTED_WRITE_DIRS:
+            if _is_same_or_under(resolved, os.path.join(base, name)):
+                return True
+        for name in _HERCULES_PROTECTED_WRITE_FILES:
+            if norm_resolved == _norm(os.path.join(base, name)):
+                return True
+
+    safe_roots = get_safe_write_roots()
+    if safe_roots and not any(_is_same_or_under(resolved, root) for root in safe_roots):
+        return True
+
     return False
 
 
@@ -118,8 +227,132 @@ _BLOCKED_PROJECT_ENV_BASENAMES: set[str] = {
 }
 
 
+# Credential stores at the top level of a Hercules base (HERCULES_HOME, the
+# root, or a profile), as paths relative to that base. Mirrors the per-file
+# credential set of gateway.platforms.base._ROOT_CREDENTIAL_FILES, minus
+# config.yaml (readable for debugging; its writes are refused by
+# tools.file_tools._check_sensitive_path).
+_HERCULES_CREDENTIAL_FILES: tuple[str, ...] = (
+    ".env",
+    "auth.json",
+    "auth.lock",
+    "credentials",
+    ".anthropic_oauth.json",
+    "google_token.json",
+    "google_oauth_pending.json",
+    "auth/google_oauth.json",
+    "webhook_subscriptions.json",
+    "cache/bws_cache.json",
+)
+
+# Directory trees under a Hercules base whose every child is token material.
+_HERCULES_TOKEN_DIRS: tuple[str, ...] = ("mcp-tokens",)
+
+# Internal Hercules cache (skills hub index / metadata) under a Hercules base.
+_HERCULES_CACHE_DIRS: tuple[str, ...] = ("skills/.hub",)
+
+# Credential files in the user's home directory (relative to ``~``).
+_HOME_CREDENTIAL_FILES: tuple[str, ...] = (
+    ".git-credentials",
+    ".netrc",
+    ".pgpass",
+    ".aws/credentials",
+    ".ssh/id_rsa",
+    ".ssh/id_dsa",
+    ".ssh/id_ecdsa",
+    ".ssh/id_ed25519",
+)
+
+
+def _relative_parts(resolved: str, base: str) -> Optional[tuple[str, ...]]:
+    """Return ``resolved`` relative to ``base`` as case-folded parts, or None."""
+    try:
+        rel = Path(resolved).relative_to(base)
+    except ValueError:
+        return None
+    return tuple(part.casefold() for part in rel.parts)
+
+
+def _split_rel(rel: str) -> tuple[str, ...]:
+    return tuple(part.casefold() for part in rel.split("/") if part)
+
+
 def get_read_block_error(path: str) -> Optional[str]:
-    """Read safety check disabled - all reads allowed."""
+    """Return an error message when the agent must not read ``path``, else None.
+
+    The path is ``~``-expanded and resolved through symlinks and ``..`` first,
+    so indirection cannot reach a blocked file. Blocked:
+
+    * Hercules credential stores (``.env``, ``auth.json``, ``auth.lock``,
+      ``.anthropic_oauth.json``, ``auth/google_oauth.json``,
+      ``webhook_subscriptions.json``, Google/Bitwarden token caches, ...) at
+      the top level of the active HERCULES_HOME, the Hercules root, or any
+      profile. Identically named files elsewhere stay readable.
+    * Anything inside, or the ``mcp-tokens/`` directory itself (MCP OAuth).
+    * The internal skills-hub cache (``skills/.hub``).
+    * Credential files in the user's home (``~/.git-credentials``,
+      ``~/.netrc``, ``~/.pgpass``, ``~/.aws/credentials``, SSH private keys).
+    * Any project-local secret-bearing environment file (``.env``,
+      ``.env.local``, ``.envrc``, ...; case-insensitive) anywhere on disk.
+      Documentation variants such as ``.env.example`` stay readable.
+    """
+    raw = str(path)
+    try:
+        resolved = _resolve_user_path(raw)
+    except (OSError, RuntimeError, TypeError, ValueError):
+        resolved = os.path.abspath(os.path.expanduser(raw))
+
+    for base in _hercules_bases():
+        parts = _relative_parts(resolved, base)
+        if parts is None:
+            continue
+        for rel in _HERCULES_CREDENTIAL_FILES:
+            if parts == _split_rel(rel):
+                return (
+                    f"Access denied: {path} is a Hercules credential store "
+                    f"({rel}) holding API keys, OAuth tokens or secrets. "
+                    f"The agent may not read it."
+                )
+        for rel in _HERCULES_TOKEN_DIRS:
+            prefix = _split_rel(rel)
+            if parts[: len(prefix)] == prefix:
+                return (
+                    f"Access denied: {path} is inside the Hercules MCP token "
+                    f"store ({rel}/), which holds live MCP OAuth credentials. "
+                    f"The agent may not read it."
+                )
+        for rel in _HERCULES_CACHE_DIRS:
+            prefix = _split_rel(rel)
+            if parts[: len(prefix)] == prefix:
+                return (
+                    f"Access denied: {path} is an internal Hercules cache file "
+                    f"({rel}/) and cannot be read directly. Use the skills "
+                    f"tools instead."
+                )
+
+    try:
+        home = os.path.realpath(os.path.expanduser("~"))
+    except (OSError, RuntimeError, TypeError, ValueError):
+        home = ""
+    if home:
+        parts = _relative_parts(resolved, home)
+        if parts is not None:
+            for rel in _HOME_CREDENTIAL_FILES:
+                if parts == _split_rel(rel):
+                    return (
+                        f"Access denied: {path} is a credential file (~/{rel}). "
+                        f"The agent may not read it."
+                    )
+
+    for candidate in (os.path.basename(raw.rstrip("/\\")), os.path.basename(resolved)):
+        if candidate.lower() in _BLOCKED_PROJECT_ENV_BASENAMES:
+            return (
+                f"Access denied: {path} is a secret-bearing environment file "
+                f"({candidate}) that typically holds API keys and passwords. "
+                f"Read a documentation variant such as .env.example instead, "
+                f"or ask the user for the specific non-secret value you need."
+            )
+
     return None
 
 

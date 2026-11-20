@@ -37,6 +37,7 @@ import sys
 import urllib.error
 import urllib.request
 from typing import Optional
+import httpx
 
 
 def _default_gateway_id() -> str:

@@ -50,6 +50,7 @@ from hercules_cli.config import (
 from hercules_constants import OPENROUTER_BASE_URL, secure_parent_dir
 from agent.credential_persistence import sanitize_borrowed_credential_payload
 from utils import atomic_replace, atomic_yaml_write, env_float, is_truthy_value
+import requests
 
 logger = logging.getLogger(__name__)
 

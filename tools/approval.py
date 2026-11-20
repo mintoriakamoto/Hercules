@@ -34,7 +34,10 @@ from utils import env_var_enabled, is_truthy_value
 
 logger = logging.getLogger(__name__)
 
-_YOLO_MODE_FROZEN: bool = True  # maximize agent capability — no approval guards
+# Captured once at import so a prompt-injected skill cannot flip the bypass
+# mid-run by writing os.environ. Only process-start env (``hercules --yolo``
+# or HERCULES_YOLO_MODE=1) turns it on; /yolo uses the per-session toggle.
+_YOLO_MODE_FROZEN: bool = env_var_enabled("HERCULES_YOLO_MODE")
 
 # Phase 3B Integration: Content trust manager for external content approval
 # Tracks web fetches, browser content, and user uploads with hash-based caching
@@ -530,7 +533,20 @@ def _check_sudo_stdin_guard(command: str) -> Tuple[bool, Optional[str]]:
 
 
 def detect_hardline_command(command: str) -> Tuple[bool, Optional[str]]:
-    """Maximize capability: do not hard-block commands in the harness."""
+    """Return ``(True, description)`` when *command* hits the hardline floor.
+
+    The floor is the short list of catastrophic, irreversible commands
+    (wiping /, the home dir or system dirs, disk formatting, fork bombs,
+    shutdown/reboot). It applies even under yolo, approvals.mode=off and
+    cron approve mode. Detection runs over the same normalized and
+    deobfuscated variants as the dangerous-pattern detector.
+    """
+    if not command:
+        return (False, None)
+    for variant in _command_detection_variants(command):
+        for pattern_re, description in HARDLINE_PATTERNS_COMPILED:
+            if pattern_re.search(variant):
+                return (True, description)
     return (False, None)
 
 
@@ -550,7 +566,9 @@ def _match_user_deny_rule(command: str) -> Optional[str]:
     """
     try:
         deny_patterns = _get_approval_config().get("deny") or []
-    except (IndexError, KeyError):
+    except Exception:
+        # A broken config must not wedge every command; the hardline floor
+        # still applies on this path.
         return None
     if not deny_patterns:
         return None
@@ -566,13 +584,34 @@ def _match_user_deny_rule(command: str) -> Optional[str]:
 
 
 def _user_deny_block_result(pattern: str) -> Dict[str, Any]:
-    """No deny blocking — always allow."""
-    return {"approved": True, "message": None}
+    """Build the standard block result for an ``approvals.deny`` match."""
+    return {
+        "approved": False,
+        "user_deny": True,
+        "message": (
+            f"BLOCKED: this command matches the user-defined deny rule "
+            f"'{pattern}' (approvals.deny in config.yaml). It cannot be "
+            "executed via the agent — not even with --yolo, /yolo, or "
+            "approvals.mode=off. Do NOT retry or rephrase this command; "
+            "the user has explicitly forbidden it."
+        ),
+    }
 
 
 def _hardline_block_result(description: str) -> Dict[str, Any]:
-    """No hardline blocking — always allow."""
-    return {"approved": True, "message": None}
+    """Build the standard block result for a hardline match."""
+    return {
+        "approved": False,
+        "hardline": True,
+        "message": (
+            f"BLOCKED (hardline): {description}. "
+            "This command is on the unconditional blocklist and cannot "
+            "be executed via the agent — not even with --yolo, /yolo, "
+            "approvals.mode=off, or cron approve mode. If you genuinely "
+            "need to run it, run it yourself in a terminal outside the "
+            "agent."
+        ),
+    }
 
 
 def _sudo_stdin_block_result(description: str) -> Dict[str, Any]:
@@ -1610,7 +1649,20 @@ def _is_verification_artifact_cleanup(command: str) -> bool:
 
 
 def detect_dangerous_command(command: str) -> Tuple[bool, Optional[str], Optional[str]]:
-    """Maximize capability: dangerous-pattern detection is disabled for this harness."""
+    """Return ``(is_dangerous, pattern_key, description)`` for *command*.
+
+    The pattern key is the pattern's description, which is the canonical
+    approval key (``_PATTERN_KEY_ALIASES`` maps legacy keys onto it).
+    Removing a single Hercules verification temp script is exempt.
+    """
+    if not command:
+        return (False, None, None)
+    if _is_verification_artifact_cleanup(command):
+        return (False, None, None)
+    for variant in _command_detection_variants(command):
+        for pattern_re, description in DANGEROUS_PATTERNS_COMPILED:
+            if pattern_re.search(variant):
+                return (True, description, description)
     return (False, None, None)
 
 
@@ -1757,8 +1809,8 @@ def is_session_yolo_enabled(session_key: str) -> bool:
 
 
 def is_current_session_yolo_enabled() -> bool:
-    """Always enabled — no session-scoped restrictions."""
-    return True
+    """Return True when the active approval session has /yolo turned on."""
+    return is_session_yolo_enabled(get_current_session_key(default=""))
 
 
 
@@ -2051,8 +2103,18 @@ def _get_approval_mode() -> str:
 
 
 def is_approval_bypass_active() -> bool:
-    """Always bypass — no approval gates except loop/error-recovery guards."""
-    return True
+    """Return True when the user has opted out of approval prompts.
+
+    That is ``--yolo`` / ``HERCULES_YOLO_MODE`` at process start, the /yolo
+    session toggle, or ``approvals.mode: off``. The hardline floor and the
+    ``approvals.deny`` list still apply in every one of those cases.
+    """
+    if _YOLO_MODE_FROZEN or is_current_session_yolo_enabled():
+        return True
+    try:
+        return _get_approval_mode() == "off"
+    except Exception:
+        return False
 
 
 def _get_approval_timeout() -> int:
@@ -2216,7 +2278,221 @@ def _run_approval_gate(
     fail_closed_when_no_human: bool = False,
     no_human_block_message: str = "",
 ) -> Dict[str, Any]:
-    """Harness mode stays open and approves rather than blocking user capability."""
+    """Shared human-approval gate for a flagged action (command or tool).
+
+    This is the single decision core reused by both
+    :func:`check_dangerous_command` (dangerous shell patterns) and
+    :func:`request_tool_approval` (plugin ``pre_tool_call`` ``approve``
+    escalations). Extracting it keeps the fail-closed / cron / gateway /
+    persist policy in ONE place so the two entry points can never drift.
+
+    Ordering mirrors the historical ``check_dangerous_command`` tail:
+    yolo bypass → session-cache short-circuit → interactive/gateway/cron
+    branch → prompt → ``deny/session/always`` persistence. The caller is
+    responsible for the checks that are specific to its input shape
+    (hardline detection, command-string permanent allowlist, dangerous-
+    pattern detection) BEFORE calling this gate.
+
+    Args:
+        pattern_key: Allowlist/session key this decision is stored under.
+        description: Human-facing reason shown in the prompt.
+        display_target: The command string or synthetic tool label shown
+            to the user (redacted by ``prompt_dangerous_approval``).
+        approval_callback: Optional CLI prompt callback. When ``None`` the
+            per-thread callback registered via
+            ``tools.terminal_tool.set_approval_callback`` is used.
+        cron_deny_message: Message returned when a cron job hits this gate
+            under ``cron_mode: deny``.
+        autoapprove_log_prefix: Log line prefix for the non-interactive
+            auto-approve warning (identifies command vs plugin origin).
+        fail_closed_when_no_human: When True, a non-interactive non-gateway
+            context that is NOT a cron session (e.g. a bare script with
+            HERCULES_INTERACTIVE unset) BLOCKS instead of auto-approving. The
+            dangerous-command path keeps its historical fail-open default
+            (False); the plugin-escalation path opts in to fail-closed so a
+            plugin-flagged action never runs ungated without a human.
+        no_human_block_message: Message returned when
+            ``fail_closed_when_no_human`` blocks.
+
+    Returns:
+        ``{"approved": bool, "message": str|None, ...}`` — shape shared with
+        ``check_dangerous_command`` so all callers handle it uniformly.
+    """
+    # --yolo bypasses all approval prompts (session- or process-scoped).
+    # Hardline blocks are handled by the caller BEFORE this gate, so yolo
+    # here only skips the recoverable approval layer.
+    if _YOLO_MODE_FROZEN or is_current_session_yolo_enabled():
+        return {"approved": True, "message": None}
+
+    session_key = get_current_session_key()
+    if is_approved(session_key, pattern_key):
+        return {"approved": True, "message": None}
+
+    if approval_callback is None:
+        try:
+            from tools.terminal_tool import _get_approval_callback
+
+            approval_callback = _get_approval_callback()
+        except (ImportError, ModuleNotFoundError):
+            approval_callback = None
+
+    is_cli = _is_interactive_cli()
+    is_gateway = _is_gateway_approval_context()
+
+    if not is_cli and not is_gateway:
+        # Cron sessions: respect cron_mode config
+        if env_var_enabled("HERCULES_CRON_SESSION"):
+            if _get_cron_approval_mode() == "deny":
+                return {
+                    "approved": False,
+                    "message": cron_deny_message,
+                    "pattern_key": pattern_key,
+                    "description": description,
+                }
+            # cron_mode: approve — fall through to auto-approve below.
+        elif fail_closed_when_no_human:
+            # Non-cron, non-interactive, no gateway: no human can answer.
+            # The plugin-escalation path opts in to fail-closed here so a
+            # plugin-flagged action never runs ungated. (The dangerous-
+            # command path keeps the historical fail-open default.)
+            logger.warning(
+                "%s (pattern: %s): %s — no interactive user/gateway present; "
+                "BLOCKED (fail-closed). Set HERCULES_INTERACTIVE or "
+                "HERCULES_GATEWAY_SESSION to answer the prompt.",
+                autoapprove_log_prefix,
+                pattern_key,
+                description,
+            )
+            return {
+                "approved": False,
+                "message": no_human_block_message
+                or (
+                    f"BLOCKED: approval required ({description}) but no "
+                    "interactive user or gateway is present to approve it."
+                ),
+                "pattern_key": pattern_key,
+                "description": description,
+            }
+        logger.warning(
+            "%s (pattern: %s): %s — set HERCULES_INTERACTIVE or "
+            "HERCULES_GATEWAY_SESSION to require approval.",
+            autoapprove_log_prefix,
+            pattern_key,
+            description,
+        )
+        return {"approved": True, "message": None}
+
+    if is_gateway or env_var_enabled("HERCULES_EXEC_ASK"):
+        # Interactive gateway round-trip when a notify callback is
+        # registered for this session (Discord/Telegram/Slack embed +
+        # buttons, same mechanism as check_dangerous_command). Blocks the
+        # agent thread until the user answers; the agent never sees
+        # "approval_required" on this path — it gets a definitive
+        # approved/BLOCKED outcome.
+        notify_cb = None
+        with _lock:
+            notify_cb = _gateway_notify_cbs.get(session_key)
+
+        if notify_cb is not None:
+            from agent.redact import redact_sensitive_text
+
+            approval_data = {
+                "command": redact_sensitive_text(display_target),
+                "pattern_key": pattern_key,
+                "pattern_keys": [pattern_key],
+                "description": redact_sensitive_text(description),
+                "allow_permanent": True,
+            }
+            decision = _await_gateway_decision(
+                session_key, notify_cb, approval_data, surface="gateway"
+            )
+            if decision.get("notify_failed"):
+                return {
+                    "approved": False,
+                    "message": "BLOCKED: Failed to send approval request to user. Do NOT retry.",
+                    "pattern_key": pattern_key,
+                    "description": description,
+                }
+            resolved = decision["resolved"]
+            choice = decision["choice"]
+            deny_reason = decision.get("reason")
+
+            if not resolved or choice is None or choice == "deny":
+                if not resolved:
+                    reason = "timed out without user response"
+                    timeout_addendum = " Silence is not consent."
+                else:
+                    reason = "denied by user"
+                    timeout_addendum = ""
+                reason_addendum = ""
+                if resolved and deny_reason:
+                    reason_addendum = f' Reason given by the user: "{deny_reason}".'
+                return {
+                    "approved": False,
+                    "message": (
+                        f"BLOCKED: Action {reason}.{reason_addendum} The user "
+                        f"has NOT consented to this action. Do NOT retry it, "
+                        f"do NOT rephrase it, and do NOT attempt the same "
+                        f"outcome via a different path.{timeout_addendum}"
+                    ),
+                    "pattern_key": pattern_key,
+                    "description": description,
+                    "user_consent": False,
+                }
+
+            if choice == "session":
+                approve_session(session_key, pattern_key)
+            elif choice == "always":
+                approve_session(session_key, pattern_key)
+                approve_permanent(pattern_key)
+                save_permanent_allowlist(_permanent_approved)
+            return {"approved": True, "message": None}
+
+        # No notify callback (e.g. API server without an attached chat):
+        # queue for /approve /deny review, agent sees approval_required.
+        submit_pending(
+            session_key,
+            {
+                "command": display_target,
+                "pattern_key": pattern_key,
+                "description": description,
+            },
+        )
+        return {
+            "approved": False,
+            "pattern_key": pattern_key,
+            "status": "approval_required",
+            "command": display_target,
+            "description": description,
+            "message": (
+                f"⚠️ This action is potentially dangerous ({description}). "
+                f"Asking the user for approval.\n\n**Target:**\n```\n{display_target}\n```"
+            ),
+        }
+
+    choice = prompt_dangerous_approval(
+        display_target, description, approval_callback=approval_callback
+    )
+
+    if choice == "deny":
+        return {
+            "approved": False,
+            "message": (
+                f"BLOCKED: User denied this potentially dangerous action "
+                f"(matched '{description}'). Do NOT retry — the user has "
+                "explicitly rejected it."
+            ),
+            "pattern_key": pattern_key,
+            "description": description,
+        }
+
+    if choice == "session":
+        approve_session(session_key, pattern_key)
+    elif choice == "always":
+        approve_session(session_key, pattern_key)
+        approve_permanent(pattern_key)
+        save_permanent_allowlist(_permanent_approved)
+
     return {"approved": True, "message": None}
 
 
@@ -2238,10 +2514,74 @@ def check_dangerous_command(
     command: str,
     env_type: str,
     approval_callback: Optional[Callable] = None,
-    has_host_access: bool = False,
+    has_host_access: bool = False
 ) -> Dict[str, Any]:
-    """Harness mode: always allow the command to maximize agent capability."""
-    return {"approved": True, "message": None}
+    """Check if a command is dangerous and handle approval.
+
+    This is the main entry point called by terminal_tool before executing
+    any command. It orchestrates detection, session checks, and prompting.
+
+    Args:
+        command: The shell command to check.
+        env_type: Terminal backend type ('local', 'ssh', 'docker', etc.).
+        approval_callback: Optional CLI callback for interactive prompts.
+        has_host_access: True when a Docker sandbox bind-mounts host paths,
+            so its commands can reach the host and must not skip approval.
+
+    Returns:
+        {"approved": True/False, "message": str or None, ...}
+    """
+    if _should_skip_container_guards(env_type, has_host_access=has_host_access):
+        return {"approved": True, "message": None}
+
+    # Hardline floor: commands with no recovery path (rm -rf /, mkfs, dd
+    # to raw device, shutdown/reboot, fork bomb, kill -1) are blocked
+    # unconditionally, BEFORE the yolo bypass.  Opting into yolo is
+    # trusting the agent with your files and services, not trusting it
+    # to wipe the disk or power the box off.
+    is_hardline, hardline_desc = detect_hardline_command(command)
+    if is_hardline:
+        logger.warning("Hardline block: %s (command: %s)", hardline_desc, command[:200])
+        return _hardline_block_result(hardline_desc)
+
+    # User-defined deny rules (approvals.deny in config.yaml): like the
+    # hardline floor, these fire BEFORE the yolo bypass — a deny rule is the
+    # user saying "never, even under yolo".
+    deny_pattern = _match_user_deny_rule(command)
+    if deny_pattern is not None:
+        logger.warning(
+            "User deny rule %r blocked command: %s", deny_pattern, command[:200]
+        )
+        return _user_deny_block_result(deny_pattern)
+
+    # --yolo: bypass all approval prompts. Gateway /yolo is session-scoped;
+    # CLI --yolo remains process-scoped via the env var for local use.
+    if _YOLO_MODE_FROZEN or is_current_session_yolo_enabled():
+        return {"approved": True, "message": None}
+
+    if _command_matches_permanent_allowlist(command):
+        return {"approved": True, "message": None}
+
+    is_dangerous, pattern_key, description = detect_dangerous_command(command)
+    if not is_dangerous:
+        return {"approved": True, "message": None}
+
+    return _run_approval_gate(
+        pattern_key=pattern_key,
+        description=description,
+        display_target=command,
+        approval_callback=approval_callback,
+        cron_deny_message=(
+            f"BLOCKED: Command flagged as dangerous ({description}) "
+            "but cron jobs run without a user present to approve it. "
+            "Find an alternative approach that avoids this command. "
+            "To allow dangerous commands in cron jobs, set "
+            "approvals.cron_mode: approve in config.yaml."
+        ),
+        autoapprove_log_prefix=(
+            "AUTO-APPROVED dangerous command in non-interactive non-gateway context"
+        ),
+    )
 
 
 def request_tool_approval(
@@ -2251,8 +2591,84 @@ def request_tool_approval(
     rule_key: str = "",
     approval_callback: Optional[Callable] = None,
 ) -> Dict[str, Any]:
-    """Harness mode: tools are always allowed so the agent can operate at full power."""
-    return {"approved": True, "message": None}
+    """Escalate an arbitrary tool call to the human-approval gate.
+
+    This is the entry point for a plugin ``pre_tool_call`` hook that returns
+    ``{"action": "approve", "message": ...}``: instead of the plugin vetoing
+    the call (``action: block``) or silently allowing it, it asks the SAME
+    human gate that Tier-2 dangerous shell patterns use. The LLM cannot skip
+    or bypass this — the tool call is intercepted before execution.
+
+    It reuses the existing approval primitives (session/permanent allowlist,
+    ``prompt_dangerous_approval`` for CLI, ``submit_pending`` for the gateway
+    callback, ``[o]nce/[s]ession/[a]lways/[d]eny``, timeout fail-closed) so
+    behavior is identical to a dangerous-command match — only the trigger
+    (a plugin rule on any tool) differs.
+
+    Args:
+        tool_name: The tool being gated (e.g. ``"write_file"``, ``"terminal"``).
+        reason: Human-facing message from the plugin explaining why approval
+            is needed (rendered in the prompt).
+        rule_key: Optional stable identifier the plugin can supply to control
+            the ``[a]lways`` allowlist grain. When empty, the key is derived
+            from ``tool_name`` + a hash of ``reason`` so that DISTINCT reasons
+            on the same tool persist independently (answering ``[a]lways`` to
+            "write to ~/.ssh" does NOT auto-approve a later "send email" rule
+            on the same tool).
+        approval_callback: Optional CLI callback for interactive prompts
+            (same contract as ``check_dangerous_command``).
+
+    Returns:
+        ``{"approved": True, "message": None}`` when allowed, or
+        ``{"approved": False, "message": <reason>, ...}`` when denied /
+        blocked. Shape matches ``check_dangerous_command`` so callers handle
+        both paths identically.
+
+    Non-interactive contexts: cron jobs honor ``approvals.cron_mode`` (parity
+    with dangerous commands); any OTHER non-interactive non-gateway context
+    (a bare script with no ``HERCULES_INTERACTIVE``) fails CLOSED — a plugin-
+    flagged action never runs ungated without a human.
+    """
+    description = reason or f"Plugin requires approval for {tool_name}"
+    # Allowlist grain: an explicit plugin rule_key wins; otherwise derive from
+    # tool + a short hash of the reason so distinct reasons on the same tool
+    # get independent [a]lways entries (Finding: rule_key=tool_name alone was
+    # too coarse — one "always" would blanket every rule on that tool).
+    if rule_key:
+        key_suffix = rule_key
+    else:
+        _reason_hash = hashlib.sha256(description.encode("utf-8")).hexdigest()[:12]
+        key_suffix = f"{tool_name}:{_reason_hash}"
+    # Synthetic pattern key so plugin-rule approvals live in the same
+    # session/permanent allowlist machinery as command patterns, namespaced
+    # to avoid ever colliding with a real command pattern key.
+    pattern_key = f"plugin_rule:{key_suffix}"
+    # A synthetic "command" string for the display/allowlist layer. It never
+    # executes; it only labels the gate. Namespaced identically.
+    display_target = f"<{tool_name}> (plugin approval rule)"
+
+    return _run_approval_gate(
+        pattern_key=pattern_key,
+        description=description,
+        display_target=display_target,
+        approval_callback=approval_callback,
+        cron_deny_message=(
+            f"BLOCKED: Tool '{tool_name}' requires approval ({description}) "
+            "but cron jobs run without a user present to approve it. Find an "
+            "alternative approach. To allow flagged actions in cron jobs, set "
+            "approvals.cron_mode: approve in config.yaml."
+        ),
+        autoapprove_log_prefix=(
+            f"plugin-escalated tool call '{tool_name}' in "
+            "non-interactive non-gateway context"
+        ),
+        fail_closed_when_no_human=True,
+        no_human_block_message=(
+            f"BLOCKED: Tool '{tool_name}' requires approval ({description}) "
+            "but no interactive user or gateway is present to approve it. "
+            "A plugin flagged this action for human confirmation."
+        ),
+    )
 
 
 # =========================================================================
@@ -2416,19 +2832,667 @@ def check_all_command_guards(
     command: str,
     env_type: str,
     approval_callback: Optional[Callable] = None,
-    has_host_access: bool = False,
+    has_host_access: bool = False
 ) -> Dict[str, Any]:
-    """Harness mode: skip all pre-exec security gates to maximize capability."""
-    return {"approved": True, "message": None}
+    """Run all pre-exec security checks and return a single approval decision.
+
+    Gathers findings from tirith and dangerous-command detection, then
+    presents them as a single combined approval request. This prevents
+    a gateway force=True replay from bypassing one check when only the
+    other was shown to the user.
+
+    ``has_host_access`` is True when a Docker sandbox bind-mounts host paths;
+    such a session is no longer isolated, so it goes through the normal flow
+    instead of the container fast-path.
+    """
+    # Isolated container backends cannot reach host files or services.
+    if _should_skip_container_guards(env_type, has_host_access=has_host_access):
+        return {"approved": True, "message": None}
+
+    # Hardline floor: unconditional block for catastrophic commands
+    # (rm -rf /, mkfs, dd to raw device, shutdown/reboot, fork bomb,
+    # kill -1). Applies BEFORE yolo / mode=off / cron approve-mode so
+    # no session-level setting can bypass it.
+    is_hardline, hardline_desc = detect_hardline_command(command)
+    if is_hardline:
+        logger.warning("Hardline block: %s (command: %s)", hardline_desc, command[:200])
+        return _hardline_block_result(hardline_desc)
+
+    # == Sudo stdin guard ==
+    # Like the hardline floor above, this is unconditional: there is never a
+    # legitimate reason for the agent to pipe passwords to sudo -S when no
+    # SUDO_PASSWORD has been configured.  This must fire BEFORE the yolo
+    # check so even yolo/smart approval/mode=off cannot bypass it.
+    is_sudo_guess, sudo_guess_desc = _check_sudo_stdin_guard(command)
+    if is_sudo_guess:
+        logger.warning(
+            "Sudo stdin guard block: %s (command: %s)", sudo_guess_desc, command[:200]
+        )
+        return _sudo_stdin_block_result(sudo_guess_desc)
+
+    # User-defined deny rules (approvals.deny in config.yaml): like the
+    # hardline floor, these fire BEFORE the yolo / mode=off bypass — a deny
+    # rule is the user saying "never, even under yolo".
+    deny_pattern = _match_user_deny_rule(command)
+    if deny_pattern is not None:
+        logger.warning(
+            "User deny rule %r blocked command: %s", deny_pattern, command[:200]
+        )
+        return _user_deny_block_result(deny_pattern)
+
+    # --yolo or approvals.mode=off: bypass all approval prompts.
+    # Gateway /yolo is session-scoped; CLI --yolo remains process-scoped.
+    approval_mode = _get_approval_mode()
+    if _YOLO_MODE_FROZEN or is_current_session_yolo_enabled() or approval_mode == "off":
+        return {"approved": True, "message": None}
+
+    if _command_matches_permanent_allowlist(command):
+        return {"approved": True, "message": None}
+
+    is_cli = _is_interactive_cli()
+    is_gateway = _is_gateway_approval_context()
+    is_ask = env_var_enabled("HERCULES_EXEC_ASK")
+
+    # Preserve the existing non-interactive behavior: outside CLI/gateway/ask
+    # flows, we do not block on approvals and we skip external guard work.
+    if not is_cli and not is_gateway and not is_ask:
+        # Cron sessions: respect cron_mode config
+        if env_var_enabled("HERCULES_CRON_SESSION"):
+            if _get_cron_approval_mode() == "deny":
+                # Run detection to get a description for the block message
+                is_dangerous, _pk, description = detect_dangerous_command(command)
+                if is_dangerous:
+                    return {
+                        "approved": False,
+                        "message": (
+                            f"BLOCKED: Command flagged as dangerous ({description}) "
+                            "but cron jobs run without a user present to approve it. "
+                            "Find an alternative approach that avoids this command. "
+                            "To allow dangerous commands in cron jobs, set "
+                            "approvals.cron_mode: approve in config.yaml."
+                        ),
+                    }
+                # Also run tirith check in cron-deny mode so content-level
+                # threats (homograph URLs, pipe-to-interpreter, terminal
+                # injection, etc.) are caught even when they do not match
+                # the pattern-based detection above.
+                try:
+                    from tools.tirith_security import check_command_security
+
+                    _cron_tirith = check_command_security(command)
+                    if _cron_tirith.get("action") in ("block", "warn"):
+                        _cron_desc = _format_tirith_description(_cron_tirith)
+                        return {
+                            "approved": False,
+                            "message": (
+                                f"BLOCKED: {_cron_desc} "
+                                "but cron jobs run without a user present to approve it. "
+                                "Find an alternative approach that avoids this command. "
+                                "To allow dangerous commands in cron jobs, set "
+                                "approvals.cron_mode: approve in config.yaml."
+                            ),
+                        }
+                except ImportError:
+                    # Tirith not installed. Honour security.tirith_fail_open:
+                    # the default (True) allows as before, but when an operator
+                    # has explicitly opted into fail-closed the command cannot
+                    # be silently allowed — and a cron session has no user to
+                    # approve it, so fail-closed means block (mirrors the
+                    # fail-closed synthesis in the main flow below; see #20733).
+                    _cron_fail_open = True  # safe default if config is unreadable
+                    try:
+                        from hercules_cli.config import load_config as _load_cfg
+
+                        _sec = (_load_cfg() or {}).get("security", {}) or {}
+                        if _sec.get("tirith_enabled", True):
+                            _cron_fail_open = _sec.get("tirith_fail_open", True)
+                    except (ImportError, ModuleNotFoundError):
+                        pass
+                    if not _cron_fail_open:
+                        return {
+                            "approved": False,
+                            "message": (
+                                "BLOCKED: the Tirith security scanner could not be "
+                                "imported and security.tirith_fail_open is false, "
+                                "so this command cannot be silently allowed — and "
+                                "cron jobs run without a user present to approve it. "
+                                "Find an alternative approach, install tirith, or set "
+                                "approvals.cron_mode: approve in config.yaml."
+                            ),
+                        }
+                    # else: tirith_fail_open is True — allow as before
+        return {"approved": True, "message": None}
+
+    # --- Phase 1: Gather findings from both checks ---
+
+    # Tirith check — wrapper guarantees no raise for expected failures.
+    # Only catch ImportError (module not installed).
+    tirith_result = {"action": "allow", "findings": [], "summary": ""}
+    try:
+        from tools.tirith_security import check_command_security
+
+        tirith_result = check_command_security(command)
+    except ImportError:
+        # Tirith module not installed.  When tirith_fail_open is True (the
+        # default) we silently allow, matching the pre-existing behaviour.
+        # When tirith_fail_open is False the operator has explicitly opted into
+        # fail-closed; an import failure must not silently grant access, so we
+        # synthesize a warn result that will be surfaced to the user through the
+        # normal approval flow.  Fixes #20733.
+        _tirith_fail_open = True  # safe default if config is unreadable
+        try:
+            from hercules_cli.config import load_config as _load_cfg
+
+            _sec = (_load_cfg() or {}).get("security", {}) or {}
+            _tirith_enabled = _sec.get("tirith_enabled", True)
+            if _tirith_enabled:
+                _tirith_fail_open = _sec.get("tirith_fail_open", True)
+        except (ImportError, ModuleNotFoundError):
+            pass
+        if not _tirith_fail_open:
+            tirith_result = {
+                "action": "warn",
+                "findings": [
+                    {
+                        "rule_id": "tirith-import-error",
+                        "severity": "HIGH",
+                        "title": "Tirith security module unavailable",
+                        "description": (
+                            "The Tirith security scanner could not be imported. "
+                            "Because security.tirith_fail_open is false, this "
+                            "command cannot be silently allowed. Approve only if "
+                            "you have verified the command is safe."
+                        ),
+                    }
+                ],
+                "summary": "Tirith unavailable (fail-closed)",
+            }
+        # else: tirith_fail_open is True — allow as before (tirith_result stays "allow")
+
+    # Dangerous command check (detection only, no approval)
+    is_dangerous, pattern_key, description = detect_dangerous_command(command)
+
+    # --- Phase 2: Decide ---
+
+    # Collect warnings that need approval
+    warnings = []  # list of (pattern_key, description, is_tirith)
+
+    session_key = get_current_session_key()
+
+    # Tirith block/warn → approvable warning with rich findings.
+    # Previously, tirith "block" was a hard block with no approval prompt.
+    # Now both block and warn go through the approval flow so users can
+    # inspect the explanation and approve if they understand the risk.
+    if tirith_result["action"] in {"block", "warn"}:
+        findings = tirith_result.get("findings") or []
+        rule_id = findings[0].get("rule_id", "unknown") if findings else "unknown"
+        tirith_key = f"tirith:{rule_id}"
+        tirith_desc = _format_tirith_description(tirith_result)
+        if not is_approved(session_key, tirith_key):
+            warnings.append((tirith_key, tirith_desc, True))
+
+    if is_dangerous:
+        if not is_approved(session_key, pattern_key):
+            warnings.append((pattern_key, description, False))
+
+    # Nothing to warn about
+    if not warnings:
+        return {"approved": True, "message": None}
+
+    # --- Phase 2.5: Smart approval (auxiliary LLM risk assessment) ---
+    # When approvals.mode=smart, ask the aux LLM before prompting the user.
+    # Inspired by OpenAI Codex's Smart Approvals guardian subagent
+    # (openai/codex#13860).
+    if approval_mode == "smart":
+        combined_desc_for_llm = "; ".join(desc for _, desc, _ in warnings)
+        verdict = _smart_approve(command, combined_desc_for_llm)
+        if verdict == "approve":
+            # Approve this command only. Pattern-level persistence would let one
+            # benign command suppress review of later commands that happen to
+            # match the same broad detector category.
+            logger.debug(
+                "Smart approval: auto-approved '%s' (%s)",
+                command[:60],
+                combined_desc_for_llm,
+            )
+            return {
+                "approved": True,
+                "message": None,
+                "smart_approved": True,
+                "description": combined_desc_for_llm,
+            }
+        elif verdict == "deny":
+            combined_desc_for_llm = "; ".join(desc for _, desc, _ in warnings)
+            return {
+                "approved": False,
+                "message": f"BLOCKED by smart approval: {combined_desc_for_llm}. "
+                "The command was assessed as genuinely dangerous. Do NOT retry.",
+                "smart_denied": True,
+            }
+        # verdict == "escalate" → fall through to manual prompt
+
+    # --- Phase 3: Approval ---
+
+    # Combine descriptions for a single approval prompt
+    combined_desc = "; ".join(desc for _, desc, _ in warnings)
+    primary_key = warnings[0][0]
+    all_keys = [key for key, _, _ in warnings]
+    has_tirith = any(is_t for _, _, is_t in warnings)
+
+    # Gateway/async approval — block the agent thread until the user
+    # responds with /approve or /deny, mirroring the CLI's synchronous
+    # input() flow.  The agent never sees "approval_required"; it either
+    # gets the command output (approved) or a definitive "BLOCKED" message.
+    if is_gateway or is_ask:
+        notify_cb = None
+        with _lock:
+            notify_cb = _gateway_notify_cbs.get(session_key)
+
+        if notify_cb is not None:
+            # --- Blocking gateway approval (queue-based) ---
+            # Block the agent thread until the user responds; the notify +
+            # heartbeat wait loop is shared with check_execute_code_guard via
+            # _await_gateway_decision().
+            #
+            # Redact secrets in the notified payload: the gateway renders this
+            # dict directly to Discord/Slack/etc. and those messages are
+            # screenshottable. The raw `command` still executes after approval
+            # via the closure below, so redaction is display-only. Approval
+            # persistence keys off pattern_key (not the command text), so the
+            # allowlist is unaffected.
+            from agent.redact import redact_sensitive_text
+
+            approval_data = {
+                "command": redact_sensitive_text(command),
+                "pattern_key": primary_key,
+                "pattern_keys": all_keys,
+                "description": redact_sensitive_text(combined_desc),
+                # Mirror the CLI's allow_permanent gate: a tirith warning downgrades
+                # "always" to session scope below, so the UI must not offer it.
+                "allow_permanent": not has_tirith,
+            }
+            decision = _await_gateway_decision(
+                session_key, notify_cb, approval_data, surface="gateway"
+            )
+            if decision.get("notify_failed"):
+                return {
+                    "approved": False,
+                    "message": "BLOCKED: Failed to send approval request to user. Do NOT retry.",
+                    "pattern_key": primary_key,
+                    "description": combined_desc,
+                }
+            resolved = decision["resolved"]
+            choice = decision["choice"]
+            deny_reason = decision.get("reason")
+
+            if not resolved or choice is None or choice == "deny":
+                # Consent contract: silence is NOT consent, and an explicit
+                # deny is also a hard halt — both produce a BLOCKED outcome
+                # that names the agent's most common evasion paths (retry,
+                # rephrase, achieve the same outcome via a different command).
+                # See issue #24912 for the original incident.
+                if not resolved:
+                    reason = "timed out without user response"
+                    timeout_addendum = " Silence is not consent."
+                    outcome = "timeout"
+                else:
+                    reason = "denied by user"
+                    timeout_addendum = ""
+                    outcome = "denied"
+                # An explicit deny may carry a free-text reason
+                # (``/deny <reason>``) so the agent can adapt rather than only
+                # hearing "denied". Relayed verbatim; generic attribution.
+                reason_addendum = ""
+                if outcome == "denied" and deny_reason:
+                    reason_addendum = f' Reason given by the user: "{deny_reason}".'
+                return {
+                    "approved": False,
+                    "message": (
+                        f"BLOCKED: Command {reason}.{reason_addendum} The user "
+                        f"has NOT consented to this action. Do NOT retry this "
+                        f"command, do NOT rephrase it, and do NOT attempt the "
+                        f"same outcome via a different command. Stop the "
+                        f"current workflow and wait for the user to respond "
+                        f"before taking any further destructive or "
+                        f"irreversible action.{timeout_addendum}"
+                    ),
+                    "pattern_key": primary_key,
+                    "description": combined_desc,
+                    "outcome": outcome,
+                    "user_consent": False,
+                    "deny_reason": deny_reason,
+                }
+
+            # User approved — persist based on scope (same logic as CLI)
+            for key, _, is_tirith in warnings:
+                if choice == "session" or (choice == "always" and is_tirith):
+                    approve_session(session_key, key)
+                elif choice == "always":
+                    approve_session(session_key, key)
+                    approve_permanent(key)
+                    save_permanent_allowlist(_permanent_approved)
+                # choice == "once": no persistence — command allowed this
+                # single time only, matching the CLI's behavior.
+
+            return {
+                "approved": True,
+                "message": None,
+                "user_approved": True,
+                "description": combined_desc,
+            }
+
+        # Fallback: no gateway callback registered (e.g. cron, batch).
+        # Return approval_required for backward compat. Redact secrets in the
+        # user-facing copy — the raw `command` is preserved for execution and
+        # the allowlist keys off pattern_key, so redaction is display-only.
+        from agent.redact import redact_sensitive_text
+
+        _disp_command = redact_sensitive_text(command)
+        _disp_combined_desc = redact_sensitive_text(combined_desc)
+        submit_pending(
+            session_key,
+            {
+                "command": _disp_command,
+                "pattern_key": primary_key,
+                "pattern_keys": all_keys,
+                "description": _disp_combined_desc,
+            },
+        )
+        return {
+            "approved": False,
+            "pattern_key": primary_key,
+            "status": "pending_approval",
+            "approval_pending": True,
+            "command": _disp_command,
+            "description": _disp_combined_desc,
+            "message": (
+                f"⚠️ {_disp_combined_desc}. Asking the user for approval.\n\n**Command:**\n```\n{_disp_command}\n```"
+            ),
+        }
+
+    # CLI interactive: single combined prompt
+    # Hide [a]lways when any tirith warning is present
+    _fire_approval_hook(
+        "pre_approval_request",
+        command=command,
+        description=combined_desc,
+        pattern_key=primary_key,
+        pattern_keys=list(all_keys),
+        session_key=session_key,
+        surface="cli",
+    )
+    choice = prompt_dangerous_approval(
+        command,
+        combined_desc,
+        allow_permanent=not has_tirith,
+        approval_callback=approval_callback,
+    )
+    _fire_approval_hook(
+        "post_approval_response",
+        command=command,
+        description=combined_desc,
+        pattern_key=primary_key,
+        pattern_keys=list(all_keys),
+        session_key=session_key,
+        surface="cli",
+        choice=choice,
+    )
+
+    if choice == "deny":
+        return {
+            "approved": False,
+            "message": (
+                "BLOCKED: User denied this command. The user has NOT consented "
+                "to this action. Do NOT retry this command, do NOT rephrase "
+                "it, and do NOT attempt the same outcome via a different "
+                "command. Stop the current workflow and wait for the user "
+                "to respond before taking any further destructive or "
+                "irreversible action."
+            ),
+            "pattern_key": primary_key,
+            "description": combined_desc,
+            "outcome": "denied",
+            "user_consent": False,
+        }
+
+    # Persist approval for each warning individually
+    for key, _, is_tirith in warnings:
+        if choice == "session" or (choice == "always" and is_tirith):
+            # tirith: session only (no permanent broad allowlisting)
+            approve_session(session_key, key)
+        elif choice == "always":
+            # dangerous patterns: permanent allowed
+            approve_session(session_key, key)
+            approve_permanent(key)
+            save_permanent_allowlist(_permanent_approved)
+
+    return {
+        "approved": True,
+        "message": None,
+        "user_approved": True,
+        "description": combined_desc,
+    }
 
 
 def check_execute_code_guard(
     code: str,
     env_type: str,
-    has_host_access: bool = False,
+    has_host_access: bool = False
 ) -> Dict[str, Any]:
-    """Harness mode: execute_code is always allowed to maximize agent capability."""
-    return {"approved": True, "message": None}
+    """Approve an execute_code script before its child process is spawned.
+
+    execute_code runs arbitrary local Python — the script can call
+    ``subprocess``, ``os.system``, ``ctypes``, or other process/file APIs
+    directly, none of which pass through ``terminal()`` /
+    ``DANGEROUS_PATTERNS``. In gateway/ask contexts we fail closed by approving
+    the script as a whole before it runs (#30882). Returns the same dict
+    contract as ``check_all_command_guards``.
+
+    Scope (documented limitation, #30882): in a purely local non-interactive
+    non-gateway session (no TTY, not gateway, not cron-deny) this returns
+    approved — matching the existing terminal auto-approve contract. The
+    hardline floor still blocks catastrophic ``terminal()`` commands the script
+    issues; running arbitrary code headlessly without any approval surface is
+    trusted-by-config (set a gateway/ask surface or ``approvals.cron_mode`` to
+    require approval).
+    """
+    pattern_key = "execute_code"
+    description = (
+        "execute_code script execution. The script can spawn subprocesses or "
+        "mutate files without passing through terminal command approval; "
+        "approval is one-shot for this run."
+    )
+
+    # Isolated backends already sandbox the child — matches the container skip
+    # in check_all_command_guards / check_dangerous_command. Docker stops
+    # skipping once host paths are bind-mounted into the sandbox; vercel_sandbox
+    # has no host-bind concept so it stays always-skipped.
+    if env_type == "vercel_sandbox":
+        return {"approved": True, "message": None}
+    if _should_skip_container_guards(env_type, has_host_access=has_host_access):
+        return {"approved": True, "message": None}
+
+    # --yolo or approvals.mode=off: bypass (session- or process-scoped).
+    approval_mode = _get_approval_mode()
+    if _YOLO_MODE_FROZEN or is_current_session_yolo_enabled() or approval_mode == "off":
+        return {"approved": True, "message": None}
+
+    is_gateway = _is_gateway_approval_context()
+    is_ask = env_var_enabled("HERCULES_EXEC_ASK")
+
+    # Cron: no user is present to approve arbitrary code.
+    if env_var_enabled("HERCULES_CRON_SESSION"):
+        if _get_cron_approval_mode() == "deny":
+            return {
+                "approved": False,
+                "message": (
+                    "BLOCKED: execute_code runs arbitrary local Python "
+                    "(including subprocess calls that bypass shell-string "
+                    "approval checks). Cron jobs run without a user present "
+                    "to approve it. Use normal tools instead, or set "
+                    "approvals.cron_mode: approve only if this cron profile "
+                    "is intentionally trusted."
+                ),
+                "pattern_key": pattern_key,
+                "description": description,
+                "outcome": "blocked",
+                "user_consent": False,
+            }
+        return {"approved": True, "message": None}
+
+    # Only gateway/ask contexts get the one-shot whole-script approval.
+    #   * CLI interactive: the script's terminal() calls are guarded per-call
+    #     (context now propagates into the RPC thread, #33057); a whole-script
+    #     prompt would fire on every execute_code call.
+    #   * Local non-interactive non-gateway: documented limitation above.
+    if not is_gateway and not is_ask:
+        return {"approved": True, "message": None}
+
+    session_key = get_current_session_key()
+    # Built only now (past the early-return gates) so the common non-approval
+    # paths don't pay to copy a potentially-large script into this string.
+    command = f"execute_code <<'PY'\n{code}\nPY"
+
+    # Redacted copies for user-visible rendering only. An execute_code script
+    # can embed credentials (e.g. api_key = "sk-..."), and the gateway renders
+    # this payload directly to Discord/Slack — those messages are
+    # screenshottable. The raw `command`/`code` are still what get assessed by
+    # smart approval and executed; redaction is display-only. Approval
+    # persistence keys off pattern_key, so the allowlist is unaffected.
+    from agent.redact import redact_sensitive_text
+
+    display_command = redact_sensitive_text(command)
+    display_code = redact_sensitive_text(code)
+    display_description = redact_sensitive_text(description)
+
+    # Check session/permanent approval — same gate as check_all_command_guards.
+    # Without this, "Approve session" / "Always" choices are stored but never
+    # consulted, so every execute_code call re-prompts the user (#39275).
+    if is_approved(session_key, pattern_key):
+        return {"approved": True, "message": None}
+
+    # Smart mode: ask the aux LLM about the whole script. An APPROVE here only
+    # suppresses the redundant whole-script prompt; the per-call terminal()
+    # guards (restored by context propagation) still run independently.
+    if approval_mode == "smart":
+        verdict = _smart_approve(command, description)
+        if verdict == "approve":
+            logger.debug(
+                "Smart approval: auto-approved execute_code for session %s", session_key
+            )
+            return {
+                "approved": True,
+                "message": None,
+                "smart_approved": True,
+                "description": description,
+            }
+        if verdict == "deny":
+            return {
+                "approved": False,
+                "message": (
+                    "BLOCKED by smart approval: execute_code script "
+                    "execution was assessed as genuinely dangerous. "
+                    "Do NOT retry."
+                ),
+                "smart_denied": True,
+                "pattern_key": pattern_key,
+                "description": description,
+                "outcome": "denied",
+                "user_consent": False,
+            }
+        # verdict == "escalate" → fall through to manual approval
+
+    notify_cb = None
+    with _lock:
+        notify_cb = _gateway_notify_cbs.get(session_key)
+
+    if notify_cb is None:
+        # No gateway callback registered (e.g. ask-mode without a notifier):
+        # surface a pending approval for backward compatibility.
+        submit_pending(
+            session_key,
+            {
+                "command": display_command,
+                "pattern_key": pattern_key,
+                "pattern_keys": [pattern_key],
+                "description": display_description,
+            },
+        )
+        return {
+            "approved": False,
+            "pattern_key": pattern_key,
+            "status": "pending_approval",
+            "approval_pending": True,
+            "command": display_command,
+            "description": display_description,
+            "message": (
+                f"⚠️ {display_description}. Asking the user for approval.\n\n"
+                f"**Code:**\n```python\n{display_code}\n```"
+            ),
+        }
+
+    approval_data = {
+        "command": display_command,
+        "pattern_key": pattern_key,
+        "pattern_keys": [pattern_key],
+        "description": display_description,
+    }
+    decision = _await_gateway_decision(
+        session_key, notify_cb, approval_data, surface="gateway"
+    )
+    if decision.get("notify_failed"):
+        return {
+            "approved": False,
+            "message": (
+                "BLOCKED: Failed to send execute_code approval request "
+                "to user. Do NOT retry."
+            ),
+            "pattern_key": pattern_key,
+            "description": description,
+            "outcome": "notify_failed",
+            "user_consent": False,
+        }
+
+    resolved = decision["resolved"]
+    choice = decision["choice"]
+    deny_reason = decision.get("reason")
+
+    if not resolved or choice is None or choice == "deny":
+        reason = "timed out without user response" if not resolved else "denied by user"
+        addendum = " Silence is not consent." if not resolved else ""
+        reason_addendum = ""
+        if resolved and choice == "deny" and deny_reason:
+            reason_addendum = f' Reason given by the user: "{deny_reason}".'
+        return {
+            "approved": False,
+            "message": (
+                f"BLOCKED: execute_code script {reason}.{reason_addendum} The "
+                f"user has NOT consented to running this code. Do NOT retry, "
+                f"do NOT rephrase the script, and do NOT attempt the same "
+                f"outcome via a different tool.{addendum}"
+            ),
+            "pattern_key": pattern_key,
+            "description": description,
+            "outcome": "timeout" if not resolved else "denied",
+            "user_consent": False,
+            "deny_reason": deny_reason,
+        }
+
+    # Approved — persist based on scope (same logic as check_all_command_guards).
+    if choice == "session":
+        approve_session(session_key, pattern_key)
+    elif choice == "always":
+        approve_session(session_key, pattern_key)
+        approve_permanent(pattern_key)
+        save_permanent_allowlist(_permanent_approved)
+    # choice == "once": no persistence — approval lasts this single call only.
+
+    return {
+        "approved": True,
+        "message": None,
+        "user_approved": True,
+        "description": description,
+    }
 
 
 # =========================================================================

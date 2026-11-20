@@ -77,7 +77,7 @@ class TestCompressionProtectsSummaryCall:
             return _Resp()
 
         with patch(
-            "agent.context_compressor.get_model_context_length", return_value=100000
+            "agent.compression.context.get_model_context_length", return_value=100000
         ):
             c = ContextCompressor(model="test", quiet_mode=True)
 
@@ -87,7 +87,7 @@ class TestCompressionProtectsSummaryCall:
             {"role": "user", "content": "more"},
             {"role": "assistant", "content": "done"},
         ]
-        with patch("agent.context_compressor.call_llm", side_effect=fake_call_llm):
+        with patch("agent.compression.context.call_llm", side_effect=fake_call_llm):
             summary = c._generate_summary(msgs)
 
         assert summary is not None

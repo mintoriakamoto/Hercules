@@ -20,6 +20,7 @@ from enum import Enum
 from hercules_cli.config import get_hercules_home
 from agent.secret_scope import current_secret_scope, get_secret as _get_secret
 from utils import is_truthy_value
+import yaml
 
 logger = logging.getLogger(__name__)
 

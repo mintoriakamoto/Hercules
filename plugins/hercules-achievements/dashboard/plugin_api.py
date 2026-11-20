@@ -12,6 +12,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
+import requests
 
 try:
     from hercules_constants import get_hercules_home

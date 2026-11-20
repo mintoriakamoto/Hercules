@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple, Set
 
 from hercules_cli.secret_prompt import masked_secret_prompt
+import yaml
 
 logger = logging.getLogger(__name__)
 

@@ -176,7 +176,7 @@ def test_reset_session_state_rebinds_builtin_compressor_after_session_switch(
     db.record_compression_failure_cooldown("old-sid", 4_000_000_000.0, "old-timeout")
 
     monkeypatch.setattr(
-        "agent.context_compressor.get_model_context_length",
+        "agent.compression.context.get_model_context_length",
         lambda *_a, **_k: 100_000,
     )
     compressor = ContextCompressor(

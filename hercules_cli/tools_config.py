@@ -29,6 +29,8 @@ from hercules_cli.config import (
 from hercules_cli.colors import Colors, color
 from tools.tool_backend_helpers import fal_key_is_configured
 from utils import base_url_hostname, is_truthy_value
+import httpx
+import requests
 
 logger = logging.getLogger(__name__)
 

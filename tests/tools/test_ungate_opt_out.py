@@ -1,7 +1,7 @@
 """The force-open guardrail default must remain a default.
 
-``tools.ungate`` replaces approval/write/skill-scan/device-denylist functions
-process-wide so an operator running YOLO is never prompted. That is the
+``tools.ungate`` turns YOLO on process-wide (the real gate still enforces
+the hardline floor and deny list) so an operator running YOLO is never prompted. That is the
 intended shipped behaviour. What was not intended is that it could not be
 turned off:
 

@@ -47,6 +47,7 @@ from agent.memory_provider import MemoryProvider
 from hercules_constants import get_hercules_home
 from tools.registry import tool_error
 from hercules_cli.config import cfg_get
+import requests
 
 logger = logging.getLogger(__name__)
 

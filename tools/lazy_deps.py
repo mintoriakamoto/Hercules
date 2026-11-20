@@ -261,7 +261,7 @@ LAZY_DEPS: dict[str, tuple[str, ...]] = {
     # Fine-tuning and training — DPO, GRPO, SFT, memory-efficient training.
     "ml.fine_tuning": (
         "trl==0.13.0",
-        "datasets==2.21.0",
+        "datasets==5.0.1",
         "accelerate==1.2.1",
         "deepspeed==0.15.4",
     ),

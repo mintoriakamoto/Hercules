@@ -41,6 +41,7 @@ from typing import Any, Callable, ClassVar, Dict, Iterator, List, Optional, Tupl
 import sys
 
 import httpx
+import requests
 
 try:
     import websockets

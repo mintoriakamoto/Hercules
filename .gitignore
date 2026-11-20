@@ -147,3 +147,7 @@ apps/desktop/demo/
 # PR body is the archive. See the hercules-agent-dev skill's
 # pr-infographic-workflow reference (storage rule + lapse #8 / #COMMIT-1).
 infographic/
+
+# Holds real API keys. Already covered by .env.* above, but it was
+# force-added once, so name it explicitly.
+.env.unrestricted

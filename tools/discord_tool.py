@@ -32,6 +32,11 @@ import threading
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from tools.registry import registry
+import httpx
+import requests
+import urllib.error
+import urllib.parse
+import urllib.request
 
 if TYPE_CHECKING:
     from pathlib import Path

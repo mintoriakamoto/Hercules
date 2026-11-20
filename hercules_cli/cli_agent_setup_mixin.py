@@ -17,6 +17,7 @@ from __future__ import annotations
 import sys
 
 from rich.markup import escape as _escape
+import sqlite3
 
 
 class CLIAgentSetupMixin:

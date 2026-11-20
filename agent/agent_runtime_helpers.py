@@ -46,6 +46,8 @@ from utils import (
     env_var_enabled,
     atomic_json_write,
 )
+import httpx
+import requests
 
 logger = logging.getLogger(__name__)
 
