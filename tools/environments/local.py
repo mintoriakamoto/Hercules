@@ -333,6 +333,12 @@ def _is_hercules_internal_secret(key: str) -> bool:
         upper.endswith("_API_KEY") or upper.endswith("_BASE_URL")
     ):
         return True
+    # Credentials that config writers moved out of config.yaml into .env
+    # (hercules_cli/config_secret_refs.py).
+    if upper in ("HERCULES_MODEL_API_KEY", "HERCULES_DELEGATION_API_KEY") or (
+        upper.startswith("HERCULES_CUSTOM_") and upper.endswith("_API_KEY")
+    ):
+        return True
     if upper.startswith("GATEWAY_RELAY_") and (
         upper.endswith("_SECRET") or upper.endswith("_KEY") or upper.endswith("_TOKEN")
     ):

@@ -217,7 +217,8 @@ class TestListNavigation:
         assert isinstance(reloaded["custom_providers"], list)
         assert len(reloaded["custom_providers"]) == 2
         # Entry 0 was updated
-        assert reloaded["custom_providers"][0]["api_key"] == "new-a"
+        # The secret goes to .env; config.yaml keeps only its reference (config_secret_refs).
+        assert reloaded["custom_providers"][0]["api_key"] == "${HERCULES_CUSTOM_PROVIDER_A_API_KEY}"
         assert reloaded["custom_providers"][0]["name"] == "provider-a"
         assert reloaded["custom_providers"][0]["base_url"] == "https://a.example.com"
         # Entry 1 is untouched
@@ -246,7 +247,7 @@ class TestListNavigation:
 
         reloaded = yaml.safe_load(_read_config(_isolated_hercules_home))
         entry = reloaded["custom_providers"][0]
-        assert entry["api_key"] == "rotated"
+        assert entry["api_key"] == "${HERCULES_CUSTOM_PROVIDER_A_API_KEY}"
         assert entry["name"] == "provider-a"
         assert entry["base_url"] == "https://a.example.com"
         assert set(entry["models"].keys()) == {"foo", "bar"}

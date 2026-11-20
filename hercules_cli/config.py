@@ -8452,6 +8452,11 @@ def set_config_value(key: str, value: str):
     # _set_nested which preserves list-typed nodes; before #17876 the
     # inline navigation here silently overwrote lists with dicts.
 
+    # Credential paths store the secret in .env and write only its ${VAR} reference.
+    # Runs before the type conversion below, so a numeric-looking secret stays a string.
+    from hercules_cli.config_secret_refs import config_set_secret_value
+    value = config_set_secret_value(key, value, user_config)
+
     # Convert value to appropriate type
     if value.lower() in {"true", "yes", "on"}:
         value = True
