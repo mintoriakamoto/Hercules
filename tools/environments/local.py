@@ -1040,7 +1040,7 @@ class LocalEnvironment(BaseEnvironment):
             try:
                 from hercules_constants import get_hercules_home
 
-                cache_dir = get_hercules_home() / "cache" / "terminal"
+                cache_dir = Path(get_hercules_home()) / "cache" / "terminal"
             except (ImportError, ModuleNotFoundError):
                 cache_dir = Path(tempfile.gettempdir()) / "hercules_terminal"
             cache_dir.mkdir(parents=True, exist_ok=True)
