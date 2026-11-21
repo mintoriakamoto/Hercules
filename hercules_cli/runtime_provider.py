@@ -988,11 +988,16 @@ def _resolve_named_custom_runtime(
     requested_norm = (requested_provider or "").strip().lower()
     if requested_norm and requested_norm != "custom":
         try:
+            from hercules_cli.auth import AuthError
             from hercules_cli.auth import resolve_provider as _resolve_provider
 
             if _resolve_provider(requested_norm) == "custom":
                 requested_norm = "custom"
         except (ImportError, ModuleNotFoundError):
+            pass
+        except AuthError:
+            # A named custom endpoint is not in the built-in registry. The custom
+            # lookup below matches it by name, so the unknown name is not an error here.
             pass
     if requested_norm == "custom" and explicit_base_url:
         base_url = explicit_base_url.strip().rstrip("/")
@@ -1145,6 +1150,7 @@ def _resolve_openrouter_runtime(
     # gate up the stack — alias-aware without duplicating the alias map.
     if requested_norm and requested_norm != "custom":
         try:
+            from hercules_cli.auth import AuthError
             from hercules_cli.auth import resolve_provider as _resolve_provider
 
             if _resolve_provider(requested_norm) == "custom":

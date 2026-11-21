@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import queue
+import requests
 import subprocess
 import sys
 import threading
