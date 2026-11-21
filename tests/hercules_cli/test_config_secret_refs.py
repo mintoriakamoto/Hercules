@@ -64,3 +64,17 @@ def test_child_env_strips_moved_credentials(name):
 def test_child_env_keeps_ordinary_settings():
     from tools.environments.local import _is_hercules_internal_secret
     assert not _is_hercules_internal_secret("HERCULES_MODEL")
+
+
+def test_custom_endpoint_key_goes_to_env(tmp_path, monkeypatch):
+    """A new custom_providers entry stores its key in .env and keeps a reference in config.yaml."""
+    monkeypatch.setenv("HERCULES_HOME", str(tmp_path))
+    from hercules_cli.main import _save_custom_provider
+
+    _save_custom_provider("http://localhost:8080/v1", api_key="sk-lab-77", model="m1", name="lab")
+
+    yaml_text = (tmp_path / "config.yaml").read_text(encoding="utf-8")
+    env_text = (tmp_path / ".env").read_text(encoding="utf-8")
+    assert "sk-lab-77" not in yaml_text
+    assert "${HERCULES_CUSTOM_LOCALHOST_8080_API_KEY}" in yaml_text
+    assert "HERCULES_CUSTOM_LOCALHOST_8080_API_KEY=sk-lab-77" in env_text

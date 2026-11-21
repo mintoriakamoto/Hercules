@@ -3894,7 +3894,10 @@ def _save_custom_provider(
 
     entry = {"name": name, "base_url": base_url}
     if api_key:
-        entry["api_key"] = api_key
+        # The secret goes to .env; the entry keeps only its ${VAR} reference.
+        from hercules_cli.config_secret_refs import endpoint_api_key_env, secret_ref_for
+
+        entry["api_key"] = secret_ref_for(endpoint_api_key_env(base_url), api_key)
     if model:
         entry["model"] = model
     if api_mode:

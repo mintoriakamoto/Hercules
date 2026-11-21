@@ -63,9 +63,12 @@ def is_secret_config_key(key: str) -> bool:
 
 def store_secret(env_name: str, value: str) -> str:
     """Save ``value`` to ``.env`` as ``env_name`` and return the ``${env_name}`` reference."""
+    import os
+
     from hercules_cli.config import save_env_value
 
     save_env_value(env_name, value)
+    os.environ[env_name] = value  # visible to this process before the next load
     return f"${{{env_name}}}"
 
 
