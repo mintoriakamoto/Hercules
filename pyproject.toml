@@ -190,7 +190,7 @@ honcho = ["honcho-ai==2.0.1"]
 # excluded from [all] like honcho/hindsight so a quarantined upstream release
 # can't break fresh installs.
 supermemory = ["supermemory==3.50.0"]
-mem0 = ["mem0ai==2.0.10"]
+mem0 = ["mem0ai==2.0.18"]
 # Computer vision — image processing, detection, segmentation via OpenCV and ML pipelines.
 # Pillow is already a CORE dependency (see the main `dependencies` list).
 # This extra adds opencv-python for advanced vision features.
