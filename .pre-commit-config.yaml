@@ -1,6 +1,12 @@
 repos:
   - repo: local
     hooks:
+      - id: secret-guard
+        name: Block env files and key-shaped secrets
+        entry: python scripts/check_secrets.py
+        language: system
+        stages: [commit]
+
       - id: dependency-check
         name: Check dependency structure
         entry: python scripts/validate_dependencies.py
