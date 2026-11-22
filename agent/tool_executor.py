@@ -47,6 +47,8 @@ from tools.tool_result_storage import (
     enforce_turn_budget,
 )
 from tools.budget_config import BudgetConfig, DEFAULT_BUDGET, budget_for_context_window
+import httpx
+import requests
 
 logger = logging.getLogger(__name__)
 

@@ -10,6 +10,8 @@ import os
 import sys
 import subprocess  # noqa: F401 — re-exported for tests that monkeypatch status.subprocess to guard against regressions
 from pathlib import Path
+import httpx
+import requests
 
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 

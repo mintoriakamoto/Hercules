@@ -94,6 +94,7 @@ from hercules_cli.dashboard_auth import (
     RefreshExpiredError,
     Session,
 )
+import requests
 
 logger = logging.getLogger(__name__)
 

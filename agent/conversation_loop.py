@@ -1177,37 +1177,37 @@ def run_conversation(
                 api_kwargs = agent._build_api_kwargs(api_messages)
 
                 # === Hybrid Ensemble Routing: Intelligent model selection ===
-                try:
-                    # Build agent config for router
-                    agent_config = {
-                        "model": agent.model,
-                        "provider": agent.provider,
-                        "api_mode": agent.api_mode,
-                        "enable_speculative": getattr(agent, "enable_speculative", True),
-                        "enable_ensemble": getattr(agent, "enable_ensemble", False),
-                    }
-
-                    # Route the request
-                    routing_decision = route_request(api_messages, agent.tools, agent_config)
-
-                    # Apply routing decision
-                    if routing_decision.primary_model != agent.model:
-                        logger.info(
-                            "Model routing applied: %s → %s (complexity=%d, tier=%s, confidence=%.2f)",
-                            agent.model,
-                            routing_decision.primary_model,
-                            routing_decision.complexity_score,
-                            routing_decision.tier.value,
-                            routing_decision.confidence
-                        )
-                        # Update model in api_kwargs if possible
-                        if "model" in api_kwargs:
-                            api_kwargs["model"] = routing_decision.primary_model
-                            agent._routing_decision = routing_decision
-                except (ImportError, ModuleNotFoundError, Exception) as e:
-                    # Routing is optional; fall back to default model
-                    logger.debug("Model routing unavailable or failed: %s", str(e)[:100])
-                    agent._routing_decision = None
+                # Opt-in only (``agent.model_routing: true``). The router's
+                # tiers name hosted Claude/GPT models and ignore provider and
+                # base_url, so running it by default replaced the configured
+                # model on every call, including local and single-provider
+                # setups that do not serve those names.
+                agent._routing_decision = None
+                if getattr(agent, "enable_model_routing", False):
+                    try:
+                        agent_config = {
+                            "model": agent.model,
+                            "provider": agent.provider,
+                            "api_mode": agent.api_mode,
+                            "enable_speculative": getattr(agent, "enable_speculative", True),
+                            "enable_ensemble": getattr(agent, "enable_ensemble", False),
+                        }
+                        routing_decision = route_request(api_messages, agent.tools, agent_config)
+                        if routing_decision.primary_model != agent.model:
+                            logger.info(
+                                "Model routing applied: %s → %s (complexity=%d, tier=%s, confidence=%.2f)",
+                                agent.model,
+                                routing_decision.primary_model,
+                                routing_decision.complexity_score,
+                                routing_decision.tier.value,
+                                routing_decision.confidence
+                            )
+                            if "model" in api_kwargs:
+                                api_kwargs["model"] = routing_decision.primary_model
+                                agent._routing_decision = routing_decision
+                    except Exception as e:
+                        # Routing is optional; fall back to the configured model
+                        logger.debug("Model routing unavailable or failed: %s", str(e)[:100])
 
                 if agent._force_ascii_payload:
                     _sanitize_structure_non_ascii(api_kwargs)

@@ -37,7 +37,7 @@ Pinned here:
   assistant message.
 
 * ``TestSourceGuardrail`` — static asserts on
-  ``agent/context_compressor.py`` so a future refactor can't
+  ``agent/compression/context.py`` so a future refactor can't
   silently drop the anchor.
 """
 
@@ -55,7 +55,7 @@ def compressor():
     from agent.context_compressor import ContextCompressor
 
     with patch(
-        "agent.context_compressor.get_model_context_length",
+        "agent.compression.context.get_model_context_length",
         return_value=100_000,
     ):
         c = ContextCompressor(
@@ -547,7 +547,7 @@ class TestSourceGuardrail:
         from pathlib import Path
 
         return (
-            Path(__file__).resolve().parents[2] / "agent" / "context_compressor.py"
+            Path(__file__).resolve().parents[2] / "agent" / "compression" / "context.py"
         ).read_text(encoding="utf-8")
 
     def test_helper_defined(self, source):
@@ -565,9 +565,9 @@ class TestSourceGuardrail:
         user_call = (
             "self._ensure_last_user_message_in_tail(messages, cut_idx, head_end)"
         )
-        asst_call = (
-            "self._ensure_last_assistant_message_in_tail(messages, cut_idx, head_end)"
-        )
+        # Matched as an assignment so the def line doesn't count; the
+        # arguments may wrap onto the next lines.
+        asst_call = "cut_idx = self._ensure_last_assistant_message_in_tail("
         user_idx = source.find(user_call)
         asst_idx = source.find(asst_call)
         assert user_idx >= 0 and asst_idx >= 0

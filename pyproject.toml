@@ -480,7 +480,11 @@ preview = true  # required for PLW1514 (unspecified-encoding) — preview rule
 # which silently corrupts any non-ASCII file content.  We had three
 # separate Windows sandbox regressions in one debug session before
 # adding the explicit encoding.  This rule keeps new code honest.
-select = ["PLW1514"]
+# F821 (undefined name) and E9 (syntax errors) are on because 217 except
+# clauses once named modules that were never imported (``requests``,
+# ``httpx``, ``urllib``): the handler itself raised NameError the moment an
+# error reached it, so every "handled" failure crashed instead.
+select = ["PLW1514", "F821", "E9"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests can intentionally exercise locale-encoding edge cases.
@@ -489,3 +493,5 @@ select = ["PLW1514"]
 "skills/**" = ["PLW1514"]
 "optional-skills/**" = ["PLW1514"]
 "plugins/**" = ["PLW1514"]
+# Left untouched on purpose (out of scope for hardening work).
+"optional-skills/security/godmode/**" = ["PLW1514", "F821"]

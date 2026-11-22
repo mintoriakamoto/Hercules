@@ -37,7 +37,7 @@ def compressor():
     from agent.context_compressor import ContextCompressor
 
     with patch(
-        "agent.context_compressor.get_model_context_length",
+        "agent.compression.context.get_model_context_length",
         return_value=100_000,
     ):
         c = ContextCompressor(

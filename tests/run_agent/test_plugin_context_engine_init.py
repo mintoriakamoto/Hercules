@@ -197,7 +197,7 @@ def test_codex_gpt55_autoraise_still_applies_to_builtin_compressor():
     with (
         patch("hercules_cli.config.load_config", return_value=cfg),
         patch(
-            "agent.context_compressor.get_model_context_length", return_value=272_000
+            "agent.compression.context.get_model_context_length", return_value=272_000
         ),
         patch("run_agent.get_tool_definitions", return_value=[]),
         patch("run_agent.check_toolset_requirements", return_value={}),
@@ -234,7 +234,7 @@ def test_codex_gpt55_autoraise_applies_when_plugin_engine_missing():
         ),
         patch("hercules_cli.plugins.get_plugin_context_engine", return_value=None),
         patch(
-            "agent.context_compressor.get_model_context_length", return_value=272_000
+            "agent.compression.context.get_model_context_length", return_value=272_000
         ),
         patch("run_agent.get_tool_definitions", return_value=[]),
         patch("run_agent.check_toolset_requirements", return_value={}),

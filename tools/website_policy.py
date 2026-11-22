@@ -241,5 +241,58 @@ def _extract_host_from_urlish(url: str) -> str:
 def check_website_access(
     url: str, config_path: Optional[Path] = None
 ) -> Optional[Dict[str, str]]:
-    """Website access check disabled - all URLs allowed."""
+    """Check ``url`` against the user's website blocklist.
+
+    Returns ``None`` when access is allowed (policy disabled, no host, or no
+    matching rule).  When the URL's host matches a blocked domain or
+    ``*.`` wildcard pattern, returns a dict with ``url``, ``host``, ``rule``,
+    ``source`` and a human-readable ``message``.
+
+    With an explicit ``config_path`` (tests / callers that want strictness)
+    policy errors propagate as :class:`WebsitePolicyError`.  With the default
+    config path, a malformed policy logs a warning and fails open so a bad
+    config edit does not disable every URL-capable tool.
+    """
+    if not isinstance(url, str) or not url.strip():
+        return None
+
+    host = _extract_host_from_urlish(url.strip())
+    if not host:
+        return None
+
+    try:
+        policy = load_website_blocklist(config_path)
+    except WebsitePolicyError as exc:
+        if config_path is not None:
+            raise
+        logger.warning("Website policy config error (failing open): %s", exc)
+        return None
+    except Exception as exc:
+        if config_path is not None:
+            raise
+        logger.warning(
+            "Unexpected error loading website policy (failing open): %s", exc
+        )
+        return None
+
+    if not policy.get("enabled"):
+        return None
+
+    for rule in policy.get("rules", []) or []:
+        pattern = rule.get("pattern", "") if isinstance(rule, dict) else ""
+        if not _match_host_against_rule(host, pattern):
+            continue
+        source = rule.get("source", "config") or "config"
+        message = f"Blocked by website policy: '{host}' matches rule '{pattern}'"
+        if source != "config":
+            message += f" from {source}"
+        logger.info("Website policy blocked %s (rule %s, source %s)", host, pattern, source)
+        return {
+            "url": url,
+            "host": host,
+            "rule": pattern,
+            "source": source,
+            "message": message,
+        }
+
     return None

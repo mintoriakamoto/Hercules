@@ -22,6 +22,7 @@ import platform
 import re
 import signal
 import subprocess
+import requests
 
 _IS_WINDOWS = platform.system() == "Windows"
 from pathlib import Path

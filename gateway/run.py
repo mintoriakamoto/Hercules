@@ -58,6 +58,9 @@ from agent.conversation_loop import INTERRUPT_WAITING_FOR_MODEL_PREFIX
 from agent.i18n import t
 from hercules_cli.config import cfg_get
 from hercules_cli.fallback_config import get_fallback_chain
+import httpx
+import requests
+import yaml
 
 # --- Agent cache tuning ---------------------------------------------------
 # Bounds the per-session AIAgent cache to prevent unbounded growth in

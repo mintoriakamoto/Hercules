@@ -64,6 +64,7 @@ from html import escape as _html_escape
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, Optional, Set
+import requests
 
 try:
     from mautrix.types import (

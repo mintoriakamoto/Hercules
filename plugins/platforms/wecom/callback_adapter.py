@@ -17,6 +17,7 @@ import logging
 import socket as _socket
 import time
 from typing import Any, Dict, List, Optional
+import requests
 
 # Security: parse untrusted, pre-auth request bodies (WeCom callbacks) with
 # defusedxml to block billion-laughs / entity-expansion (and XXE) DoS. The

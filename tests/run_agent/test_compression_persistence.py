@@ -229,7 +229,7 @@ class TestFlushAfterCompression:
             ]
 
             with patch(
-                "agent.context_compressor.call_llm",
+                "agent.compression.context.call_llm",
                 side_effect=RuntimeError("no provider"),
             ):
                 compressed, _ = compress_context(

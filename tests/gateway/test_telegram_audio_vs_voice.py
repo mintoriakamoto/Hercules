@@ -21,7 +21,7 @@ from gateway.platforms.base import MessageEvent, MessageType
 from gateway.session import SessionSource
 
 
-def _make_runner(stt_enabled: bool = True) -> "GatewayRunner":  # type: ignore[name-defined]
+def _make_runner(stt_enabled: bool = True) -> "GatewayRunner":  # type: ignore[name-defined]  # noqa: F821
     from gateway.run import GatewayRunner
 
     runner = GatewayRunner.__new__(GatewayRunner)

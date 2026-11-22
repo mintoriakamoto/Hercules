@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from hercules_constants import get_config_path, get_skills_dir, is_termux
+import yaml
 
 logger = logging.getLogger(__name__)
 

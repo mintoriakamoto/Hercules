@@ -70,6 +70,7 @@ from hercules_constants import agent_browser_runnable, get_hercules_home
 from utils import env_int, is_truthy_value
 from hercules_cli.config import DEFAULT_CONFIG, cfg_get
 from hercules_cli._subprocess_compat import windows_hide_flags
+import httpx
 
 # Browser-specific tool keys passed through to the agent-browser subprocess
 # AFTER credential stripping.  agent-browser is a Node process loading npm

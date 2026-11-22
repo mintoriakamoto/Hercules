@@ -52,6 +52,8 @@ from tools.registry import tool_error
 from .store import MemoryStore
 from .retrieval import FactRetriever
 from hercules_cli.config import cfg_get
+import requests
+import sqlite3
 
 logger = logging.getLogger(__name__)
 

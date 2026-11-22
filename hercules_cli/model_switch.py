@@ -43,6 +43,8 @@ from agent.models_dev import (
     get_model_info,
     list_provider_models,
 )
+import httpx
+import requests
 
 # Providers whose picker model list should NOT be capped by max_models.
 # OpenCode Zen / Go are aggregators whose full catalogs (70+ models each) must

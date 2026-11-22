@@ -35,6 +35,7 @@ from tui_gateway.transport import (
     current_transport,
     reset_transport,
 )
+import requests
 
 logger = logging.getLogger(__name__)
 

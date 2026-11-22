@@ -117,7 +117,7 @@ def _make_agent_with_cooldown(db_path, session_id, *, cooldown_until=None):
         db.record_compression_failure_cooldown(session_id, cooldown_until, "timeout")
 
     with patch(
-        "agent.context_compressor.get_model_context_length", return_value=100000
+        "agent.compression.context.get_model_context_length", return_value=100000
     ):
         compressor = ContextCompressor(
             model="test/model",

@@ -10,6 +10,10 @@ import ast
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+# Resolve the checkout this script lives in, so the test runs from any clone
+# instead of only from one hardcoded path.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
 class VeritasReport:
     """Report following Elder Veritas Principles"""
 
@@ -27,7 +31,10 @@ class VeritasReport:
         output.append("=" * 80)
 
         for category, result in self.results.items():
-            status = "✅ PASS" if result['passed'] else "❌ FAIL"
+            if result['count'] == 0:
+                status = "❌ FAIL (nothing was checked)"
+            else:
+                status = "✅ PASS" if result['passed'] else "❌ FAIL"
             output.append(f"\n[{category}] {status}")
             output.append(f"  Total: {result['count']}")
             output.append(f"  Passed: {result['passed_count']}")
@@ -54,7 +61,7 @@ def test_imports() -> Tuple[int, int, List[str]]:
     failed = 0
     issues = []
 
-    py_files = list(Path('/home/user/Hercules').rglob('*.py'))
+    py_files = list(REPO_ROOT.rglob('*.py'))
     py_files = [f for f in py_files if 'test' not in str(f) and '__pycache__' not in str(f)]
 
     for py_file in py_files[:50]:  # Test first 50 to avoid timeout
@@ -112,7 +119,7 @@ def test_capability_modules() -> Tuple[int, int, List[str]]:
     ]
 
     for filepath in capability_files:
-        full_path = Path('/home/user/Hercules') / filepath
+        full_path = REPO_ROOT / filepath
         try:
             if full_path.exists():
                 with open(full_path, encoding="utf-8") as f:
@@ -137,7 +144,7 @@ def test_skills() -> Tuple[int, int, List[str]]:
     failed = 0
     issues = []
 
-    skills_dir = Path('/home/user/Hercules/.claude/skills')
+    skills_dir = REPO_ROOT / '.claude' / 'skills'
     skill_files = list(skills_dir.glob('*/SKILL.md'))
 
     for skill_file in skill_files:
@@ -173,7 +180,7 @@ def test_cache_files() -> Tuple[int, int, List[str]]:
     ]
 
     for cache_file in cache_files:
-        full_path = Path('/home/user/Hercules') / cache_file
+        full_path = REPO_ROOT / cache_file
         try:
             with open(full_path, encoding="utf-8") as f:
                 data = json.load(f)
@@ -206,7 +213,7 @@ def test_pylint() -> Tuple[int, int, List[str]]:
     failed = 0
     issues = []
 
-    consciousness_files = list(Path('/home/user/Hercules/agent/consciousness').glob('*.py'))
+    consciousness_files = list((REPO_ROOT / 'agent' / 'consciousness').glob('*.py'))
     consciousness_files = [f for f in consciousness_files if '__pycache__' not in str(f)]
 
     for py_file in consciousness_files:
@@ -248,7 +255,7 @@ def test_git_status() -> Tuple[int, int, List[str]]:
             ['git', 'status', '--porcelain'],
             capture_output=True,
             text=True,
-            cwd='/home/user/Hercules'
+            cwd=str(REPO_ROOT)
         )
 
         if not result.stdout.strip():
@@ -349,6 +356,11 @@ def main():
         'issues': git_issues,
     }
     report.total_issues.extend(git_issues)
+
+    # A category that checked nothing proves nothing: count it as an issue.
+    for category, result in report.results.items():
+        if result['count'] == 0:
+            report.total_issues.append(f"{category}: nothing was checked")
 
     # Render report
     print(report.render())

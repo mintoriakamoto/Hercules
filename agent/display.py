@@ -19,6 +19,8 @@ from utils import safe_json_loads
 from agent.redact import redact_sensitive_text
 from agent.tool_result_classification import file_mutation_result_landed
 from tools.approval import _is_spinner_paused
+import httpx
+import requests
 
 # ANSI escape codes for coloring tool failure indicators
 _RED = "\033[31m"

@@ -37,6 +37,7 @@ import copy
 import hashlib
 import json
 import logging
+import requests
 
 logger = logging.getLogger(__name__)
 import os

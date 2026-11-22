@@ -50,6 +50,8 @@ from agent.secret_sources._cache import (
     is_valid_env_name as _is_valid_env_name,
 )
 from agent.secret_sources.base import ErrorKind, SecretSource
+import urllib.error
+import urllib.request
 
 logger = logging.getLogger(__name__)
 

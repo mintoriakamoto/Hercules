@@ -28,6 +28,7 @@ from pathlib import Path
 from agent.memory_manager import sanitize_context
 from hercules_constants import get_hercules_home
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar
+import requests
 
 logger = logging.getLogger(__name__)
 

@@ -21,6 +21,7 @@ import subprocess
 import sys
 import threading
 import time
+import requests
 
 # fcntl is Unix-only; on Windows use msvcrt for file locking
 try:
