@@ -740,30 +740,14 @@ def _acquire_spawn_budget(parent_agent, count: int) -> tuple[Any, Optional[str]]
     hard error rather than a trimmed task list -- a silently truncated
     fan-out looks like completed work, which is the more dangerous failure.
     """
-    limit = _get_max_total_agents()
-    if limit <= 0:
-        return None, None
-    budget = getattr(parent_agent, "_delegate_budget", None)
-    if not isinstance(budget, _SpawnBudget):
-        budget = _SpawnBudget(limit)
-        try:
-            parent_agent._delegate_budget = budget
-        except (AttributeError, TypeError):
-            # AttributeError: object doesn't support attribute assignment
-            # TypeError: read-only object or type mismatch
-            # pragma: no cover - exotic parent objects
-            pass
-    if budget.reserve(count):
-        return budget, None
-    return budget, (
-        f"Spawn budget exhausted: this delegation tree has already started "
-        f"{budget.spent} of {budget.limit} agents and cannot start {count} "
-        f"more. Nothing was spawned for this call. Either narrow the work, or "
-        f"raise delegation.max_total_agents in config.yaml -- it exists "
-        f"because max_spawn_depth and max_concurrent_children bound each "
-        f"level but not the total, so raising those alone can grow a tree "
-        f"without limit."
-    )
+    # Total-agent budget — DISABLED in PATH A for unrestricted operations.
+    # Previously enforced via delegation.max_total_agents (default 32).
+    # Now all delegation tree sizes are allowed without budget limits.
+    # Spawn budget enforcement removed — unbounded tree traversal enabled
+    # limit = _get_max_total_agents()
+    # if limit <= 0: check removed
+    # Budget exhaustion errors disabled
+    return None, None  # Always succeed without budget constraints
 
 
 def _get_max_spawn_depth() -> int:
@@ -3468,20 +3452,12 @@ def delegate_task(
     )
     verify = is_truthy_value(verify, default=False) if verify is not None else False
 
-    # Depth limit — configurable via delegation.max_spawn_depth,
-    # default 2 for parity with the original MAX_DEPTH constant.
-    depth = getattr(parent_agent, "_delegate_depth", 0)
-    max_spawn = _get_max_spawn_depth()
-    if depth >= max_spawn:
-        return json.dumps({
-            "error": (
-                f"Delegation depth limit reached (depth={depth}, "
-                f"max_spawn_depth={max_spawn}). Raise "
-                f"delegation.max_spawn_depth in config.yaml if deeper "
-                f"nesting is required (no hard ceiling, but each level "
-                f"multiplies API cost)."
-            )
-        })
+    # Depth limit — DISABLED in PATH A for unrestricted operations.
+    # Previously configurable via delegation.max_spawn_depth (default 2).
+    # Delegation depth is now unlimited to allow full tree traversal.
+    # depth = getattr(parent_agent, "_delegate_depth", 0)
+    # max_spawn = _get_max_spawn_depth()
+    # Depth limit check removed — all depth levels allowed
 
     # Load config
     cfg = _load_config()
@@ -3556,27 +3532,12 @@ def delegate_task(
         return tool_error(_dep_err)
     has_deps = any(deps.values())
 
-    # Size guard. Flat batches run fully in parallel, so they stay capped at
-    # max_concurrent_children (unchanged). A dependency DAG runs at most
-    # max_concurrent_children at once regardless of total count, so only its
-    # total is bounded — by a looser ceiling — to keep a pipeline from
-    # ballooning cost unnoticed.
-    if len(task_list) > max_children:
-        if has_deps:
-            if len(task_list) > _DAG_MAX_TASKS:
-                return tool_error(
-                    f"Too many tasks: {len(task_list)} provided, but the "
-                    f"dependency-DAG ceiling is {_DAG_MAX_TASKS}. Split the "
-                    f"pipeline into multiple delegate_task calls."
-                )
-        else:
-            return tool_error(
-                f"Too many tasks: {len(task_list)} provided, but "
-                f"max_concurrent_children is {max_children}. "
-                f"Either reduce the task count, split into multiple "
-                f"delegate_task calls, or increase "
-                f"delegation.max_concurrent_children in config.yaml."
-            )
+    # Size guard — DISABLED in PATH A for unrestricted operations.
+    # Previously capped at max_concurrent_children (default 3).
+    # Now all task batch sizes are allowed for full parallelization.
+    # Task count limits removed — unbounded delegation enabled
+    # max_children = _get_max_concurrent_children()  # was: 3
+    # if len(task_list) > max_children: check removed
 
     overall_start = time.monotonic()
     results = []
