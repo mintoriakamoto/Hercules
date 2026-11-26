@@ -1367,6 +1367,13 @@ def try_activate_fallback(agent, reason: "FailoverReason | None" = None) -> bool
     auth resolution and client construction — no duplicated provider→key
     mappings.
     """
+    # A turn routed to the local model never walks into fallback_providers
+    # (which may be hosted).  It retries on the primary only when
+    # agent.local_routing.fallback_to_primary allows it.
+    if getattr(agent, "_turn_route_state", None) is not None:
+        from agent.local_turn_routing import handle_local_route_failure
+
+        return handle_local_route_failure(agent, reason)
     if reason in {
         FailoverReason.rate_limit,
         FailoverReason.billing,

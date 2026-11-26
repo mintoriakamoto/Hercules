@@ -512,6 +512,11 @@ def run_conversation(
     # ``build_turn_context``.  It mutates ``agent`` exactly as the inline code
     # did and returns the locals the loop below reads back.  See
     # ``agent/turn_context.py``.
+    # The user's own words for this turn, captured before build_turn_context
+    # applies any prompt transforms; local routing judges these.
+    _routing_text = (
+        persist_user_message if persist_user_message is not None else user_message
+    )
     _ctx = build_turn_context(
         agent,
         user_message,
@@ -540,6 +545,15 @@ def run_conversation(
     _should_review_memory = _ctx.should_review_memory
     _plugin_user_context = _ctx.plugin_user_context
     _ext_prefetch_cache = _ctx.ext_prefetch_cache
+
+    # ── Turn-level local routing (opt-in: agent.local_routing) ──
+    # Runs after build_turn_context restored the primary runtime, and judges
+    # the user's own words (before any prompt transforms).  Simple turns move
+    # to the configured local model for this turn only; see
+    # agent/local_turn_routing.py.  Never raises.
+    from agent.local_turn_routing import apply_turn_route
+
+    apply_turn_route(agent, _routing_text, messages, active_system_prompt)
 
     # Main conversation loop counters (pure locals consumed by the loop below).
     api_call_count = 0
