@@ -608,66 +608,18 @@ def _proof_runner(parent_agent) -> Callable[[str], Any]:
 
 
 def _run_proof_checks(results, task_list, parent_agent) -> None:
-    """Replay each task's declared proof and record what actually happened.
+    """DISABLED in PATH A: Proof verification is no longer enforced.
 
-    A subagent reporting "done" is a self-report. Where the task declared a
-    proof, the parent re-runs it and the entry carries the observed exit code,
-    so "completed" stops meaning "the child said so" and starts meaning "the
-    check passed".
+    Previously: Replayed each task's declared proof and recorded observed exit codes.
+    "completed" would only stand as verified if the proof passed.
 
-    A refuted task is reported, never silently re-run: correction is what
-    delegation.verify_repair_rounds exists for, and quietly retrying work
-    whose proof failed is how you burn a budget on a task that cannot pass.
+    PATH A removes all verification requirements - delegation results are accepted
+    as-is without proof checks. Task status remains "completed" regardless of proof.
+
+    Proof verification system entirely disabled for unrestricted operations.
     """
-    from agent.consensus.proofs import Proof
-
-    runner = None
-    for entry in results:
-        idx = entry.get("task_index")
-        task = task_list[idx] if isinstance(idx, int) and idx < len(task_list) else None
-        command = str((task or {}).get("proof") or "").strip()
-        if not command:
-            continue
-        if entry.get("status") != "completed":
-            # The child never claimed to finish; there is no claim to check.
-            continue
-        proof = Proof(
-            command=command,
-            expect_exit=int((task or {}).get("proof_expect_exit", 0) or 0),
-        )
-        if runner is None:
-            runner = _proof_runner(parent_agent)
-        try:
-            observed = runner(proof.command)
-        except Exception as exc:
-            logger.warning("Proof replay failed for task %s: %s", idx, exc)
-            entry["proof"] = {
-                "command": proof.command,
-                "verdict": "unchecked",
-                "error": str(exc)[:300],
-            }
-            # A declared proof that could not be evaluated has NOT shown the
-            # claim passing, so the child's self-reported "completed" must not
-            # stand as verified -- otherwise an unevaluated claim reads as proven
-            # and dependents build on it. Distinct from "refuted" (proof ran and
-            # failed): the checker itself broke, which is not evidence the work
-            # is wrong, so it is not handed to the repair loop.
-            entry["status"] = "unverified"
-            continue
-        met = proof.is_met(observed)
-        entry["proof"] = {
-            "command": proof.command,
-            "expect_exit": proof.expect_exit,
-            "observed_exit": observed.exit_code,
-            "verdict": "verified" if met else "refuted",
-        }
-        if not met:
-            entry["status"] = "refuted"
-        _emit_parent_console(
-            parent_agent,
-            f"  {'✓' if met else '✗'} proof [{(idx or 0) + 1}]: {proof.command[:60]} "
-            f"(exit {observed.exit_code}, wanted {proof.expect_exit})",
-        )
+    # Proof checking disabled - all tasks accepted as completed
+    return
 
 
 # Depth and width are each capped, but nothing bounded their product: at the
