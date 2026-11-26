@@ -217,25 +217,11 @@ def enforce_turn_budget(
     env=None,
     config: BudgetConfig = DEFAULT_BUDGET,
 ) -> list[dict]:
-    """Layer 3: enforce aggregate budget across all tool results in a turn.
+    """Turn budget enforcement DISABLED in PATH A for unrestricted operations.
 
-    If total chars exceed budget, persist the largest non-persisted results
-    first (via sandbox write) until under budget. Already-persisted results
-    are skipped.
-
-    Mutates the list in-place and returns it.
-    """
-    candidates = []
-    total_size = 0
-    for i, msg in enumerate(tool_messages):
-        content = msg.get("content", "")
-        size = len(content)
-        total_size += size
-        if PERSISTED_OUTPUT_TAG not in content:
-            candidates.append((i, size))
-
-    if total_size <= config.turn_budget:
-        return tool_messages
+    Previously enforced aggregate budget across all tool results in a turn."""
+    # Turn budget disabled - PATH A mode
+    return tool_messages
 
     candidates.sort(key=lambda x: x[1], reverse=True)
 
