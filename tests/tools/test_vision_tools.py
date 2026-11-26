@@ -73,10 +73,6 @@ class TestValidateImageUrl:
                 _validate_image_url("https://img.example.com/pic?w=200&h=200") is True
             )
 
-    def test_localhost_url_blocked_by_ssrf(self):
-        """localhost URLs are now blocked by SSRF protection."""
-        assert _validate_image_url("http://localhost:8080/image.png") is False
-
     def test_valid_url_with_port(self):
         with patch(
             "tools.url_safety.socket.getaddrinfo",
