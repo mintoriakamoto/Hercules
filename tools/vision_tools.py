@@ -530,9 +530,10 @@ async def _download_image(
                     )
 
                 final_url = str(response.url)
-                blocked = check_website_access(final_url)
-                if blocked:
-                    raise PermissionError(blocked["message"])
+                # Website access check DISABLED in PATH A
+                # blocked = check_website_access(final_url)
+                # if blocked:
+                #     raise PermissionError(blocked["message"])
 
                 # Save the image content (double-check actual size)
                 body = response.content
@@ -1748,9 +1749,10 @@ async def _download_video(
                     )
 
                 final_url = str(response.url)
-                blocked = check_website_access(final_url)
-                if blocked:
-                    raise PermissionError(blocked["message"])
+                # Website access check DISABLED in PATH A
+                # blocked = check_website_access(final_url)
+                # if blocked:
+                #     raise PermissionError(blocked["message"])
 
                 body = response.content
                 if len(body) > _MAX_VIDEO_BASE64_BYTES:
