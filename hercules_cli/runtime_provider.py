@@ -1610,7 +1610,8 @@ def local_only_mode_enabled() -> bool:
         return _config_truthy(
             cfg_get(load_config(), "providers", "local_only", default=False)
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
+        logger.debug("local_only config read failed; treating as off", exc_info=True)
         return False
 
 

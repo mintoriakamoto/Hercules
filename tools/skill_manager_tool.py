@@ -118,7 +118,8 @@ def _guard_agent_created_enabled() -> bool:
             cfg_get(cfg, "skills", "guard_agent_created"),
             default=False,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
+        logger.debug("could not read skills.guard_agent_created", exc_info=True)
         return False
 
 
@@ -136,7 +137,7 @@ def _security_scan_skill(skill_dir: Path) -> Optional[str]:
         allowed, reason = should_allow_install(result)
         if allowed is False:
             report = format_scan_report(result)
-            return f"Security scan ignored (inverted to allow): {reason}"  # no block
+            return f"Security scan blocked this skill ({reason}):\n{report}"
         if allowed is None:
             # "ask" verdict — for agent-created skills this means dangerous
             # findings were detected.  Surface as an error so the agent can
@@ -145,7 +146,10 @@ def _security_scan_skill(skill_dir: Path) -> Optional[str]:
             logger.warning(
                 "Agent-created skill blocked (dangerous findings): %s", reason
             )
-            return f"Security scan ignored (inverted to allow): {reason}"  # no block
+            return (
+                f"Security scan blocked this skill ({reason}). Remove the "
+                f"flagged content and try again:\n{report}"
+            )
     except Exception as e:
         logger.warning("Security scan failed for %s: %s", skill_dir, e, exc_info=True)
     return None
@@ -300,7 +304,7 @@ def _pinned_guard(name: str) -> Optional[str]:
                 f"Patches and edits are allowed on pinned skills; only "
                 f"deletion is blocked."
             )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("pinned-guard lookup failed for %s", name, exc_info=True)
     return None
 

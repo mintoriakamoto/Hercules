@@ -45,7 +45,12 @@ from utils import base_url_hostname, is_truthy_value
 
 # Tools that children must never have access to
 DELEGATE_BLOCKED_TOOLS = frozenset([
-    # All restrictions disabled - children have full tool access
+    "delegate_task",  # no recursive delegation (orchestrators get it back by role)
+    "clarify",        # children can never reach a human
+    "memory",         # no writes to the parent's shared memory
+    "send_message",   # no cross-platform side effects in the parent's name
+    "execute_code",   # children reason step by step instead of writing scripts
+    "cronjob",        # no scheduling new jobs under the parent's identity (#43466)
 ])
 
 
@@ -61,8 +66,8 @@ DELEGATE_BLOCKED_TOOLS = frozenset([
 # Fix: install a non-interactive callback into every subagent worker thread
 # via ThreadPoolExecutor(initializer=_set_subagent_approval_cb, initargs=(cb,)).
 # The callback is chosen by the `delegation.subagent_auto_approve` config:
-#   default → _subagent_auto_approve (YOLO on)
-#   false       → _subagent_auto_deny
+#   false (default) → _subagent_auto_deny
+#   true            → _subagent_auto_approve
 # Both emit a logger.warning for audit; gateway sessions are unaffected
 # because they resolve approvals via tools/approval.py's per-session queue,
 # not through these TLS callbacks.
@@ -98,12 +103,12 @@ def _subagent_auto_approve(command: str, description: str, **kwargs) -> str:
 def _get_subagent_approval_callback() -> Callable[[str, str], str]:
     """Return the callback to install into subagent worker threads.
 
-    Config key: delegation.subagent_auto_approve (bool, default True).
+    Config key: delegation.subagent_auto_approve (bool, default False).
     Reads via the same _load_config() path as the rest of delegate_task so
     priority is config.yaml > (no env override for this knob) > default.
     """
     cfg = _load_config()
-    val = cfg.get("subagent_auto_approve", True)  # default allow
+    val = cfg.get("subagent_auto_approve", False)  # default deny
     if is_truthy_value(val):
         return _subagent_auto_approve
     return _subagent_auto_deny
@@ -1100,7 +1105,12 @@ def _strip_blocked_tools(toolsets: List[str]) -> List[str]:
     one-to-one tool. This keeps the blocklist and the strip set in lockstep
     so new blocked tools can't silently leak through as toolset names.
     """
-    return toolsets
+    blocked_toolsets = {"delegation", "code_execution"}
+    for name, defn in TOOLSETS.items():
+        tools = defn.get("tools") or []
+        if tools and all(t in DELEGATE_BLOCKED_TOOLS for t in tools):
+            blocked_toolsets.add(name)
+    return [t for t in toolsets if t not in blocked_toolsets]
 
 
 def _emit_parent_console(parent_agent, line: str) -> None:
@@ -4511,8 +4521,10 @@ def _load_config() -> dict:
             cfg = full.get("delegation") or {}
             if isinstance(cfg, dict):
                 return cfg
-        except (ImportError, ModuleNotFoundError):
-            pass
+        except Exception:
+            # A broken or unreadable config must not take delegation down;
+            # fall back to the legacy CLI_CONFIG below.
+            logger.debug("delegation config load failed; using CLI_CONFIG", exc_info=True)
     try:
         from cli import CLI_CONFIG
 

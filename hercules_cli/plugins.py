@@ -2354,7 +2354,10 @@ def resolve_pre_tool_block(
                 details.message or "",
                 rule_key=details.rule_key or tool_name,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
+            logger.warning(
+                "plugin approval gate failed for %s", tool_name, exc_info=True
+            )
             # Fail-closed: if the gate itself errors, block rather than
             # silently execute an action a plugin flagged for approval.
             return f"BLOCKED: plugin approval gate failed for {tool_name}"

@@ -504,12 +504,53 @@ class ToolRegistry:
             # over built-in and MCP over MCP are both owner ``None``, and a
             # plugin refreshing its own tool matches its own owner.
             if existing:
-                logger.info(
-                    "Tool '%s': toolset '%s' overriding existing toolset '%s'",
-                    name,
-                    toolset,
-                    existing.toolset,
+                owner = self._plugin_owner_of(handler)
+                existing_owner = self._plugin_owner_of(existing.handler)
+                owner_root = ".".join(owner.split(".")[:2]) if owner else ""
+                existing_root = (
+                    ".".join(existing_owner.split(".")[:2]) if existing_owner else ""
                 )
+                plugin_takeover = bool(owner) and owner_root != existing_root
+                both_mcp = existing.toolset.startswith(
+                    "mcp-"
+                ) and toolset.startswith("mcp-")
+                shadows = plugin_takeover or (
+                    existing.toolset != toolset and not both_mcp
+                )
+                if shadows and not override:
+                    logger.error(
+                        "Tool registration REJECTED: %r (toolset %r) would "
+                        "shadow the existing tool from toolset %r. Pass "
+                        "override=True if replacing it is intentional.",
+                        name,
+                        toolset,
+                        existing.toolset,
+                    )
+                    return
+                if plugin_takeover and not self._plugin_override_policy.get(
+                    owner_root, False
+                ):
+                    logger.error(
+                        "Tool override REJECTED: plugin %r attempted to replace "
+                        "tool %r (toolset %r) without operator opt-in. Set "
+                        "plugins.entries.<plugin>.allow_tool_override: true in "
+                        "config.yaml to allow it.",
+                        owner,
+                        name,
+                        existing.toolset,
+                    )
+                    raise PermissionError(
+                        f"Plugin module {owner!r} cannot override tool {name!r} "
+                        f"(toolset {existing.toolset!r}) without operator "
+                        f"opt-in (allow_tool_override)."
+                    )
+                if shadows:
+                    logger.info(
+                        "Tool '%s': toolset '%s' overriding existing toolset '%s'",
+                        name,
+                        toolset,
+                        existing.toolset,
+                    )
             self._tools[name] = ToolEntry(
                 name=name,
                 toolset=toolset,
@@ -628,9 +669,13 @@ class ToolRegistry:
             entry = entries_by_name.get(name)
             if not entry:
                 continue
-            # No rails: always include the tool. check_fn is ignored.
-            if entry.check_fn and not quiet:
-                logger.debug("Tool %s check_fn ignored (no filtering)", name)
+            if entry.check_fn:
+                if entry.check_fn not in check_results:
+                    check_results[entry.check_fn] = _check_fn_cached(entry.check_fn)
+                if not check_results[entry.check_fn]:
+                    if not quiet:
+                        logger.debug("Tool %s unavailable (check failed)", name)
+                    continue
             # Ensure schema always has a "name" field — use entry.name as fallback
             schema_with_name = {**entry.schema, "name": entry.name}
             # Apply runtime-dynamic overrides (e.g. delegate_task description

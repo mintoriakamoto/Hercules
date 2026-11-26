@@ -241,17 +241,17 @@ def run_security_audit(
             r = check()
             if r:
                 findings.append(r)
-        except (AttributeError, ValueError):
+        except Exception:  # each check is fail-safe; never block startup
             continue
     try:
         r = _container_no_volume_mount(hercules_home)
         if r:
             findings.append(r)
-    except (AttributeError, ValueError):
+    except Exception:  # each check is fail-safe; never block startup
         pass
     try:
         findings.extend(_network_listener_without_auth(config))
-    except (AttributeError, ValueError):
+    except Exception:  # each check is fail-safe; never block startup
         pass
     return findings
 
