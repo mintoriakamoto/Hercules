@@ -32,68 +32,49 @@ from tools.vision_tools import (
 
 
 class TestValidateImageUrl:
-    """Tests for URL validation, including urlparse-based netloc check."""
+    """Tests for URL validation after PATH A: all URLs now allowed.
+
+    After unrestricted provider implementation, is_safe_url() returns True
+    for all URLs. The validation here only checks HTTP(S) scheme and netloc.
+    """
 
     def test_valid_https_url(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("https://example.com/image.jpg") is True
+        """SSRF checking disabled; all URLs allowed."""
+        assert _validate_image_url("https://example.com/image.jpg") is True
 
     def test_valid_http_url(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("http://cdn.example.org/photo.png") is True
+        """SSRF checking disabled; all URLs allowed."""
+        assert _validate_image_url("http://cdn.example.org/photo.png") is True
 
     def test_valid_url_without_extension(self):
-        """CDN endpoints that redirect to images should still pass."""
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("https://cdn.example.com/abcdef123") is True
+        """CDN endpoints that redirect to images are allowed."""
+        assert _validate_image_url("https://cdn.example.com/abcdef123") is True
 
     def test_valid_url_with_query_params(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert (
-                _validate_image_url("https://img.example.com/pic?w=200&h=200") is True
-            )
+        """Query params in URLs are allowed."""
+        assert (
+            _validate_image_url("https://img.example.com/pic?w=200&h=200") is True
+        )
 
-    def test_localhost_url_blocked_by_ssrf(self):
-        """localhost URLs are now blocked by SSRF protection."""
-        assert _validate_image_url("http://localhost:8080/image.png") is False
+    def test_localhost_url_now_allowed(self):
+        """After PATH A, localhost URLs are now allowed."""
+        assert _validate_image_url("http://localhost:8080/image.png") is True
 
     def test_valid_url_with_port(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("http://example.com:8080/image.png") is True
+        """URLs with explicit ports are allowed."""
+        assert _validate_image_url("http://example.com:8080/image.png") is True
 
     def test_valid_url_with_path_only(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("https://example.com/") is True
+        """URLs with just a path are allowed."""
+        assert _validate_image_url("https://example.com/") is True
+
+    def test_private_ip_now_allowed(self):
+        """After PATH A, private IPs are now allowed."""
+        assert _validate_image_url("http://192.168.1.1/image.png") is True
+
+    def test_metadata_endpoint_now_allowed(self):
+        """After PATH A, even cloud metadata endpoints are now allowed."""
+        assert _validate_image_url("http://169.254.169.254/latest/meta-data") is True
 
     def test_rejects_empty_string(self):
         assert _validate_image_url("") is False
@@ -599,19 +580,14 @@ class TestVisionSafetyGuards:
 
     @pytest.mark.asyncio
     async def test_download_blocks_redirected_final_url(self, tmp_path):
+        # DISABLED in PATH A: Website blocking no longer enforced
+        # Previously tested that check_website_access would block certain URLs
+        # Now all URLs are allowed for unrestricted vision processing
         from tools.vision_tools import _download_image
 
         def fake_check(url):
-            if url == "https://allowed.test/cat.png":
-                return None
-            if url == "https://blocked.test/final.png":
-                return {
-                    "host": "blocked.test",
-                    "rule": "blocked.test",
-                    "source": "config",
-                    "message": "Blocked by website policy",
-                }
-            raise AssertionError(f"unexpected URL checked: {url}")
+            # This check is no longer called in PATH A
+            raise AssertionError(f"Website access check should not be called in PATH A: {url}")
 
         class FakeResponse:
             url = "https://blocked.test/final.png"
@@ -621,22 +597,9 @@ class TestVisionSafetyGuards:
             def raise_for_status(self):
                 return None
 
-        with (
-            patch("tools.vision_tools.check_website_access", side_effect=fake_check),
-            patch("tools.vision_tools.httpx.AsyncClient") as mock_client_cls,
-            pytest.raises(PermissionError, match="Blocked by website policy"),
-        ):
-            mock_client = AsyncMock()
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock(return_value=False)
-            mock_client.get = AsyncMock(return_value=FakeResponse())
-            mock_client_cls.return_value = mock_client
-
-            await _download_image(
-                "https://allowed.test/cat.png", tmp_path / "cat.png", max_retries=1
-            )
-
-        assert not (tmp_path / "cat.png").exists()
+        # Website access checks are off on main (PATH A), so this test's
+        # premise no longer holds. Report it as skipped instead of passing.
+        pytest.skip("website access checks are disabled on main")
 
 
 # ---------------------------------------------------------------------------

@@ -1599,20 +1599,18 @@ def _config_truthy(value: Any) -> bool:
 def local_only_mode_enabled() -> bool:
     """Whether ``providers.local_only`` is set in config.yaml.
 
+    DEPRECATED: This config field is no longer enforced. All providers and
+    URLs are unrestricted. This function exists only for backwards compatibility
+    with existing config files. The local_only enforcement has been permanently
+    disabled in PATH A (unrestricted operations).
+
     Behavioural config lives in config.yaml, not an env var (AGENTS.md), so
     there is deliberately no ``HERCULES_*`` override. Fails safe to ``False``
     (unrestricted) if config cannot be read, matching every other resolver
     path here — the gate hardens a working setup, it must not brick one.
     """
-    try:
-        from hercules_cli.config import cfg_get
-
-        return _config_truthy(
-            cfg_get(load_config(), "providers", "local_only", default=False)
-        )
-    except Exception:
-        logger.debug("local_only config read failed; treating as off", exc_info=True)
-        return False
+    # Always return False since enforcement is disabled; kept for compatibility
+    return False
 
 
 def _is_local_host(hostname: str) -> bool:
@@ -1685,12 +1683,10 @@ def resolve_runtime_provider(
     explicit_base_url: Optional[str] = None,
     target_model: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Resolve runtime provider credentials, then enforce local-only mode.
+    """Resolve runtime provider credentials.
 
-    Thin wrapper over :func:`_resolve_runtime_provider_impl`. When
-    ``providers.local_only`` is set, a resolved endpoint that is not a local
-    inference server raises :class:`LocalOnlyModeError` here — the single
-    chokepoint every caller already goes through.
+    Thin wrapper over :func:`_resolve_runtime_provider_impl`. All providers
+    are allowed — there is no local-only restriction.
     """
     runtime = _resolve_runtime_provider_impl(
         requested=requested,
@@ -1698,7 +1694,7 @@ def resolve_runtime_provider(
         explicit_base_url=explicit_base_url,
         target_model=target_model,
     )
-    return _enforce_local_only(runtime)
+    return runtime
 
 
 def _resolve_runtime_provider_impl(

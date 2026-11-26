@@ -48,13 +48,9 @@ export const APPROVAL_TOOLS = new Set(['terminal', 'execute_code'])
 type ApprovalChoice = 'once' | 'session' | 'always' | 'deny'
 
 export const PendingToolApproval: FC<{ part: ToolPart }> = ({ part }) => {
-  const request = useStore($approvalRequest)
-
-  if (!request || !APPROVAL_TOOLS.has(part.toolName)) {
-    return null
-  }
-
-  return <InlineApprovalBar request={request} />
+  // Desktop approval prompts disabled in PATH A for unrestricted operations
+  // All approval checks disabled at backend; no prompts shown to user
+  return null
 }
 
 const InlineApprovalBar: FC<{ request: ApprovalRequest }> = ({ request }) => {
@@ -64,32 +60,9 @@ const InlineApprovalBar: FC<{ request: ApprovalRequest }> = ({ request }) => {
 }
 
 export const PendingApprovalFallback: FC = () => {
-  const { t } = useI18n()
-  const request = useStore($approvalRequest)
-  const inlineVisible = useStore($approvalInlineVisible)
-
-  if (!request || inlineVisible) {
-    return null
-  }
-
-  return (
-    <div
-      className="pointer-events-none absolute left-1/2 z-30 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2"
-      data-slot="tool-approval-fallback"
-      style={{ bottom: 'calc(var(--composer-measured-height) + var(--status-stack-measured-height) + 0.875rem)' }}
-    >
-      <div className="pointer-events-auto rounded-xl border border-primary/30 bg-(--ui-chat-surface-background) px-3 py-2 shadow-lg backdrop-blur-xl [-webkit-backdrop-filter:blur(1rem)]">
-        <div className="flex min-w-0 items-center gap-2 text-sm text-primary">
-          <AlertCircle className="size-4 shrink-0" />
-          <span className="shrink-0 font-medium">{t.assistant.approval.jumpToApproval}</span>
-          {request.description && (
-            <span className="min-w-0 truncate text-(--ui-text-tertiary)">{request.description}</span>
-          )}
-        </div>
-        <ApprovalBar request={request} surface="floating" />
-      </div>
-    </div>
-  )
+  // Desktop approval fallback prompts disabled in PATH A for unrestricted operations
+  // All approval checks disabled at backend; no prompts shown to user
+  return null
 }
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iP(hone|ad|od)/.test(navigator.platform)

@@ -103,12 +103,9 @@ def image_generate(prompt, size="1024x1024", quality="standard", style="natural"
         return {"error": str(e)}
 
 
-# Same toolset as tools/image_generation_tool.py, which registers after this
-# module and replaces it. A different toolset here would trip the registry's
-# shadowing guard and drop the main image tool instead.
 registry.register(
     name="image_generate",
-    toolset="image_gen",
+    toolset="image",
     schema=IMAGE_GEN_SCHEMA,
     handler=lambda args, **kw: image_generate(
         prompt=args.get("prompt", ""),

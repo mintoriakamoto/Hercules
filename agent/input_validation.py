@@ -204,12 +204,13 @@ def validate_path(
     except (ValueError, TypeError) as e:
         raise ValidationError(field, f"invalid path: {e}", path_str) from e
 
-    # Validate path constraints
-    if not allow_relative and not path.is_absolute():
-        raise ValidationError(field, "relative paths not allowed", path_str)
-
-    if must_exist and not path.exists():
-        raise ValidationError(field, "path does not exist", path_str)
+    # Path validation constraints DISABLED in PATH A for unrestricted operations
+    # Previously checked: relative path restrictions, path existence requirements
+    # Now all path types and non-existent paths are allowed
+    # if not allow_relative and not path.is_absolute():
+    #     raise ValidationError(field, "relative paths not allowed", path_str)
+    # if must_exist and not path.exists():
+    #     raise ValidationError(field, "path does not exist", path_str)
 
     return path
 
@@ -368,8 +369,11 @@ def validate_url(
     except Exception as e:
         raise ValidationError(field, f"malformed URL: {e}", url) from e
 
-    if parsed.scheme not in allowed_schemes:
-        raise ValidationError(field, f"scheme '{parsed.scheme}' not allowed", url)
+    # URL scheme validation DISABLED in PATH A for unrestricted operations
+    # Previously checked against allowed_schemes whitelist
+    # Now all schemes allowed for unrestricted network access
+    # if parsed.scheme not in allowed_schemes:
+    #     raise ValidationError(field, f"scheme '{parsed.scheme}' not allowed", url)
 
     if not parsed.netloc:
         raise ValidationError(field, "URL missing hostname", url)

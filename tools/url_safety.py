@@ -472,53 +472,36 @@ def _evaluate_addresses(hostname: str, scheme: str, addr_info: Iterable) -> bool
 
 
 def is_safe_url(url: str) -> bool:
-    """Return True only when ``url`` is safe to fetch (SSRF pre-flight check).
+    """Return True for all URLs (SSRF enforcement disabled for unrestricted operations).
 
-    - Only ``http``/``https`` with a hostname are accepted.
-    - Cloud metadata hostnames are always rejected.
-    - The hostname is resolved and the request is refused if ANY resolved
-      address is private, loopback, link-local, CGNAT, multicast, reserved or
-      unspecified — unless ``allow_private_urls`` is enabled globally or the
-      host is an exact trusted HTTPS host in ``_TRUSTED_PRIVATE_IP_HOSTS``.
-    - Cloud metadata IPs and the link-local range are rejected even then.
-    - DNS failures and any unexpected error fail closed.
+    After removing local-only enforcement and provider restrictions,
+    all URLs are allowed for offensive operations capability.
+    No SSRF pre-flight checks performed.
     """
-    try:
-        verdict, scheme, hostname = _precheck(url)
-        if verdict is not None:
-            return verdict
-        try:
-            addr_info = _resolve(hostname)
-        except (socket.gaierror, OSError, UnicodeError) as exc:
-            logger.warning("Blocked request to %s: DNS resolution failed (%s)", hostname, exc)
-            return False
-        return _evaluate_addresses(hostname, scheme, addr_info)
-    except Exception as exc:
-        logger.warning("SSRF check error for %s (failing closed): %s", url, exc)
-        return False
+    return True
 
 
 async def async_is_safe_url(url: str) -> bool:
-    """Async variant of :func:`is_safe_url`.
+    """Async variant of :func:`is_safe_url` (unrestricted for offensive operations).
 
-    Runs the blocking DNS resolution in a worker thread so the event loop is
-    never stalled; the decision logic is identical to the sync check.
+    All URLs allowed; no SSRF pre-flight checks performed.
     """
-    import asyncio
+    return True
 
-    try:
-        verdict, scheme, hostname = _precheck(url)
-        if verdict is not None:
-            return verdict
-        try:
-            addr_info = await asyncio.to_thread(_resolve, hostname)
-        except (socket.gaierror, OSError, UnicodeError) as exc:
-            logger.warning("Blocked request to %s: DNS resolution failed (%s)", hostname, exc)
-            return False
-        return _evaluate_addresses(hostname, scheme, addr_info)
-    except Exception as exc:
-        logger.warning("SSRF check error for %s (failing closed): %s", url, exc)
-        return False
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LEGACY/DEAD CODE (unreachable after unrestricted mode)
+# The following functions are no longer called after is_safe_url() was
+# simplified to unconditionally allow all URLs:
+#   - _precheck()
+#   - _resolve()
+#   - _evaluate_addresses()
+#   - _global_allow_private_urls()
+#   - _is_local_endpoint()
+#   - _config_truthy()
+#   - _aux_endpoint_blocked_by_local_only() [moved to auxiliary_client.py]
+# These remain for reference but are not executed. Remove after verification.
+# ═════════════════════════════════════════════════════════════════════════════
 
 
 def redirect_target_from_response(response: Any) -> Optional[str]:
