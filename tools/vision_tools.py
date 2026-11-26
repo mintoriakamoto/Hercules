@@ -156,7 +156,7 @@ def _resolve_vision_cpu_workers() -> int:
             parsed = int(val)
             if parsed >= 1:
                 return parsed
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     return _detect_host_cpus()
 
