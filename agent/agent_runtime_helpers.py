@@ -1214,6 +1214,8 @@ def restore_primary_runtime(agent) -> bool:
     # undone, even during a primary rate-limit cooldown: staying on it would
     # run the next, possibly complex, turn on the local model unannounced.
     turn_route_state = getattr(agent, "_turn_route_state", None)
+    if not isinstance(turn_route_state, dict):
+        turn_route_state = None
     if (
         turn_route_state is None
         and getattr(agent, "_rate_limited_until", 0) > time.monotonic()

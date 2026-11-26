@@ -321,7 +321,13 @@ def decide_turn_route(
 
 
 def local_route_active(agent) -> bool:
-    return getattr(agent, "_turn_route_state", None) is not None
+    """True while the current turn runs on the local model.
+
+    Only the dict that ``_activate_local_runtime`` stores counts, so a stray
+    attribute (or a test double whose every attribute is truthy) never sends
+    the fallback path down the local-route branch.
+    """
+    return isinstance(getattr(agent, "_turn_route_state", None), dict)
 
 
 def _activate_local_runtime(agent, cfg: LocalRoutingConfig) -> bool:
@@ -459,7 +465,9 @@ def handle_local_route_failure(agent, reason=None) -> bool:
     cfg: LocalRoutingConfig = getattr(agent, "_local_routing_config", None) or (
         LocalRoutingConfig()
     )
-    state = getattr(agent, "_turn_route_state", None) or {}
+    state = getattr(agent, "_turn_route_state", None)
+    if not isinstance(state, dict):
+        state = {}
     local_model = state.get("local_model") or agent.model
     primary_model = state.get("primary_model") or "the primary model"
     why = getattr(reason, "value", reason) or "error"

@@ -32,8 +32,23 @@ def _tool_defs(*names):
     ]
 
 
+def _passthrough_config(model=None, api_key=None, provider=None, base_url=None):
+    # agent_init validates the constructor args through ConfigLoader, whose
+    # provider list on main does not include "custom".  These tests are about
+    # the runtime swap, not that list, so hand the args through unchanged.
+    return {
+        "model": model,
+        "api_key": api_key,
+        "provider": provider,
+        "base_url": base_url,
+    }
+
+
 def _make_agent(fallback_model=None, **routing):
     with (
+        patch(
+            "agent.agent_init.ConfigLoader.load", side_effect=_passthrough_config
+        ),
         patch("run_agent.get_tool_definitions", return_value=_tool_defs("web_search")),
         patch("run_agent.check_toolset_requirements", return_value={}),
         patch("run_agent.OpenAI"),

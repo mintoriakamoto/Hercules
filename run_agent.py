@@ -4823,7 +4823,7 @@ class AIAgent:
         fallback chain configured).  Mirrors the early-return guard in
         ``try_activate_fallback`` (#35314, #17446).
         """
-        if getattr(self, "_turn_route_state", None) is not None:
+        if isinstance(getattr(self, "_turn_route_state", None), dict):
             # On a local-routed turn the only "fallback" is the primary, and
             # only when agent.local_routing.fallback_to_primary is on.
             cfg = getattr(self, "_local_routing_config", None)

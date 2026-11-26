@@ -253,3 +253,15 @@ class TestProbe:
         probe_local_endpoint("http://localhost:1/v1", "m")
         probe_local_endpoint("http://localhost:1/v1", "m")
         assert get.call_count == 1
+
+
+class TestLocalRouteActive:
+    def test_only_the_stored_dict_counts(self):
+        # A test double (or any stray truthy attribute) must not look like a
+        # local-routed turn, or the fallback path would skip fallback_providers.
+        assert ltr.local_route_active(MagicMock()) is False
+        agent = MagicMock()
+        agent._turn_route_state = None
+        assert ltr.local_route_active(agent) is False
+        agent._turn_route_state = {"local_model": "qwen3:8b"}
+        assert ltr.local_route_active(agent) is True
