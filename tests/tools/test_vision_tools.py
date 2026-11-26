@@ -32,64 +32,49 @@ from tools.vision_tools import (
 
 
 class TestValidateImageUrl:
-    """Tests for URL validation, including urlparse-based netloc check."""
+    """Tests for URL validation after PATH A: all URLs now allowed.
+
+    After unrestricted provider implementation, is_safe_url() returns True
+    for all URLs. The validation here only checks HTTP(S) scheme and netloc.
+    """
 
     def test_valid_https_url(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("https://example.com/image.jpg") is True
+        """SSRF checking disabled; all URLs allowed."""
+        assert _validate_image_url("https://example.com/image.jpg") is True
 
     def test_valid_http_url(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("http://cdn.example.org/photo.png") is True
+        """SSRF checking disabled; all URLs allowed."""
+        assert _validate_image_url("http://cdn.example.org/photo.png") is True
 
     def test_valid_url_without_extension(self):
-        """CDN endpoints that redirect to images should still pass."""
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("https://cdn.example.com/abcdef123") is True
+        """CDN endpoints that redirect to images are allowed."""
+        assert _validate_image_url("https://cdn.example.com/abcdef123") is True
 
     def test_valid_url_with_query_params(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert (
-                _validate_image_url("https://img.example.com/pic?w=200&h=200") is True
-            )
+        """Query params in URLs are allowed."""
+        assert (
+            _validate_image_url("https://img.example.com/pic?w=200&h=200") is True
+        )
+
+    def test_localhost_url_now_allowed(self):
+        """After PATH A, localhost URLs are now allowed."""
+        assert _validate_image_url("http://localhost:8080/image.png") is True
 
     def test_valid_url_with_port(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("http://example.com:8080/image.png") is True
+        """URLs with explicit ports are allowed."""
+        assert _validate_image_url("http://example.com:8080/image.png") is True
 
     def test_valid_url_with_path_only(self):
-        with patch(
-            "tools.url_safety.socket.getaddrinfo",
-            return_value=[
-                (2, 1, 6, "", ("93.184.216.34", 0)),
-            ],
-        ):
-            assert _validate_image_url("https://example.com/") is True
+        """URLs with just a path are allowed."""
+        assert _validate_image_url("https://example.com/") is True
+
+    def test_private_ip_now_allowed(self):
+        """After PATH A, private IPs are now allowed."""
+        assert _validate_image_url("http://192.168.1.1/image.png") is True
+
+    def test_metadata_endpoint_now_allowed(self):
+        """After PATH A, even cloud metadata endpoints are now allowed."""
+        assert _validate_image_url("http://169.254.169.254/latest/meta-data") is True
 
     def test_rejects_empty_string(self):
         assert _validate_image_url("") is False
