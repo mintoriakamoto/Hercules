@@ -1207,13 +1207,27 @@ def restore_primary_runtime(agent) -> bool:
         # entirely, stranding the index and silently blocking all future
         # fallback attempts for the session.  Fixes #20465.
         agent._fallback_index = 0
+        agent._turn_route_state = None
         return False
 
-    if getattr(agent, "_rate_limited_until", 0) > time.monotonic():
+    # A turn routed to the local model (agent/local_turn_routing.py) is always
+    # undone, even during a primary rate-limit cooldown: staying on it would
+    # run the next, possibly complex, turn on the local model unannounced.
+    turn_route_state = getattr(agent, "_turn_route_state", None)
+    if not isinstance(turn_route_state, dict):
+        turn_route_state = None
+    if (
+        turn_route_state is None
+        and getattr(agent, "_rate_limited_until", 0) > time.monotonic()
+    ):
         return False  # primary still in rate-limit cooldown, stay on fallback
 
     rt = agent._primary_runtime
     try:
+        if turn_route_state is not None:
+            # Re-attach the primary credential pool stashed by the local route,
+            # so the pool re-select below works as after a fallback.
+            agent._credential_pool = turn_route_state.get("credential_pool")
         # ── Core runtime state ──
         agent.model = rt["model"]
         agent.provider = rt["provider"]
@@ -1369,6 +1383,7 @@ def restore_primary_runtime(agent) -> bool:
         # ── Reset fallback chain for the new turn ──
         agent._fallback_activated = False
         agent._fallback_index = 0
+        agent._turn_route_state = None
 
         # Reset the stale-call circuit breaker (#58962): the streak measured
         # the FALLBACK provider we're leaving; the restored primary deserves
@@ -2253,6 +2268,8 @@ def switch_model(agent, new_model, new_provider, api_key="", base_url="", api_mo
     # ── Reset fallback state ──
     agent._fallback_activated = False
     agent._fallback_index = 0
+    # An explicit model switch replaces any local turn route too.
+    agent._turn_route_state = None
 
     # When the user deliberately swaps primary providers (e.g. openrouter
     # → anthropic), drop any fallback entries that target the OLD primary

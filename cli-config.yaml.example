@@ -729,6 +729,26 @@ agent:
   # configured a local one.
   # model_routing: false
 
+  # Send simple turns to a local model (agent/local_turn_routing.py).
+  # Off by default.  When on, each user message is scored by the task router;
+  # short, simple ones ("list the files here", "check the git status") run on
+  # the local model for that turn, everything else stays on the model above.
+  # Every routed turn is announced and logged ("Turn routing: local …").
+  # It only ever uses the local endpoint below or your configured model, and
+  # a local failure is shown to you instead of being retried on a hosted model
+  # unless fallback_to_primary is true.
+  # local_routing:
+  #   enabled: false
+  #   model: qwen3:8b                        # must be pulled: ollama pull qwen3:8b
+  #   base_url: http://localhost:11434/v1    # Ollama's OpenAI-compatible API
+  #   api_key: ollama                        # sent to this endpoint only
+  #   max_message_chars: 400                 # longer messages stay on the primary
+  #   max_request_tokens: 24000              # history + tool schemas must fit the local model
+  #   fallback_to_primary: false             # retry a failed local turn on the model above
+  #   allow_non_local_endpoint: false        # refuse endpoints off this machine/LAN
+  #   health_check: true                     # skip routing when the model isn't served
+  #   announce: true                         # show "🏠 Simple step → local model …"
+
   # Inactivity timeout for gateway agent runs (seconds, 0 = unlimited).
   # The agent can run indefinitely when actively calling tools or receiving
   # API responses.  Only fires after the agent has been idle for this duration.

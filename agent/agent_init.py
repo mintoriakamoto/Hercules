@@ -1658,6 +1658,16 @@ def init_agent(
         _agent_section.get("model_routing"), default=False
     )
 
+    # Turn-level local routing (agent/local_turn_routing.py): simple turns run
+    # on a local model such as Ollama.  Opt-in: ``agent.local_routing``.
+    from agent.local_turn_routing import LocalRoutingConfig
+
+    agent._local_routing_config = LocalRoutingConfig.from_config(
+        _agent_section.get("local_routing")
+    )
+    agent._turn_route_state = getattr(agent, "_turn_route_state", None)
+    agent._turn_route = None
+
     # Intent-ack continuation config: "auto" (default — codex_responses only,
     # the historical gate), true (all api_modes), false (never), or a list of
     # model-name substrings.  Resolved against the active api_mode/model in the
