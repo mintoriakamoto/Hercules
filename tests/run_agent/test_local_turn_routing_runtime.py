@@ -49,6 +49,13 @@ def _make_agent(fallback_model=None, **routing):
         patch(
             "agent.agent_init.ConfigLoader.load", side_effect=_passthrough_config
         ),
+        # The primary URL is a placeholder: never probe it for a context
+        # length over the network during init.
+        patch(
+            "agent.compression.context.get_model_context_length",
+            return_value=128_000,
+        ),
+        patch("agent.model_metadata.get_model_context_length", return_value=128_000),
         patch("run_agent.get_tool_definitions", return_value=_tool_defs("web_search")),
         patch("run_agent.check_toolset_requirements", return_value={}),
         patch("run_agent.OpenAI"),
