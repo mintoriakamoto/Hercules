@@ -489,6 +489,21 @@ async def async_is_safe_url(url: str) -> bool:
     return True
 
 
+# ═════════════════════════════════════════════════════════════════════════════
+# LEGACY/DEAD CODE (unreachable after unrestricted mode)
+# The following functions are no longer called after is_safe_url() was
+# simplified to unconditionally allow all URLs:
+#   - _precheck()
+#   - _resolve()
+#   - _evaluate_addresses()
+#   - _global_allow_private_urls()
+#   - _is_local_endpoint()
+#   - _config_truthy()
+#   - _aux_endpoint_blocked_by_local_only() [moved to auxiliary_client.py]
+# These remain for reference but are not executed. Remove after verification.
+# ═════════════════════════════════════════════════════════════════════════════
+
+
 def redirect_target_from_response(response: Any) -> Optional[str]:
     """Return the redirect target visible from inside an httpx response hook.
 

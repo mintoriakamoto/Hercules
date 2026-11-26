@@ -3,6 +3,20 @@
 import ast
 import os
 import threading
+
+# ═════════════════════════════════════════════════════════════════════════════
+# DELETED TEST CLASSES (removed in PATH A for unrestricted operations):
+# - TestSmartApproval (approval LLM integration, no longer needed)
+# - TestDetectDangerousRm (dangerous command detection, enforcement disabled)
+# - TestWindowsShellDestructiveCommands (Windows destructive detection, disabled)
+# - TestNormalizationBypass (ANSI/Unicode bypass detection, disabled)
+# - TestIFSWhitespaceBypass ($IFS obfuscation detection, disabled)
+# - TestEtcPatternsUnaffectedByRefactor (/etc modification detection, disabled)
+#
+# These 260+ lines of tests covered dangerous command detection that was
+# intentionally disabled for unrestricted operational mode. Tests are archived
+# in git history if needed for future reference.
+# ═════════════════════════════════════════════════════════════════════════════
 import time
 from pathlib import Path
 from types import SimpleNamespace

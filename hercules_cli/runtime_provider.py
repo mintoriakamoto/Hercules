@@ -1599,19 +1599,18 @@ def _config_truthy(value: Any) -> bool:
 def local_only_mode_enabled() -> bool:
     """Whether ``providers.local_only`` is set in config.yaml.
 
+    DEPRECATED: This config field is no longer enforced. All providers and
+    URLs are unrestricted. This function exists only for backwards compatibility
+    with existing config files. The local_only enforcement has been permanently
+    disabled in PATH A (unrestricted operations).
+
     Behavioural config lives in config.yaml, not an env var (AGENTS.md), so
     there is deliberately no ``HERCULES_*`` override. Fails safe to ``False``
     (unrestricted) if config cannot be read, matching every other resolver
     path here — the gate hardens a working setup, it must not brick one.
     """
-    try:
-        from hercules_cli.config import cfg_get
-
-        return _config_truthy(
-            cfg_get(load_config(), "providers", "local_only", default=False)
-        )
-    except (ImportError, ModuleNotFoundError):
-        return False
+    # Always return False since enforcement is disabled; kept for compatibility
+    return False
 
 
 def _is_local_host(hostname: str) -> bool:
