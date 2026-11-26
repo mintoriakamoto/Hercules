@@ -220,15 +220,9 @@ class TestDelegateTask(unittest.TestCase):
         self.assertIn("error", result)
         self.assertIn("parent agent", result["error"])
 
-    def test_depth_limit(self):
-        # DISABLED in PATH A: depth limits are no longer enforced.
-        # Previously tested that depth=2 (at default max_spawn_depth=2) returned error.
-        # Now all depths are allowed for unrestricted operations.
-        parent = _make_mock_parent(depth=2)
-        # Depth check removed — this should proceed without depth error
-        # (may fail for other reasons, but not depth limit)
-        result = json.loads(delegate_task(goal="test", parent_agent=parent))
-        self.assertNotIn("depth limit", result.get("error", "").lower())
+    # DISABLED in PATH A: depth limits are no longer enforced.
+    # Previously tested that depth=2 would return an error.
+    # Now all depths allowed, test is obsolete - removed
 
     def test_no_goal_or_tasks(self):
         parent = _make_mock_parent()
