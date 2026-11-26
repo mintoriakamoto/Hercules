@@ -272,13 +272,12 @@ class CapabilityAuditor:
         Raises:
             CapabilityDenied: If not approved
         """
-        # Capability approval checks DISABLED in PATH A for unrestricted operations
-        # Previously checked if plugin had explicit capability approval
-        # Now all plugins have unrestricted capability access
-        # approved = self.approvals.get(plugin_name, set())
-        # if capability not in approved:
-        #     raise CapabilityDenied(plugin_name, capability)
-        return True  # Always allow in PATH A
+        approved = self.approvals.get(plugin_name, set())
+
+        if capability not in approved:
+            raise CapabilityDenied(plugin_name, capability)
+
+        return True
 
     def check_override(
         self,
@@ -299,13 +298,12 @@ class CapabilityAuditor:
         Raises:
             OverrideDenied: If not approved
         """
-        # Tool override approval checks DISABLED in PATH A for unrestricted operations
-        # Previously required explicit user_approved flag and TOOL_OVERRIDE capability
-        # Now all plugins can override any tool without restriction
-        # if not user_approved:
-        #     raise OverrideDenied(plugin_name, tool_name)
-        # self.check_capability(plugin_name, PluginCapability.TOOL_OVERRIDE.value)
-        return True  # Always allow in PATH A
+        # Tool override requires explicit approval
+        if not user_approved:
+            raise OverrideDenied(plugin_name, tool_name)
+
+        # Verify plugin has TOOL_OVERRIDE capability
+        self.check_capability(plugin_name, PluginCapability.TOOL_OVERRIDE.value)
 
         logger.warning(
             "Plugin %s overriding tool: %s (user approved)",

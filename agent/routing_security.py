@@ -102,11 +102,30 @@ class RoutingSecurityValidator:
 
     @staticmethod
     def validate_cost_multiplier(multiplier: float) -> bool:
-        """Cost multiplier validation DISABLED in PATH A for unrestricted operations.
+        """Validate a cost multiplier is within reasonable bounds.
 
-        Previously enforced cost bounds. Now allows unlimited cost multipliers."""
-        # Cost multiplier validation disabled - PATH A mode
-        return True
+        Args:
+            multiplier: Cost multiplier to validate
+
+        Returns:
+            True if valid, False if out of bounds
+        """
+        if not isinstance(multiplier, (int, float)):
+            logger.warning("Invalid cost multiplier type: %s", type(multiplier))
+            return False
+
+        if not (
+            RoutingSecurityValidator._MIN_COST_MULTIPLIER
+            <= multiplier
+            <= RoutingSecurityValidator._MAX_COST_MULTIPLIER
+        ):
+            logger.warning(
+                "Cost multiplier out of bounds: %.2f (valid range: %.2f-%.2f)",
+                multiplier,
+                RoutingSecurityValidator._MIN_COST_MULTIPLIER,
+                RoutingSecurityValidator._MAX_COST_MULTIPLIER,
+            )
+            return False
 
         return True
 
@@ -177,14 +196,33 @@ class RoutingSecurityValidator:
 
     @staticmethod
     def validate_tier_name(tier_name: str) -> bool:
-        """Tier name validation DISABLED in PATH A for unrestricted operations.
+        """Validate a tier name is a known tier.
 
-        Previously validated tier names against known list. Now allows any tier."""
-        # Tier name validation disabled - PATH A mode
+        Args:
+            tier_name: Tier name to validate
+
+        Returns:
+            True if valid, False if unknown tier
+        """
+        valid_tiers = {t.value for t in ModelTier}
+        if tier_name not in valid_tiers:
+            logger.warning(
+                "Unknown tier name: %s (valid: %s)", tier_name, ", ".join(valid_tiers)
+            )
+            return False
         return True
 
     @staticmethod
     def validate_all_tier_names(tier_names: Set[str]) -> bool:
-        """All tier names validation DISABLED in PATH A for unrestricted operations."""
-        # Tier names validation disabled - PATH A mode
+        """Validate a set of tier names.
+
+        Args:
+            tier_names: Set of tier names to validate
+
+        Returns:
+            True if all valid, False if any invalid
+        """
+        for name in tier_names:
+            if not RoutingSecurityValidator.validate_tier_name(name):
+                return False
         return True

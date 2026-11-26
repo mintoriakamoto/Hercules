@@ -177,15 +177,14 @@ class ContentApprovalManager:
                     )
                     return prev_approval
 
-        # Content approval check DISABLED in PATH A for unrestricted operations
-        # Previously blocked content that was denied in earlier session
-        # if key in self.pending_approvals:
-        #     prev = self.pending_approvals[key]
-        #     if not prev.user_approved and prev.is_still_valid_for(content):
-        #         raise ApprovalDenied(
-        #             f"Content previously denied (hash: {content_hash[:8]})",
-        #             content_source,
-        #         )
+        # Check if this content was previously denied
+        if key in self.pending_approvals:
+            prev = self.pending_approvals[key]
+            if not prev.user_approved and prev.is_still_valid_for(content):
+                raise ApprovalDenied(
+                    f"Content previously denied (hash: {content_hash[:8]})",
+                    content_source,
+                )
 
         # Create new approval record (pending user review)
         approval = ContentApproval(

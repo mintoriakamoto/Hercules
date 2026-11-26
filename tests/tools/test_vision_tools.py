@@ -32,49 +32,68 @@ from tools.vision_tools import (
 
 
 class TestValidateImageUrl:
-    """Tests for URL validation after PATH A: all URLs now allowed.
-
-    After unrestricted provider implementation, is_safe_url() returns True
-    for all URLs. The validation here only checks HTTP(S) scheme and netloc.
-    """
+    """Tests for URL validation, including urlparse-based netloc check."""
 
     def test_valid_https_url(self):
-        """SSRF checking disabled; all URLs allowed."""
-        assert _validate_image_url("https://example.com/image.jpg") is True
+        with patch(
+            "tools.url_safety.socket.getaddrinfo",
+            return_value=[
+                (2, 1, 6, "", ("93.184.216.34", 0)),
+            ],
+        ):
+            assert _validate_image_url("https://example.com/image.jpg") is True
 
     def test_valid_http_url(self):
-        """SSRF checking disabled; all URLs allowed."""
-        assert _validate_image_url("http://cdn.example.org/photo.png") is True
+        with patch(
+            "tools.url_safety.socket.getaddrinfo",
+            return_value=[
+                (2, 1, 6, "", ("93.184.216.34", 0)),
+            ],
+        ):
+            assert _validate_image_url("http://cdn.example.org/photo.png") is True
 
     def test_valid_url_without_extension(self):
-        """CDN endpoints that redirect to images are allowed."""
-        assert _validate_image_url("https://cdn.example.com/abcdef123") is True
+        """CDN endpoints that redirect to images should still pass."""
+        with patch(
+            "tools.url_safety.socket.getaddrinfo",
+            return_value=[
+                (2, 1, 6, "", ("93.184.216.34", 0)),
+            ],
+        ):
+            assert _validate_image_url("https://cdn.example.com/abcdef123") is True
 
     def test_valid_url_with_query_params(self):
-        """Query params in URLs are allowed."""
-        assert (
-            _validate_image_url("https://img.example.com/pic?w=200&h=200") is True
-        )
+        with patch(
+            "tools.url_safety.socket.getaddrinfo",
+            return_value=[
+                (2, 1, 6, "", ("93.184.216.34", 0)),
+            ],
+        ):
+            assert (
+                _validate_image_url("https://img.example.com/pic?w=200&h=200") is True
+            )
 
-    def test_localhost_url_now_allowed(self):
-        """After PATH A, localhost URLs are now allowed."""
-        assert _validate_image_url("http://localhost:8080/image.png") is True
+    def test_localhost_url_blocked_by_ssrf(self):
+        """localhost URLs are now blocked by SSRF protection."""
+        assert _validate_image_url("http://localhost:8080/image.png") is False
 
     def test_valid_url_with_port(self):
-        """URLs with explicit ports are allowed."""
-        assert _validate_image_url("http://example.com:8080/image.png") is True
+        with patch(
+            "tools.url_safety.socket.getaddrinfo",
+            return_value=[
+                (2, 1, 6, "", ("93.184.216.34", 0)),
+            ],
+        ):
+            assert _validate_image_url("http://example.com:8080/image.png") is True
 
     def test_valid_url_with_path_only(self):
-        """URLs with just a path are allowed."""
-        assert _validate_image_url("https://example.com/") is True
-
-    def test_private_ip_now_allowed(self):
-        """After PATH A, private IPs are now allowed."""
-        assert _validate_image_url("http://192.168.1.1/image.png") is True
-
-    def test_metadata_endpoint_now_allowed(self):
-        """After PATH A, even cloud metadata endpoints are now allowed."""
-        assert _validate_image_url("http://169.254.169.254/latest/meta-data") is True
+        with patch(
+            "tools.url_safety.socket.getaddrinfo",
+            return_value=[
+                (2, 1, 6, "", ("93.184.216.34", 0)),
+            ],
+        ):
+            assert _validate_image_url("https://example.com/") is True
 
     def test_rejects_empty_string(self):
         assert _validate_image_url("") is False
@@ -580,14 +599,19 @@ class TestVisionSafetyGuards:
 
     @pytest.mark.asyncio
     async def test_download_blocks_redirected_final_url(self, tmp_path):
-        # DISABLED in PATH A: Website blocking no longer enforced
-        # Previously tested that check_website_access would block certain URLs
-        # Now all URLs are allowed for unrestricted vision processing
         from tools.vision_tools import _download_image
 
         def fake_check(url):
-            # This check is no longer called in PATH A
-            raise AssertionError(f"Website access check should not be called in PATH A: {url}")
+            if url == "https://allowed.test/cat.png":
+                return None
+            if url == "https://blocked.test/final.png":
+                return {
+                    "host": "blocked.test",
+                    "rule": "blocked.test",
+                    "source": "config",
+                    "message": "Blocked by website policy",
+                }
+            raise AssertionError(f"unexpected URL checked: {url}")
 
         class FakeResponse:
             url = "https://blocked.test/final.png"
@@ -597,9 +621,11 @@ class TestVisionSafetyGuards:
             def raise_for_status(self):
                 return None
 
-        # In PATH A, URLs are no longer blocked - test skipped
-        # Website access check is disabled so the test premise is invalid
-        return  # Skip this test - website blocking disabled
+        with (
+            patch("tools.vision_tools.check_website_access", side_effect=fake_check),
+            patch("tools.vision_tools.httpx.AsyncClient") as mock_client_cls,
+            pytest.raises(PermissionError, match="Blocked by website policy"),
+        ):
             mock_client = AsyncMock()
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client.__aexit__ = AsyncMock(return_value=False)

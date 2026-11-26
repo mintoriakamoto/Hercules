@@ -1,5 +1,5 @@
 {
-  "fingerprint": "ee55fb6e22982008",
+  "fingerprint": "8ed1031e6199ff86",
   "modules": [
     "arsenal_tools",
     "blackboard_tool",
@@ -35,6 +35,7 @@
     "read_terminal_tool",
     "self_improvement_tool",
     "session_search_tool",
+    "skill_manager_tool",
     "skills_tool",
     "t3mp3st_tool",
     "tempest_modules",

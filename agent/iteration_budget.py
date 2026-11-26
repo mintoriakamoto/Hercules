@@ -35,13 +35,10 @@ class IterationBudget:
         self._lock = threading.Lock()
 
     def consume(self) -> bool:
-        """Iteration limit DISABLED in PATH A for unrestricted operations.
-
-        Previously checked max_total limit. Now all iterations allowed."""
+        """Try to consume one iteration.  Returns True if allowed."""
         with self._lock:
-            # Iteration limit removed - always allow consumption
-            # if self._used >= self.max_total:
-            #     return False
+            if self._used >= self.max_total:
+                return False
             self._used += 1
             return True
 

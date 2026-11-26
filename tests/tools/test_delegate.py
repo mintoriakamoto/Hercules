@@ -165,13 +165,7 @@ class TestChildSystemPrompt(unittest.TestCase):
 
 
 class TestStripBlockedTools(unittest.TestCase):
-    # DISABLED in PATH A: Tool blocking is no longer enforced.
-    # DELEGATE_BLOCKED_TOOLS is now empty - children have full tool access.
-    # Previously tested that certain tools (clarify, memory, code_execution, delegation)
-    # were stripped from child subagents. All tool stripping is now disabled.
-
     def test_removes_blocked_toolsets(self):
-        # In PATH A, nothing is stripped - all tools pass through
         result = _strip_blocked_tools([
             "terminal",
             "file",
@@ -180,11 +174,7 @@ class TestStripBlockedTools(unittest.TestCase):
             "memory",
             "code_execution",
         ])
-        # All input tools should be returned unchanged (nothing blocked)
-        self.assertEqual(
-            sorted(result),
-            sorted(["terminal", "file", "delegation", "clarify", "memory", "code_execution"])
-        )
+        self.assertEqual(sorted(result), ["file", "terminal"])
 
     def test_preserves_allowed_toolsets(self):
         result = _strip_blocked_tools(["terminal", "file", "web", "browser"])
@@ -195,23 +185,34 @@ class TestStripBlockedTools(unittest.TestCase):
         self.assertEqual(result, [])
 
     def test_strips_cronjob_toolset(self):
-        # In PATH A, cronjob is NOT stripped - children have full tool access
+        """Regression for issue #43466: child subagents must not inherit
+        the cronjob toolset from a parent running on a gateway platform.
+        Without this guard, a delegated child could schedule new cron jobs
+        under the parent's identity.
+        """
         result = _strip_blocked_tools(["terminal", "file", "cronjob", "web"])
-        # Cronjob restriction removed - tool stripping disabled
-        self.assertIn("cronjob", result)
+        self.assertNotIn("cronjob", result)
         self.assertIn("terminal", result)
         self.assertIn("file", result)
         self.assertIn("web", result)
 
     def test_strip_set_derived_from_blocklist(self):
-        # In PATH A, DELEGATE_BLOCKED_TOOLS is empty, so nothing is stripped
+        """The strip set must be derived from DELEGATE_BLOCKED_TOOLS so a
+        new blocked tool can't silently leak through as a toolset name
+        (regression for issue #43466's 'more robust variant' suggestion).
+        """
         from tools.delegate_tool import TOOLSETS, _strip_blocked_tools
 
-        # With DELEGATE_BLOCKED_TOOLS empty, no toolsets are fully blocked
+        # Every toolset whose tools are ALL in the blocklist should be stripped
         for name, defn in TOOLSETS.items():
             tools = defn.get("tools", [])
-            # All toolsets should pass through since nothing is blocked
-            self.assertIn(name, _strip_blocked_tools([name, "terminal"]))
+            if tools and all(t in DELEGATE_BLOCKED_TOOLS for t in tools):
+                self.assertNotIn(
+                    name,
+                    _strip_blocked_tools([name, "terminal"]),
+                    f"Toolset {name!r} (tools={tools}) is fully blocked "
+                    f"but was not stripped",
+                )
 
 
 class TestDelegateTask(unittest.TestCase):
@@ -220,9 +221,11 @@ class TestDelegateTask(unittest.TestCase):
         self.assertIn("error", result)
         self.assertIn("parent agent", result["error"])
 
-    # DISABLED in PATH A: depth limits are no longer enforced.
-    # Previously tested that depth=2 would return an error.
-    # Now all depths allowed, test is obsolete - removed
+    def test_depth_limit(self):
+        parent = _make_mock_parent(depth=2)
+        result = json.loads(delegate_task(goal="test", parent_agent=parent))
+        self.assertIn("error", result)
+        self.assertIn("depth limit", result["error"].lower())
 
     def test_no_goal_or_tasks(self):
         parent = _make_mock_parent()
@@ -345,9 +348,6 @@ class TestDelegateTask(unittest.TestCase):
 
     @patch("tools.delegate_tool._run_single_child")
     def test_batch_capped_at_3(self, mock_run):
-        # DISABLED in PATH A: batch size limits are no longer enforced.
-        # Previously tested that >3 tasks (default limit) returned error.
-        # Now all batch sizes are allowed for unrestricted operations.
         mock_run.return_value = {
             "task_index": 0,
             "status": "completed",
@@ -357,12 +357,12 @@ class TestDelegateTask(unittest.TestCase):
         }
         parent = _make_mock_parent()
         limit = _get_max_concurrent_children()
-        # Create >limit tasks to verify no error is returned
         tasks = [{"goal": f"Task {i}"} for i in range(limit + 2)]
         result = json.loads(delegate_task(tasks=tasks, parent_agent=parent))
-        # Should NOT return "Too many tasks" error — batch size is unrestricted
-        if isinstance(result, dict):
-            self.assertNotIn("Too many tasks", result.get("error", ""))
+        # Should return an error instead of silently truncating
+        self.assertIn("error", result)
+        self.assertIn("Too many tasks", result["error"])
+        mock_run.assert_not_called()
 
     @patch("tools.delegate_tool._run_single_child")
     def test_batch_ignores_toplevel_goal(self, mock_run):
@@ -1219,10 +1219,6 @@ class TestSubagentCostRollup(unittest.TestCase):
 
 class TestBlockedTools(unittest.TestCase):
     def test_blocked_tools_constant(self):
-        # DISABLED in PATH A: Tool blocking is no longer enforced.
-        # DELEGATE_BLOCKED_TOOLS is now empty - children have full tool access.
-        # Previously expected certain tools to be blocked.
-        # In PATH A, no tools are blocked.
         for tool in [
             "delegate_task",
             "clarify",
@@ -1230,8 +1226,7 @@ class TestBlockedTools(unittest.TestCase):
             "send_message",
             "execute_code",
         ]:
-            # In PATH A, nothing is blocked - tools are unrestricted
-            self.assertNotIn(tool, DELEGATE_BLOCKED_TOOLS)
+            self.assertIn(tool, DELEGATE_BLOCKED_TOOLS)
 
     def test_constants(self):
         from tools.delegate_tool import (
@@ -2822,11 +2817,20 @@ class TestConcurrencyDefaults(unittest.TestCase):
                 self.assertEqual(_get_max_concurrent_children(), 50)
 
     def test_load_config_falls_back_to_cli_config_when_persistent_load_fails(self):
-        # DISABLED in PATH A: Concurrency config loading fallback tests no longer relevant.
-        # In PATH A, delegation concurrency limits are disabled entirely.
-        # Config loading fallback is preserved, but testing it requires exception handling
-        # that may not be active in unrestricted mode.
-        pass
+        fallback_cli = types.ModuleType("cli")
+        fallback_cli.CLI_CONFIG = {
+            "delegation": {
+                "max_iterations": 45,
+                "max_concurrent_children": 8,
+            }
+        }
+
+        with patch.dict("sys.modules", {"cli": fallback_cli}):
+            with patch(
+                "hercules_cli.config.load_config_readonly",
+                side_effect=RuntimeError("boom"),
+            ):
+                self.assertEqual(_load_config()["max_concurrent_children"], 8)
 
     def test_load_config_prefers_cli_config_when_user_config_ignored(self):
         # `hercules chat --ignore-user-config` sets HERCULES_IGNORE_USER_CONFIG=1,
@@ -3099,18 +3103,76 @@ class TestOrchestratorRoleBehavior(unittest.TestCase):
             self.assertIn("delegation", kwargs["enabled_toolsets"])
             self.assertEqual(mock_child._delegate_role, "orchestrator")
 
-    # DISABLED in PATH A: Depth-based role degradation no longer enforced.
-    # Previously tested that parent at depth 1 with max_spawn_depth=2 would
-    # degrade role='orchestrator' to 'leaf'. Now all depths allowed, so
-    # orchestrator role is preserved regardless of depth.
+    @patch("tools.delegate_tool._resolve_delegation_credentials")
+    @patch("tools.delegate_tool._load_config", return_value={"max_spawn_depth": 2})
+    def test_orchestrator_blocked_at_max_spawn_depth(self, mock_cfg, mock_creds):
+        """Parent at depth 1 with max_spawn_depth=2 spawns child
+        at depth 2 (the floor); role='orchestrator' degrades to leaf."""
+        mock_creds.return_value = {
+            "provider": None,
+            "base_url": None,
+            "api_key": None,
+            "api_mode": None,
+            "model": None,
+        }
+        parent = _make_mock_parent(depth=1)
+        parent.enabled_toolsets = ["terminal", "delegation"]
+        with patch("run_agent.AIAgent") as MockAgent:
+            mock_child = _make_role_mock_child()
+            MockAgent.return_value = mock_child
+            delegate_task(goal="test", role="orchestrator", parent_agent=parent)
+            kwargs = MockAgent.call_args[1]
+            self.assertNotIn("delegation", kwargs["enabled_toolsets"])
+            self.assertEqual(mock_child._delegate_role, "leaf")
 
-    # DISABLED in PATH A: Depth-based role degradation no longer enforced.
-    # Previously tested that with default max_spawn_depth=1 (flat),
-    # role='orchestrator' would degrade to 'leaf'. Now all depths allowed.
+    @patch("tools.delegate_tool._resolve_delegation_credentials")
+    @patch("tools.delegate_tool._load_config", return_value={})
+    def test_orchestrator_blocked_at_default_flat_depth(self, mock_cfg, mock_creds):
+        """With default max_spawn_depth=1 (flat), role='orchestrator'
+        on a depth-0 parent produces a depth-1 child that is already at
+        the floor — the role degrades to 'leaf' and the delegation
+        toolset is stripped.  This is the new default posture."""
+        mock_creds.return_value = {
+            "provider": None,
+            "base_url": None,
+            "api_key": None,
+            "api_mode": None,
+            "model": None,
+        }
+        parent = _make_mock_parent(depth=0)
+        parent.enabled_toolsets = ["terminal", "file", "delegation"]
+        with patch("run_agent.AIAgent") as MockAgent:
+            mock_child = _make_role_mock_child()
+            MockAgent.return_value = mock_child
+            delegate_task(goal="test", role="orchestrator", parent_agent=parent)
+            kwargs = MockAgent.call_args[1]
+            self.assertNotIn("delegation", kwargs["enabled_toolsets"])
+            self.assertEqual(mock_child._delegate_role, "leaf")
 
-    # DISABLED in PATH A: orchestrator_enabled=false kill switch no longer enforced.
-    # Previously tested that delegation.orchestrator_enabled=false would
-    # force role to degrade to 'leaf'. PATH A removes all such gates.
+    @patch("tools.delegate_tool._resolve_delegation_credentials")
+    def test_orchestrator_enabled_false_forces_leaf(self, mock_creds):
+        """Kill switch delegation.orchestrator_enabled=false overrides
+        role='orchestrator'."""
+        mock_creds.return_value = {
+            "provider": None,
+            "base_url": None,
+            "api_key": None,
+            "api_mode": None,
+            "model": None,
+        }
+        parent = _make_mock_parent(depth=0)
+        parent.enabled_toolsets = ["terminal", "delegation"]
+        with patch(
+            "tools.delegate_tool._load_config",
+            return_value={"orchestrator_enabled": False},
+        ):
+            with patch("run_agent.AIAgent") as MockAgent:
+                mock_child = _make_role_mock_child()
+                MockAgent.return_value = mock_child
+                delegate_task(goal="test", role="orchestrator", parent_agent=parent)
+                kwargs = MockAgent.call_args[1]
+                self.assertNotIn("delegation", kwargs["enabled_toolsets"])
+                self.assertEqual(mock_child._delegate_role, "leaf")
 
     # ── Role-aware system prompt ────────────────────────────────────────
 
@@ -3161,9 +3223,43 @@ class TestOrchestratorRoleBehavior(unittest.TestCase):
 
     # ── Batch mode and intersection ─────────────────────────────────────
 
-    # DISABLED in PATH A: Batch mode per-task role override with depth constraints disabled.
-    # Previously tested that per-task roles would be respected only within depth limits.
-    # Now all depths allowed, so this test scenario is incompatible with unrestricted mode.
+    @patch("tools.delegate_tool._resolve_delegation_credentials")
+    @patch("tools.delegate_tool._load_config", return_value={"max_spawn_depth": 2})
+    def test_batch_mode_per_task_role_override(self, mock_cfg, mock_creds):
+        """Per-task role beats top-level; no top-level role → "leaf".
+
+        tasks=[{role:'orchestrator'},{role:'leaf'},{}] → first gets
+        delegation, second and third don't.  Requires max_spawn_depth>=2
+        (raised explicitly here) since the new default is 1 (flat).
+        """
+        mock_creds.return_value = {
+            "provider": None,
+            "base_url": None,
+            "api_key": None,
+            "api_mode": None,
+            "model": None,
+        }
+        parent = _make_mock_parent(depth=0)
+        parent.enabled_toolsets = ["terminal", "file", "delegation"]
+        built_toolsets = []
+
+        def _factory(*a, **kw):
+            m = _make_role_mock_child()
+            built_toolsets.append(kw.get("enabled_toolsets"))
+            return m
+
+        with patch("run_agent.AIAgent", side_effect=_factory):
+            delegate_task(
+                tasks=[
+                    {"goal": "A", "role": "orchestrator"},
+                    {"goal": "B", "role": "leaf"},
+                    {"goal": "C"},  # no role → falls back to top_role (leaf)
+                ],
+                parent_agent=parent,
+            )
+        self.assertIn("delegation", built_toolsets[0])
+        self.assertNotIn("delegation", built_toolsets[1])
+        self.assertNotIn("delegation", built_toolsets[2])
 
     @patch("tools.delegate_tool._resolve_delegation_credentials")
     @patch("tools.delegate_tool._load_config", return_value={"max_spawn_depth": 2})
@@ -3210,9 +3306,93 @@ class TestOrchestratorEndToEnd(unittest.TestCase):
     the test in one patch context and avoids depth-indexed nesting.
     """
 
-    # DISABLED in PATH A: End-to-end nesting test relies on max_spawn_depth limits.
-    # Previously tested nested orchestration with max_spawn_depth=2.
-    # Test archived in git history if needed for reference.
+    @patch("tools.delegate_tool._resolve_delegation_credentials")
+    @patch("tools.delegate_tool._load_config", return_value={"max_spawn_depth": 2})
+    def test_end_to_end_nested_orchestration(self, mock_cfg, mock_creds):
+        mock_creds.return_value = {
+            "provider": None,
+            "base_url": None,
+            "api_key": None,
+            "api_mode": None,
+            "model": None,
+        }
+        parent = _make_mock_parent(depth=0)
+        parent.enabled_toolsets = ["terminal", "file", "delegation"]
+
+        # (enabled_toolsets, _delegate_role) for each agent built
+        built_agents: list = []
+        # Keep the orchestrator mock around so the re-entrant delegate_task
+        # can reach it via closure.
+        orch_mock = {}
+
+        def _factory(*a, **kw):
+            prompt = kw.get("ephemeral_system_prompt", "") or ""
+            is_orchestrator = "Orchestrator Role" in prompt
+            m = _make_role_mock_child()
+            built_agents.append({
+                "enabled_toolsets": list(kw.get("enabled_toolsets") or []),
+                "is_orchestrator_prompt": is_orchestrator,
+            })
+
+            if is_orchestrator:
+                # Prepare the orchestrator mock as a parent-capable object
+                # so the nested delegate_task call succeeds.
+                m._delegate_depth = 1
+                m._delegate_role = "orchestrator"
+                m._active_children = []
+                m._active_children_lock = threading.Lock()
+                m._session_db = None
+                m.platform = "cli"
+                m.enabled_toolsets = ["terminal", "file", "delegation"]
+                m.api_key = "***"
+                m.base_url = ""
+                m.provider = None
+                m.api_mode = None
+                m.providers_allowed = None
+                m.providers_ignored = None
+                m.providers_order = None
+                m.provider_sort = None
+                m._print_fn = None
+                m.tool_progress_callback = None
+                m.thinking_callback = None
+                orch_mock["agent"] = m
+
+                def _orchestrator_run(
+                    user_message=None, task_id=None, stream_callback=None
+                ):
+                    # Re-entrant: orchestrator spawns two leaves
+                    delegate_task(
+                        tasks=[{"goal": "leaf-A"}, {"goal": "leaf-B"}],
+                        parent_agent=m,
+                    )
+                    return {
+                        "final_response": "orchestrated 2 workers",
+                        "completed": True,
+                        "api_calls": 1,
+                        "messages": [],
+                    }
+
+                m.run_conversation.side_effect = _orchestrator_run
+
+            return m
+
+        with patch("run_agent.AIAgent", side_effect=_factory) as MockAgent:
+            delegate_task(
+                goal="top-level orchestration",
+                role="orchestrator",
+                parent_agent=parent,
+            )
+
+        # 1 orchestrator + 2 leaf grandchildren = 3 agents
+        self.assertEqual(MockAgent.call_count, 3)
+        # First built = the orchestrator (parent's direct child)
+        self.assertIn("delegation", built_agents[0]["enabled_toolsets"])
+        self.assertTrue(built_agents[0]["is_orchestrator_prompt"])
+        # Next two = leaves (grandchildren)
+        self.assertNotIn("delegation", built_agents[1]["enabled_toolsets"])
+        self.assertFalse(built_agents[1]["is_orchestrator_prompt"])
+        self.assertNotIn("delegation", built_agents[2]["enabled_toolsets"])
+        self.assertFalse(built_agents[2]["is_orchestrator_prompt"])
 
 
 class TestSubagentApprovalCallback(unittest.TestCase):
@@ -3243,10 +3423,12 @@ class TestSubagentApprovalCallback(unittest.TestCase):
 
     @patch("tools.delegate_tool._load_config", return_value={})
     def test_getter_defaults_to_deny(self, _mock_cfg):
-        # DISABLED in PATH A: Approval is now permissive (all approved).
-        # Previously tested that default was _subagent_auto_deny.
-        # In PATH A, approval defaults to permissive mode.
-        pass
+        from tools.delegate_tool import (
+            _get_subagent_approval_callback,
+            _subagent_auto_deny,
+        )
+
+        self.assertIs(_get_subagent_approval_callback(), _subagent_auto_deny)
 
     @patch(
         "tools.delegate_tool._load_config",
@@ -3623,40 +3805,241 @@ class TestChildDropOffRecovery(unittest.TestCase):
         self.assertIn("blackboard", retry_context)
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# DELETED: TestProofChecks class (removed in PATH A)
-#
-# This class tested proof verification for delegation, including:
-# - test_passing_proof_confirms_the_task
-# - test_failing_proof_refutes_a_confident_subagent
-# - test_proof_runs_through_the_terminal_tool
-# - test_no_proof_means_no_command_is_run
-# - test_a_task_that_never_finished_is_not_proof_checked
-# - test_expected_exit_code_is_honoured
-# - test_unparseable_backend_output_does_not_read_as_success
-# - test_a_crashing_runner_is_recorded_not_swallowed
-# - test_per_task_proofs_in_a_batch
-#
-# Proof verification has been permanently disabled in PATH A for unrestricted
-# operations. All delegated tasks are accepted as "completed" regardless of proof
-# status. Proofs are still accepted in the API but no longer checked or enforced.
-# Tests are archived in git history if needed for future reference.
-# ═════════════════════════════════════════════════════════════════════════════
+class TestProofChecks(unittest.TestCase):
+    """A declared proof, not the subagent's self-report, settles the task."""
+
+    @staticmethod
+    def _done(idx=0, summary="I fixed it"):
+        return {
+            "task_index": idx,
+            "status": "completed",
+            "summary": summary,
+            "api_calls": 1,
+            "duration_seconds": 1.0,
+        }
+
+    @staticmethod
+    def _term(exit_code, output="out"):
+        return json.dumps({"output": output, "exit_code": exit_code, "error": None})
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_passing_proof_confirms_the_task(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(0)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="fix auth", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["status"], "completed")
+        self.assertEqual(entry["proof"]["verdict"], "verified")
+        self.assertEqual(entry["proof"]["observed_exit"], 0)
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_failing_proof_refutes_a_confident_subagent(self, mock_run, mock_term):
+        """The child says it worked; the command says otherwise."""
+        mock_run.side_effect = [self._done(summary="All tests pass now!")]
+        mock_term.return_value = self._term(1)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="fix auth", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["status"], "refuted")
+        self.assertEqual(entry["proof"]["verdict"], "refuted")
+        self.assertEqual(entry["proof"]["observed_exit"], 1)
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_proof_runs_through_the_terminal_tool(self, mock_run, mock_term):
+        """Proof commands get no privileged path around the usual guards."""
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(0)
+        parent = _make_mock_parent()
+        delegate_task(goal="g", proof="npm run build", parent_agent=parent)
+        self.assertEqual(mock_term.call_args.args[0], "npm run build")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_no_proof_means_no_command_is_run(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        parent = _make_mock_parent()
+        result = json.loads(delegate_task(goal="g", parent_agent=parent))
+        mock_term.assert_not_called()
+        self.assertNotIn("proof", result["results"][0])
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._get_max_child_retries", return_value=0)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_task_that_never_finished_is_not_proof_checked(
+        self, mock_run, _retries, mock_term
+    ):
+        mock_run.side_effect = [
+            {"task_index": 0, "status": "error", "summary": None, "error": "boom"}
+        ]
+        parent = _make_mock_parent()
+        delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        mock_term.assert_not_called()
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_expected_exit_code_is_honoured(self, mock_run, mock_term):
+        """Proving a command still fails is a legitimate bar."""
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = self._term(1)
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                goal="g", proof="./repro.sh", proof_expect_exit=1, parent_agent=parent
+            )
+        )
+        self.assertEqual(result["results"][0]["proof"]["verdict"], "verified")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_unparseable_backend_output_does_not_read_as_success(
+        self, mock_run, mock_term
+    ):
+        mock_run.side_effect = [self._done()]
+        mock_term.return_value = "not json at all"
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        )
+        self.assertEqual(result["results"][0]["status"], "refuted")
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_crashing_runner_is_recorded_not_swallowed(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done()]
+        mock_term.side_effect = RuntimeError("backend down")
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(goal="g", proof="pytest -q", parent_agent=parent)
+        )
+        entry = result["results"][0]
+        self.assertEqual(entry["proof"]["verdict"], "unchecked")
+        self.assertIn("backend down", entry["proof"]["error"])
+        # A proof that could not be evaluated must NOT leave the child's
+        # self-reported "completed" standing as verified -- it becomes
+        # "unverified" (distinct from "refuted", which means the proof ran
+        # and failed) so dependents don't build on an unproven claim.
+        self.assertEqual(entry["status"], "unverified")
+        self.assertNotEqual(
+            entry["status"], "completed", "an unevaluated proof must not read as verified"
+        )
+
+    @patch("tools.terminal_tool.terminal_tool")
+    @patch("tools.delegate_tool._run_single_child")
+    def test_per_task_proofs_in_a_batch(self, mock_run, mock_term):
+        mock_run.side_effect = [self._done(0), self._done(1)]
+        mock_term.side_effect = [self._term(0), self._term(1)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[
+                    {"goal": "task A", "proof": "pytest a"},
+                    {"goal": "task B", "proof": "pytest b"},
+                ],
+                parent_agent=parent,
+            )
+        )
+        by_index = {r["task_index"]: r for r in result["results"]}
+        self.assertEqual(by_index[0]["status"], "completed")
+        self.assertEqual(by_index[1]["status"], "refuted")
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# DELETED: TestSpawnBudget class (removed in PATH A)
-#
-# This class tested spawn budget enforcement, including:
-# - test_a_batch_within_budget_runs
-# - test_exceeding_the_ceiling_refuses_loudly
-# - test_a_refused_batch_spawns_nothing
-# - test_the_allowance_is_spent_across_successive_calls
-# - test_a_zero_limit_disables_the_ceiling
-# - test_reservation_is_all_or_nothing
-# - test_budget_is_shared_not_reset_by_nesting
-#
-# Spawn budget enforcement (max_total_agents) has been permanently disabled in
-# PATH A for unrestricted operations. Delegation tree sizes are now unlimited.
-# Tests are archived in git history if needed for future reference.
-# ═════════════════════════════════════════════════════════════════════════════
+class TestSpawnBudget(unittest.TestCase):
+    """Depth and width are each capped; the product needs its own ceiling."""
+
+    @staticmethod
+    def _ok(idx=0):
+        return {
+            "task_index": idx,
+            "status": "completed",
+            "summary": "done",
+            "api_calls": 1,
+            "duration_seconds": 1.0,
+        }
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=10)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_batch_within_budget_runs(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0), self._ok(1)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(tasks=[{"goal": "a"}, {"goal": "b"}], parent_agent=parent)
+        )
+        self.assertEqual(len(result["results"]), 2)
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=2)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_exceeding_the_ceiling_refuses_loudly(self, mock_run, _limit):
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}],
+                parent_agent=parent,
+            )
+        )
+        self.assertIn("error", result)
+        self.assertIn("Spawn budget exhausted", result["error"])
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=2)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_refused_batch_spawns_nothing(self, mock_run, _limit):
+        """Never a half-filled fan-out that reads as complete."""
+        parent = _make_mock_parent()
+        delegate_task(
+            tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}], parent_agent=parent
+        )
+        mock_run.assert_not_called()
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=3)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_the_allowance_is_spent_across_successive_calls(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0), self._ok(0), self._ok(0)]
+        parent = _make_mock_parent()
+        for _ in range(3):
+            self.assertNotIn(
+                "error", json.loads(delegate_task(goal="g", parent_agent=parent))
+            )
+        exhausted = json.loads(delegate_task(goal="one too many", parent_agent=parent))
+        self.assertIn("error", exhausted)
+
+    @patch("tools.delegate_tool._get_max_total_agents", return_value=0)
+    @patch("tools.delegate_tool._run_single_child")
+    def test_a_zero_limit_disables_the_ceiling(self, mock_run, _limit):
+        mock_run.side_effect = [self._ok(0) for _ in range(3)]
+        parent = _make_mock_parent()
+        result = json.loads(
+            delegate_task(
+                tasks=[{"goal": "a"}, {"goal": "b"}, {"goal": "c"}],
+                parent_agent=parent,
+            )
+        )
+        self.assertNotIn("error", result)
+
+    def test_reservation_is_all_or_nothing(self):
+        from tools.delegate_tool import _SpawnBudget
+
+        budget = _SpawnBudget(5)
+        self.assertTrue(budget.reserve(3))
+        self.assertFalse(budget.reserve(3), "must not partially fill")
+        self.assertEqual(budget.remaining, 2, "a refused reservation spends nothing")
+
+    def test_budget_is_shared_not_reset_by_nesting(self):
+        """A nested orchestrator must draw from its parent's allowance."""
+        from tools.delegate_tool import _SpawnBudget
+
+        root = _make_mock_parent()
+        root._delegate_budget = _SpawnBudget(4)
+        root._delegate_budget.reserve(3)
+
+        with patch("tools.delegate_tool._get_max_total_agents", return_value=4):
+            from tools.delegate_tool import _acquire_spawn_budget
+
+            _, error = _acquire_spawn_budget(root, 2)
+        self.assertIsNotNone(error, "a child must not get a fresh ceiling")

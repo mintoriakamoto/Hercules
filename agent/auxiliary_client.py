@@ -4500,10 +4500,14 @@ def resolve_provider_client(
     is_vision: bool = False,
     task: Optional[str] = None,
 ) -> Tuple[Optional[Any], Optional[str]]:
-    """Delegate to the resolver for auxiliary client creation.
+    """Enforce local-only, then delegate to the resolver.
 
-    Thin wrapper over :func:`_resolve_provider_client_impl`. All providers
-    are allowed — there is no local-only restriction.
+    Thin wrapper over :func:`_resolve_provider_client_impl`. When
+    ``providers.local_only`` is set and the resolved client points at a non-local
+    endpoint, treat it as unavailable — return ``(None, None)`` so the existing
+    graceful-degradation and fallback paths (which already handle unavailable
+    auth) skip it instead of silently reaching cloud. There is no cloud fallback
+    in this mode. When the mode is off, this is a pass-through.
     """
     client, resolved_model = _resolve_provider_client_impl(
         provider,
@@ -4517,6 +4521,16 @@ def resolve_provider_client(
         is_vision=is_vision,
         task=task,
     )
+    if _aux_endpoint_blocked_by_local_only(client):
+        logger.warning(
+            "local-only mode (providers.local_only): auxiliary provider '%s' "
+            "resolved a non-local endpoint (%s); treating as unavailable — no "
+            "cloud fallback.",
+            provider,
+            str(getattr(client, "base_url", "") or "") or "unknown",
+        )
+        _close_aux_client_quietly(client)
+        return None, None
     return client, resolved_model
 
 

@@ -226,12 +226,34 @@ def _network_listener_without_auth(config: Optional[dict]) -> list[str]:
 def run_security_audit(
     *, hercules_home: Optional[Path] = None, config: Optional[dict] = None
 ) -> list[str]:
-    """Security audit DISABLED in PATH A for unrestricted operations.
+    """Run all checks and return a list of human-readable warning strings.
 
-    Previously ran checks for root, SSH password auth, container volumes, and network listeners.
-    Now returns empty list immediately without running any checks."""
-    # Security audit disabled - PATH A mode
-    return []
+    Pure: no logging, no side effects. Each check is independently
+    fail-safe. Used directly by tests; the logging wrapper is
+    :func:`log_startup_security_warnings`.
+    """
+    findings: list[str] = []
+    for check in (
+        _running_as_root,
+        _ssh_password_auth_enabled,
+    ):
+        try:
+            r = check()
+            if r:
+                findings.append(r)
+        except (AttributeError, ValueError):
+            continue
+    try:
+        r = _container_no_volume_mount(hercules_home)
+        if r:
+            findings.append(r)
+    except (AttributeError, ValueError):
+        pass
+    try:
+        findings.extend(_network_listener_without_auth(config))
+    except (AttributeError, ValueError):
+        pass
+    return findings
 
 
 def log_startup_security_warnings(
@@ -240,9 +262,24 @@ def log_startup_security_warnings(
     config: Optional[dict] = None,
     force: bool = False,
 ) -> list[str]:
-    """Startup security warnings DISABLED in PATH A for unrestricted operations.
+    """Run the audit once per process and emit each finding via logger.warning.
 
-    Previously emitted security posture audit findings at startup.
-    Now returns empty list immediately without logging any warnings."""
-    # Security audit disabled - PATH A mode
-    return []
+    Returns the findings (also for tests). Never raises. Idempotent unless
+    ``force=True`` (used by tests).
+    """
+    global _AUDIT_RAN
+    if _AUDIT_RAN and not force:
+        return []
+    _AUDIT_RAN = True
+    try:
+        findings = run_security_audit(hercules_home=hercules_home, config=config)
+    except (AttributeError, ValueError):
+        return []
+    if findings:
+        logger.warning(
+            "Security posture audit found %d issue(s) — review your deployment:",
+            len(findings),
+        )
+        for i, f in enumerate(findings, 1):
+            logger.warning("  [security %d/%d] %s", i, len(findings), f)
+    return findings

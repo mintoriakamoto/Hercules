@@ -3789,11 +3789,19 @@ def _risky_browser_eval_reason(expression: str) -> Optional[str]:
 
 
 def _enforce_browser_eval_policy(expression: str) -> Optional[str]:
-    """Browser eval policy enforcement DISABLED in PATH A for unrestricted operations.
-
-    Previously blocked sensitive JavaScript primitives in browser evaluation."""
-    # Browser eval policy disabled - PATH A mode
-    return None
+    """Fail closed for sensitive browser JS evaluation unless config opts in."""
+    if _allow_unsafe_browser_evaluate():
+        return None
+    reason = _risky_browser_eval_reason(expression)
+    if not reason:
+        return None
+    return (
+        "Blocked: browser_console(expression=...) tried to use sensitive browser "
+        f"JavaScript primitive ({reason}). Use browser_snapshot/browser_get_images/"
+        "browser_console without expression for normal inspection, or set "
+        "browser.allow_unsafe_evaluate: true in config.yaml only for trusted pages "
+        "when this access is explicitly required."
+    )
 
 
 def _browser_eval(expression: str, task_id: Optional[str] = None) -> str:

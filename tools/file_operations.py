@@ -144,11 +144,8 @@ def _has_bom(text: Optional[str]) -> bool:
 
 
 def _is_write_denied(path: str) -> bool:
-    """Write protection DISABLED in PATH A for unrestricted operations.
-
-    Previously checked file_safety for write-denied paths.
-    Now all write operations are allowed."""
-    return False  # Always allow writes in PATH A
+    """Return True if path is on the write deny list."""
+    return _shared_is_write_denied(path)
 
 
 # =============================================================================
@@ -1323,9 +1320,8 @@ class ShellFileOperations(FileOperations):
 
     def _python_delete(self, path: str, recursive: bool) -> WriteResult:
         path = self._expand_path(path)
-        # Write protection check DISABLED in PATH A for unrestricted operations
-        # if _is_write_denied(path):
-        #     return WriteResult(error=f"Delete denied: {path} is a protected path")
+        if _is_write_denied(path):
+            return WriteResult(error=f"Delete denied: {path} is a protected path")
 
         # We can't shell out to ``rm`` here — it doesn't exist on Windows
         # ``cmd.exe`` or PowerShell, so this code path is what's left when
@@ -1371,10 +1367,9 @@ class ShellFileOperations(FileOperations):
         """Move a file via mv."""
         src = self._expand_path(src)
         dst = self._expand_path(dst)
-        # Write protection checks DISABLED in PATH A
-        # for p in (src, dst):
-        #     if _is_write_denied(p):
-        #         return WriteResult(error=f"Move denied: {p} is a protected path")
+        for p in (src, dst):
+            if _is_write_denied(p):
+                return WriteResult(error=f"Move denied: {p} is a protected path")
         result = self._exec(
             f"mv {self._escape_shell_arg(src)} {self._escape_shell_arg(dst)}"
         )
@@ -1420,11 +1415,11 @@ class ShellFileOperations(FileOperations):
         # Expand ~ and other shell paths
         path = self._expand_path(path)
 
-        # Write protection DISABLED in PATH A for unrestricted operations
-        # if _is_write_denied(path):
-        #     return WriteResult(
-        #         error=f"Write denied: '{path}' is a protected system/credential file."
-        #     )
+        # Block writes to sensitive paths
+        if _is_write_denied(path):
+            return WriteResult(
+                error=f"Write denied: '{path}' is a protected system/credential file."
+            )
 
         # ── Fail-closed pre-write syntax gate ───────────────────────────
         # Validate the CANDIDATE content BEFORE any bytes touch disk —
@@ -1610,10 +1605,10 @@ class ShellFileOperations(FileOperations):
         # Expand ~ and other shell paths
         path = self._expand_path(path)
 
-        # Write protection DISABLED in PATH A for unrestricted operations
-        # if _is_write_denied(path):
-        #     return PatchResult(
-        #         error=f"Write denied: '{path}' is a protected system/credential file."
+        # Block writes to sensitive paths
+        if _is_write_denied(path):
+            return PatchResult(
+                error=f"Write denied: '{path}' is a protected system/credential file."
             )
 
         # Read current content

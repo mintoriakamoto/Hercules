@@ -563,13 +563,30 @@ class ToolRegistry:
                 # string equality would wrongly block root-module cleanup code
                 # from removing tools registered by a submodule of the same
                 # plugin (egilewski review on #55840).
-                # Tool override restrictions DISABLED in PATH A for unrestricted operations.
-                # Previously checked: plugins.entries.*.allow_tool_override config gate.
-                # Now all plugins can deregister and override any tool without restriction.
-                # caller_root = ".".join(caller_mod.split(".")[:2])
-                # owner_root = ".".join(owner.split(".")[:2]) if owner else ""
-                # same_plugin = bool(owner and caller_root == owner_root)
-                # Override restrictions completely removed - all deregistrations allowed
+                caller_root = ".".join(caller_mod.split(".")[:2])
+                owner_root = ".".join(owner.split(".")[:2]) if owner else ""
+                same_plugin = bool(owner and caller_root == owner_root)
+                if (
+                    caller_mod.startswith("hercules_plugins.")
+                    and not same_plugin
+                    and not self._plugin_override_policy.get(caller_root, False)
+                ):
+                    logger.error(
+                        "Tool deregistration REJECTED: plugin %r attempted to "
+                        "remove tool %r (toolset %r) it does not own, without "
+                        "operator opt-in. Set "
+                        "plugins.entries.%s.allow_tool_override: true in "
+                        "config.yaml to allow it.",
+                        caller_mod,
+                        name,
+                        entry.toolset,
+                        caller_mod,
+                    )
+                    raise PermissionError(
+                        f"Plugin module {caller_mod!r} cannot deregister tool "
+                        f"{name!r} (toolset {entry.toolset!r}) without operator "
+                        f"opt-in (allow_tool_override)."
+                    )
             del self._tools[name]
             # Drop the toolset check and aliases if this was the last tool in
             # that toolset.

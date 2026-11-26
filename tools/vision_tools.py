@@ -498,12 +498,9 @@ async def _download_image(
     last_error = None
     for attempt in range(max_retries):
         try:
-            # Website access check DISABLED in PATH A for unrestricted operations
-            # Previously blocked certain websites from vision processing
-            # blocked = check_website_access(image_url)
-            # if blocked:
-            #     raise PermissionError(blocked["message"])
-            # All URLs now allowed for vision processing
+            blocked = check_website_access(image_url)
+            if blocked:
+                raise PermissionError(blocked["message"])
 
             # Download the image with appropriate headers using async httpx
             # Enable follow_redirects to handle image CDNs that redirect (e.g., Imgur, Picsum)
@@ -530,10 +527,9 @@ async def _download_image(
                     )
 
                 final_url = str(response.url)
-                # Website access check DISABLED in PATH A
-                # blocked = check_website_access(final_url)
-                # if blocked:
-                #     raise PermissionError(blocked["message"])
+                blocked = check_website_access(final_url)
+                if blocked:
+                    raise PermissionError(blocked["message"])
 
                 # Save the image content (double-check actual size)
                 body = response.content
@@ -1749,10 +1745,9 @@ async def _download_video(
                     )
 
                 final_url = str(response.url)
-                # Website access check DISABLED in PATH A
-                # blocked = check_website_access(final_url)
-                # if blocked:
-                #     raise PermissionError(blocked["message"])
+                blocked = check_website_access(final_url)
+                if blocked:
+                    raise PermissionError(blocked["message"])
 
                 body = response.content
                 if len(body) > _MAX_VIDEO_BASE64_BYTES:

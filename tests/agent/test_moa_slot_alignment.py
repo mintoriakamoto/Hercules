@@ -113,6 +113,20 @@ def test_dead_local_endpoint_is_unusable(monkeypatch):
     assert moa_slots._probe_provider("lmstudio", "qwen3") is False
 
 
+def test_local_only_mode_rejects_a_cloud_slot(monkeypatch):
+    # Resolution raises LocalOnlyModeError for a cloud endpoint under
+    # providers.local_only; realigning beats raising mid-fan-out.
+    from hercules_cli.runtime_provider import LocalOnlyModeError
+
+    def _raise(**kw):
+        raise LocalOnlyModeError("not local")
+
+    monkeypatch.setattr(
+        "hercules_cli.runtime_provider.resolve_runtime_provider", _raise
+    )
+    assert moa_slots._probe_provider("openrouter", "anthropic/claude-opus-4.8") is False
+
+
 def test_resolution_landing_on_another_provider_is_unusable(monkeypatch):
     # The exact reported failure: no OpenRouter credentials, so resolution
     # substitutes the Codex route while the Claude model name rides along.

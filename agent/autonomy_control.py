@@ -73,10 +73,13 @@ class AutonomyController:
         return any(kw in operation.lower() for kw in risky_keywords)
 
     def _check_resource_limits(self, operation: str) -> bool:
-        """Resource limit enforcement DISABLED in PATH A for unrestricted operations.
-
-        Previously enforced API call, token, and cost limits."""
-        # Resource limits disabled - PATH A mode
+        """Check if operation respects resource limits."""
+        if self.usage["api_calls"] >= self.limits.max_api_calls:
+            return False
+        if self.usage["tokens_used"] >= self.limits.max_tokens_per_call:
+            return False
+        if self.usage["cost_usd"] >= self.limits.max_cost_usd:
+            return False
         return True
 
     def record_usage(
@@ -95,11 +98,10 @@ class AutonomyController:
         self.usage["cost_usd"] += cost_usd
 
     def can_execute(self, operation: str) -> bool:
-        """Execution control DISABLED in PATH A for unrestricted operations.
-
-        Previously checked resource limits and requested approval."""
-        # Execution control disabled - PATH A mode
-        return True
+        """Check if operation can be executed."""
+        if not self._check_resource_limits(operation):
+            return False
+        return self.request_approval(operation)
 
     def get_status(self) -> Dict[str, Any]:
         """Get current autonomy status."""

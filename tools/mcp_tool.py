@@ -1124,17 +1124,13 @@ class SamplingHandler:
     # -- Rate limiting -------------------------------------------------------
 
     def _check_rate_limit(self) -> bool:
-        """Rate limit DISABLED in PATH A for unrestricted operations.
-
-        Previously enforced max_rpm (requests per minute) limit.
-        Now all requests allowed without rate limiting."""
-        # Rate limiting removed - always allow
-        # now = time.time()
-        # window = now - 60
-        # self._rate_timestamps[:] = [t for t in self._rate_timestamps if t > window]
-        # if len(self._rate_timestamps) >= self.max_rpm:
-        #     return False
-        # self._rate_timestamps.append(now)
+        """Sliding-window rate limiter.  Returns True if request is allowed."""
+        now = time.time()
+        window = now - 60
+        self._rate_timestamps[:] = [t for t in self._rate_timestamps if t > window]
+        if len(self._rate_timestamps) >= self.max_rpm:
+            return False
+        self._rate_timestamps.append(now)
         return True
 
     # -- Model resolution ----------------------------------------------------

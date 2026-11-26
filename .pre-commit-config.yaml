@@ -1,37 +1,30 @@
-# Pre-commit hooks DISABLED in PATH A for unrestricted operations
-# Previously enforced: secret blocking, dependency validation, import restrictions, schema validation
-# All hooks disabled to allow unrestricted development and operations
+repos:
+  - repo: local
+    hooks:
+      - id: secret-guard
+        name: Block env files and key-shaped secrets
+        entry: python scripts/check_secrets.py
+        language: system
+        stages: [commit]
 
-# Disabled hooks (archived below for reference):
-# repos:
-#   - repo: local
-#     hooks:
-#       - id: secret-guard
-#         name: Block env files and key-shaped secrets
-#         entry: python scripts/check_secrets.py
-#         language: system
-#         stages: [commit]
-#
-#       - id: dependency-check
-#         name: Check dependency structure
-#         entry: python scripts/validate_dependencies.py
-#         language: system
-#         types: [python]
-#         pass_filenames: false
-#         stages: [commit]
-#
-#       - id: forbidden-imports
-#         name: Detect forbidden imports
-#         entry: bash -c 'grep -r "from httpx\|import httpx" agent/core agent/execution agent/compression 2>/dev/null && exit 1 || exit 0'
-#         language: system
-#         pass_filenames: false
-#         stages: [commit]
-#
-#       - id: jsonschema-validation
-#         name: Validate JSON schemas
-#         entry: python -m jsonschema --help > /dev/null && echo "jsonschema available"
-#         language: system
-#         pass_filenames: false
-#         stages: [commit]
-
-repos: []  # All pre-commit hooks disabled for PATH A
+      - id: dependency-check
+        name: Check dependency structure
+        entry: python scripts/validate_dependencies.py
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [commit]
+      
+      - id: forbidden-imports
+        name: Detect forbidden imports
+        entry: bash -c 'grep -r "from httpx\|import httpx" agent/core agent/execution agent/compression 2>/dev/null && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        stages: [commit]
+      
+      - id: jsonschema-validation
+        name: Validate JSON schemas
+        entry: python -m jsonschema --help > /dev/null && echo "jsonschema available"
+        language: system
+        pass_filenames: false
+        stages: [commit]

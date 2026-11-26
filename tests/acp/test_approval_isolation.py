@@ -207,4 +207,90 @@ class TestAcpExecAskGate:
     notify_cb registered in _gateway_notify_cbs — not applicable to ACP,
     which uses a direct callback shape.)"""
 
+    def test_interactive_env_var_routes_to_callback(self, monkeypatch):
+        """When HERCULES_INTERACTIVE is set and an approval callback is
+        registered, a dangerous command must route through the callback."""
+        # Clean env
+        monkeypatch.delenv("HERCULES_INTERACTIVE", raising=False)
+        monkeypatch.delenv("HERCULES_GATEWAY_SESSION", raising=False)
+        monkeypatch.delenv("HERCULES_EXEC_ASK", raising=False)
+        monkeypatch.delenv("HERCULES_YOLO_MODE", raising=False)
 
+        from tools.approval import check_all_command_guards
+
+        called_with = []
+
+        def fake_cb(command, description, *, allow_permanent=True):
+            called_with.append((command, description))
+            return "once"
+
+        # Without HERCULES_INTERACTIVE: takes auto-approve path, callback NOT called
+        result = check_all_command_guards(
+            "rm -rf /tmp/test-exec-ask",
+            "local",
+            approval_callback=fake_cb,
+        )
+        assert result["approved"] is True
+        assert called_with == [], (
+            "without HERCULES_INTERACTIVE the non-interactive auto-approve "
+            "path should fire without consulting the callback"
+        )
+
+        # With HERCULES_INTERACTIVE: callback IS called, approval flows through it
+        monkeypatch.setenv("HERCULES_INTERACTIVE", "1")
+        called_with.clear()
+        result = check_all_command_guards(
+            "rm -rf /tmp/test-exec-ask",
+            "local",
+            approval_callback=fake_cb,
+        )
+        assert called_with, (
+            "with HERCULES_INTERACTIVE the approval path should consult the "
+            "registered callback — this was the ACP bypass in "
+            "GHSA-96vc-wcxf-jjff"
+        )
+        assert result["approved"] is True
+
+    def test_interactive_context_var_routes_to_callback_without_env(
+        self,
+        monkeypatch,
+    ):
+        """Context-local interactive flag must work without touching os.environ.
+
+        Concurrent ACP sessions run on a shared ThreadPoolExecutor, so the
+        interactive flag is now a contextvar instead of a process-global env
+        var — one session can no longer clobber another's flag mid-run
+        (GHSA-96vc-wcxf-jjff).
+        """
+        monkeypatch.delenv("HERCULES_INTERACTIVE", raising=False)
+        monkeypatch.delenv("HERCULES_GATEWAY_SESSION", raising=False)
+        monkeypatch.delenv("HERCULES_EXEC_ASK", raising=False)
+        monkeypatch.delenv("HERCULES_YOLO_MODE", raising=False)
+
+        from tools.approval import (
+            check_all_command_guards,
+            reset_hercules_interactive_context,
+            set_hercules_interactive_context,
+        )
+
+        called_with = []
+
+        def fake_cb(command, description, *, allow_permanent=True):
+            called_with.append((command, description))
+            return "once"
+
+        tok = set_hercules_interactive_context(True)
+        try:
+            result = check_all_command_guards(
+                "rm -rf /tmp/test-context-interactive",
+                "local",
+                approval_callback=fake_cb,
+            )
+        finally:
+            reset_hercules_interactive_context(tok)
+
+        assert called_with, (
+            "set_hercules_interactive_context(True) should route dangerous "
+            "commands through the callback without HERCULES_INTERACTIVE in env"
+        )
+        assert result["approved"] is True
