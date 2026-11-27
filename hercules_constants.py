@@ -106,7 +106,7 @@ def get_hercules_home() -> Path:
             try:
                 sys.stderr.write(msg + "\n")
                 sys.stderr.flush()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     return _get_platform_default_hercules_home()
@@ -682,7 +682,7 @@ def _norm_home_path(path: str | None) -> str:
         return ""
     try:
         return os.path.normcase(os.path.abspath(os.path.expanduser(raw)))
-    except (AttributeError, ValueError):
+    except Exception:
         return os.path.normcase(raw)
 
 
@@ -729,7 +729,7 @@ def _iter_real_home_candidates(env: dict[str, str] | None = None) -> list[str]:
         ).pw_dir.strip()  # windows-footgun: ok — POSIX-only module inside try/except
         if pw_home:
             candidates.append(pw_home)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     userprofile = str(env.get("USERPROFILE") or os.getenv("USERPROFILE", "")).strip()
     if userprofile:

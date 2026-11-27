@@ -77,7 +77,7 @@ def _resolve_auto_decompose_settings(
     """
     try:
         cfg = load_config()
-    except (AttributeError, ValueError):
+    except Exception:
         return False, 3
     kcfg = cfg.get("kanban", {}) if isinstance(cfg, dict) else {}
     enabled = bool(kcfg.get("auto_decompose", True))
@@ -135,11 +135,11 @@ def _release_singleton_lock(handle) -> None:
         from gateway.status import _release_file_lock
 
         _release_file_lock(handle)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         handle.close()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
 
@@ -278,7 +278,7 @@ class GatewayKanbanWatchersMixin:
                     # more than once before advancing the cursor.
                     try:
                         boards = _kb.list_boards(include_archived=False)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         boards = [_kb.read_board_metadata(_kb.DEFAULT_BOARD)]
                     seen_db_paths: set[str] = set()
                     for board_meta in boards:
@@ -1296,7 +1296,7 @@ class GatewayKanbanWatchersMixin:
                 if conn is not None:
                     try:
                         conn.close()
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
 
         def _tick_once() -> "list[tuple[str, Optional[object]]]":
@@ -1308,7 +1308,7 @@ class GatewayKanbanWatchersMixin:
             """
             try:
                 boards = _kb.list_boards(include_archived=False)
-            except (AttributeError, ValueError):
+            except Exception:
                 boards = [_kb.read_board_metadata(_kb.DEFAULT_BOARD)]
             out: list[tuple[str, "Optional[object]"]] = []
             for b in boards:
@@ -1330,7 +1330,7 @@ class GatewayKanbanWatchersMixin:
             """
             try:
                 boards = _kb.list_boards(include_archived=False)
-            except (AttributeError, ValueError):
+            except Exception:
                 boards = [_kb.read_board_metadata(_kb.DEFAULT_BOARD)]
             for b in boards:
                 slug = b.get("slug") or _kb.DEFAULT_BOARD
@@ -1341,13 +1341,13 @@ class GatewayKanbanWatchersMixin:
                         return True
                     if _kb.has_spawnable_review(conn):
                         return True
-                except (AttributeError, ValueError):
+                except Exception:
                     continue
                 finally:
                     if conn is not None:
                         try:
                             conn.close()
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
             return False
 
@@ -1385,7 +1385,7 @@ class GatewayKanbanWatchersMixin:
                 return 0
             try:
                 boards = _kb.list_boards(include_archived=False)
-            except (AttributeError, ValueError):
+            except Exception:
                 boards = [_kb.read_board_metadata(_kb.DEFAULT_BOARD)]
             attempted = 0
             successes = 0
@@ -1419,7 +1419,7 @@ class GatewayKanbanWatchersMixin:
                             author="auto-decomposer",
                             board=slug,
                         )
-                    except (AttributeError, ValueError):
+                    except Exception:
                         logger.exception(
                             "kanban auto-decompose: decompose_task crashed on %s",
                             tid,

@@ -902,7 +902,7 @@ class MemoryStore:
             return []
         try:
             qvec = embedder.embed_one(content)
-        except (AttributeError, ValueError):
+        except Exception:
             return []
         if not qvec:
             return []
@@ -972,7 +972,7 @@ class MemoryStore:
         ):
             try:
                 decision = reconciler.reconcile(content, neighbors)
-            except (AttributeError, ValueError):
+            except Exception:
                 decision = None
 
         if decision and decision.get("action") == "duplicate":
@@ -1304,7 +1304,7 @@ class MemoryStore:
             return
         try:
             vec = embedder.embed_one(content)
-        except (AttributeError, ValueError):
+        except Exception:
             return
         if not vec:
             return

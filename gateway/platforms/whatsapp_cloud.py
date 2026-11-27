@@ -1719,7 +1719,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                     from tools.clarify_gateway import mark_awaiting_text
 
                     flipped = mark_awaiting_text(clarify_id)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     logger.exception(
                         "[whatsapp_cloud] mark_awaiting_text failed for %s",
                         clarify_id,

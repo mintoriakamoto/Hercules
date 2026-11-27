@@ -156,7 +156,7 @@ class XAIWebSearchProvider(WebSearchProvider):
 
             if is_interrupted():
                 return {"success": False, "error": "Interrupted"}
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         creds = resolve_xai_http_credentials()

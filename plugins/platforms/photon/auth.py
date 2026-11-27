@@ -94,7 +94,7 @@ def _auth_json_path() -> Path:
         from hercules_constants import get_hercules_home
 
         return Path(get_hercules_home()) / "auth.json"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return Path(os.path.expanduser("~/.hercules")) / "auth.json"
 
 
@@ -585,7 +585,7 @@ def _validated_dashboard_token(candidates: list) -> str:
 def _safe(fn: Callable[[], None]) -> None:
     try:
         fn()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
 
@@ -609,7 +609,7 @@ def login_device_flow(
 
             target = code.verification_uri_complete or code.verification_uri
             webbrowser.open(target, new=2)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
     # Poll once for the approved token, then collect every candidate shape so
     # we can validate against the dashboard API before persisting (avoids

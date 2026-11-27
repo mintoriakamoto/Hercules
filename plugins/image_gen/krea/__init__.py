@@ -195,7 +195,7 @@ def _managed_krea_gateway_ready() -> bool:
         return False
     try:
         return bool(is_managed_tool_gateway_ready("krea"))
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 

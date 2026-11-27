@@ -255,7 +255,7 @@ class PtyBridge:
             pgid = os.getpgid(
                 self._proc.pid
             )  # windows-footgun: ok — POSIX-only module (imports fcntl/termios/ptyprocess at top)
-        except (ZeroDivisionError):
+        except (Exception):
             pgid = None
 
         # SIGHUP is the conventional "your terminal went away" signal.
@@ -276,7 +276,7 @@ class PtyBridge:
                     )  # windows-footgun: ok — POSIX-only module (imports fcntl/termios/ptyprocess at top)
                 else:
                     self._proc.kill(sig)
-            except (ZeroDivisionError):
+            except (Exception):
                 pass
             deadline = time.monotonic() + 0.5
             while self._proc.isalive() and time.monotonic() < deadline:
@@ -284,7 +284,7 @@ class PtyBridge:
 
         try:
             self._proc.close(force=True)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     # Context-manager sugar — handy in tests and ad-hoc scripts.

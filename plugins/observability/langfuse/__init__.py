@@ -303,7 +303,7 @@ def _maybe_parse_json_string(value: str) -> Any:
             return value
     try:
         parsed, idx = json.JSONDecoder().raw_decode(stripped)
-    except (AttributeError, ValueError):
+    except Exception:
         return value
     if not isinstance(parsed, (dict, list)):
         return value
@@ -662,7 +662,7 @@ def _usage_and_cost(
                         )
                 else:
                     cost_details["total"] = float(cost.amount_usd)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 cost_details["total"] = float(cost.amount_usd)
     except Exception as exc:  # pragma: no cover - fail-open
         _debug(f"usage normalization failed: {exc}")
@@ -743,7 +743,7 @@ def _start_root_trace(
 
     try:
         root_span.set_trace_io(input=trace_input)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     _debug(f"started trace {trace_id} for {task_key}")
@@ -859,7 +859,7 @@ def _finish_trace(task_key: str, *, output: Any = None) -> None:
     finally:
         try:
             client.flush()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -1164,7 +1164,7 @@ def on_post_llm_call(
                 )
                 if _cost.amount_usd is not None:
                     cost_details["total"] = float(_cost.amount_usd)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
     else:
         usage_details, cost_details = {}, {}

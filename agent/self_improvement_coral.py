@@ -539,7 +539,7 @@ class SelfImprovementEngine:
             if len(parts) >= 1:
                 minor = int(parts[-1]) + 1
                 return ".".join(parts[:-1]) + "." + str(minor)
-        except (IndexError, KeyError, ValueError):
+        except Exception:
             pass
         return current + ".1"
 
@@ -552,7 +552,7 @@ class SelfImprovementEngine:
                 return ".".join(parts[:-1]) + "." + str(minor)
             elif len(parts) == 1 and current != "1.0":
                 return "1.0"
-        except (IndexError, KeyError, ValueError):
+        except Exception:
             pass
         return current
 

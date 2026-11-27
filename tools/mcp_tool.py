@@ -759,7 +759,7 @@ def _wrap_command_with_watchdog(command: str, args: list) -> tuple[str, list]:
             create_time = psutil.Process(my_pid).create_time()
         except ImportError:
             create_time = time.time()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Never let watchdog bookkeeping failure block a real MCP connection.
         return command, args
     watchdog_args = [
@@ -3770,7 +3770,7 @@ def _snapshot_child_pids() -> set:
         import psutil
 
         return {c.pid for c in psutil.Process(my_pid).children()}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     return set()
@@ -3873,7 +3873,7 @@ def _wrap_with_home_override(coro: "Coroutine") -> "Coroutine":
         )
 
         home_override = get_hercules_home_override()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return coro
     if not home_override:
         return coro
@@ -4053,7 +4053,7 @@ def _load_mcp_config() -> Dict[str, dict]:
             from hercules_cli.env_loader import load_hercules_dotenv
 
             load_hercules_dotenv()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         safe_servers: Dict[str, dict] = {}
         for name, cfg in _filter_suspicious_mcp_servers(servers).items():
@@ -5826,7 +5826,7 @@ def _reinject_post_build_tools(agent, tools_list: list, name_set: set) -> set:
                 for schema in get_mem_schemas():
                     if isinstance(schema, dict):
                         _add(schema)
-    except (AttributeError, ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Memory-provider tool re-injection skipped", exc_info=True)
 
     # Context-engine tools (lcm_grep/lcm_describe/…) — the `context_engine`
@@ -6074,7 +6074,7 @@ def _stop_mcp_loop(*, only_if_idle: bool = False) -> bool:
             thread.join(timeout=5)
         try:
             loop.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         # After closing the loop, any stdio subprocesses that survived the
         # graceful shutdown are now orphaned — include active PIDs too

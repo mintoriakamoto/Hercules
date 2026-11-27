@@ -88,7 +88,7 @@ def format_secret_source_suffix(env_var: str) -> str:
         registered = get_source(source)
         if registered is not None and registered.label:
             return f" (from {registered.label})"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return f" (from {source})"
 
@@ -295,7 +295,7 @@ def _apply_managed_env() -> None:
         from hercules_cli import managed_scope
 
         managed_dir = managed_scope.get_managed_dir()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
     if managed_dir is None:
         return
@@ -336,7 +336,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
 
     try:
         cfg = _load_secrets_config(home_path)
-    except (AttributeError, ValueError):
+    except Exception:
         return
     if not cfg:
         return
@@ -348,7 +348,7 @@ def _apply_external_secret_sources(home_path: Path) -> None:
 
     try:
         report = apply_all(cfg, home_path)
-    except (AttributeError, ValueError):
+    except Exception:
         return
 
     if report.applied_any:

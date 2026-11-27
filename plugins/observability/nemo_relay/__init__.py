@@ -161,7 +161,7 @@ class _Runtime:
         if callable(deregister):
             try:
                 deregister(self._atof_subscriber_name)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("NeMo Relay ATOF deregister failed", exc_info=True)
         self.atof_exporter = None
 
@@ -234,18 +234,18 @@ class _Runtime:
         if state.handle is not None:
             try:
                 self.nemo_relay.scope.pop(state.handle, output=_jsonable(kwargs))
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("NeMo Relay session pop failed", exc_info=True)
         self.export_atif(state)
         if state.atif_exporter is not None and state.atif_subscriber_name:
             try:
                 state.atif_exporter.deregister(state.atif_subscriber_name)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("NeMo Relay ATIF deregister failed", exc_info=True)
         if self._plugin_config_initialized and not self.sessions:
             try:
                 self._clear_plugins_toml()
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("NeMo Relay plugins.toml clear failed", exc_info=True)
         elif self.settings.plugins_config and not self.sessions:
             self._plugin_config_needs_reinit = True
@@ -859,16 +859,16 @@ def _jsonable(value: Any) -> Any:
     try:
         if hasattr(value, "model_dump"):
             return _jsonable(value.model_dump(mode="json"))
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     try:
         if hasattr(value, "__dict__"):
             return _jsonable(vars(value))
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     try:
         return json.loads(json.dumps(value, default=str))
-    except (AttributeError, ValueError):
+    except Exception:
         return str(value)
 
 

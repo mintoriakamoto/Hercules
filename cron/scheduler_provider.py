@@ -129,7 +129,7 @@ def resolve_cron_scheduler() -> "CronScheduler":
         from hercules_cli.config import cfg_get, load_config
 
         name = (cfg_get(load_config(), "cron", "provider", default="") or "").strip()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     if not name or name in ("builtin", "in-process", "inprocess"):

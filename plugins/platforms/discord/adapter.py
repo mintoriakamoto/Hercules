@@ -247,7 +247,7 @@ class _DiscordNonConversationalMessageTracker:
             self._ids = dict.fromkeys(ids)
         try:
             atomic_json_write(self._state_path(), ids, indent=None)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[%s] Failed to save non-conversational Discord IDs",
                 "Discord",
@@ -317,7 +317,7 @@ def check_discord_requirements() -> bool:
         from tools.lazy_deps import ensure as _lazy_ensure
 
         _lazy_ensure("platform.discord", prompt=False)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
     try:
         import discord as _discord
@@ -445,7 +445,7 @@ class VoiceReceiver:
         self._running = False
         try:
             self._vc._connection.remove_socket_listener(self._on_packet)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         with self._lock:
             self._buffers.clear()
@@ -799,7 +799,7 @@ def _read_dm_role_auth_guild() -> Optional[int]:
         cfg = read_raw_config() or {}
         discord_cfg = cfg.get("discord", {}) or {}
         raw = discord_cfg.get("dm_role_auth_guild")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
     if raw is None or raw == "":
         return None
@@ -845,7 +845,7 @@ def _read_discord_prompt_timeout() -> int:
         cfg = read_raw_config() or {}
         approvals_cfg = cfg.get("approvals", {}) or {}
         raw = approvals_cfg.get("discord_prompt_timeout")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return _DISCORD_PROMPT_TIMEOUT_DEFAULT
     if raw is None or raw == "":
         return _DISCORD_PROMPT_TIMEOUT_DEFAULT
@@ -1081,7 +1081,7 @@ class DiscordAdapter(BasePlatformAdapter):
                     discord.opus.load_opus(opus_path)
                     if discord.opus.is_loaded():
                         break
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.warning(
                         "Opus codec found at %s but failed to load", opus_path
                     )
@@ -1163,7 +1163,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 try:
                     if not self._client.is_closed():
                         await self._client.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "[%s] Failed to close previous Discord client", self.name
                     )
@@ -1490,7 +1490,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 )
                 try:
                     await client.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "[%s] Error closing wedged Discord client",
                         self.name,
@@ -1503,7 +1503,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 )
                 try:
                     await self._notify_fatal_error()
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "[%s] Fatal-error handler raised",
                         self.name,
@@ -1640,7 +1640,7 @@ class DiscordAdapter(BasePlatformAdapter):
         directory = get_hercules_home() / _DISCORD_COMMAND_SYNC_STATE_SUBDIR
         try:
             directory.mkdir(parents=True, exist_ok=True)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         return directory / _DISCORD_COMMAND_SYNC_STATE_FILENAME
 
@@ -1650,7 +1650,7 @@ class DiscordAdapter(BasePlatformAdapter):
             if not path.exists():
                 return {}
             data = json.loads(path.read_text(encoding="utf-8"))
-        except (AttributeError, ValueError):
+        except Exception:
             return {}
         return data if isinstance(data, dict) else {}
 
@@ -2635,7 +2635,7 @@ class DiscordAdapter(BasePlatformAdapter):
             if hasattr(prev_msg, "to_reference"):
                 try:
                     reference = prev_msg.to_reference(fail_if_not_exists=False)
-                except (AttributeError, ValueError):
+                except Exception:
                     reference = None
             try:
                 sent = await channel.send(content=chunk, reference=reference)
@@ -2889,7 +2889,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 if aiohttp_session is not None:
                     try:
                         await aiohttp_session.close()
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
 
     async def play_tts(
@@ -2963,7 +2963,7 @@ class DiscordAdapter(BasePlatformAdapter):
 
                     info = OggOpus(audio_path)
                     duration_secs = info.info.length
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     duration_secs = max(1.0, len(file_data) / 2000.0)
 
                 waveform_bytes = bytes([128] * 256)
@@ -3248,7 +3248,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 try:
                     if vc.is_playing():
                         vc.stop()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 await vc.disconnect()
             task = self._voice_timeout_tasks.pop(guild_id, None)
@@ -3387,21 +3387,21 @@ class DiscordAdapter(BasePlatformAdapter):
             try:
                 if _mode_getter(str(text_ch_id)) == "off":
                     return
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         await self.leave_voice_channel(guild_id)
         # Notify the runner so it can clean up voice_mode state
         if self._on_voice_disconnect and text_ch_id:
             try:
                 self._on_voice_disconnect(str(text_ch_id))
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         if text_ch_id and self._client:
             ch = self._client.get_channel(text_ch_id)
             if ch:
                 try:
                     await ch.send("Left voice channel (inactivity timeout).")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
     def is_in_voice_channel(self, guild_id: int) -> bool:
@@ -3595,7 +3595,7 @@ class DiscordAdapter(BasePlatformAdapter):
             from gateway.pairing import PairingStore
 
             return bool(PairingStore().is_approved("discord", user_id))
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
 
     def _is_allowed_user(
@@ -4828,7 +4828,7 @@ class DiscordAdapter(BasePlatformAdapter):
 
             try:
                 already_registered = {cmd.name for cmd in tree.get_commands()}
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
             config_overrides = _resolve_config_gates()
@@ -4851,7 +4851,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 try:
                     tree.add_command(auto_cmd)
                     already_registered.add(discord_name)
-                except (AttributeError, ValueError):
+                except Exception:
                     # Silently skip commands that fail registration (e.g.
                     # name conflict with a subcommand group).
                     pass
@@ -4890,7 +4890,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 try:
                     tree.add_command(auto_cmd)
                     already_registered.add(discord_name)
-                except (AttributeError, ValueError):
+                except Exception:
                     # Silently skip commands that fail registration (e.g.
                     # name conflict with a subcommand group).
                     pass
@@ -4997,7 +4997,7 @@ class DiscordAdapter(BasePlatformAdapter):
             existing_names = set()
             try:
                 existing_names = {cmd.name for cmd in tree.get_commands()}
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
             # Populate the instance-level entries/lookup so the
@@ -5036,7 +5036,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 """
                 try:
                     allowed, _reason = self._evaluate_slash_authorization(interaction)
-                except (AttributeError, ValueError):
+                except Exception:
                     # Defensive: never raise from autocomplete. Fail
                     # closed by returning an empty suggestion list.
                     return []
@@ -6000,7 +6000,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 )
                 try:
                     setattr(thread, "_hercules_auto_thread_initial_name", thread_name)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 return thread
             except Exception as direct_error:
@@ -6018,7 +6018,7 @@ class DiscordAdapter(BasePlatformAdapter):
                         setattr(
                             thread, "_hercules_auto_thread_initial_name", thread_name
                         )
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                     return thread
                 except Exception as fallback_error:
@@ -6072,7 +6072,7 @@ class DiscordAdapter(BasePlatformAdapter):
             thread = self._client.get_channel(thread_id_int)
             if thread is None:
                 thread = await self._client.fetch_channel(thread_id_int)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[%s] Failed to resolve Discord thread %s for rename",
                 self.name,
@@ -6608,7 +6608,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 from hercules_cli.providers import get_label
 
                 provider_label = get_label(current_provider)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 provider_label = current_provider
 
             embed = discord.Embed(
@@ -7564,7 +7564,7 @@ def _component_check_auth(
             store = PairingStore()
             if store.is_approved("discord", uid):
                 return True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     return False
@@ -7602,7 +7602,7 @@ def _resolve_exec_approval_admin_gate(
         from gateway.slash_access import _coerce_id_list
 
         admin_ids = set(_coerce_id_list(extra.get("allow_admin_from")))
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         admin_ids = set()
     return (True, admin_ids)
 
@@ -8190,7 +8190,7 @@ def _define_discord_view_classes() -> None:
                     model_id,
                     provider=self._selected_provider,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 return None
 
         async def _on_provider_selected(self, interaction: discord.Interaction):
@@ -8328,7 +8328,7 @@ def _define_discord_view_classes() -> None:
                 from hercules_cli.providers import get_label
 
                 provider_label = get_label(self.current_provider)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 provider_label = self.current_provider
 
             await interaction.response.edit_message(
@@ -8369,7 +8369,7 @@ def _define_discord_view_classes() -> None:
                         color=discord.Color.greyple(),
                     )
                     await msg.edit(embed=embed, view=self)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
     class ClarifyChoiceView(discord.ui.View):
@@ -8510,7 +8510,7 @@ def _define_discord_view_classes() -> None:
 
             try:
                 await interaction.response.edit_message(embed=embed, view=self)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "Discord clarify edit_message failed for %s",
                     self.clarify_id,
@@ -8518,7 +8518,7 @@ def _define_discord_view_classes() -> None:
                 )
                 try:
                     await interaction.response.defer()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
             # Resolve via the gateway clarify primitive — same mechanism as
@@ -8531,7 +8531,7 @@ def _define_discord_view_classes() -> None:
                 entry = _clarify_entries.get(self.clarify_id)
                 if entry and entry.choices and 0 <= index < len(entry.choices):
                     resolved_text = entry.choices[index]
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 resolved_text = None
             if resolved_text is None:
                 resolved_text = choice
@@ -8602,10 +8602,10 @@ def _define_discord_view_classes() -> None:
 
             try:
                 await interaction.response.edit_message(embed=embed, view=self)
-            except (AttributeError, ValueError):
+            except Exception:
                 try:
                     await interaction.response.defer()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
         async def on_timeout(self):
@@ -8734,7 +8734,7 @@ def _standalone_response_encoding(resp: Any) -> str:
     if callable(get_encoding):
         try:
             return get_encoding() or "utf-8"
-        except (AttributeError, ValueError):
+        except Exception:
             return "utf-8"
     return "utf-8"
 
@@ -9014,7 +9014,7 @@ async def _standalone_send(
                                         _DISCORD_STANDALONE_JSON_BODY_LIMIT_BYTES,
                                     )
                                     caption_pending = False
-                        except (AttributeError, ValueError):
+                        except Exception:
                             logger.warning(
                                 "Discord caption-fallback send failed for missing media"
                             )

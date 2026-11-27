@@ -144,7 +144,7 @@ def log_stream_retry(
     try:
         try:
             _summary = agent._summarize_api_error(error)
-        except (AttributeError, ValueError):
+        except Exception:
             _summary = str(error)
         if _summary and len(_summary) > 240:
             _summary = _summary[:240] + "…"
@@ -152,7 +152,7 @@ def log_stream_retry(
         # Inner-cause chain (httpx errors hide under openai.APIError).
         try:
             _chain = flatten_exception_chain(error)
-        except (AttributeError, ValueError):
+        except Exception:
             _chain = type(error).__name__
 
         # Per-attempt counters and upstream headers.
@@ -205,7 +205,7 @@ def log_stream_retry(
             _headers_repr,
             extra={"mid_tool_call": mid_tool_call},
         )
-    except (AttributeError, ValueError):
+    except Exception:
         logger.debug("stream-retry log emit failed", exc_info=True)
 
 
@@ -263,7 +263,7 @@ def emit_stream_drop(
         agent._touch_activity(
             f"stream retry {attempt}/{max_attempts} after {type(error).__name__}"
         )
-    except (ZeroDivisionError):
+    except (Exception):
         pass
 
 

@@ -207,21 +207,21 @@ class GatewaySlashCommandsMixin:
                 parent_session_id=str(getattr(old_entry, "session_id", "") or ""),
                 reason="session_reset",
             )
-        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             pass
 
         try:
             from tools.env_passthrough import clear_env_passthrough
 
             clear_env_passthrough()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         try:
             from tools.credential_files import clear_credential_files
 
             clear_credential_files()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # Reset the session
@@ -260,7 +260,7 @@ class GatewaySlashCommandsMixin:
                 old_session_id=_old_sid,
                 new_session_id=new_entry.session_id if new_entry else None,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # Emit session:end hook (session is ending)
@@ -363,7 +363,7 @@ class GatewaySlashCommandsMixin:
                 old_session_id=_old_sid,
                 new_session_id=_new_sid,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # Append a random tip to the reset message
@@ -371,7 +371,7 @@ class GatewaySlashCommandsMixin:
             from hercules_cli.tips import get_random_tip
 
             _tip_line = t("gateway.reset.tip", tip=get_random_tip())
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _tip_line = ""
 
         if session_info:
@@ -662,7 +662,7 @@ class GatewaySlashCommandsMixin:
         if not model_name or not provider_name or not context_total:
             try:
                 user_config = _load_gateway_config()
-            except (AttributeError, ValueError):
+            except Exception:
                 user_config = {}
         if not model_name:
             model_name = _resolve_gateway_model(user_config)
@@ -904,7 +904,7 @@ class GatewaySlashCommandsMixin:
             policy = policy_for_source(self.config, source)
             uid = getattr(source, "user_id", None)
             return bool(policy.enabled and uid and policy.is_admin(uid))
-        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             return False
 
     async def _resume_target_allowed(
@@ -927,7 +927,7 @@ class GatewaySlashCommandsMixin:
         # silently allow/deny — fall through to the deterministic DB scoping.
         try:
             origin = self._gateway_session_origin_for_id(target_id)
-        except (AttributeError, ValueError):
+        except Exception:
             origin = None
         if isinstance(origin, SessionSource):
             return self._same_origin_chat(source, origin)
@@ -1476,7 +1476,7 @@ class GatewaySlashCommandsMixin:
                     lines.append(
                         t("gateway.help.more_use_commands", count=len(sorted_cmds) - 10)
                     )
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+        except Exception:
             pass
         return _telegramize_command_mentions(
             "\n".join(lines),
@@ -1510,7 +1510,7 @@ class GatewaySlashCommandsMixin:
                         "gateway.commands.default_desc"
                     )
                     entries.append(f"`{cmd}` — {desc}")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         if not entries:
@@ -1590,7 +1590,7 @@ class GatewaySlashCommandsMixin:
                 from hercules_cli.models import clear_provider_models_cache
 
                 clear_provider_models_cache()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         # Read current model/provider from config
@@ -1614,9 +1614,9 @@ class GatewaySlashCommandsMixin:
                     from hercules_cli.config import get_compatible_custom_providers
 
                     custom_provs = get_compatible_custom_providers(cfg)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     custom_provs = cfg.get("custom_providers")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # Check for session override
@@ -2211,7 +2211,7 @@ class GatewaySlashCommandsMixin:
                 api_key=result.api_key or current_api_key or "",
                 model_info=result.model_info,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _cost_warning = None
         if _cost_warning is not None:
 
@@ -2279,7 +2279,7 @@ class GatewaySlashCommandsMixin:
             try:
                 session_key = self._session_key_for_source(event.source)
                 self._evict_cached_agent(session_key)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "could not evict cached agent after codex-runtime change",
                     exc_info=True,
@@ -2299,7 +2299,7 @@ class GatewaySlashCommandsMixin:
         try:
             config = _load_gateway_config()
             personalities = cfg_get(config, "agent", "personalities", default={})
-        except (AttributeError, ValueError):
+        except Exception:
             config = {}
             personalities = {}
 
@@ -3233,7 +3233,7 @@ class GatewaySlashCommandsMixin:
                 cfg_get(user_config, "display", "tool_progress_command"),
                 default=False,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             gate_enabled = False
 
         if not gate_enabled:
@@ -3708,7 +3708,7 @@ class GatewaySlashCommandsMixin:
             try:
                 if not auth_fn(source):
                     return t("gateway.topic.unauthorized")
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("Topic auth check failed", exc_info=True)
 
         args = event.get_command_args().strip()
@@ -4912,7 +4912,7 @@ class GatewaySlashCommandsMixin:
                     )
                     lines.append(t("gateway.debug.full_logs_hint"))
                     return "\n".join(lines)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass  # fall back to a local file
 
             share_dir = (
@@ -4961,7 +4961,7 @@ class GatewaySlashCommandsMixin:
                 entry = platform_registry.get(platform.value)
                 if not entry or not entry.allow_update_command:
                     return t("gateway.update.platform_not_messaging")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 return t("gateway.update.platform_not_messaging")
 
         if is_managed():

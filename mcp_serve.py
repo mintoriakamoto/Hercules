@@ -169,7 +169,7 @@ def _load_sessions_index_from_db() -> dict:
     finally:
         try:
             db.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -511,7 +511,7 @@ class EventBridge:
 
             try:
                 messages = db.get_messages(session_id)
-            except (AttributeError, ValueError):
+            except Exception:
                 continue
 
             if not messages:
@@ -530,7 +530,7 @@ class EventBridge:
                             from datetime import datetime
 
                             return datetime.fromisoformat(ts).timestamp()
-                        except (ImportError, ModuleNotFoundError):
+                        except Exception:
                             return 0.0
                 return 0.0
 

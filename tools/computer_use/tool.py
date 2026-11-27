@@ -230,7 +230,7 @@ def _get_backend() -> ComputerUseBackend:
                 )
             try:
                 _backend.start()
-            except (AttributeError, ValueError):
+            except Exception:
                 # Don't cache a backend whose start() failed (e.g. a lazy
                 # dependency install was declined / failed). The next call
                 # retries cleanly instead of returning a half-initialised
@@ -247,7 +247,7 @@ def reset_backend_for_tests() -> None:  # pragma: no cover
         if _backend is not None:
             try:
                 _backend.stop()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         _backend = None
     _session_auto_approve = False
@@ -580,7 +580,7 @@ def _image_dimensions_from_b64(image_b64: str) -> Optional[Tuple[int, int]]:
         return None
     try:
         raw = base64.b64decode(image_b64, validate=False)
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
     # PNG: signature + IHDR width/height.
@@ -588,7 +588,7 @@ def _image_dimensions_from_b64(image_b64: str) -> Optional[Tuple[int, int]]:
         try:
             width, height = struct.unpack(">II", raw[16:24])
             return int(width), int(height)
-        except (IndexError, KeyError, ValueError):
+        except Exception:
             return None
 
     # JPEG: scan for SOF markers that carry dimensions.

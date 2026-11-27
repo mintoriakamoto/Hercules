@@ -345,7 +345,7 @@ def fetch_recent(
     finally:
         try:
             conn.logout()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 

@@ -54,7 +54,7 @@ def _estimate_tokens(agent: Any, messages: Optional[List[dict]]) -> Optional[int
                     tools=tools or None,
                 )
             )
-        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             pass
 
     last = int(getattr(cc, "last_prompt_tokens", 0) or 0)
@@ -160,7 +160,7 @@ def enrich_model_switch_warnings_for_gateway(
         try:
             entry = store.get_or_create_session(source)
             messages = db.get_messages_as_conversation(entry.session_id)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     merge_preflight_compression_warning(

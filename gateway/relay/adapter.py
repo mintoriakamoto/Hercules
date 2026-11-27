@@ -296,7 +296,7 @@ class RelayAdapter(BasePlatformAdapter):
             user_id = getattr(src, "user_id", None)
             if user_id:
                 _remember_chat_hint(self._dm_user_by_chat, str(chat), str(user_id))
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def _with_scope(

@@ -552,7 +552,7 @@ def safe_url_for_log(url: str, max_len: int = 80) -> str:
 
     try:
         parsed = urlsplit(raw)
-    except (AttributeError, ValueError):
+    except Exception:
         return raw[:max_len]
 
     if parsed.scheme and parsed.netloc:
@@ -647,7 +647,7 @@ def get_inbound_media_max_bytes() -> int:
         from hercules_cli.config import load_config as _load_config
 
         cfg = _load_config()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return DEFAULT_INBOUND_MEDIA_MAX_BYTES
     gw = cfg.get("gateway", {}) if isinstance(cfg, dict) else {}
     if not isinstance(gw, dict) or "max_inbound_media_bytes" not in gw:
@@ -2958,7 +2958,7 @@ class BasePlatformAdapter(ABC):
                 logged = set()
                 try:
                     self._status_write_logged = logged
-                except (AttributeError, ValueError, KeyError, OSError):
+                except Exception:
                     pass
             key = (self.platform.value, context)
             if key not in logged:
@@ -3061,7 +3061,7 @@ class BasePlatformAdapter(ABC):
             return
         try:
             recovered = recover(source)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("topic recovery hook failed", exc_info=True)
             return
         if recovered is None or str(recovered) == str(source.thread_id or ""):
@@ -3271,7 +3271,7 @@ class BasePlatformAdapter(ABC):
             return 0
         try:
             cfg = _load_config()
-        except (AttributeError, ValueError):
+        except Exception:
             return 0
         display = cfg.get("display", {}) if isinstance(cfg, dict) else {}
         if not isinstance(display, dict):
@@ -5080,7 +5080,7 @@ class BasePlatformAdapter(ABC):
                         )
                         is not None
                     )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     _has_text_clarify = False
 
                 if _has_text_clarify:

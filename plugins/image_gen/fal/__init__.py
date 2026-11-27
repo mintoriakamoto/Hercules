@@ -63,7 +63,7 @@ class FalImageGenProvider(ImageGenProvider):
 
         try:
             return bool(_it.check_fal_api_key())
-        except (AttributeError, ValueError):
+        except Exception:
             return False
 
     def list_models(self) -> List[Dict[str, Any]]:
@@ -108,7 +108,7 @@ class FalImageGenProvider(ImageGenProvider):
 
         try:
             _model_id, meta = _it._resolve_fal_model()
-        except (AttributeError, ValueError):
+        except Exception:
             return {"modalities": ["text"], "max_reference_images": 0}
         if meta.get("edit_endpoint"):
             return {
@@ -176,7 +176,7 @@ class FalImageGenProvider(ImageGenProvider):
 
         try:
             response = json.loads(raw) if isinstance(raw, str) else raw
-        except (AttributeError, ValueError):
+        except Exception:
             response = {
                 "success": False,
                 "image": None,

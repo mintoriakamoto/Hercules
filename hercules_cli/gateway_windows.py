@@ -74,7 +74,7 @@ def _schtasks_encoding() -> str:
     """
     try:
         return locale.getpreferredencoding(False) or "utf-8"
-    except (AttributeError, ValueError):
+    except Exception:
         return "utf-8"
 
 
@@ -910,7 +910,7 @@ def windowless_gateway_restart_spec(
         windowless_python, venv_dir, extra_pythonpath = _resolve_detached_python(
             python_exe
         )
-    except (AttributeError, ValueError):
+    except Exception:
         return run_argv, "", {}
 
     new_argv = [windowless_python, *rest]
@@ -1650,7 +1650,7 @@ def _drain_gateway_pid(pid: int, drain_timeout: float) -> bool:
 
     try:
         write_planned_stop_marker(pid)
-    except (AttributeError, ValueError):
+    except Exception:
         # Best-effort: if the marker can't be written, we have no choice
         # but to fall through to a hard kill.  Caller decides escalation.
         pass
@@ -1669,7 +1669,7 @@ def _windows_stop_drain_timeout() -> float:
         from hercules_cli.gateway import _get_restart_drain_timeout
 
         configured = float(_get_restart_drain_timeout() or 30.0)
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         configured = 30.0
     # Windows CLI stop must not wedge forever. Give the gateway a real
     # graceful-drain window, then escalate to the known PID.
@@ -1713,7 +1713,7 @@ def _collect_gateway_stop_pids(primary_pid: int | None = None) -> list[int]:
         for pid in _gateway_pids():
             if pid > 0 and pid not in pids:
                 pids.append(pid)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     return pids
 

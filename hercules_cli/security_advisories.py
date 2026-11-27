@@ -155,7 +155,7 @@ def _installed_version(pkg_name: str) -> Optional[str]:
         return version(pkg_name)
     except PackageNotFoundError:
         return None
-    except (AttributeError, ValueError):
+    except Exception:
         # Some metadata corruption modes raise ValueError or OSError. Don't
         # let advisory checking crash the CLI startup path.
         logger.debug("importlib.metadata.version(%s) raised", pkg_name, exc_info=True)
@@ -210,7 +210,7 @@ def get_acked_ids() -> set[str]:
         from hercules_cli.config import load_config
 
         cfg = load_config()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Could not load config for advisory acks", exc_info=True)
         return set()
     sec = cfg.get("security") or {}
@@ -335,7 +335,7 @@ def _banner_cache_path() -> Optional[Path]:
         cache_dir = Path(get_hercules_home()) / "cache"
         cache_dir.mkdir(parents=True, exist_ok=True)
         return cache_dir / _BANNER_CACHE_FILE
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
 
@@ -357,7 +357,7 @@ def _read_banner_cache() -> dict[str, float]:
                 out[advisory_id] = float(ts)
             except ValueError:
                 continue
-    except (IndexError, KeyError, ValueError):
+    except Exception:
         return {}
     return out
 

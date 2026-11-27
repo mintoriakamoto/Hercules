@@ -243,7 +243,7 @@ def _union_alpha_bbox(frames) -> tuple[int, int, int, int] | None:
     for frame in frames:
         try:
             bbox = frame.getchannel("A").getbbox()
-        except (AttributeError, ValueError):
+        except Exception:
             bbox = None
         if not bbox:
             continue

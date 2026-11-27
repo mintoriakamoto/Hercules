@@ -229,7 +229,7 @@ def _save_mem0_json(hercules_home: str, data: dict) -> None:
     if config_path.exists():
         try:
             existing = json.loads(config_path.read_text(encoding="utf-8"))
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     existing.update(data)
     config_path.write_text(json.dumps(existing, indent=2) + "\n")
@@ -269,7 +269,7 @@ def _setup_platform(hercules_home: str, config: dict, flags: dict[str, str]) -> 
     if config_path.exists():
         try:
             existing_config = json.loads(config_path.read_text())
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     provider_config = dict(existing_config)
@@ -396,7 +396,7 @@ def _setup_selfhosted(hercules_home: str, config: dict, flags: dict[str, str]) -
     if config_path.exists():
         try:
             existing_config = json.loads(config_path.read_text())
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     provider_config = dict(existing_config)
@@ -1090,7 +1090,7 @@ def _check_min_dep_version() -> None:
             )
     except ImportError:
         pass
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 

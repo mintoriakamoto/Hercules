@@ -44,7 +44,7 @@ def _title_language() -> str:
             .get("title_generation", {})
             .get("language", "")
         ).strip()
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return ""
 
 
@@ -120,7 +120,7 @@ def generate_title(
         if failure_callback is not None:
             try:
                 failure_callback("title generation", e)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("Title generation failure_callback raised", exc_info=True)
         return None
 
@@ -150,7 +150,7 @@ def auto_title_session(
         existing = session_db.get_session_title(session_id)
         if existing:
             return
-    except (AttributeError, ValueError):
+    except Exception:
         return
 
     title = generate_title(
@@ -168,7 +168,7 @@ def auto_title_session(
         if title_callback is not None:
             try:
                 title_callback(title)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("Auto-title callback failed", exc_info=True)
     except Exception as e:
         logger.debug("Failed to set auto-generated title: %s", e)

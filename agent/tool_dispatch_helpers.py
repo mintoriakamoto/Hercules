@@ -99,7 +99,7 @@ def _is_mcp_tool_parallel_safe(tool_name: str) -> bool:
         from tools.mcp_tool import is_mcp_tool_parallel_safe
 
         return is_mcp_tool_parallel_safe(tool_name)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 

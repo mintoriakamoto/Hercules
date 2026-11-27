@@ -244,7 +244,7 @@ def _permitted_host_read_target(p: Path, ctx: ResolveContext) -> Optional[Path]:
     if _is_local_terminal_backend():
         try:
             return p.resolve()
-        except (AttributeError, ValueError):
+        except Exception:
             return p
 
     from tools.credential_files import from_agent_visible_cache_path
@@ -252,7 +252,7 @@ def _permitted_host_read_target(p: Path, ctx: ResolveContext) -> Optional[Path]:
     host_candidate = Path(from_agent_visible_cache_path(str(p)))
     try:
         real = host_candidate.resolve()
-    except (AttributeError, ValueError):
+    except Exception:
         return None
     for root in _media_cache_roots():
         try:
@@ -270,7 +270,7 @@ def _get_active_env(task_id: Optional[str]):
         from tools.terminal_tool import get_active_env
 
         return get_active_env(task_id)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
 

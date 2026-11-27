@@ -525,7 +525,7 @@ def _gateway_setup_hint() -> str:
         from gateway.platforms.base import GATEWAY_SECRET_CAPTURE_UNSUPPORTED_MESSAGE
 
         return GATEWAY_SECRET_CAPTURE_UNSUPPORTED_MESSAGE
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return f"Secure secret entry is not available. Load this skill in the local CLI to be prompted, or add the key to {display_hercules_home()}/.env manually."
 
 
@@ -573,7 +573,7 @@ def _get_category_from_path(skill_path: Path) -> Optional[str]:
         from agent.skill_utils import get_external_skills_dirs
 
         dirs_to_check.extend(get_external_skills_dirs())
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     for skills_dir in dirs_to_check:
         try:
@@ -638,7 +638,7 @@ def _get_session_platform() -> str:
         from gateway.session_context import get_session_env
 
         return get_session_env("HERCULES_SESSION_PLATFORM") or ""
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return ""
 
 
@@ -669,7 +669,7 @@ def _is_skill_disabled(name: str, platform: Optional[str] = None) -> bool:
                 # in sync with agent.skill_utils.get_disabled_skill_names.
                 return name in platform_disabled or name in global_disabled
         return name in global_disabled
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -1005,7 +1005,7 @@ def _serve_plugin_skill(
     parsed_frontmatter: Dict[str, Any] = {}
     try:
         parsed_frontmatter, _ = _parse_frontmatter(content)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     if not skill_matches_platform(parsed_frontmatter):
@@ -1059,7 +1059,7 @@ def _serve_plugin_skill(
                 skill_md.parent,
                 session_id=session_id,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug(
                 "Could not preprocess plugin skill %s:%s",
                 namespace,
@@ -1234,7 +1234,7 @@ def skill_view(
         def _record(sd: Optional[Path], smd: Path) -> None:
             try:
                 key = smd.resolve()
-            except (AttributeError, ValueError):
+            except Exception:
                 key = smd
             if key in seen_md:
                 return
@@ -1286,7 +1286,7 @@ def skill_view(
                 try:
                     fm_content = found_skill_md.read_text(encoding="utf-8")
                     fm, _ = _parse_frontmatter(fm_content)
-                except (AttributeError, ValueError):
+                except Exception:
                     fm = {}
                 if fm.get("name") == name:
                     _record(found_skill_md.parent, found_skill_md)
@@ -1390,7 +1390,7 @@ def skill_view(
         parsed_frontmatter: Dict[str, Any] = {}
         try:
             parsed_frontmatter, _ = _parse_frontmatter(content)
-        except (AttributeError, ValueError):
+        except Exception:
             parsed_frontmatter = {}
 
         if not skill_matches_platform(parsed_frontmatter):
@@ -1511,7 +1511,7 @@ def skill_view(
                 from tools.skill_manager_tool import mark_background_review_skill_read
 
                 mark_background_review_skill_read(target_file)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug(
                     "Could not record background-review skill read for %s",
                     target_file,
@@ -1647,7 +1647,7 @@ def skill_view(
                 from tools.env_passthrough import register_env_passthrough
 
                 register_env_passthrough(available_env_names)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug(
                     "Could not register env passthrough for skill %s",
                     skill_name,
@@ -1668,7 +1668,7 @@ def skill_view(
                 missing_cred_files = register_credential_files(required_cred_files_raw)
                 if missing_cred_files:
                     setup_needed = True
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug(
                     "Could not register credential files for skill %s",
                     skill_name,
@@ -1685,7 +1685,7 @@ def skill_view(
                     skill_dir,
                     session_id=task_id,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug(
                     "Could not preprocess skill content for %s",
                     skill_name,
@@ -1728,7 +1728,7 @@ def skill_view(
             from tools.skill_manager_tool import mark_background_review_skill_read
 
             mark_background_review_skill_read(skill_md)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug(
                 "Could not record background-review skill read for %s",
                 skill_md,
@@ -1890,7 +1890,7 @@ def _skill_view_with_bump(args, **kw):
                 # to act on it — that counts as use, not just a browse/view.
                 # Curator's stale timer keys off last_used_at (see agent/curator.py).
                 bump_use(str(resolved))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     return result
 

@@ -194,7 +194,7 @@ def _model_metadata_disk_cache_age_seconds() -> Optional[float]:
         if age < 0:
             return None
         return age
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
 
@@ -552,7 +552,7 @@ try:
         _host = _pp.get_hostname()
         if _host and _host not in _URL_TO_PROVIDER:
             _URL_TO_PROVIDER[_host] = _pp.name
-except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+except Exception:
     pass
 
 
@@ -1597,7 +1597,7 @@ def query_ollama_num_ctx(model: str, base_url: str, api_key: str = "") -> Option
 
     try:
         server_type = detect_local_server_type(base_url, api_key=api_key)
-    except (AttributeError, ValueError):
+    except Exception:
         return None
     if server_type != "ollama":
         return None
@@ -1651,7 +1651,7 @@ def query_ollama_supports_vision(
     try:
         if detect_local_server_type(base_url, api_key=api_key) != "ollama":
             return None
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
     server_url = _localhost_to_ipv4(base_url.rstrip("/"))
@@ -1770,7 +1770,7 @@ def _query_ollama_api_show_uncached(
                                     return ctx
                             except ValueError:
                                 pass
-    except (IndexError, KeyError, ValueError):
+    except Exception:
         pass
     return None
 
@@ -1867,7 +1867,7 @@ def _query_local_context_length_uncached(
 
     try:
         server_type = detect_local_server_type(base_url, api_key=api_key)
-    except (AttributeError, ValueError):
+    except Exception:
         server_type = None
 
     try:
@@ -1948,7 +1948,7 @@ def _query_local_context_length_uncached(
                         )
                         if ctx and isinstance(ctx, (int, float)):
                             return int(ctx)
-    except (IndexError, KeyError, ValueError):
+    except Exception:
         pass
 
     return None
@@ -2184,7 +2184,7 @@ def get_model_context_length(
                     api_key=rt.get("api_key", "") or "",
                     provider=agg_provider,
                 )
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             logger.debug(
                 "MoA aggregator context-length resolution failed", exc_info=True
             )
@@ -2205,7 +2205,7 @@ def get_model_context_length(
             )
             if cp_ctx:
                 return cp_ctx
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # fall through to probing
 
     # Normalise provider-prefixed model names (e.g. "local:model-name" →
@@ -2413,7 +2413,7 @@ def get_model_context_length(
             ctx = get_copilot_model_context(model, api_key=api_key)
             if ctx:
                 return ctx
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Fall through to models.dev
 
     if effective_provider == "openai-codex":

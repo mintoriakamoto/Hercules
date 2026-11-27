@@ -87,7 +87,7 @@ def write_approval_enabled(subsystem: str) -> bool:
 
         cfg = load_config()
         raw = cfg_get(cfg, subsystem, CONFIG_KEY, default=False)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
     return _normalize_enabled(raw)
 
@@ -205,7 +205,7 @@ def pending_count(subsystem: str) -> int:
         return 0
     try:
         return sum(1 for _ in d.glob("*.json"))
-    except (AttributeError, ValueError):
+    except Exception:
         return 0
 
 
@@ -226,7 +226,7 @@ def current_origin() -> str:
         from tools.skill_provenance import get_current_write_origin
 
         return get_current_write_origin()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return "foreground"
 
 
@@ -344,7 +344,7 @@ def _interactive_approval_available() -> bool:
         from tools.terminal_tool import _get_approval_callback
 
         return _get_approval_callback() is not None
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -492,7 +492,7 @@ def skill_pending_diff(record: Dict[str, Any]) -> str:
             try:
                 if p.exists():
                     current = p.read_text(encoding="utf-8")
-            except (AttributeError, ValueError):
+            except Exception:
                 current = ""
 
     if action == "edit":

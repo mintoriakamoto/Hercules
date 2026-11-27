@@ -170,7 +170,7 @@ def _get_process_start_time(pid: int) -> Optional[int]:
         import psutil  # type: ignore
 
         return int(round(psutil.Process(pid).create_time() * 100))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return None
 
 
@@ -216,7 +216,7 @@ def _read_process_cmdline(pid: int) -> Optional[str]:
         cmdline_parts = proc.cmdline()
         if cmdline_parts:
             return " ".join(cmdline_parts)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     return None
@@ -625,7 +625,7 @@ def _pid_exists(pid: int) -> bool:
                 return False
         except getattr(psutil, "NoSuchProcess", ()):
             return False
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         return bool(psutil.pid_exists(int(pid)))
 
@@ -989,7 +989,7 @@ def remove_pid_file() -> None:
                 return
         path.unlink(missing_ok=True)
         _clear_running_pid_cache()
-    except (IndexError, KeyError, ValueError):
+    except Exception:
         pass
 
 

@@ -46,7 +46,7 @@ def _get_anthropic_sdk():
             _lazy_ensure("provider.anthropic", prompt=False)
         except ImportError:
             pass
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             # FeatureUnavailable — fall through to ImportError handling below
             pass
         try:
@@ -219,7 +219,7 @@ def _resolve_positive_anthropic_max_tokens(value) -> Optional[int]:
 
         if not math.isfinite(value):
             return None
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return None
     floored = int(value)  # truncates toward zero for floats
     return floored if floored > 0 else None

@@ -78,7 +78,7 @@ def _prune_replaced_custom_model_config_credentials(
                 retained.append(entry)
             if changed:
                 write_credential_pool(pool_key, retained, removed_ids=removed_ids)
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return
 
 
@@ -100,7 +100,7 @@ def _prompt_auth_credentials_choice(title: str) -> str:
         if idx >= 0:
             print()
             return ("use", "reauth", "cancel")[idx]
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
     print(title)
@@ -237,7 +237,7 @@ def _model_flow_moa(config, current_model=""):
         idx = _curses_prompt_choice(
             "Select a Mixture of Agents preset:", rows, default_idx
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         print("Select a Mixture of Agents preset:")
         for i, row in enumerate(rows, 1):
             marker = "→" if (i - 1) == default_idx else " "
@@ -354,7 +354,7 @@ def _model_flow_openai_codex(config, current_model=""):
 
             _codex_creds = resolve_codex_runtime_credentials()
             _codex_token = _codex_creds.get("api_key")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     codex_models = get_codex_model_ids(access_token=_codex_token)
@@ -445,7 +445,7 @@ def _model_flow_xai_oauth(_config, current_model="", *, args=None):
     try:
         creds = resolve_xai_oauth_runtime_credentials()
         base_url = (creds.get("base_url") or "").strip().rstrip("/") or base_url
-    except (ZeroDivisionError):
+    except (Exception):
         pass
 
     models = list(
@@ -2687,7 +2687,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
                 from agent.models_dev import list_agentic_models
 
                 mdev_models = list_agentic_models(provider_id)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             if mdev_models:
                 seen = {m.lower() for m in mdev_models}
@@ -2712,7 +2712,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
             from agent.models_dev import list_agentic_models
 
             mdev_models = list_agentic_models(provider_id)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         if mdev_models:
@@ -2830,7 +2830,7 @@ def _model_flow_anthropic(config, current_model=""):
         cc_creds = read_claude_code_credentials()
         if cc_creds and is_claude_code_token_valid(cc_creds):
             cc_available = True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Stale-OAuth guard: if the only existing cred is an expired OAuth token

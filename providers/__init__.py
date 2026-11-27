@@ -95,7 +95,7 @@ def _user_plugins_dir() -> Path | None:
 
         d = get_hercules_home() / "plugins" / "model-providers"
         return d if d.is_dir() else None
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
 
@@ -187,5 +187,5 @@ def _discover_providers() -> None:
                 logger.warning(
                     "Failed to import legacy provider module %s: %s", modname, exc
                 )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass

@@ -291,7 +291,7 @@ class WecomCallbackAdapter(BasePlatformAdapter):
                 crypt = self._crypt_for_app(app)
                 plain = crypt.verify_url(msg_signature, timestamp, nonce, echostr)
                 return web.Response(text=plain, content_type="text/plain")
-            except (AttributeError, ValueError):
+            except Exception:
                 continue
         return web.Response(status=403, text="signature verification failed")
 

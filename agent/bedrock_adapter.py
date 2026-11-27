@@ -46,7 +46,7 @@ try:
     from tools.lazy_deps import ensure
 
     ensure("provider.bedrock", prompt=False)
-except (ImportError, ModuleNotFoundError):
+except Exception:
     pass  # lazy_deps unavailable or install failed — let downstream imports surface the real error
 
 
@@ -78,7 +78,7 @@ def _require_boto3():
     # version pinned in pyproject.toml.
     try:
         version = tuple(int(x) for x in boto3.__version__.split(".")[:3])
-    except (AttributeError, ValueError):
+    except Exception:
         return boto3  # can't parse — don't block on version check
     if version < _MIN_BOTO3_VERSION:
         raise RuntimeError(
@@ -325,7 +325,7 @@ def resolve_aws_auth_env_var(env: Optional[Dict[str, str]] = None) -> Optional[s
             resolved = credentials.get_frozen_credentials()
             if resolved and resolved.access_key:
                 return "iam-role"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return None
 
@@ -357,7 +357,7 @@ def has_aws_credentials(env: Optional[Dict[str, str]] = None) -> bool:
             resolved = credentials.get_frozen_credentials()
             if resolved and resolved.access_key:
                 return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return False
 
@@ -388,7 +388,7 @@ def resolve_bedrock_region(env: Optional[Dict[str, str]] = None) -> str:
         region = botocore.session.get_session().get_config_variable("region")
         if region:
             return region
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return "us-east-1"
 

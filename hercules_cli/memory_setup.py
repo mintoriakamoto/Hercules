@@ -168,7 +168,7 @@ def _get_available_providers() -> list:
         from plugins.memory import discover_memory_providers, load_memory_provider
 
         raw = discover_memory_providers()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         raw = []
 
     results = []
@@ -177,7 +177,7 @@ def _get_available_providers() -> list:
             provider = load_memory_provider(name)
             if not provider:
                 continue
-        except (AttributeError, ValueError):
+        except Exception:
             continue
 
         schema = (

@@ -1148,7 +1148,7 @@ async def qr_login(
                         qr.add_data(qr_scan_data)
                         qr.make(fit=True)
                         qr.print_ascii(invert=True)
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         pass
                 except Exception as exc:
                     logger.error("weixin: QR refresh failed: %s", exc)

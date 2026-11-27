@@ -501,7 +501,7 @@ def run_conversation(
                 moa_config = _decoded_moa_config
                 if persist_user_message is None:
                     persist_user_message = _decoded_message
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     # ── Per-turn setup (the prologue) ──
@@ -1008,7 +1008,7 @@ def run_conversation(
             agent._api_call_count = api_call_count
             try:
                 agent.iteration_budget.refund()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             break
 
@@ -1261,7 +1261,7 @@ def run_conversation(
                     api_kwargs = _llm_request_mw.payload
                     _original_api_kwargs = _llm_request_mw.original_payload
                     _llm_middleware_trace = _llm_request_mw.trace
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     _original_api_kwargs = dict(api_kwargs)
                     _llm_middleware_trace = []
 
@@ -2762,7 +2762,7 @@ def run_conversation(
                         or getattr(api_error, "message", None)
                         or str(api_error)
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 _err_status = getattr(api_error, "status_code", None)
                 _IMAGE_REJECTION_PHRASES = (
@@ -2968,7 +2968,7 @@ def run_conversation(
                         agent._oauth_1m_beta_disabled = True
                         try:
                             agent._anthropic_client.close()
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
                         agent._rebuild_anthropic_client()
                         agent._vprint(
@@ -4831,7 +4831,7 @@ def run_conversation(
                 if first_line and getattr(agent, "_delegate_depth", 0) > 0:
                     try:
                         agent.tool_progress_callback("_thinking", first_line)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                 elif _think_text:
                     try:
@@ -5267,7 +5267,7 @@ def run_conversation(
                 if agent.stream_delta_callback:
                     try:
                         agent.stream_delta_callback(None)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
 
                 agent._execute_tool_calls(
@@ -5293,7 +5293,7 @@ def run_conversation(
                             try:
                                 agent.stream_delta_callback(final_response)
                                 agent.stream_delta_callback(None)
-                            except (AttributeError, ValueError):
+                            except Exception:
                                 pass
                     break
 
@@ -5792,7 +5792,7 @@ def run_conversation(
                         )
                     else:
                         _verify_nudge = None
-                except (AttributeError, ImportError, ModuleNotFoundError):
+                except Exception:
                     logger.debug("verification stop-loop check failed", exc_info=True)
                     _verify_nudge = None
 
@@ -5875,7 +5875,7 @@ def run_conversation(
                             final_response=final_response,
                             changed_paths=_edited,
                         )
-                except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+                except Exception:
                     logger.debug("pre_verify hook check failed", exc_info=True)
                     _verify_nudge2 = None
 

@@ -668,7 +668,7 @@ def create_task(payload: CreateTaskBody, board: Optional[str] = Query(None)):
                 running, message = _check_dispatcher_presence()
                 if not running and message:
                     body["warning"] = message
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 # Probe failure must never block the create itself.
                 pass
         return body
@@ -1808,7 +1808,7 @@ def get_config():
         from hercules_cli.config import load_config
 
         cfg = load_config() or {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         cfg = {}
     dash_cfg = cfg.get("dashboard") or {}
     # dashboard.kanban may itself be a dict; fall back to {}.
@@ -1852,7 +1852,7 @@ def _configured_home_channels() -> list[dict]:
         return []
     try:
         gw_cfg = load_gateway_config()
-    except (AttributeError, ValueError):
+    except Exception:
         return []
     result: list[dict] = []
     for platform, pcfg in gw_cfg.platforms.items():
@@ -1876,7 +1876,7 @@ def _active_profile_name() -> str:
         from hercules_cli.profiles import get_active_profile_name
 
         return get_active_profile_name() or "default"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return "default"
 
 
@@ -2414,7 +2414,7 @@ def get_orchestration_settings():
         from hercules_cli.config import load_config
 
         cfg = load_config() or {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         cfg = {}
     kanban_cfg = (cfg.get("kanban") or {}) if isinstance(cfg, dict) else {}
     explicit_orch = (kanban_cfg.get("orchestrator_profile") or "").strip()
@@ -2433,7 +2433,7 @@ def get_orchestration_settings():
             resolved_orch = active_default
         if not resolved_default or not profiles_mod.profile_exists(resolved_default):
             resolved_default = active_default
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         active_default = "default"
         if not resolved_orch:
             resolved_orch = active_default
@@ -2489,7 +2489,7 @@ def set_orchestration_settings(payload: OrchestrationSettingsBody):
                     )
             except HTTPException:
                 raise
-            except (AttributeError, ValueError):
+            except Exception:
                 pass  # fail open if the lookup itself errors
         kanban_section["orchestrator_profile"] = name
 
@@ -2504,7 +2504,7 @@ def set_orchestration_settings(payload: OrchestrationSettingsBody):
                     )
             except HTTPException:
                 raise
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         kanban_section["default_assignee"] = name
 
@@ -2599,5 +2599,5 @@ async def stream_events(ws: WebSocket):
         log.warning("Kanban event stream error: %s", exc)
         try:
             await ws.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass

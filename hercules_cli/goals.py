@@ -650,14 +650,14 @@ def _pid_alive(pid: int) -> bool:
         from gateway.status import _pid_exists
 
         return bool(_pid_exists(int(pid)))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     # Last-resort fallback if gateway.status is unavailable: psutil directly.
     try:
         import psutil  # type: ignore
 
         return bool(psutil.pid_exists(int(pid)))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return False
 
 
@@ -675,7 +675,7 @@ def _session_waiting(session_id: str) -> bool:
         from tools.process_registry import process_registry
 
         return bool(process_registry.is_session_waiting(session_id))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return False
 
 
@@ -701,7 +701,7 @@ def _goal_judge_max_tokens() -> int:
         value = int(value)
         if value > 0:
             return value
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     return DEFAULT_JUDGE_MAX_TOKENS
 

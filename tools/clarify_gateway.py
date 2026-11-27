@@ -286,7 +286,7 @@ def get_clarify_timeout() -> int:
         cfg = load_config() or {}
         agent_cfg = cfg.get("agent", {}) or {}
         return int(agent_cfg.get("clarify_timeout", 3600))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return 3600
 
 

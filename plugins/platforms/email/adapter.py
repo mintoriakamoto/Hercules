@@ -570,7 +570,7 @@ class EmailAdapter(BasePlatformAdapter):
             smtp = smtp_cls(host, port, timeout=SMTP_CONNECT_TIMEOUT)
             try:
                 smtp.starttls(context=ctx)
-            except (AttributeError, ValueError):
+            except Exception:
                 smtp.close()
                 raise
             return smtp
@@ -782,7 +782,7 @@ class EmailAdapter(BasePlatformAdapter):
             finally:
                 try:
                     imap.logout()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
         except Exception as e:
             logger.error("[Email] IMAP fetch error: %s", e)
@@ -1010,7 +1010,7 @@ class EmailAdapter(BasePlatformAdapter):
         finally:
             try:
                 smtp.quit()
-            except (AttributeError, ValueError):
+            except Exception:
                 smtp.close()
 
         logger.info("[Email] Sent reply to %s (subject: %s)", to_addr, subject)
@@ -1142,7 +1142,7 @@ class EmailAdapter(BasePlatformAdapter):
         finally:
             try:
                 smtp.quit()
-            except (AttributeError, ValueError):
+            except Exception:
                 smtp.close()
 
         logger.info(
@@ -1224,7 +1224,7 @@ class EmailAdapter(BasePlatformAdapter):
         finally:
             try:
                 smtp.quit()
-            except (AttributeError, ValueError):
+            except Exception:
                 smtp.close()
 
         return msg_id
@@ -1300,7 +1300,7 @@ async def _standalone_send(
             from tools.send_message_tool import _error as _e
 
             return _e(f"Email send failed: {e}")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return {"error": f"Email send failed: {e}"}
 
 

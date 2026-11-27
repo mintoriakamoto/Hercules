@@ -171,7 +171,7 @@ def _core_tool_names() -> frozenset[str]:
         from toolsets import _HERCULES_CORE_TOOLS
 
         return frozenset(_HERCULES_CORE_TOOLS)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return frozenset()
 
 
@@ -198,7 +198,7 @@ def is_deferrable_tool_name(name: str) -> bool:
             return True
         # Non-MCP, non-core → plugin tool, eligible.
         return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -337,7 +337,7 @@ def _classify_source(name: str) -> Tuple[str, str]:
         if entry.toolset.startswith("mcp-"):
             return ("mcp", entry.toolset)
         return ("plugin", entry.toolset)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return ("other", "")
 
 

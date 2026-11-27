@@ -603,7 +603,7 @@ def run_bot() -> int:
             try:
                 page.evaluate(_enable_captions_js())
                 state.set(captions_enabled_attempted=True)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             try:
                 page.evaluate(_CAPTION_OBSERVER_JS)
@@ -809,7 +809,7 @@ def _detect_admission(page) -> bool:
     """
     try:
         return bool(page.evaluate(probe))
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 
@@ -828,7 +828,7 @@ def _detect_denied(page) -> bool:
     """
     try:
         return bool(page.evaluate(probe))
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 
@@ -866,7 +866,7 @@ def _click_join(page, state: _BotState) -> None:
                 if label == "Ask to join":
                     state.set(lobby_waiting=True)
                 break
-        except (AttributeError, ValueError):
+        except Exception:
             continue
 
 

@@ -304,7 +304,7 @@ def _do_upload(
         from tools import lazy_deps
 
         lazy_deps.ensure("tool.trace_upload", prompt=False)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # lazy-install unavailable/declined — fall through to the import,
         # which surfaces the install hint below if the package is missing.
         pass

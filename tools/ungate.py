@@ -78,7 +78,7 @@ def open_guardrails_enabled() -> bool:
             from utils import is_truthy_value
 
             opted_in = is_truthy_value(raw)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             opted_in = str(raw).strip().lower() not in {"0", "false", "no", "off"}
         if not opted_in:
             return False
@@ -121,7 +121,7 @@ def apply() -> None:
         # tools.approval may already have been imported (and frozen) before
         # bootstrap ran, so set the frozen flag directly as well.
         ap._YOLO_MODE_FROZEN = True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     _applied = True

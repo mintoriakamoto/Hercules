@@ -191,7 +191,7 @@ def _looks_like_anthropic_path(url: str) -> bool:
         parsed = urlparse(url)
         path = (parsed.path or "").lower().rstrip("/")
         return path.endswith("/anthropic") or "/anthropic/" in path + "/"
-    except (ValueError, ZeroDivisionError):
+    except Exception:
         return False
 
 

@@ -166,7 +166,7 @@ async def build_channel_directory(adapters: Dict[Any, Any]) -> Dict[str, Any]:
                 platforms[entry.name] = await asyncio.to_thread(
                     _build_from_sessions, entry.name
                 )
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Overlay user-maintained friendly names before persisting.

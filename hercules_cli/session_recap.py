@@ -95,7 +95,7 @@ def _tool_call_name_and_args(tool_call: Any) -> Tuple[str, Mapping[str, Any]]:
             parsed = json.loads(raw_args)
             if isinstance(parsed, Mapping):
                 return name, parsed
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return name, {}
     return name, {}
 

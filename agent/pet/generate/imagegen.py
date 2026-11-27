@@ -106,7 +106,7 @@ def resolve_provider(
     active = None
     try:
         active = get_active_provider()
-    except (AttributeError, ValueError):
+    except Exception:
         active = None
     if active is not None:
         name = getattr(active, "name", "")

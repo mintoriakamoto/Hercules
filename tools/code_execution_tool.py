@@ -1583,7 +1583,7 @@ def execute_code(
                 if touch_activity_if_due is not None:
                     try:
                         touch_activity_if_due(_activity_state, "execute_code running")
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                 try:
                     proc.wait(timeout=min(poll_interval, max(0.0, deadline - now)))
@@ -1680,17 +1680,17 @@ def execute_code(
             if proc.stdout:
                 try:
                     proc.stdout.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if proc.stderr:
                 try:
                     proc.stderr.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             # Ensure process is terminated
             try:
                 proc.terminate()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     except Exception as exc:
@@ -1805,7 +1805,7 @@ def _load_config() -> dict:
 
         cfg = read_raw_config().get("code_execution", {})
         return cfg if isinstance(cfg, dict) else {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 

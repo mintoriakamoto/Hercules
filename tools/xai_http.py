@@ -47,7 +47,7 @@ def has_xai_credentials() -> bool:
         tokens = xai_state.get("tokens") if isinstance(xai_state, dict) else None
         access_token = tokens.get("access_token") if isinstance(tokens, dict) else None
         return bool(str(access_token or "").strip())
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return False
 
 
@@ -64,7 +64,7 @@ def get_env_value(name: str, default=None):
         value = _hercules_get_env_value(name)
         if value is not None:
             return value
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return os.environ.get(name, default)
 
@@ -86,7 +86,7 @@ def _load_config_section(section_name: str) -> Dict[str, Any]:
         cfg = load_config()
         section = cfg.get(section_name) if isinstance(cfg, dict) else None
         return section if isinstance(section, dict) else {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -217,7 +217,7 @@ def maybe_mark_xai_storage_notice_seen(section_name: str) -> Optional[str]:
             return None
         marker.write_text(datetime.datetime.now(datetime.UTC).isoformat() + "\n")
         return notice
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return notice
 
 

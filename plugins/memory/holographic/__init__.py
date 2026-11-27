@@ -379,7 +379,7 @@ def _load_plugin_config() -> dict:
         with open(config_path, encoding="utf-8-sig") as f:
             all_config = yaml.safe_load(f) or {}
         return cfg_get(all_config, "plugins", "hercules-memory-store", default={}) or {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -426,7 +426,7 @@ class HolographicMemoryProvider(MemoryProvider):
             existing["plugins"]["hercules-memory-store"] = values
             with open(config_path, "w", encoding="utf-8") as f:
                 yaml.dump(existing, f, default_flow_style=False)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     def get_config_schema(self):
@@ -585,7 +585,7 @@ class HolographicMemoryProvider(MemoryProvider):
             if llm is not None and getattr(llm, "enabled", False):
                 try:
                     expanded = llm.expand_query(query)
-                except (AttributeError, ValueError):
+                except Exception:
                     expanded = None
                 if expanded and expanded.strip().lower() != query.strip().lower():
                     extra = self._retriever.search(
@@ -818,7 +818,7 @@ class HolographicMemoryProvider(MemoryProvider):
                     importance=int(ins.get("importance", 8)),
                 )
                 made += 1
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 continue
         result["insights"] = made
         if made:
@@ -1183,7 +1183,7 @@ class HolographicMemoryProvider(MemoryProvider):
                     )
                     if res.get("action") in ("new", "update"):
                         stored += 1
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     continue
             logger.info(
                 "LLM salience: extracted %d facts (%d new/updated)", len(facts), stored

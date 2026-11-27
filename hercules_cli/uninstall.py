@@ -461,7 +461,7 @@ def _is_default_hercules_home(hercules_home: Path) -> bool:
         from hercules_constants import get_default_hercules_root
 
         return hercules_home.resolve() == get_default_hercules_root().resolve()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 

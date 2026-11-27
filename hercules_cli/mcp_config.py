@@ -254,7 +254,7 @@ def _resolve_mcp_server_config(config: dict) -> dict:
         from hercules_cli.env_loader import load_hercules_dotenv
 
         load_hercules_dotenv()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return _interpolate_env_vars(config)
 
@@ -652,7 +652,7 @@ def cmd_mcp_remove(args):
 
         get_manager().remove(name)
         _success("Cleaned up OAuth tokens")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 

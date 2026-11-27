@@ -43,7 +43,7 @@ try:
     from dingtalk_stream.frames import CallbackMessage, AckMessage
 
     DINGTALK_STREAM_AVAILABLE = True
-except (ImportError, ModuleNotFoundError):
+except Exception:
     DINGTALK_STREAM_AVAILABLE = False
     dingtalk_stream = None  # type: ignore[assignment]
     ChatbotMessage = None  # type: ignore[assignment]
@@ -86,7 +86,7 @@ try:
     from alibabacloud_tea_util import models as tea_util_models
 
     CARD_SDK_AVAILABLE = True
-except (ImportError, ModuleNotFoundError):
+except Exception:
     CARD_SDK_AVAILABLE = False
     dingtalk_card_client = None
     dingtalk_card_models = None
@@ -136,7 +136,7 @@ def check_dingtalk_requirements() -> bool:
             from tools.lazy_deps import ensure as _lazy_ensure
 
             _lazy_ensure("platform.dingtalk", prompt=False)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
         try:
             import dingtalk_stream as _ds
@@ -460,7 +460,7 @@ class DingTalkAdapter(BasePlatformAdapter):
             if raw:
                 try:
                     loaded = json.loads(raw)
-                except (AttributeError, ValueError):
+                except Exception:
                     loaded = [part.strip() for part in raw.splitlines() if part.strip()]
                     if not loaded:
                         loaded = [
@@ -1582,7 +1582,7 @@ class _IncomingHandler(
         """Wrapper that catches exceptions from _on_message."""
         try:
             await self._adapter._on_message(chatbot_msg)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.exception(
                 "[%s] Error processing incoming message", self._adapter.name
             )
@@ -1649,7 +1649,7 @@ async def _standalone_send(
             from tools.send_message_tool import _error as _redact_error
 
             return _redact_error(f"DingTalk send failed: {e}")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return {"error": f"DingTalk send failed: {e}"}
 
 

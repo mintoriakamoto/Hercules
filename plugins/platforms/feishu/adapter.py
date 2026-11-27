@@ -1370,7 +1370,7 @@ def _run_official_feishu_ws_client(ws_client: Any, adapter: Any) -> None:
             setattr(ws_client, "_reconnect_interval", adapter._ws_reconnect_interval)
             if adapter._ws_ping_interval is not None:
                 setattr(ws_client, "_ping_interval", adapter._ws_ping_interval)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[Feishu] Failed to apply websocket runtime overrides", exc_info=True
             )
@@ -1397,7 +1397,7 @@ def _run_official_feishu_ws_client(ws_client: Any, adapter: Any) -> None:
     _apply_runtime_ws_overrides()
     try:
         ws_client.start()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     finally:
         ws_client_module.websockets.connect = original_connect
@@ -1410,11 +1410,11 @@ def _run_official_feishu_ws_client(ws_client: Any, adapter: Any) -> None:
             loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
         try:
             loop.stop()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         try:
             loop.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         adapter._ws_thread_loop = None
 
@@ -2025,7 +2025,7 @@ class FeishuAdapter(BasePlatformAdapter):
             return
         try:
             setattr(self._ws_client, "_auto_reconnect", False)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         finally:
             self._ws_client = None
@@ -3362,7 +3362,7 @@ class FeishuAdapter(BasePlatformAdapter):
         if action_value:
             try:
                 synthetic_text += f" {json.dumps(action_value, ensure_ascii=False)}"
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         sender_id = SimpleNamespace(open_id=open_id, user_id=None, union_id=None)
@@ -3484,7 +3484,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 getattr(response, "code", None),
                 getattr(response, "msg", None),
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.warning(
                 "[Feishu] Add reaction %s on %s raised",
                 emoji_type,
@@ -3518,7 +3518,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 getattr(response, "code", None),
                 getattr(response, "msg", None),
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.warning(
                 "[Feishu] Remove reaction %s on %s raised",
                 reaction_id,
@@ -4058,7 +4058,7 @@ class FeishuAdapter(BasePlatformAdapter):
             content = f"{timestamp}{nonce}{self._encrypt_key}{body_str}"
             computed = hashlib.sha256(content.encode("utf-8")).hexdigest()
             return hmac.compare_digest(computed, signature)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[Feishu] Signature verification raised an exception", exc_info=True
             )
@@ -4714,7 +4714,7 @@ class FeishuAdapter(BasePlatformAdapter):
                         now + _FEISHU_SENDER_NAME_TTL_SECONDS,
                     )
                     return name
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug(
                 "[Feishu] Failed to resolve sender name for %s",
                 sender_id,
@@ -4827,7 +4827,7 @@ class FeishuAdapter(BasePlatformAdapter):
     def _log_background_failure(future: Any) -> None:
         try:
             future.result()
-        except (AttributeError, ValueError):
+        except Exception:
             logger.exception("[Feishu] Background inbound processing failed")
 
     # =========================================================================
@@ -5891,7 +5891,7 @@ def _render_qr(url: str) -> bool:
         qr.make(fit=True)
         qr.print_ascii(invert=True)
         return True
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 

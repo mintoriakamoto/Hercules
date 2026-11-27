@@ -517,7 +517,7 @@ def _compute_tool_definitions(
 
                 schema_fn = getattr(_dt, _discord_schema_fns[discord_tool_name])
                 dynamic = schema_fn()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 dynamic = None
             if dynamic is None:
                 filtered_tools = [
@@ -1328,7 +1328,7 @@ def handle_function_call(
                 from tools.file_tools import notify_other_tool_call
 
                 notify_other_tool_call(task_id or "default")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass  # file_tools may not be loaded yet
 
         # Measure tool dispatch latency so post_tool_call and
@@ -1350,7 +1350,7 @@ def handle_function_call(
                 turn_id=turn_id or "",
                 tool_call_id=tool_call_id or "",
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             reset_current_observability_context = None
         try:
             if function_name == "execute_code":
@@ -1402,7 +1402,7 @@ def handle_function_call(
             ):
                 try:
                     reset_current_observability_context(_approval_tokens)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
         duration_ms = int((time.monotonic() - _dispatch_start) * 1000)
 

@@ -158,7 +158,7 @@ def _get_skin():
         from hercules_cli.skin_engine import get_active_skin
 
         return get_active_skin()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
 
@@ -191,7 +191,7 @@ def get_tool_emoji(tool_name: str, default: str = "⚡") -> str:
         emoji = registry.get_emoji(tool_name, default="")
         if emoji:
             return emoji
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     # 3. Hardcoded fallback
     return default
@@ -923,7 +923,7 @@ def _emit_inline_diff(diff_text: str, print_fn) -> bool:
         for line in diff_text.rstrip("\n").splitlines():
             print_fn(line)
         return True
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 
@@ -1183,7 +1183,7 @@ class KawaiiSpinner:
         if self._print_fn is not None:
             try:
                 self._print_fn(text)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             return
         try:

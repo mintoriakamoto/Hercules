@@ -57,7 +57,7 @@ def _skin_color(key: str, fallback: str) -> str:
         from hercules_cli.skin_engine import get_active_skin
 
         return get_active_skin().get_color(key, fallback)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return fallback
 
 
@@ -188,7 +188,7 @@ def _should_animate_banner() -> bool:
     try:
         if not sys.stdout.isatty():
             return False
-    except (AttributeError, ValueError):
+    except Exception:
         return False
     return True
 
@@ -206,7 +206,7 @@ def render_logo(console: "Console", *, animate: Optional[bool] = None) -> None:
 
         _bskin = get_active_skin()
         skin_logo = getattr(_bskin, "banner_logo", None)
-    except (AttributeError, ImportError, ModuleNotFoundError):
+    except Exception:
         skin_logo = None
     if skin_logo:
         console.print(skin_logo)
@@ -246,7 +246,7 @@ def get_available_skills() -> Dict[str, List[str]]:
         from tools.skills_tool import _find_all_skills
 
         all_skills = _find_all_skills()  # already filtered
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
     skills_by_category: Dict[str, List[str]] = {}
@@ -445,7 +445,7 @@ def check_for_updates() -> Optional[int]:
 
         if detect_install_method(get_project_root()) == "docker":
             return None
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Read cache — invalidate if the embedded rev OR installed version has
@@ -552,7 +552,7 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
             baked = get_build_sha(short=8)
             if baked:
                 return {"upstream": baked, "local": baked, "ahead": 0}
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return None
 
@@ -567,7 +567,7 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
             baked = get_build_sha(short=8)
             if baked:
                 return {"upstream": baked, "local": baked, "ahead": 0}
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return None
 
@@ -819,7 +819,7 @@ def build_welcome_banner(
             if hasattr(_bskin, "banner_hero") and _bskin.banner_hero
             else HERCULES_PILLARS
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _bskin = None
         _hero = HERCULES_PILLARS
     left_lines = ["", _hero, ""]
@@ -838,7 +838,7 @@ def build_welcome_banner(
                 _agg = _preset.get("aggregator") or {}
                 _am = str(_agg.get("model") or "")
                 agg_label = _am.split("/")[-1] if "/" in _am else _am
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             agg_label = ""
         if len(preset_name) > 28:
             preset_name = preset_name[:25] + "..."
@@ -939,7 +939,7 @@ def build_welcome_banner(
         from tools.mcp_tool import get_mcp_status
 
         mcp_status = get_mcp_status()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         mcp_status = []
 
     if mcp_status:
@@ -1037,7 +1037,7 @@ def build_welcome_banner(
                 f"[bold {accent}]Runtime:[/] [{text}]codex app-server[/] "
                 f"[dim {dim}](terminal/file ops/MCP run inside codex)[/]"
             )
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
     # Show active profile name when not 'default'
     try:
@@ -1046,7 +1046,7 @@ def build_welcome_banner(
         _profile_name = get_active_profile_name()
         if _profile_name and _profile_name != "default":
             right_lines.append(f"[bold {accent}]Profile:[/] [{text}]{_profile_name}[/]")
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass  # Never break the banner over a profiles.py bug
 
     right_lines.append(f"[dim {dim}]{' · '.join(summary_parts)}[/]")
@@ -1075,7 +1075,7 @@ def build_welcome_banner(
                 if managed_cmd:
                     line += f"[dim yellow] — run [bold]{managed_cmd}[/bold][/]"
                 right_lines.append(line)
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass  # Never break the banner over an update check
 
     # Unsupported install-method warning — pip/PyPI and Homebrew are no
@@ -1097,7 +1097,7 @@ def build_welcome_banner(
             right_lines.append(
                 f"[bold yellow]⚠ {format_unsupported_install_warning(_install_method)}[/]"
             )
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass  # Never break the banner over the install-method check
 
     right_content = "\n".join(right_lines)

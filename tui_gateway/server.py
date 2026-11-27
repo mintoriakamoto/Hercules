@@ -123,7 +123,7 @@ try:
     from hercules_cli.banner import prefetch_update_check
 
     prefetch_update_check()
-except (ImportError, ModuleNotFoundError):
+except Exception:
     pass
 
 from tui_gateway.render import make_stream_renderer, render_diff, render_message
@@ -378,23 +378,23 @@ class _SlashWorker:
                 proc.terminate()
                 try:
                     proc.wait(timeout=1)
-                except (AttributeError, ValueError):
+                except Exception:
                     proc.kill()
                     try:
                         proc.wait(timeout=1)  # reap the zombie SIGKILL leaves behind
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
-        except (AttributeError, ValueError):
+        except Exception:
             try:
                 proc.kill()
                 proc.wait(timeout=1)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         finally:
             for stream in (proc.stdin, proc.stdout, proc.stderr):
                 try:
                     stream.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
 
@@ -418,7 +418,7 @@ def _notify_session_boundary(
             session_id=session_id,
             platform=_resolve_agent_platform(platform),
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -450,7 +450,7 @@ def _release_active_session_slot(session: dict | None) -> None:
         return
     try:
         lease.release()
-    except (AttributeError, ValueError):
+    except Exception:
         logger.debug("Failed to release active session slot", exc_info=True)
 
 
@@ -474,7 +474,7 @@ def _transfer_active_session_slot(
             metadata={"live_session_id": sid},
         ):
             return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Failed to transfer active session slot", exc_info=True)
 
     # Fallback: the in-place transfer could not move the lease (entry pruned /
@@ -492,7 +492,7 @@ def _transfer_active_session_slot(
         if old_lease is not None:
             try:
                 old_lease.release()
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "Failed to release stale active session slot", exc_info=True
                 )
@@ -553,7 +553,7 @@ def _is_gateway_owned_source(source: str) -> bool:
 
         Platform(src)  # raises ValueError for arbitrary non-platform strings
         return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -598,7 +598,7 @@ def _finalize_session(session: dict | None, end_reason: str = "tui_close") -> No
         if snapshot:
             try:
                 agent._persist_session(snapshot)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     # ── Plugin hook: on_session_end ────────────────────────────────────
@@ -620,13 +620,13 @@ def _finalize_session(session: dict | None, end_reason: str = "tui_close") -> No
                 model=getattr(agent, "model", "unknown"),
                 platform=getattr(agent, "platform", None) or "tui",
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     if agent is not None and history and hasattr(agent, "commit_memory_session"):
         try:
             agent.commit_memory_session(history)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     session_key = session.get("session_key")
@@ -677,14 +677,14 @@ def _finalize_session(session: dict | None, end_reason: str = "tui_close") -> No
                         if _cand is session:
                             _own_sid = _cand_sid
                             break
-            except (AttributeError, ValueError):
+            except Exception:
                 _own_sid = ""
         interrupt_for_session(
             session_key=str(session_key or "") if _tui_owns_lifecycle else "",
             origin_ui_session_id=_own_sid,
             reason=end_reason,
         )
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     # Close the slash-worker subprocess as part of finalize itself, not just
@@ -721,7 +721,7 @@ def _teardown_session(session: dict | None, *, end_reason: str = "tui_close") ->
 
         if key := session.get("session_key"):
             unregister_gateway_notify(key)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         agent = session.get("agent")
@@ -842,7 +842,7 @@ def _close_sessions_for_transport(
             detached += 1
             try:
                 _schedule_ws_orphan_reap(sid)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
     return reaped, detached
 
@@ -921,7 +921,7 @@ def _max_live_sessions() -> int:
                 raw = gateway_cfg.get("max_live_sessions")
         coerced = coerce_max_concurrent_sessions(raw, key="max_live_sessions")
         return int(coerced) if coerced else 0
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return 0
 
 
@@ -964,7 +964,7 @@ def _schedule_session_cap_enforcement() -> None:
     def _run():
         try:
             _enforce_session_cap()
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("session cap enforcement failed", exc_info=True)
 
     timer = threading.Timer(0.1, _run)
@@ -978,7 +978,7 @@ def _start_idle_reaper() -> None:
             time.sleep(_REAPER_SCAN_S)
             try:
                 _reap_idle_sessions()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     threading.Thread(target=_loop, daemon=True).start()
@@ -1031,7 +1031,7 @@ def _profile_home(profile: str | None) -> Path | None:
         from hercules_cli import profiles as profiles_mod
 
         home = Path(profiles_mod.get_profile_dir(name))
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
     # Already the launch profile? No override needed.
     if home.resolve() == Path(_hercules_home).resolve():
@@ -1108,7 +1108,7 @@ def _profile_configured_cwd(profile_home: Path | None) -> str | None:
         with open(p, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         return _configured_cwd_from_cfg(data)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
 
@@ -1125,7 +1125,7 @@ def _launch_configured_cwd() -> str | None:
     """
     try:
         return _configured_cwd_from_cfg(_load_cfg())
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
 
@@ -1220,7 +1220,7 @@ def _image_meta(path: Path) -> dict:
         meta["width"] = int(width)
         meta["height"] = int(height)
         meta["token_estimate"] = _estimate_image_tokens(int(width), int(height))
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return meta
 
@@ -1375,7 +1375,7 @@ def _start_agent_build(sid: str, session: dict) -> None:
                     from hercules_state import SessionDB
 
                     session_db = SessionDB(db_path=Path(profile_home) / "state.db")
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     session_db = None
             try:
                 # Lazy-resumed (watch) sessions carry the stored conversation
@@ -1439,7 +1439,7 @@ def _start_agent_build(sid: str, session: dict) -> None:
                 )
                 notify_registered = True
                 load_permanent_allowlist()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
             _wire_callbacks(sid)
@@ -1454,7 +1454,7 @@ def _start_agent_build(sid: str, session: dict) -> None:
                     "review.summary", _sid, {"text": str(message)}
                 )
                 agent.memory_notifications = _load_memory_notifications()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             with _sessions_lock:
                 if sid in _sessions:
@@ -1490,7 +1490,7 @@ def _start_agent_build(sid: str, session: dict) -> None:
                     from tools.approval import unregister_gateway_notify
 
                     unregister_gateway_notify(key)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             ready.set()
 
@@ -1544,7 +1544,7 @@ def _completion_cwd(params: dict | None = None) -> str:
         resolved = os.path.abspath(os.path.expanduser(str(raw)))
         if os.path.isdir(resolved):
             return resolved
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     return os.getcwd()
 
@@ -1622,7 +1622,7 @@ def _heal_dead_cwd(cwd: str) -> str:
 
     try:
         root = _git_common_repo_root_for_cwd(probe) or _git_repo_root_for_cwd(probe)
-    except (AttributeError, ValueError):
+    except Exception:
         root = ""
 
     return root or probe
@@ -1675,7 +1675,7 @@ def _register_session_cwd(session: dict | None) -> None:
         register_task_env_overrides(
             session["session_key"], {"cwd": _terminal_task_cwd(session)}
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -1754,7 +1754,7 @@ def _ensure_session_db_row(session: dict) -> None:
             )
             if healed:
                 model_config["provider"] = healed
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug(
                 "custom provider identity recovery failed (db row)", exc_info=True
             )
@@ -1783,7 +1783,7 @@ def _ensure_session_db_row(session: dict) -> None:
         if close_db:
             try:
                 db.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
 
@@ -1880,7 +1880,7 @@ def _persist_session_git_meta(session: dict, cwd: str) -> None:
             with _session_db(db_session) as db:
                 if db is not None:
                     db.update_session_cwd(session_key, cwd, branch, root)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("failed to persist session git metadata", exc_info=True)
 
     threading.Thread(target=_run, name="git-meta", daemon=True).start()
@@ -1907,7 +1907,7 @@ def _set_session_cwd(session: dict, cwd: str) -> str:
         from tools.terminal_tool import cleanup_vm
 
         cleanup_vm(session["session_key"])
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return resolved
 
@@ -1952,7 +1952,7 @@ def _load_cfg() -> dict:
             _cfg_mtime = mtime
             _cfg_path = p
         return _apply_managed(data)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return {}
 
@@ -1969,7 +1969,7 @@ def _apply_managed(cfg: dict) -> dict:
         from hercules_cli import managed_scope
 
         return managed_scope.apply_managed_overlay(cfg if isinstance(cfg, dict) else {})
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return cfg
 
 
@@ -1985,7 +1985,7 @@ def _save_cfg(cfg: dict):
         _cfg_path = path
         try:
             _cfg_mtime = path.stat().st_mtime
-        except (AttributeError, ValueError):
+        except Exception:
             _cfg_mtime = None
 
 
@@ -2031,7 +2031,7 @@ def _set_session_context(
             cwd=resolved,
             ui_session_id=ui_session_id,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
 
@@ -2042,7 +2042,7 @@ def _clear_session_context(tokens: list) -> None:
         from gateway.session_context import clear_session_vars
 
         clear_session_vars(tokens)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -2123,7 +2123,7 @@ def resolve_skin() -> dict:
             "tool_prefix": skin.tool_prefix,
             "help_header": (skin.branding or {}).get("help_header", ""),
         }
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -2247,7 +2247,7 @@ def _resolve_startup_runtime() -> tuple[str, str | None]:
         if detected:
             provider, detected_model = detected
             return detected_model, provider
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return model, None
 
@@ -2278,7 +2278,7 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
             parsed = json.loads(raw_config)
             if isinstance(parsed, dict):
                 model_config = parsed
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("failed to parse stored session model_config", exc_info=True)
 
     overrides: dict = {}
@@ -2316,7 +2316,7 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
             from hercules_cli.runtime_provider import canonical_custom_identity
 
             healed = canonical_custom_identity(base_url=base_url or None)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug("custom provider identity recovery failed", exc_info=True)
         provider = healed or ("" if not base_url else provider)
 
@@ -2373,7 +2373,7 @@ def _runtime_model_config(agent, existing: dict | None = None) -> dict:
                 )
 
                 provider = canonical_custom_identity(base_url=base_url) or provider
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug("custom provider identity lookup failed", exc_info=True)
         config["provider"] = provider
     if base_url:
@@ -2668,7 +2668,7 @@ def _load_enabled_toolsets() -> list[str] | None:
                 # that normally adds it — without this the desktop loses the
                 # project tools exactly when sitting in a repo (see below).
                 return sorted({*selection, "project"})
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     try:
@@ -2686,7 +2686,7 @@ def _load_enabled_toolsets() -> list[str] | None:
 
                 discover_plugins()
                 plugin_valid = [name for name in unresolved if validate_toolset(name)]
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 plugin_valid = []
 
             if plugin_valid:
@@ -2726,7 +2726,7 @@ def _load_enabled_toolsets() -> list[str] | None:
                     mcp_names.add(str(name))
                 else:
                     mcp_disabled.add(str(name))
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             mcp_names = set()
             mcp_disabled = set()
 
@@ -2783,7 +2783,7 @@ def _load_enabled_toolsets() -> list[str] | None:
         # folding in the `project` toolset here is the gate that exposes them on
         # exactly the surface that can follow a project move.
         return sorted(enabled | {"project"})
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         if fallback_notice is not None:
             print(
                 "[tui] no valid HERCULES_TUI_TOOLSETS entries and configured CLI toolsets could not be loaded; enabling all toolsets",
@@ -2810,7 +2810,7 @@ def _restart_slash_worker(sid: str, session: dict):
     if worker:
         try:
             worker.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     try:
         new_worker = _SlashWorker(
@@ -2918,7 +2918,7 @@ def _apply_model_switch(
         cfg = load_config()
         user_provs = cfg.get("providers")
         custom_provs = get_compatible_custom_providers(cfg)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     result = switch_model(
@@ -2967,7 +2967,7 @@ def _apply_model_switch(
                 api_key=result.api_key or current_api_key,
                 model_info=result.model_info,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             warning = None
         if warning is not None:
             confirm_msg = warning.message
@@ -3194,27 +3194,27 @@ def _sync_session_key_after_compress(
 
         try:
             unregister_gateway_notify(old_key)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         session["session_key"] = new_session_id
         try:
             yolo_was_on = is_session_yolo_enabled(old_key)
-        except (AttributeError, ValueError):
+        except Exception:
             yolo_was_on = False
         if yolo_was_on:
             try:
                 enable_session_yolo(new_session_id)
                 disable_session_yolo(old_key)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         try:
             register_gateway_notify(
                 new_session_id,
                 lambda data: _emit_approval_request(sid, data),
             )
-        except (AttributeError, ValueError):
+        except Exception:
             pass
-    except (AttributeError, ValueError):
+    except Exception:
         # Even if the approval module fails to import, still anchor the
         # session_key on the new continuation id so downstream lookups
         # don't keep targeting the ended row.
@@ -3225,7 +3225,7 @@ def _sync_session_key_after_compress(
     if restart_slash_worker:
         try:
             _restart_slash_worker(sid, session)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -3278,7 +3278,7 @@ def _get_usage(agent) -> dict:
         from tools.async_delegation import active_count as _async_active_count
 
         usage["active_subagents"] = _async_active_count()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return usage
 
@@ -3333,7 +3333,7 @@ def _current_profile_name() -> str:
         from hercules_cli.profiles import get_active_profile_name
 
         return get_active_profile_name() or "default"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return "default"
 
 
@@ -3387,7 +3387,7 @@ def _session_info(agent, session: dict | None = None) -> dict:
             bool(is_session_yolo_enabled(session_key)) if session_key else False
         )
         yolo = bool(_YOLO_MODE_FROZEN) or session_yolo or _get_approval_mode() == "off"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         yolo = False
     info: dict = {
         "model": getattr(agent, "model", ""),
@@ -3423,14 +3423,14 @@ def _session_info(agent, session: dict | None = None) -> dict:
             info["install_warning"] = format_unsupported_install_warning(
                 _install_method
             )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from hercules_cli import __version__, __release_date__
 
         info["version"] = __version__
         info["release_date"] = __release_date__
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from model_tools import get_toolset_for_tool
@@ -3440,19 +3440,19 @@ def _session_info(agent, session: dict | None = None) -> dict:
             info["tools"].setdefault(get_toolset_for_tool(name) or "other", []).append(
                 name
             )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from hercules_cli.banner import get_available_skills
 
         info["skills"] = get_available_skills()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from tools.mcp_tool import get_mcp_status
 
         info["mcp_servers"] = get_mcp_status()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         info["mcp_servers"] = []
     try:
         info["system_prompt"] = getattr(agent, "_cached_system_prompt", "") or ""
@@ -3464,7 +3464,7 @@ def _session_info(agent, session: dict | None = None) -> dict:
 
         info["update_behind"] = get_update_result(timeout=0.5)
         info["update_command"] = recommended_update_command()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     warn = _probe_credentials(agent)
     if warn:
@@ -3477,7 +3477,7 @@ def _tool_ctx(name: str, args: dict) -> str:
         from agent.display import build_tool_label
 
         return build_tool_label(name, args, max_len=80) or ""
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return ""
 
 
@@ -3487,7 +3487,7 @@ def _emit_session_info_for_session(sid: str, session: dict) -> None:
         return
     try:
         _emit("session.info", sid, _session_info(agent, session))
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
 
@@ -3543,7 +3543,7 @@ def _redact_tui_verbose_text(text: str) -> str:
         from agent.redact import redact_sensitive_text
 
         redacted = redact_sensitive_text(str(text), force=True)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return ""
     return _cap_tui_verbose_text(redacted)
 
@@ -3551,7 +3551,7 @@ def _redact_tui_verbose_text(text: str) -> str:
 def _tool_args_text(args: dict) -> str:
     try:
         raw = json.dumps(args or {}, indent=2, ensure_ascii=False, default=str)
-    except (AttributeError, ValueError):
+    except Exception:
         raw = str(args or {})
     return _redact_tui_verbose_text(raw)
 
@@ -3561,7 +3561,7 @@ def _tool_result_text(result: object) -> str:
         from agent.tool_dispatch_helpers import _multimodal_text_summary
 
         raw = _multimodal_text_summary(result)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         raw = str(result)
     return _redact_tui_verbose_text(raw)
 
@@ -3589,7 +3589,7 @@ def _count_list(obj: object, *path: str) -> int | None:
 def _tool_summary(name: str, result: str, duration_s: float | None) -> str | None:
     try:
         data = json.loads(result)
-    except (AttributeError, ValueError):
+    except Exception:
         data = None
 
     dur = _fmt_tool_duration(duration_s)
@@ -3623,7 +3623,7 @@ def _on_tool_start(sid: str, tool_call_id: str, name: str, args: dict):
             snapshot = capture_local_edit_snapshot(name, args)
             if snapshot is not None:
                 session.setdefault("edit_snapshots", {})[tool_call_id] = snapshot
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         session.setdefault("tool_started_at", {})[tool_call_id] = time.time()
     if _tool_progress_enabled(sid):
@@ -3682,7 +3682,7 @@ def _on_tool_complete(sid: str, tool_call_id: str, name: str, args: dict, result
             print_fn=rendered.append,
         ):
             payload["inline_diff"] = "\n".join(rendered)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     if _tool_progress_enabled(sid) or payload.get("inline_diff"):
         _emit("tool.complete", sid, payload)
@@ -4065,12 +4065,12 @@ def _available_personalities(cfg: dict | None = None) -> dict:
         from cli import load_cli_config
 
         return (load_cli_config().get("agent") or {}).get("personalities", {}) or {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         try:
             from hercules_cli.config import load_config as _load_full_cfg
 
             return (_load_full_cfg().get("agent") or {}).get("personalities", {}) or {}
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             cfg = cfg or _load_cfg()
             return (cfg.get("agent") or {}).get("personalities", {}) or {}
 
@@ -4312,7 +4312,7 @@ def _preview_restart_history(
 def _preview_tool_result_preview(name: str, result: str) -> str:
     try:
         data = json.loads(result)
-    except (AttributeError, ValueError):
+    except Exception:
         return ""
 
     if not isinstance(data, dict):
@@ -4530,7 +4530,7 @@ def _resolve_runtime_with_fallback(
                     fb_provider,
                 )
                 return runtime
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 continue
         raise
 
@@ -4558,13 +4558,13 @@ def _make_agent(
         from hercules_cli.mcp_startup import wait_for_mcp_discovery
 
         wait_for_mcp_discovery()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from tui_gateway.entry import wait_for_mcp_discovery
 
         wait_for_mcp_discovery()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     cfg = _load_cfg()
@@ -4774,7 +4774,7 @@ def _init_session(
 
         register_gateway_notify(key, lambda data: _emit_approval_request(sid, data))
         load_permanent_allowlist()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     # Surface the self-improvement background review's "💾 …" summary as a
     # review.summary event so Ink can render it as a persistent system line
@@ -4789,7 +4789,7 @@ def _init_session(
         # messaging gateway and CLI do — otherwise the review always behaved as
         # "on" on the TUI/desktop and a user who set "off" was ignored.
         agent.memory_notifications = _load_memory_notifications()
-    except (AttributeError, ValueError):
+    except Exception:
         # Bare AIAgents that don't expose the attribute (unlikely, but keep
         # session startup resilient).
         pass
@@ -5172,7 +5172,7 @@ def _handle_busy_submit(
     if mode != "queue" and agent is not None and hasattr(agent, "interrupt"):
         try:
             agent.interrupt()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     _enqueue_prompt(session, text, transport)
     session["last_active"] = time.time()
@@ -5278,7 +5278,7 @@ def _(rid, params: dict) -> dict:
             from hercules_constants import parse_reasoning_effort
 
             create_reasoning_override = parse_reasoning_effort(effort)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             create_reasoning_override = None
     # Only pin "fast" when explicitly requested; leaving it None lets the build
     # fall back to the profile default service tier rather than forcing normal.
@@ -5488,7 +5488,7 @@ def _(rid, params: dict) -> dict:
         from agent.coding_context import project_facts_for
 
         return _ok(rid, {"facts": project_facts_for(params.get("cwd"))})
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.exception("project.facts failed")
         return _ok(rid, {"facts": None})
 
@@ -5512,7 +5512,7 @@ def _(rid, params: dict) -> dict:
                 )
             },
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.exception("verification.status failed")
         return _ok(rid, {"verification": {"status": "unknown", "evidence": None}})
 
@@ -5681,7 +5681,7 @@ def _(rid, params: dict) -> dict:
     if found and not is_truthy_value(params.get("lazy", False)):
         try:
             tip = db.resolve_resume_session_id(target)
-        except (AttributeError, ValueError):
+        except Exception:
             tip = target
         if tip and tip != target:
             target = tip
@@ -5935,7 +5935,7 @@ def _(rid, params: dict) -> dict:
             try:
                 if hasattr(agent, "close"):
                     agent.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             if lease is not None:
                 lease.release()
@@ -6067,7 +6067,7 @@ def _session_live_title(session: dict, key: str) -> str:
     if db is not None:
         try:
             title = str(db.get_session_title(key) or title or "").strip()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     return title
 
@@ -6627,7 +6627,7 @@ def _pet_frame_counts(spritesheet) -> dict:
         from agent.pet import render
 
         return render.state_frame_counts(str(spritesheet))
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -6640,7 +6640,7 @@ def _pet_sheet_revision(spritesheet) -> str:
     try:
         stat = spritesheet.stat()
         return f"{stat.st_mtime_ns}:{stat.st_size}"
-    except (AttributeError, ValueError):
+    except Exception:
         return "0:0"
 
 
@@ -6648,7 +6648,7 @@ def _pet_payload_cache_key(pet, *, scale: float) -> tuple | None:
     """Cache key for the expensive sprite payload build."""
     try:
         stat = pet.spritesheet.stat()
-    except (AttributeError, ValueError):
+    except Exception:
         return None
     return (
         str(pet.spritesheet),
@@ -6701,7 +6701,7 @@ def _pet_row_frame_counts(spritesheet) -> dict:
                 count += 1
             out[name] = count
         return out
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -6718,7 +6718,7 @@ def _pet_config_scale() -> float:
         return float(
             pet_cfg.get("scale", constants.DEFAULT_SCALE) or constants.DEFAULT_SCALE
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return constants.DEFAULT_SCALE
 
 
@@ -6775,7 +6775,7 @@ def _pet_active_selection():
         cfg = load_config()
         display = cfg.get("display", {}) if isinstance(cfg.get("display"), dict) else {}
         pet_cfg = display.get("pet", {}) if isinstance(display.get("pet"), dict) else {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pet_cfg = {}
 
     enabled = bool(pet_cfg.get("enabled"))
@@ -6802,7 +6802,7 @@ def _pet_state_rows(spritesheet) -> list[str]:
         with Image.open(spritesheet) as image:
             row_count = max(1, image.height // constants.FRAME_H)
         return list(constants.state_rows_for_grid(row_count))
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         from agent.pet import constants
 
         return list(constants.STATE_ROWS)
@@ -6883,7 +6883,7 @@ def _(rid, params: dict) -> dict:
             pet_cfg = (
                 display.get("pet", {}) if isinstance(display.get("pet"), dict) else {}
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pet_cfg = {}
 
         if not bool(pet_cfg.get("enabled")):
@@ -7000,7 +7000,7 @@ def _(rid, params: dict) -> dict:
             pet_cfg = (
                 display.get("pet", {}) if isinstance(display.get("pet"), dict) else {}
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pet_cfg = {}
 
         installed = {p.slug: p for p in store.installed_pets()}
@@ -7652,7 +7652,7 @@ def _(rid, params: dict) -> dict:
     if db and key:
         try:
             meta = db.get_session(key) or {}
-        except (AttributeError, ValueError):
+        except Exception:
             meta = {}
 
     def _dt(value, fallback: datetime | None = None) -> datetime:
@@ -8029,7 +8029,7 @@ def _(rid, params: dict) -> dict:
         from tools.approval import resolve_gateway_approval
 
         resolve_gateway_approval(session["session_key"], "deny", resolve_all=True)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return _ok(rid, {"status": "interrupted"})
 
@@ -8215,7 +8215,7 @@ def _(rid, params: dict) -> dict:
                 stat = p.stat()
                 try:
                     raw = json.loads(p.read_text(encoding="utf-8"))
-                except (AttributeError, ValueError):
+                except Exception:
                     raw = {}
                 subagents = raw.get("subagents") or []
                 entries.append({
@@ -8441,7 +8441,7 @@ def _notification_event_belongs_elsewhere(sid: str, session: dict, evt: dict) ->
         db = _get_db()
         if db is not None:
             resolved_key = db.resolve_resume_session_id(evt_key) or evt_key
-    except (AttributeError, ValueError):
+    except Exception:
         resolved_key = evt_key
 
     # If the key has a live continuation, prefer that continuation over the
@@ -8471,7 +8471,7 @@ def _notification_event_belongs_elsewhere(sid: str, session: dict, evt: dict) ->
     try:
         with _sessions_lock:
             snapshot = list(_sessions.values())
-    except (AttributeError, ValueError):
+    except Exception:
         # If we can't safely enumerate live sessions, fail open so we don't
         # crash the poller thread or drop the event.
         return False
@@ -8516,7 +8516,7 @@ def _session_owns_notification_event(sid: str, session: dict, evt: dict) -> bool
         resolved_key = (
             db.resolve_resume_session_id(evt_key) if db is not None else evt_key
         ) or evt_key
-    except (AttributeError, ValueError):
+    except Exception:
         resolved_key = evt_key
     return resolved_key in current_keys
 
@@ -8676,7 +8676,7 @@ def _notification_poller_loop(
     while not process_registry.completion_queue.empty():
         try:
             evt = process_registry.completion_queue.get_nowait()
-        except (AttributeError, ValueError):
+        except Exception:
             break
         if _notification_event_belongs_elsewhere(sid, session, evt):
             deferred.append(evt)
@@ -8800,7 +8800,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
     if hasattr(agent, "clear_interrupt"):
         try:
             agent.clear_interrupt()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     _emit("message.start", sid)
 
@@ -9100,7 +9100,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                                 )
 
                                 _bg_procs = _gather_bg()
-                            except (ImportError, ModuleNotFoundError):
+                            except Exception:
                                 _bg_procs = None
                             decision = goal_mgr.evaluate_after_turn(
                                 raw,
@@ -9171,7 +9171,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                             "session.title", sid, {"session_id": _k, "title": t}
                         ),
                     )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
 
             # CLI parity: when voice-mode TTS is on, speak the agent reply
@@ -9217,7 +9217,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
             try:
                 if approval_token is not None:
                     reset_current_session_key(approval_token)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             if home_token is not None:
                 reset_hercules_home_override(home_token)
@@ -9421,7 +9421,7 @@ def _decode_attach_base64(raw: str, *, mime_prefix: str) -> bytes | None:
     cleaned = _re.sub(r"\s+", "", cleaned)
     try:
         return _base64.b64decode(cleaned, validate=True)
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
 
@@ -9449,7 +9449,7 @@ def _allowed_image_extensions() -> frozenset[str]:
         from cli import _IMAGE_EXTENSIONS
 
         return frozenset(_IMAGE_EXTENSIONS)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"})
 
 
@@ -9469,7 +9469,7 @@ def _queue_attached_image(
     img_path = img_dir / f"{prefix}_{ts}_{session['image_counter']}{ext}"
     try:
         img_path.write_bytes(img_bytes)
-    except (AttributeError, ValueError):
+    except Exception:
         session["image_counter"] = max(0, session["image_counter"] - 1)
         raise
     session.setdefault("attached_images", []).append(str(img_path))
@@ -9594,7 +9594,7 @@ def _(rid, params: dict) -> dict:
                 from cli import _resolve_attachment_path
 
                 resolved = _resolve_attachment_path(raw_path)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 resolved = None
             if resolved is None or not Path(resolved).is_file():
                 return _err(rid, 4016, f"PDF not found: {raw_path}")
@@ -10051,7 +10051,7 @@ def _(rid, params: dict) -> dict:
         preview_cwd = os.path.abspath(os.path.expanduser(cwd)) if cwd else ""
         if preview_cwd and not os.path.isdir(preview_cwd):
             preview_cwd = ""
-    except (AttributeError, ValueError):
+    except Exception:
         preview_cwd = ""
 
     def run():
@@ -10107,7 +10107,7 @@ def _(rid, params: dict) -> dict:
                 from tools.terminal_tool import clear_task_env_overrides
 
                 clear_task_env_overrides(task_id)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             _clear_session_context(session_tokens)
 
@@ -10967,7 +10967,7 @@ def _discover_repos_payload(db, *, conn=None, backfill: bool = True) -> list[dic
     if backfill:
         try:
             db.backfill_repo_roots(cwd_to_root)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("failed to backfill repo roots", exc_info=True)
 
     # Filesystem-scanned roots from the cache (may have zero sessions). Reuse the
@@ -10992,7 +10992,7 @@ def _discover_repos_payload(db, *, conn=None, backfill: bool = True) -> list[dic
         else:
             with pdb.connect_closing() as own:
                 _read(own)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("failed to read discovered repo cache", exc_info=True)
 
     out = sorted(repos.values(), key=lambda r: r["last_active"], reverse=True)
@@ -11360,7 +11360,7 @@ def _(rid, params: dict) -> dict:
             return _ok(
                 rid, {"mtime": cfg_path.stat().st_mtime if cfg_path.exists() else 0}
             )
-        except (AttributeError, ValueError):
+        except Exception:
             return _ok(rid, {"mtime": 0})
     return _err(rid, 4002, f"unknown config key: {key}")
 
@@ -11536,7 +11536,7 @@ def _(rid, params: dict) -> dict:
                 _confirm_required = True
                 if isinstance(_approvals, dict):
                     _confirm_required = bool(_approvals.get("mcp_reload_confirm", True))
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _confirm_required = True
             if _confirm_required:
                 # Return a structured response the Ink client can surface
@@ -11839,7 +11839,7 @@ def _resolve_name(name: str) -> str:
 
         r = resolve_command(name)
         return r.name if r else name
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return name
 
 
@@ -11899,7 +11899,7 @@ def _(rid, params: dict) -> dict:
         if handler:
             result = resolve_plugin_command_result(handler(arg))
             return _ok(rid, {"type": "plugin", "output": str(result or "")})
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     try:
@@ -11914,7 +11914,7 @@ def _(rid, params: dict) -> dict:
         bundle_key = (
             resolve_bundle_command_key(name) if resolve_command(name) is None else None
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         bundle_key = None
 
     if bundle_key is not None:
@@ -11967,7 +11967,7 @@ def _(rid, params: dict) -> dict:
                         "name": cmds[key].get("name", name),
                     },
                 )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # ── Commands that queue messages onto _pending_input in the CLI ───
@@ -12225,7 +12225,7 @@ def _(rid, params: dict) -> dict:
         # history so subsequent turns see the truncated view.
         try:
             active = db.get_messages_as_conversation(session_key)
-        except (AttributeError, ValueError):
+        except Exception:
             active = []
         with session["history_lock"]:
             session["history"] = list(active)
@@ -12244,17 +12244,17 @@ def _(rid, params: dict) -> dict:
                         reset=False,
                         rewound=True,
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if hasattr(agent, "_invalidate_system_prompt"):
                 try:
                     agent._invalidate_system_prompt()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if hasattr(agent, "_last_flushed_db_idx"):
                 try:
                     agent._last_flushed_db_idx = len(active)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
         target_msg = result.get("target_message") or {}
         target_text = target_msg.get("content") or ""
@@ -13209,7 +13209,7 @@ def _(rid, params: dict) -> dict:
                     "session_id": params.get("session_id", ""),
                 },
             )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     try:
@@ -13220,7 +13220,7 @@ def _(rid, params: dict) -> dict:
             return _err(
                 rid, 4018, f"skill command: use command.dispatch for {_cmd_key}"
             )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     plugin_handler = None
@@ -13233,7 +13233,7 @@ def _(rid, params: dict) -> dict:
             )
 
             plugin_handler = get_plugin_command_handler(_cmd_base)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             plugin_handler = None
             resolve_plugin_command_result = None
 
@@ -13266,7 +13266,7 @@ def _(rid, params: dict) -> dict:
     except Exception as e:
         try:
             worker.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         session["slash_worker"] = None
         return _err(rid, 5030, str(e))
@@ -13683,7 +13683,7 @@ def _resolve_browser_cdp_url() -> str:
         browser_cfg = cfg.get("browser", {}) if isinstance(cfg, dict) else {}
         if isinstance(browser_cfg, dict):
             return str(browser_cfg.get("cdp_url", "") or "").strip()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return ""
 
@@ -13894,7 +13894,7 @@ def _browser_disconnect(rid) -> dict:
             from tools.browser_tool import cleanup_all_browsers
 
             cleanup_all_browsers()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     reap()

@@ -145,7 +145,7 @@ class IRCAdapter(BasePlatformAdapter):
                 entry = platform_registry.get("irc")
                 if entry and entry.max_message_length:
                     max_msg = entry.max_message_length
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         self.max_message_length = int(max_msg or 450)
 
@@ -259,7 +259,7 @@ class IRCAdapter(BasePlatformAdapter):
                 from gateway.status import release_scoped_lock
 
                 release_scoped_lock("irc", self._lock_key)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         self._mark_disconnected()
         if self._writer and not self._writer.is_closing():
@@ -271,7 +271,7 @@ class IRCAdapter(BasePlatformAdapter):
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         if self._recv_task and not self._recv_task.done():

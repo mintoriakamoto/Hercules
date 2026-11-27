@@ -172,7 +172,7 @@ def _meets_minimum_version(actual: str | None, required: str) -> bool:
         from packaging.version import Version
 
         return Version(actual) >= Version(required)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -376,7 +376,7 @@ def _load_config() -> dict:
     if profile_path.exists():
         try:
             return json.loads(profile_path.read_text(encoding="utf-8"))
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     # Legacy shared path (backward compat)
@@ -384,7 +384,7 @@ def _load_config() -> dict:
     if legacy_path.exists():
         try:
             return json.loads(legacy_path.read_text(encoding="utf-8"))
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     return {
@@ -428,7 +428,7 @@ def _normalize_retain_tags(value: Any) -> List[str]:
         if text.startswith("["):
             try:
                 parsed = json.loads(text)
-            except (AttributeError, ValueError):
+            except Exception:
                 parsed = None
             if isinstance(parsed, list):
                 raw_items = parsed
@@ -477,7 +477,7 @@ def _normalize_observation_scopes(value: Any) -> Any:
         if text.startswith("["):
             try:
                 parsed = json.loads(text)
-            except (AttributeError, ValueError):
+            except Exception:
                 return None
             return _normalize_observation_scopes(parsed)
         return None
@@ -676,7 +676,7 @@ class HindsightMemoryProvider(MemoryProvider):
 
             legacy_dir = Path.home() / ".hindsight"
             return [str(legacy_dir)]
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return []
 
     def __init__(self):
@@ -798,7 +798,7 @@ class HindsightMemoryProvider(MemoryProvider):
         if config_path.exists():
             try:
                 existing = json.loads(config_path.read_text())
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         existing.update(values)
         from utils import atomic_json_write
@@ -1063,7 +1063,7 @@ class HindsightMemoryProvider(MemoryProvider):
                 materialized_config = json.loads(
                     config_path.read_text(encoding="utf-8")
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
             llm_api_key = env_writes.get("HINDSIGHT_LLM_API_KEY", "")
@@ -1729,7 +1729,7 @@ class HindsightMemoryProvider(MemoryProvider):
             from importlib.metadata import version as pkg_version
 
             _client_version = pkg_version("hindsight-client")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         logger.info(
             "Hindsight initialized: mode=%s, api_url=%s, bank=%s, budget=%s, memory_mode=%s, prefetch_method=%s, client=%s",
@@ -2395,7 +2395,7 @@ class HindsightMemoryProvider(MemoryProvider):
         if writer is not None and writer.is_alive():
             try:
                 self._retain_queue.put(_WRITER_SENTINEL)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             writer.join(timeout=10.0)
             if writer.is_alive():
@@ -2428,7 +2428,7 @@ class HindsightMemoryProvider(MemoryProvider):
                         pass
                 else:
                     self._run_sync(self._client.aclose())
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self._client = None
         # The module-global background event loop (_loop / _loop_thread)

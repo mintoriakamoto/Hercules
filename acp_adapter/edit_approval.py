@@ -326,7 +326,7 @@ def make_acp_edit_approval_requester(
                         proposal.path,
                     )
                     return True
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "ACP edit auto-approval policy check failed", exc_info=True
                 )

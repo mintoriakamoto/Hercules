@@ -79,13 +79,13 @@ def _hercules_version() -> str:
         from importlib.metadata import version
 
         return version("hercules-agent")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from hercules_cli import __version__
 
         return __version__
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return "dev"
 
 
@@ -191,7 +191,7 @@ def _normalize_chat_content(
                             part = str(text)[:MAX_NORMALIZED_TEXT_LENGTH]
                             parts.append(part)
                             total_len += len(part)
-                        except (IndexError, KeyError, ValueError):
+                        except Exception:
                             pass
                 # Silently skip image_url / other non-text parts
             elif isinstance(item, list):
@@ -219,7 +219,7 @@ def _normalize_chat_content(
             if len(result) > MAX_NORMALIZED_TEXT_LENGTH
             else result
         )
-    except (IndexError, KeyError, ValueError):
+    except Exception:
         return ""
 
 
@@ -432,7 +432,7 @@ class ResponseStore:
                 from hercules_cli.config import get_hercules_home
 
                 db_path = str(get_hercules_home() / "response_store.db")
-            except (ImportError, ModuleNotFoundError, ValueError):
+            except Exception:
                 db_path = ":memory:"
         self._db_path: Optional[str] = db_path if db_path != ":memory:" else None
         try:
@@ -575,7 +575,7 @@ class ResponseStore:
         """Close the database connection."""
         try:
             self._conn.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def __len__(self) -> int:
@@ -679,7 +679,7 @@ def _resolve_media_to_data_urls(text: str) -> str:
 
     try:
         return MEDIA_TAG_CLEANUP_RE.sub(_repl, text)
-    except (AttributeError, ValueError):
+    except Exception:
         return text
 
 
@@ -880,7 +880,7 @@ def _notify_cron_provider_jobs_changed() -> None:
         from cron.scheduler import _notify_provider_jobs_changed
 
         _notify_provider_jobs_changed()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -995,13 +995,13 @@ class APIServerAdapter(BasePlatformAdapter):
             from tools.process_registry import process_registry
 
             process_depth = process_registry.completion_queue.qsize()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         try:
             from tools.async_delegation import active_count
 
             active_delegations = active_count()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return active_api_runs, process_depth, active_delegations
 
@@ -1040,7 +1040,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 default=default,
             )
             value = int(raw)
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             return default
         return max(0, value)
 
@@ -1061,7 +1061,7 @@ class APIServerAdapter(BasePlatformAdapter):
             profile = get_active_profile_name()
             if profile and profile not in {"default", "custom"}:
                 return profile
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return "hercules-agent"
 
@@ -1114,7 +1114,7 @@ class APIServerAdapter(BasePlatformAdapter):
             )
             if isinstance(peer, (tuple, list)) and peer:
                 peer_ip = str(peer[0])
-        except (IndexError, KeyError, ValueError):
+        except Exception:
             peer_ip = ""
 
         return {
@@ -1369,7 +1369,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 return None
             override = runner._session_model_overrides.get(session_key)
             return dict(override) if isinstance(override, dict) else None
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return None
 
     def _create_agent(
@@ -1451,7 +1451,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     )
                     provider_kwargs.pop("model", None)
                     runtime_kwargs.update(provider_kwargs)
-                except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+                except Exception:
                     # Fall back to just switching the provider name; explicit
                     # per-route api_key/base_url below can still complete auth.
                     runtime_kwargs["provider"] = route["provider"]
@@ -1732,7 +1732,7 @@ class APIServerAdapter(BasePlatformAdapter):
             from tools.skills_tool import _find_all_skills, _sort_skills
 
             skills = _sort_skills(_find_all_skills(skip_disabled=False))
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.exception("GET /v1/skills failed")
             return web.json_response(
                 _openai_error("Failed to enumerate skills", err_type="server_error"),
@@ -1776,7 +1776,7 @@ class APIServerAdapter(BasePlatformAdapter):
             for name, label, desc in _get_effective_configurable_toolsets():
                 try:
                     tools = sorted(set(resolve_toolset(name)))
-                except (AttributeError, ValueError):
+                except Exception:
                     tools = []
                 is_enabled = name in enabled_toolsets
                 data.append({
@@ -2178,7 +2178,7 @@ class APIServerAdapter(BasePlatformAdapter):
             base = source.get("title") or "fork"
             try:
                 title = db.get_next_title_in_lineage(base)
-            except (AttributeError, ValueError):
+            except Exception:
                 title = f"{base} fork"
         try:
             db.set_session_title(fork_id, str(title))
@@ -3085,7 +3085,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE client disconnected")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -3759,7 +3759,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE client disconnected")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -3780,7 +3780,7 @@ class APIServerAdapter(BasePlatformAdapter):
             if agent is not None:
                 try:
                     agent.interrupt("SSE task cancelled")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if not agent_task.done():
                 agent_task.cancel()
@@ -4876,7 +4876,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 return
             try:
                 loop.call_soon_threadsafe(q.put_nowait, event)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         def _callback(
@@ -5060,7 +5060,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "delta": delta,
                     },
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         self._set_run_status(
@@ -5124,7 +5124,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     )
                     try:
                         loop.call_soon_threadsafe(q.put_nowait, event)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
 
                 def _run_sync():
@@ -5160,12 +5160,12 @@ class APIServerAdapter(BasePlatformAdapter):
                             if approval_token is not None:
                                 try:
                                     reset_current_session_key(approval_token)
-                                except (AttributeError, ValueError):
+                                except Exception:
                                     pass
                             if session_tokens:
                                 try:
                                     clear_session_vars(session_tokens)
-                                except (AttributeError, ValueError):
+                                except Exception:
                                     pass
                     u = {
                         "input_tokens": getattr(agent, "session_prompt_tokens", 0) or 0,
@@ -5240,7 +5240,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "run_id": run_id,
                         "timestamp": time.time(),
                     })
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 raise
             except Exception as exc:
@@ -5258,7 +5258,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "timestamp": time.time(),
                         "error": _redact_api_error_text(exc),
                     })
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             finally:
                 # If the asyncio wrapper is cancelled (for example via
@@ -5270,12 +5270,12 @@ class APIServerAdapter(BasePlatformAdapter):
                     from tools.approval import unregister_gateway_notify
 
                     unregister_gateway_notify(approval_session_key)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
                 # Sentinel: signal SSE stream to close
                 try:
                     _put_event_if_active(None)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 self._active_run_agents.pop(run_id, None)
                 self._active_run_tasks.pop(run_id, None)
@@ -5450,7 +5450,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     "choice": choice,
                     "resolved": resolved,
                 })
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         return web.json_response({
@@ -5482,7 +5482,7 @@ class APIServerAdapter(BasePlatformAdapter):
         if agent is not None:
             try:
                 agent.interrupt("Stop requested via API")
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         return web.json_response({"run_id": run_id, "status": "stopping"})
@@ -5514,7 +5514,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     approval_session_key = self._run_approval_sessions.get(run_id)
                     if approval_session_key:
                         unregister_gateway_notify(approval_session_key)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             # The transport TTL always bounds buffering. Live control state is
             # independent and survives until the executor-backed task returns.
@@ -5710,7 +5710,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     _backend = ((_load_cfg() or {}).get("terminal") or {}).get(
                         "backend", "local"
                     )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     _backend = "local"
                 if str(_backend).lower() == "local":
                     logger.warning(
@@ -5759,7 +5759,7 @@ class APIServerAdapter(BasePlatformAdapter):
         if self._response_store is not None:
             try:
                 self._response_store.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "Failed to close response store for %s",
                     self.name,

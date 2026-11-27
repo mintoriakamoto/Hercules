@@ -1987,7 +1987,7 @@ Summary generation was unavailable, so this is a best-effort deterministic fallb
             from hercules_time import now as _hercules_now
 
             _today_str = _hercules_now().strftime("%Y-%m-%d")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _today_str = ""
 
         # Preamble shared by both first-compaction and iterative-update prompts.

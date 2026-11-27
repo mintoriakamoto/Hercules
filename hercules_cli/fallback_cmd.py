@@ -84,7 +84,7 @@ def _snapshot_auth_active_provider() -> Any:
 
         store = _load_auth_store()
         return store.get("active_provider")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
 
@@ -101,7 +101,7 @@ def _restore_auth_active_provider(value: Any) -> None:
             store = _load_auth_store()
             store["active_provider"] = value
             _save_auth_store(store)
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         # Best-effort — if auth.json can't be restored, the user's primary
         # provider may have been deactivated by the picker.  They can re-run
         # `hercules model` to fix it.  Don't fail the fallback add.
@@ -286,7 +286,7 @@ def cmd_fallback_remove(args) -> None:
         from hercules_cli.setup import _curses_prompt_choice
 
         idx = _curses_prompt_choice("Select a fallback to remove:", choices, 0)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         idx = _numbered_pick("Select a fallback to remove:", choices)
 
     if idx is None or idx < 0 or idx >= len(chain):

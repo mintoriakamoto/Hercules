@@ -102,7 +102,7 @@ def _load_hercules_env_vars() -> dict[str, str]:
         from hercules_cli.config import load_env
 
         return load_env() or {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -137,7 +137,7 @@ def _get_active_profile_name() -> str:
         from hercules_cli.profiles import get_active_profile_name
 
         return get_active_profile_name() or "default"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return "default"
 
 
@@ -477,7 +477,7 @@ def _resolve_host_user_spec() -> Optional[str]:
         return None
     try:
         return f"{get_uid()}:{get_gid()}"
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
 
@@ -1117,7 +1117,7 @@ class DockerEnvironment(BaseEnvironment):
             from tools.env_passthrough import get_all_passthrough
 
             passthrough_keys = set(get_all_passthrough())
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         # Explicit docker_forward_env entries are an intentional opt-in and must
         # win over the generic Hercules secret blocklist. Only implicit passthrough

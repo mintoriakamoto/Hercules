@@ -606,7 +606,7 @@ def cmd_compare(symbols: list[str]) -> None:
             if price_f and low_f and price_f > 0 and low_f > 0:
                 perf = ((price_f - low_f) / low_f) * 100
                 entry["52w_performance_pct"] = fmt_pct(perf)
-        except (ValueError, TypeError, ZeroDivisionError):
+        except Exception:
             pass
 
         comparisons.append(entry)
@@ -666,7 +666,7 @@ def cmd_crypto(symbol: str, vs: str = "USD") -> None:
             chg_pct = (chg / float(prev_close)) * 100
             change = fmt_price(chg)
             change_pct = fmt_pct(chg_pct)
-        except (TypeError, ValueError, ZeroDivisionError):
+        except Exception:
             pass
 
     # 24h stats from indicators

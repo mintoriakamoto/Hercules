@@ -108,7 +108,7 @@ try:
         install_ctrl_enter_alias,
         install_ignored_terminal_sequences,
     )
-except (ImportError, ModuleNotFoundError):
+except Exception:
     pass
 import threading
 import queue
@@ -774,7 +774,7 @@ try:
     from hercules_logging import setup_logging
 
     setup_logging(mode="cli")
-except (ImportError, ModuleNotFoundError):
+except Exception:
     pass  # Logging setup is best-effort — don't crash the CLI
 
 # Validate config structure early — print warnings before user hits cryptic errors
@@ -782,7 +782,7 @@ try:
     from hercules_cli.config import print_config_warnings
 
     print_config_warnings()
-except (ImportError, ModuleNotFoundError):
+except Exception:
     pass
 
 # Initialize the skin engine from config
@@ -790,7 +790,7 @@ try:
     from hercules_cli.skin_engine import init_skin_from_config
 
     init_skin_from_config(CLI_CONFIG)
-except (ImportError, ModuleNotFoundError):
+except Exception:
     pass  # Skin engine is optional — default skin used if unavailable
 
 # Initialize tool preview length from config
@@ -799,7 +799,7 @@ try:
 
     _tpl = CLI_CONFIG.get("display", {}).get("tool_preview_length", 0)
     set_tool_preview_max_len(int(_tpl) if _tpl else 0)
-except (ImportError, ModuleNotFoundError):
+except Exception:
     pass
 
 # Initialize friendly tool labels from config (default on)
@@ -808,7 +808,7 @@ try:
 
     _ftl = CLI_CONFIG.get("display", {}).get("friendly_tool_labels", True)
     set_friendly_tool_labels(bool(_ftl))
-except (ImportError, ModuleNotFoundError):
+except Exception:
     pass
 
 # Neuter AsyncHttpxClientWrapper.__del__ before any AsyncOpenAI clients are
@@ -1014,7 +1014,7 @@ def _prepare_deferred_agent_startup() -> None:
         from hercules_cli.plugins import discover_plugins
 
         discover_plugins()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.warning(
             "plugin discovery failed at deferred CLI startup",
             exc_info=True,
@@ -1026,7 +1026,7 @@ def _prepare_deferred_agent_startup() -> None:
             logger=logger,
             thread_name="termux-cli-mcp-discovery",
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug(
             "MCP tool discovery failed at deferred CLI startup",
             exc_info=True,
@@ -1036,7 +1036,7 @@ def _prepare_deferred_agent_startup() -> None:
         from hercules_cli.config import load_config
 
         register_from_config(load_config(), accept_hooks=_accept_hooks)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug(
             "shell-hook registration failed at deferred CLI startup",
             exc_info=True,
@@ -1086,24 +1086,24 @@ def _arm_exit_watchdog(timeout_s: float | None = None) -> None:
                 "(a cleanup step or non-daemon thread is wedged).",
                 timeout_s,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         try:
             import logging as _lg
 
             _lg.shutdown()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         for _stream in (sys.stdout, sys.stderr):
             try:
                 _stream.flush()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         os._exit(0)
 
     try:
         threading.Thread(target=_watchdog, daemon=True, name="exit-watchdog").start()
-    except (AttributeError, ValueError):
+    except Exception:
         pass  # best-effort — never block shutdown on watchdog setup
 
 
@@ -1127,17 +1127,17 @@ def _run_cleanup(*, notify_session_finalize: bool = True):
 
     try:
         _cleanup_all_terminals()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     try:
         from tools.async_delegation import interrupt_all as _interrupt_async_delegations
 
         _interrupt_async_delegations(reason="CLI shutdown")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         _cleanup_all_browsers()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     try:
         from tools.mcp_tool import shutdown_mcp_servers
@@ -1152,7 +1152,7 @@ def _run_cleanup(*, notify_session_finalize: bool = True):
         from agent.auxiliary_client import shutdown_cached_clients
 
         shutdown_cached_clients()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     # Shut down memory provider (on_session_end + shutdown_all) at actual
     # session boundary — NOT per-turn inside run_conversation().
@@ -1177,7 +1177,7 @@ def _run_cleanup(*, notify_session_finalize: bool = True):
             if _mm is not None and hasattr(_mm, "flush_pending"):
                 try:
                     _mm.flush_pending(timeout=10)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             # Forward the agent's own transcript so memory providers'
             # ``on_session_end`` hooks see the real conversation instead of
@@ -1226,7 +1226,7 @@ def _notify_session_finalize(
             platform=platform,
             reason=reason,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -1238,7 +1238,7 @@ def _emit_interrupted_session_end(cli, *, reason: str = "keyboard_interrupt") ->
 
     try:
         agent.interrupt(reason.replace("_", " "))
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     session_id = getattr(agent, "session_id", None) or getattr(cli, "session_id", None)
@@ -1263,7 +1263,7 @@ def _emit_interrupted_session_end(cli, *, reason: str = "keyboard_interrupt") ->
             platform=getattr(agent, "platform", None) or "cli",
             reason=reason,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -1326,7 +1326,7 @@ def _reset_terminal_input_modes_on_exit() -> None:
             stream.write(_TERMINAL_INPUT_MODE_RESET_SEQ)
             stream.flush()
             return
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     try:
         with open("/dev/tty", "w", encoding="ascii") as tty:
@@ -1810,7 +1810,7 @@ def _worktree_lock_is_live(repo_root: str, worktree_path: str, timeout: int = 10
                 from gateway.status import _pid_exists
 
                 return "live" if _pid_exists(pid) else "dead"
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 # Can't determine liveness — fail safe toward keeping it.
                 return "live"
     return None
@@ -2011,7 +2011,7 @@ def _prune_stale_worktrees(repo_root: str, max_age_hours: int = 24) -> None:
             mtime = entry.stat().st_mtime
             if mtime > soft_cutoff:
                 continue  # Too recent — skip
-        except (AttributeError, ValueError):
+        except Exception:
             continue
 
         force = mtime <= hard_cutoff  # Over 72h — reap aggressively
@@ -2278,17 +2278,17 @@ def _query_osc11_background() -> str | None:
 
         fd = sys.stdin.fileno()
         old = termios.tcgetattr(fd)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
     try:
         try:
             tty.setcbreak(fd)
-        except (AttributeError, ValueError):
+        except Exception:
             return None
         try:
             sys.stdout.write("\x1b]11;?\x1b\\")
             sys.stdout.flush()
-        except (AttributeError, ValueError):
+        except Exception:
             return None
         # Read up to ~50ms for the response
         import select
@@ -2328,7 +2328,7 @@ def _query_osc11_background() -> str | None:
         # buffer before prompt_toolkit can read it as keystrokes.
         try:
             termios.tcsetattr(fd, termios.TCSAFLUSH, old)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -2456,7 +2456,7 @@ def _install_skin_light_mode_hook() -> None:
         value = _orig_get_color(self, key, fallback)
         try:
             return _maybe_remap_for_light_mode(value)
-        except (AttributeError, ValueError):
+        except Exception:
             return value
 
     SkinConfig.get_color = _wrapped_get_color  # type: ignore[method-assign]
@@ -2472,7 +2472,7 @@ _install_skin_light_mode_hook()
 try:
     if sys.stdin.isatty() and sys.stdout.isatty():
         _detect_light_mode()
-except (AttributeError, ValueError):
+except Exception:
     pass
 
 
@@ -2500,7 +2500,7 @@ class _SkinAwareAnsi:
                     get_active_skin().get_color(self._skin_key, self._fallback_hex),
                     bold=self._bold,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 self._cached = _hex_to_ansi(self._fallback_hex, bold=self._bold)
         return self._cached
 
@@ -2550,7 +2550,7 @@ def _accent_hex() -> str:
         from hercules_cli.skin_engine import get_active_skin
 
         return get_active_skin().get_color("ui_accent", "#E8712E")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return "#E8712E"
 
 
@@ -2628,7 +2628,7 @@ def _terminal_width_for_streaming() -> int:
 
     try:
         cols = shutil.get_terminal_size((80, 24)).columns
-    except (AttributeError, ValueError):
+    except Exception:
         cols = 80
     return max(20, cols - len(_STREAM_PAD) - 2)
 
@@ -2645,7 +2645,7 @@ def _render_final_assistant_content(text: str, mode: str = "render"):
     # soft-wrap.
     try:
         cols = shutil.get_terminal_size((80, 24)).columns
-    except (AttributeError, ValueError):
+    except Exception:
         cols = 80
     panel_width = max(20, cols - 12)
 
@@ -2744,7 +2744,7 @@ def _replay_output_history() -> None:
             if callable(entry):
                 try:
                     lines = entry()
-                except (AttributeError, ValueError):
+                except Exception:
                     continue
                 if isinstance(lines, str):
                     lines = lines.splitlines()
@@ -2792,7 +2792,7 @@ def _cprint(text: str):
     app = None
     try:
         app = get_app_or_none()
-    except (AttributeError, ValueError):
+    except Exception:
         app = None
 
     # No active app, or we're already on the app's main thread: the
@@ -2829,7 +2829,7 @@ def _cprint(text: str):
         current_loop = _asyncio.get_running_loop()
     except RuntimeError:
         current_loop = None
-    except (AttributeError, ValueError):
+    except Exception:
         current_loop = None
     # Same thread as the app's loop → safe to print directly.
     if current_loop is loop and loop.is_running():
@@ -2864,12 +2864,12 @@ def _cprint(text: str):
                 _fut.add_done_callback(_PT_PRINT_FUTURES.discard)
             # else: run_in_terminal ran the lambda synchronously; nothing more
             # to do (double-scheduling would print twice).
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # best-effort; the line may already have been printed
 
     try:
         loop.call_soon_threadsafe(_schedule)
-    except (AttributeError, ValueError):
+    except Exception:
         try:
             _pt_print(_PT_ANSI(text))
         except (ValueError):
@@ -2923,7 +2923,7 @@ def _cli_visible_print(text: str = "") -> None:
         from prompt_toolkit.application import get_app_or_none
 
         app = get_app_or_none()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         app = None
 
     if app is not None and getattr(app, "_is_running", False):
@@ -3037,7 +3037,7 @@ def _resolve_attachment_path(raw_path: str) -> Path | None:
                 expanded = unquote(parsed.path or "")
                 if parsed.netloc and os.name == "nt":
                     expanded = f"//{parsed.netloc}{expanded}"
-        except (AttributeError, ValueError):
+        except Exception:
             expanded = token
     expanded = os.path.expandvars(os.path.expanduser(expanded))
     if os.name != "nt":
@@ -3056,7 +3056,7 @@ def _resolve_attachment_path(raw_path: str) -> Path | None:
 
     try:
         resolved = path.resolve()
-    except (AttributeError, ValueError):
+    except Exception:
         resolved = path
 
     # Path.exists() / is_file() invoke os.stat(), which raises OSError when
@@ -3468,7 +3468,7 @@ def _build_cpr_disabled_output(stdout):
             return Size(rows=rows or 24, columns=columns or 80)
 
         return Vt100_Output(stdout, _get_term_size, enable_cpr=False)
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
 
@@ -3684,7 +3684,7 @@ def _build_compact_banner() -> str:
         from hercules_cli.skin_engine import get_active_skin
 
         _skin = get_active_skin()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _skin = None
 
     skin_name = getattr(_skin, "name", "default") if _skin else "default"
@@ -3809,7 +3809,7 @@ def _get_plugin_cmd_handler_names() -> set:
         from hercules_cli.plugins import get_plugin_commands
 
         return set(get_plugin_commands().keys())
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return set()
 
 
@@ -4251,7 +4251,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     f"  Reason: {e}\n"
                     "  Fix the state.db store (e.g. `hercules update` to rebuild the venv) to restore persistence."
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 # Never let the warning path itself break startup.
                 print(
                     "WARNING: Session store unavailable — this conversation will NOT be "
@@ -4430,7 +4430,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         self._active_session_lease = lease
         try:
             atexit.register(self._release_active_session)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         return True
 
@@ -4440,7 +4440,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             return
         try:
             lease.release()
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("Failed to release active session slot", exc_info=True)
         finally:
             self._active_session_lease = None
@@ -4488,7 +4488,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         if app is not None:
             try:
                 app.invalidate()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     def _force_full_redraw(self) -> None:
@@ -4513,7 +4513,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         _replay_output_history()
         try:
             app.invalidate()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def _recover_terminal_after_interrupt(self) -> None:
@@ -4539,7 +4539,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from hercules_cli.curses_ui import flush_stdin
 
             flush_stdin()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         self._force_full_redraw()
 
@@ -4632,7 +4632,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         # unnecessary full repaint.
         try:
             new_width = self._get_tui_terminal_width()
-        except (AttributeError, ValueError):
+        except Exception:
             new_width = None
         prev_width = getattr(self, "_last_resize_width", None)
         # First resize of the session has no prior width to compare against;
@@ -4642,7 +4642,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             try:
                 self._clear_prompt_toolkit_screen(app, rebuild_scrollback=False)
                 _replay_output_history()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         if new_width is not None:
             self._last_resize_width = new_width
@@ -4660,14 +4660,14 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             if old_timer is not None:
                 try:
                     old_timer.cancel()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
             def _clear():
                 self._status_bar_suppressed_after_resize = False
                 try:
                     app.invalidate()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
             def _fire():
@@ -4679,7 +4679,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     try:
                         loop.call_soon_threadsafe(_clear)
                         return
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                 _clear()
 
@@ -4687,7 +4687,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             timer.daemon = True
             self._status_bar_unsuppress_timer = timer
             timer.start()
-        except (AttributeError, ValueError):
+        except Exception:
             # Fail open: never leave the bar stuck hidden.
             self._status_bar_suppressed_after_resize = False
 
@@ -4722,7 +4722,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     try:
                         loop.call_soon_threadsafe(_run_recovery)
                         return
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                 _run_recovery()
 
@@ -4730,14 +4730,14 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 if old_timer is not None:
                     try:
                         old_timer.cancel()
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                 self._resize_recovery_pending = True
                 timer = threading.Timer(delay, lambda: _timer_fired(timer))
                 timer.daemon = True
                 self._resize_recovery_timer = timer
                 timer.start()
-        except (AttributeError, ValueError):
+        except Exception:
             self._resize_recovery_pending = False
             self._recover_after_resize(app, original_on_resize)
 
@@ -4887,7 +4887,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from tools.process_registry import process_registry
 
             snapshot["active_background_processes"] = process_registry.count_running()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # Count live background/async subagents (delegate_task batches and
@@ -4898,7 +4898,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from tools.async_delegation import active_count as _async_active_count
 
             snapshot["active_background_subagents"] = _async_active_count()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         if not agent:
@@ -4963,7 +4963,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from prompt_toolkit.utils import get_cwidth
 
             return get_cwidth(text or "")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return len(text or "")
 
     @classmethod
@@ -5006,7 +5006,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from prompt_toolkit.application import get_app
 
             return get_app().output.get_size().columns
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return shutil.get_terminal_size(default).columns
 
     def _use_minimal_tui_chrome(self, width: Optional[int] = None) -> bool:
@@ -5035,7 +5035,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         if width is None:
             try:
                 width = shutil.get_terminal_size((80, 24)).columns
-            except (AttributeError, ValueError):
+            except Exception:
                 width = 80
         return max(32, int(width or 80))
 
@@ -5162,7 +5162,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     self._pet_frames_cache.clear()
                     self._pet_frame_idx = 0
                 self._pet_enabled = True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             with self._pet_lock:
                 self._pet_enabled = False
                 self._pet_renderer = None
@@ -5303,7 +5303,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             if app is not None:
                 try:
                     app.invalidate()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
     def _pet_start_anim(self) -> None:
@@ -5358,7 +5358,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             self._voice_record_key_display_cache = format_voice_record_key_for_status(
                 raw_key
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             self._voice_record_key_display_cache = "Ctrl+B"
 
     def _get_voice_status_fragments(self, width: Optional[int] = None):
@@ -5609,7 +5609,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     self.model = normalized_model
                     current_model = normalized_model
                     changed = True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         if resolved_provider == "copilot":
@@ -5637,7 +5637,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 if resolved_mode != self.api_mode:
                     self.api_mode = resolved_mode
                     changed = True
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             return changed
 
@@ -5666,7 +5666,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 if resolved_mode != self.api_mode:
                     self.api_mode = resolved_mode
                     changed = True
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             return changed
 
@@ -5696,7 +5696,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 )
                 if available:
                     fallback_model = available[0]
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
             if current_model != fallback_model:
@@ -5777,7 +5777,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
         try:
             term_width = shutil.get_terminal_size().columns
-        except (AttributeError, ValueError):
+        except Exception:
             term_width = 80
         prefix = "  [thinking] "
         wrap_width = max(30, term_width - len(prefix) - 2)
@@ -5819,7 +5819,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
         try:
             term_width = shutil.get_terminal_size().columns
-        except (AttributeError, ValueError):
+        except Exception:
             term_width = 80
         target_width = max(40, term_width - len("  [thinking] ") - 4)
 
@@ -6170,7 +6170,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 _skin = get_active_skin()
                 label = _skin.get_branding("response_label", "⚕ Hercules")
                 _text_hex = _skin.get_color("banner_text", "#FFF8DC")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 label = "⚕ Hercules"
                 _text_hex = "#FFF8DC"
             # Build a true-color ANSI escape for the response text color
@@ -6503,7 +6503,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         """Clear an input buffer after a programmatic submit (best-effort)."""
         try:
             buffer.reset(append_to_history=True)
-        except (AttributeError, ValueError):
+        except Exception:
             try:
                 buffer.text = ""
             except (AttributeError, ValueError, OSError):
@@ -6541,7 +6541,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         f"  {_DIM}⚠ tirith security scanner enabled but not available "
                         f"— command scanning will use pattern matching only{_RST}"
                     )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     def _show_security_advisories(self):
@@ -6565,7 +6565,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 # Print to stderr — keeps stdout clean for piped automation,
                 # and Rich's banner rendering already wrote to stdout above.
                 print(banner, file=sys.stderr, flush=True)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             # Never let the security banner block startup. Failures are
             # logged at DEBUG by the advisory module.
             pass
@@ -6801,7 +6801,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             else:
                 sys.stdout.write(_TERMINAL_INPUT_MODE_RESET_SEQ)
                 sys.stdout.flush()
-        except (AttributeError, ValueError):
+        except Exception:
             return
 
         logger.warning("Recovered terminal input modes after leak: %s", reason)
@@ -6909,7 +6909,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         f"   [dim]• {item['name']}[/] [dim italic]({', '.join(item.get('env_vars', []))})[/]"
                     )
                 self._console_print("[dim]   Run 'hercules setup' to configure[/]")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Don't crash on import errors
 
     def _show_status(self):
@@ -6943,7 +6943,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             separator_color = skin.get_color("banner_dim", "#8E2B3F")
             accent_color = skin.get_color("ui_accent", "#E8712E")
             label_color = skin.get_color("ui_label", "#DAA520")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             separator_color, accent_color, label_color = "#8E2B3F", "#E8712E", "cyan"
         toolsets_info = ""
         if self.enabled_toolsets and "all" not in self.enabled_toolsets:
@@ -6969,7 +6969,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         if self._session_db:
             try:
                 session_meta = self._session_db.get_session(self.session_id) or {}
-            except (AttributeError, ValueError):
+            except Exception:
                 session_meta = {}
 
         title = (session_meta.get("title") or "").strip()
@@ -7038,7 +7038,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from hercules_cli.skin_engine import get_active_help_header
 
             header = get_active_help_header("(^_^)? Available Commands")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             header = "(^_^)? Available Commands"
         header = (header or "").strip() or "(^_^)? Available Commands"
         inner_width = 55
@@ -7257,7 +7257,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 limit=limit,
                 exclude_sources=["tool"],
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return []
 
     def _show_recent_sessions(
@@ -7403,7 +7403,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 if event_type == "on_session_reset"
                 else "session_boundary",
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     def _discard_session_if_empty(self, session_id: Optional[str]) -> bool:
@@ -7430,7 +7430,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             return self._session_db.delete_session_if_empty(
                 session_id, sessions_dir=_ghh() / "sessions"
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug("Could not prune empty session %s", session_id, exc_info=True)
             return False
 
@@ -7467,7 +7467,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         if engine is not None and hasattr(engine, "on_session_end"):
             try:
                 engine.on_session_end(session_id or "", history_snapshot)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "Context engine on_session_end failed at /new boundary",
                     exc_info=True,
@@ -7506,11 +7506,11 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             if self.agent:
                 try:
                     self.agent._flush_messages_to_session_db(self.conversation_history)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass  # best-effort
             try:
                 self._session_db.end_session(old_session_id, "new_session")
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             # Don't let immediately-rotated empty sessions pile up in
             # /resume and `hercules sessions list` (gemini-cli#27770 port).
@@ -7536,7 +7536,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     from tools.todo_tool import TodoStore
 
                     self.agent._todo_store = TodoStore()
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             if hasattr(self.agent, "_invalidate_system_prompt"):
                 self.agent._invalidate_system_prompt()
@@ -7554,7 +7554,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         },
                     )
                     self.agent._session_db_created = True
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 if title and self._session_db:
                     from hercules_state import SessionDB
@@ -7820,12 +7820,12 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             if hasattr(self.agent, "_invalidate_system_prompt"):
                 try:
                     self.agent._invalidate_system_prompt()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if hasattr(self.agent, "_last_flushed_db_idx"):
                 try:
                     self.agent._last_flushed_db_idx = len(self.conversation_history)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             # Notify memory providers — same hook /branch fires, with the
             # rewound flag so per-turn document caches invalidate (#6672, #21910).
@@ -7958,13 +7958,13 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             self._app.invalidate()
             try:
                 run_in_terminal(_ask)
-            except (AttributeError, ValueError):
+            except Exception:
                 # WSL / Warp / certain terminal emulators silently drop the
                 # scheduled coroutine.  Fall back to a direct input() so the
                 # user's keystrokes don't leak into the agent buffer.
                 try:
                     _ask()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             finally:
                 self._status_bar_visible = was_visible
@@ -8070,7 +8070,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
             try:
                 app_loop.call_soon_threadsafe(_wrapped)
-            except (AttributeError, ValueError):
+            except Exception:
                 return False
             return ready.wait(timeout=5)
 
@@ -8303,7 +8303,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 api_key=result.api_key or self.api_key or "",
                 model_info=result.model_info,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             warning = None
         if warning is None:
             return True
@@ -8478,7 +8478,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             )
             if ctx:
                 _cprint(f"    Context: {ctx:,} tokens")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         if mi:
             if mi.max_output:
@@ -8525,7 +8525,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     live = provider_model_ids(provider_data["slug"])
                     if live:
                         model_list = live
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             state["stage"] = "model"
             state["provider_data"] = provider_data
@@ -8628,7 +8628,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
                 clear_provider_models_cache()
                 _cprint("  Cleared model picker cache. Refreshing...")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         # Single inventory context — replaces the inline config-slice the
@@ -8643,7 +8643,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 current_model=self.model or "",
                 current_base_url=self.base_url or "",
             )
-        except (AttributeError, ValueError):
+        except Exception:
             ctx = None
 
         # switch_model() + _open_model_picker still need the raw provider
@@ -8893,7 +8893,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             base = text.split(None, 1)[0].lower().lstrip("/")
             cmd = resolve_command(base)
             return bool(cmd and cmd.name == "model")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
 
     def _should_handle_steer_command_inline(
@@ -8920,7 +8920,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             base = text.split(None, 1)[0].lower().lstrip("/")
             cmd = resolve_command(base)
             return bool(cmd and cmd.name == "steer")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
 
     def _output_console(self):
@@ -9132,10 +9132,10 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         _tip_color = get_active_skin().get_color(
                             "banner_dim", "#8E2B3F"
                         )
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         _tip_color = "#8E2B3F"
                     cc.print(f"[dim {_tip_color}]✦ Tip: {_tip}[/]")
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             else:
                 self.show_banner()
@@ -9153,10 +9153,10 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         _tip_color = get_active_skin().get_color(
                             "banner_dim", "#8E2B3F"
                         )
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         _tip_color = "#8E2B3F"
                     self._console_print(f"[dim {_tip_color}]✦ Tip: {_tip}[/]")
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
         elif canonical == "history":
             self.show_history()
@@ -9418,7 +9418,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
                         for p in get_plugin_manager().list_plugins():
                             loaded[p["name"]] = p
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         loaded = {}
 
                     print(f"User plugins ({len(user_entries)}):")
@@ -9829,7 +9829,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 stray = self._interrupt_queue.get_nowait()
                 if stray:
                     self._pending_input.put(stray)
-        except (AttributeError, ValueError):
+        except Exception:
             pass  # Non-fatal — never break the main loop
 
     def _maybe_continue_goal_after_turn(self) -> None:
@@ -9943,7 +9943,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from hercules_cli.goals import gather_background_processes as _gather_bg
 
             _bg_procs = _gather_bg()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _bg_procs = None
 
         decision = mgr.evaluate_after_turn(
@@ -10591,7 +10591,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 confirm_required = bool(
                     approvals.get("destructive_slash_confirm", True)
                 )
-        except (AttributeError, ValueError):
+        except Exception:
             confirm_required = True
 
         if not confirm_required:
@@ -10655,7 +10655,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             confirm_required = True
             if isinstance(approvals, dict):
                 confirm_required = bool(approvals.get("mcp_reload_confirm", True))
-        except (AttributeError, ValueError):
+        except Exception:
             confirm_required = True
 
         if not confirm_required:
@@ -10818,7 +10818,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         self.conversation_history,
                         self.conversation_history,
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass  # Best-effort
 
             print(
@@ -10970,12 +10970,12 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             )
             try:
                 self._flush_reasoning_preview(force=True)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             _cprint(f"  {_DIM}┊ ◇ {header}{_RST}")
             try:
                 self._emit_reasoning_preview(text)
-            except (AttributeError, ValueError):
+            except Exception:
                 # Fallback: print the raw text dimmed if the preview helper fails.
                 if text.strip():
                     _cprint(f"  {_DIM}{text.strip()}{_RST}")
@@ -11032,7 +11032,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         result=kwargs.get("result"),
                     )
                     _cprint(f"  {line}")
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
                 # First-touch onboarding: on the first tool in this process
                 # that takes longer than the threshold while we're in the
@@ -11062,7 +11062,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                             CLI_CONFIG.setdefault("onboarding", {}).setdefault(
                                 "seen", {}
                             )[TOOL_PROGRESS_FLAG] = True
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             self._invalidate()
             return
@@ -11096,7 +11096,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             snapshot = capture_local_edit_snapshot(function_name, function_args)
             if snapshot is not None:
                 self._pending_edit_snapshots[tool_call_id] = snapshot
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug(
                 "Edit snapshot capture failed for %s", function_name, exc_info=True
             )
@@ -11119,7 +11119,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     if isinstance(function_result, str)
                     else (function_result or {})
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 parsed = {}
             if (
                 isinstance(parsed, dict)
@@ -11147,7 +11147,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 snapshot=snapshot,
                 print_fn=_cprint,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug(
                 "Edit diff preview failed for %s", function_name, exc_info=True
             )
@@ -11207,7 +11207,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
             _cfg = load_config().get("voice")
             voice_cfg = _cfg if isinstance(_cfg, dict) else {}
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # Recorder creation can fail (no input device, PortAudio init error).
@@ -11216,7 +11216,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         if self._voice_recorder is None:
             try:
                 self._voice_recorder = create_audio_recorder()
-            except (AttributeError, ValueError):
+            except Exception:
                 with self._voice_lock:
                     self._voice_recording = False
                 raise
@@ -11258,12 +11258,12 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 from tools.voice_mode import play_beep
 
                 play_beep(frequency=880, count=1)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         try:
             self._voice_recorder.start(on_silence_stop=_on_silence)
-        except (AttributeError, ValueError):
+        except Exception:
             with self._voice_lock:
                 self._voice_recording = False
             raise
@@ -11317,7 +11317,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     from tools.voice_mode import play_beep
 
                     play_beep(frequency=660, count=2)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
 
             if wav_path is None:
@@ -11336,7 +11336,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
                 stt_config = load_config().get("stt", {})
                 stt_model = stt_config.get("model")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
             from tools.voice_mode import transcribe_recording
@@ -11483,7 +11483,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             voice_cfg = load_config().get("voice", {})
             if isinstance(voice_cfg, dict):
                 return bool(voice_cfg.get("beep_enabled", True))
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return True
 
@@ -11536,7 +11536,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             if voice_config.get("auto_tts", False):
                 with self._voice_lock:
                     self._voice_tts = True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # Voice mode instruction is injected as a user message prefix (not a
@@ -11572,7 +11572,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             def _bg_shutdown(rec=recorder):
                 try:
                     rec.shutdown()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
             threading.Thread(target=_bg_shutdown, daemon=True).start()
@@ -11583,7 +11583,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from tools.voice_mode import stop_playback
 
             stop_playback()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         self._voice_tts_done.set()
 
@@ -12120,7 +12120,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 "cursor_position": buf.cursor_position,
             }
             buf.reset()
-        except (AttributeError, ValueError):
+        except Exception:
             self._modal_input_snapshot = None
 
     def _restore_modal_input_snapshot(self) -> None:
@@ -12133,7 +12133,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             buf = self._app.current_buffer
             buf.text = snapshot.get("text", "")
             buf.cursor_position = min(snapshot.get("cursor_position", 0), len(buf.text))
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def _clear_active_overlays_for_interrupt(self) -> None:
@@ -12178,7 +12178,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         if self._secret_state:
             try:
                 self._cancel_secret_capture()
-            except (AttributeError, ValueError):
+            except Exception:
                 self._secret_state = None
 
     def _submit_secret_response(self, value: str) -> None:
@@ -12198,7 +12198,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         if getattr(self, "_app", None):
             try:
                 self._app.current_buffer.reset()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     def chat(self, message, images: Optional[list] = None) -> Optional[str]:
@@ -12399,7 +12399,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         use_streaming_tts = True
                 except (ImportError, OSError):
                     pass
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
 
             if use_streaming_tts:
@@ -12454,7 +12454,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 set_approval_callback(self._approval_callback)
                 try:
                     set_secret_capture_callback(self._secret_capture_callback)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 # Bind this turn's approval session key into the contextvar so
                 # ``tools.approval.is_current_session_yolo_enabled()`` resolves
@@ -12471,7 +12471,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     _approval_session_token = set_current_session_key(
                         self.session_id or "default"
                     )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     reset_current_session_key = None  # type: ignore[assignment]
                     _approval_session_token = None
                 agent_message = _voice_prefix + message if _voice_prefix else message
@@ -12541,7 +12541,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         set_sudo_password_callback(None)
                         set_approval_callback(None)
                         set_secret_capture_callback(None)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                     # Release the per-turn approval session key. ``_session_yolo``
                     # state itself is preserved across turns (so /yolo persists
@@ -12553,7 +12553,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     ):
                         try:
                             reset_current_session_key(_approval_session_token)
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
 
             # Start agent in background thread (daemon so it cannot keep the
@@ -12586,7 +12586,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                             if self._clarify_state or self._clarify_freetext:
                                 try:
                                     self._pending_input.put(interrupt_msg)
-                                except (AttributeError, ValueError):
+                                except Exception:
                                     pass
                                 interrupt_msg = None
                                 continue
@@ -12675,7 +12675,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 from agent.auxiliary_client import cleanup_stale_async_clients
 
                 cleanup_stale_async_clients()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
             # Flush any remaining streamed text and close the box
@@ -12753,7 +12753,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                             "api_mode": self.api_mode,
                         },
                     )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
 
             # Handle failed or partial results (e.g., non-retryable errors, rate limits,
@@ -12859,7 +12859,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     _resp_text = _maybe_remap_for_light_mode(
                         _skin.get_color("banner_text", "#FFF8DC")
                     )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     label = "⚕ Hercules"
                     _resp_color = _maybe_remap_for_light_mode("#C73E3A")
                     _resp_text = _maybe_remap_for_light_mode("#FFF8DC")
@@ -12969,7 +12969,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             if text_queue is not None:
                 try:
                     text_queue.put_nowait(None)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if stop_event is not None:
                 stop_event.set()
@@ -12995,7 +12995,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             stream = sys.stdout
             if stream is None or not stream.isatty():
                 return
-        except (AttributeError, ValueError):
+        except Exception:
             return
         try:
             stream.write("\033[3J\033[2J\033[H")
@@ -13007,7 +13007,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         # VT-capable terminal, but this covers exotic stdout wrappers).
         try:
             os.system("cls" if os.name == "nt" else "clear")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def _persist_active_session_before_close(self):
@@ -13087,7 +13087,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             if self._session_db:
                 try:
                     session_title = self._session_db.get_session_title(self.session_id)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
             print("Resume this session with:")
@@ -13100,7 +13100,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 from hercules_cli.profiles import get_active_profile_name
 
                 _active_profile = get_active_profile_name()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _active_profile = "default"
             profile_flag = (
                 ""
@@ -13123,7 +13123,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 from hercules_cli.skin_engine import get_active_goodbye
 
                 goodbye = get_active_goodbye("Goodbye! ⚕")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 goodbye = "Goodbye! ⚕"
             print(goodbye)
 
@@ -13141,7 +13141,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from hercules_cli.skin_engine import get_active_prompt_symbol
 
             symbol = get_active_prompt_symbol("❯ ")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             symbol = "❯ "
 
         symbol = (symbol or "❯ ").rstrip() + " "
@@ -13153,7 +13153,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             profile = get_active_profile_name()
             if profile not in {"default", "custom"}:
                 symbol = f"{profile} {symbol}"
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         stripped = symbol.rstrip()
         if not stripped:
@@ -13239,7 +13239,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from hercules_cli.skin_engine import get_prompt_toolkit_style_overrides
 
             style_dict.update(get_prompt_toolkit_style_overrides())
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         # Light-mode remap on the style strings.  Each value is a pt
         # style string like "bg:#1a1a2e #C0C0C0 bold" — split on space,
@@ -13270,7 +13270,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     )
 
                 style_dict = {k: _remap_value(v or "") for k, v in style_dict.items()}
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         return style_dict
 
@@ -13370,7 +13370,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
         # don't risk re-querying mid-render.
         try:
             _detect_light_mode()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         # Push the entire TUI to the bottom of the terminal so the banner,
         # responses, and prompt all appear pinned to the bottom — empty
@@ -13402,7 +13402,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 "Welcome to Hercules Agent! Type your message or /help for commands.",
             )
             _welcome_color = _welcome_skin.get_color("banner_text", "#FFF8DC")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _welcome_text = (
                 "Welcome to Hercules Agent! Type your message or /help for commands."
             )
@@ -13417,7 +13417,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             from hercules_cli.model_switch import prewarm_picker_cache_async
 
             prewarm_picker_cache_async()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # Pre-import the agent runtime off-thread during the same idle window.
@@ -13479,7 +13479,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             ):
                 try:
                     _resid_color = _welcome_skin.get_color("banner_dim", "#8E2B3F")
-                except (AttributeError, ValueError):
+                except Exception:
                     _resid_color = "#8E2B3F"
                 self._console_print(f"[{_resid_color}]{openclaw_residue_hint_cli()}[/]")
                 try:
@@ -13488,9 +13488,9 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     )
 
                     mark_seen(_get_cfg_path_resid(), OPENCLAW_RESIDUE_FLAG)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass  # best-effort — banner will fire again next session
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # banner is non-critical — never break startup
         # Show a random tip to help users discover features
         try:
@@ -13499,7 +13499,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             _tip = get_random_tip()
             try:
                 _tip_color = _welcome_skin.get_color("banner_dim", "#8E2B3F")
-            except (AttributeError, ValueError):
+            except Exception:
                 _tip_color = "#8E2B3F"
             self._console_print(f"[dim {_tip_color}]✦ Tip: {_tip}[/]")
         except (ValueError):
@@ -13516,7 +13516,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 idle_for_seconds=float("inf"),  # CLI startup = fully idle
                 on_summary=lambda msg: self._console_print(f"[dim #6b7684]💾 {msg}[/]"),
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         if self.preloaded_skills and not self._startup_skills_line_shown:
             skills_label = ", ".join(self.preloaded_skills)
@@ -13849,7 +13849,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                             CLI_CONFIG.setdefault("onboarding", {}).setdefault(
                                 "seen", {}
                             )[BUSY_INPUT_FLAG] = True
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         pass
                 else:
                     self._pending_input.put(payload)
@@ -14395,7 +14395,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     "cross-runtime parity.",
                     _raw_key,
                 )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _voice_key = "c-b"
 
         # Cache the UI label here — same ``_raw_key`` that drives the
@@ -14451,7 +14451,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
                         stop_playback()
                         cli_ref._voice_tts_done.set()
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         pass
 
                 with cli_ref._voice_lock:
@@ -14643,14 +14643,14 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 doc = input_area.buffer.document
                 try:
                     terminal_columns = get_app().output.get_size().columns
-                except (AttributeError, ValueError):
+                except Exception:
                     terminal_columns = shutil.get_terminal_size((80, 24)).columns
                 return _estimate_tui_input_height(
                     doc.lines,
                     self._get_tui_prompt_text(),
                     terminal_columns,
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 return 1
 
         input_area.window.height = _input_height
@@ -15317,7 +15317,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 from prompt_toolkit.application import get_app
 
                 term_rows = get_app().output.get_size().rows
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 term_rows = shutil.get_terminal_size((100, 24)).lines
             scroll_offset, visible = HerculesCLI._compute_model_picker_viewport(
                 selected,
@@ -15636,7 +15636,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         ):
                             if previous_screen.height < screen.height:
                                 previous_screen.height = screen.height
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
 
                     return _orig_osd(
@@ -15657,7 +15657,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
                 _pt_renderer._output_screen_diff = _patched_output_screen_diff
                 _pt_renderer._hercules_osd_patched = True
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # Apply bracketed-paste timeout recovery so torn ESC[201~ end marks
@@ -15715,7 +15715,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                                     session_key=_drain_sk
                                 ):
                                     self._pending_input.put(_synth)
-                            except (ImportError, ModuleNotFoundError):
+                            except Exception:
                                 pass
                         continue
 
@@ -15912,7 +15912,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
 
                             for _evt, _synth in process_registry.drain_notifications():
                                 self._pending_input.put(_synth)
-                        except (ImportError, ModuleNotFoundError):
+                        except Exception:
                             pass  # Non-fatal — don't break the main loop
 
                 except Exception as e:
@@ -15959,7 +15959,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             """
             try:
                 logger.debug("Received signal %s, triggering graceful shutdown", signum)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass  # never let logging raise from a signal handler (#13710 regression)
             try:
                 if getattr(self, "agent", None) and getattr(
@@ -15997,7 +15997,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     if _loop is not None:
                         _loop.call_soon_threadsafe(_app.exit)
                         return  # clean unwind — no traceback, no ENTER pause
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             raise KeyboardInterrupt()  # fallback for non-prompt_toolkit contexts
 
@@ -16039,7 +16039,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     return
 
                 _signal.signal(_signal.SIGINT, _sigint_absorb)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Signal handlers may fail in restricted environments
 
         # Install a custom asyncio exception handler that suppresses the
@@ -16113,7 +16113,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                     _loop.set_exception_handler(_suppress_closed_loop_errors)
                 except RuntimeError:
                     pass  # No running loop -- nothing to patch
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
                 # The app enables focus reporting + mouse tracking; record that
                 # so _run_cleanup resets them on exit (#36823).
@@ -16167,13 +16167,13 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
             if self.agent and getattr(self, "_agent_running", False):
                 try:
                     self.agent.interrupt()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             # Shut down voice recorder (release persistent audio stream)
             if hasattr(self, "_voice_recorder") and self._voice_recorder:
                 try:
                     self._voice_recorder.shutdown()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 self._voice_recorder = None
             # Clean up old temp voice recordings
@@ -16181,7 +16181,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 from tools.voice_mode import cleanup_temp_recordings
 
                 cleanup_temp_recordings()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             # Unregister callbacks to avoid dangling references
             set_sudo_password_callback(None)
@@ -16243,7 +16243,7 @@ class HerculesCLI(CLIAgentSetupMixin, CLICommandsMixin):
                         platform=getattr(self.agent, "platform", None) or "cli",
                         reason="shutdown",
                     )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             _run_cleanup()
             self._print_exit_summary()
@@ -16295,7 +16295,7 @@ def _run_kanban_goal_loop_q(cli: "HerculesCLI", first_response: str) -> None:
     finally:
         try:
             conn.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     if task is None:
         return
@@ -16337,7 +16337,7 @@ def _run_kanban_goal_loop_q(cli: "HerculesCLI", first_response: str) -> None:
         finally:
             try:
                 c.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     def _block(reason: str) -> None:
@@ -16347,7 +16347,7 @@ def _run_kanban_goal_loop_q(cli: "HerculesCLI", first_response: str) -> None:
         finally:
             try:
                 c.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     _run_loop(
@@ -16429,7 +16429,7 @@ def main(
         from hercules_cli.stdio import configure_windows_stdio
 
         configure_windows_stdio()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Signal to terminal_tool that we're in interactive mode
@@ -16499,7 +16499,7 @@ def main(
             from agent.coding_context import coding_selection
 
             _coding = coding_selection(platform="cli", config=CLI_CONFIG)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _coding = None
         if _coding is not None:
             toolsets_list = _coding
@@ -16630,18 +16630,18 @@ def main(
                     # caller-installed timers.
                     _sig_mod.signal(_sig_mod.SIGALRM, lambda *_: os._exit(0))
                     _sig_mod.alarm(2)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             try:
                 import logging as _lg
 
                 _lg.shutdown()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             for _stream in (sys.stdout, sys.stderr):
                 try:
                     _stream.flush()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             os._exit(0)
         raise KeyboardInterrupt()
@@ -16653,7 +16653,7 @@ def main(
         _signal.signal(_signal.SIGTERM, _signal_handler_q)
         if hasattr(_signal, "SIGHUP"):
             _signal.signal(_signal.SIGHUP, _signal_handler_q)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass  # signal handler may fail in restricted environments
 
     # Handle single query mode
@@ -16682,7 +16682,7 @@ def main(
                     finally:
                         try:
                             _conn.close()
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
                     _body = getattr(_task, "body", "") if _task is not None else ""
                     if _body:
@@ -16726,7 +16726,7 @@ def main(
                                 (cli.model or "").strip(),
                                 load_config(),
                             )
-                        except (ImportError, ModuleNotFoundError):
+                        except Exception:
                             _img_mode = "text"
 
                         if _img_mode == "native" and _build_parts is not None:
@@ -16861,7 +16861,7 @@ def main(
                                     )
 
                                     _exit_code = _RL_CODE
-                                except (ImportError, ModuleNotFoundError):
+                                except Exception:
                                     _exit_code = 1
                         sys.exit(_exit_code)
 

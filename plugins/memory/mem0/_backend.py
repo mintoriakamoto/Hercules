@@ -163,7 +163,7 @@ class SelfHostedBackend(Mem0Backend):
     def close(self) -> None:
         try:
             self._client.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -313,7 +313,7 @@ class OSSBackend(Mem0Backend):
             if telemetry and hasattr(telemetry, "posthog"):
                 try:
                     telemetry.posthog.shutdown()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             if hasattr(self._memory, "close"):
                 self._memory.close()

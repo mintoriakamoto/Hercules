@@ -144,18 +144,18 @@ def _resolve_source_meta_and_bundle(identifier: str, sources):
                 meta = src.inspect(identifier)
                 if meta:
                     matched_source = src
-            except (AttributeError, ValueError):
+            except Exception:
                 meta = None
         try:
             bundle = src.fetch(identifier)
-        except (AttributeError, ValueError):
+        except Exception:
             bundle = None
         if bundle:
             matched_source = src
             if meta is None:
                 try:
                     meta = src.inspect(identifier)
-                except (AttributeError, ValueError):
+                except Exception:
                     meta = None
             break
 
@@ -876,7 +876,7 @@ def do_install(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
     else:
         c.print("[dim]Skill will be available in your next session.[/]")
@@ -1313,7 +1313,7 @@ def do_uninstall(
                 from agent.prompt_builder import clear_skills_system_prompt_cache
 
                 clear_skills_system_prompt_cache(clear_snapshot=True)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         else:
             c.print("[dim]Change will take effect in your next session.[/]")
@@ -1368,7 +1368,7 @@ def do_reset(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
     else:
         c.print("[dim]Change will take effect in your next session.[/]")
@@ -1524,7 +1524,7 @@ def do_opt_out(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
 
@@ -1555,7 +1555,7 @@ def do_opt_in(
                 from agent.prompt_builder import clear_skills_system_prompt_cache
 
                 clear_skills_system_prompt_cache(clear_snapshot=True)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
     c.print()
 
@@ -1606,7 +1606,7 @@ def do_repair_official(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
 

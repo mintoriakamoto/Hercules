@@ -122,7 +122,7 @@ def load_tracked() -> List[Dict[str, Any]]:
                 data = json.loads(bak.read_text())
                 _log("WARN: tracked.json corrupted — restored from .bak")
                 return data
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         _log("WARN: tracked.json corrupted, no backup — starting fresh")
         return []

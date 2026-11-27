@@ -184,7 +184,7 @@ def check_compression_model_feasibility(agent: Any) -> None:
         # where the compression model is actually being called.
         try:
             _aux_cfg_provider, _, _, _, _ = _resolve_task_provider_model("compression")
-        except (AttributeError, ValueError):
+        except Exception:
             _aux_cfg_provider = ""
         client, aux_model = get_text_auxiliary_client(
             "compression",
@@ -315,7 +315,7 @@ def check_compression_model_feasibility(agent: Any) -> None:
                     _aux_provider_label = (
                         urlparse(aux_base_url).hostname or aux_base_url
                     )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     _aux_provider_label = aux_base_url or "auto"
             _main_label = (
                 f"{_main_model} ({_main_provider})" if _main_provider else _main_model
@@ -371,7 +371,7 @@ def replay_compression_warning(agent: Any) -> None:
     if msg and agent.status_callback:
         try:
             agent.status_callback("lifecycle", msg)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -601,7 +601,7 @@ def compress_context(
         if not _lock_acquired:
             try:
                 existing = _lock_db.get_compression_lock_holder(_lock_sid)
-            except (AttributeError, ValueError):
+            except Exception:
                 existing = None
             logger.warning(
                 "compression skipped: another path is compressing session=%s "
@@ -619,7 +619,7 @@ def compress_context(
                         "is already compressing this session. Will retry "
                         "after it finishes."
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             _existing_sp = getattr(agent, "_cached_system_prompt", None)
             if not _existing_sp:
@@ -648,7 +648,7 @@ def compress_context(
     if agent._memory_manager:
         try:
             agent._memory_manager.on_pre_compress(messages)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     try:
@@ -798,7 +798,7 @@ def compress_context(
                     # parent transcript (#47202). (In-place skips this — see above.)
                     try:
                         agent._flush_messages_to_session_db(messages)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass  # best-effort — don't block compression on a flush error
                     # Propagate title to the new session with auto-numbering
                     old_title = agent._session_db.get_session_title(agent.session_id)
@@ -811,7 +811,7 @@ def compress_context(
                         from gateway.session_context import set_current_session_id
 
                         set_current_session_id(agent.session_id)
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         os.environ["HERCULES_SESSION_ID"] = agent.session_id
                     # The gateway/tools session context (ContextVar + env) and the
                     # logging session context are SEPARATE mechanisms. The call above
@@ -826,7 +826,7 @@ def compress_context(
                         from hercules_logging import set_session_context
 
                         set_session_context(agent.session_id)
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         pass
                     agent._session_db_created = False
                     try:
@@ -859,19 +859,19 @@ def compress_context(
                             from gateway.session_context import set_current_session_id
 
                             set_current_session_id(agent.session_id)
-                        except (ImportError, ModuleNotFoundError):
+                        except Exception:
                             os.environ["HERCULES_SESSION_ID"] = agent.session_id
                         try:
                             from hercules_logging import set_session_context
 
                             set_session_context(agent.session_id)
-                        except (ImportError, ModuleNotFoundError):
+                        except Exception:
                             pass
                         # Re-open the parent: it was ended above, but we're
                         # continuing on it, so it must not stay closed.
                         try:
                             agent._session_db.reopen_session(old_session_id)
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
                         old_session_id = None  # no rotation happened
                         # The parent row already exists in state.db, so mark the
@@ -1044,7 +1044,7 @@ def compress_context(
             from tools.file_tools import reset_file_dedup
 
             reset_file_dedup(task_id)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         logger.info(
@@ -1121,21 +1121,21 @@ def _compress_context_via_codex_app_server(
     )
     try:
         agent._emit_status(COMPACTION_STATUS)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     result = codex_session.compact_thread()
     if getattr(result, "should_retire", False):
         try:
             codex_session.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         agent._codex_session = None
 
     if getattr(result, "interrupted", False) or getattr(result, "error", None):
         try:
             agent._emit_warning(f"⚠ Codex app-server compaction failed: {result.error}")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         existing_prompt = getattr(agent, "_cached_system_prompt", None)
         if not existing_prompt:
@@ -1160,14 +1160,14 @@ def _compress_context_via_codex_app_server(
         # the ContextEngine update hook; preserve their existing bookkeeping.
         if hasattr(agent.context_compressor, "update_from_response"):
             _record_codex_app_server_usage(agent, result)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("codex compaction bookkeeping failed", exc_info=True)
 
     try:
         from tools.file_tools import reset_file_dedup
 
         reset_file_dedup(task_id)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     logger.info(

@@ -325,7 +325,7 @@ def _serialize_slack_blocks_for_agent(blocks: list, max_chars: int = 6000) -> st
 
     try:
         payload = json.dumps(_sanitize(blocks), ensure_ascii=False, indent=2)
-    except (AttributeError, ValueError):
+    except Exception:
         payload = repr(blocks)
 
     if len(payload) > max_chars:
@@ -1295,7 +1295,7 @@ class SlackAdapter(BasePlatformAdapter):
                         # Best-effort ack so Slack doesn't retry the click.
                         try:
                             await ack()
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
 
                 return _wrapped
@@ -1322,11 +1322,11 @@ class SlackAdapter(BasePlatformAdapter):
                 self._start_socket_mode_handler()
                 self._running = True
                 self._ensure_socket_watchdog()
-            except (AttributeError, ValueError):
+            except Exception:
                 self._running = False
                 try:
                     await self._stop_socket_mode_handler()
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "[Slack] Cleanup after failed start raised", exc_info=True
                     )
@@ -1968,7 +1968,7 @@ class SlackAdapter(BasePlatformAdapter):
             return None
         try:
             return render_blocks(content, mrkdwn_fn=self.format_message)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("[Slack] block render failed; using plain text", exc_info=True)
             return None
 
@@ -2566,7 +2566,7 @@ class SlackAdapter(BasePlatformAdapter):
 
         try:
             session_store.get_or_create_session(source)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[Slack] Failed to seed assistant thread session for %s/%s",
                 channel_id,
@@ -2718,7 +2718,7 @@ class SlackAdapter(BasePlatformAdapter):
                     and is_gateway_known_command(cmd_name)
                 ):
                     original_text = "/" + original_text[1:]
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         text = original_text
@@ -3291,7 +3291,7 @@ class SlackAdapter(BasePlatformAdapter):
                     )
                     or None
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 reply_to_text = None
 
         msg_event = MessageEvent(
@@ -3514,7 +3514,7 @@ class SlackAdapter(BasePlatformAdapter):
                     user_name=str(user_name).strip() if user_name else None,
                 )
                 return bool(auth_fn(source))
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug(
                     "[Slack] Falling back to env-only interactive auth for user %s",
                     normalized_user_id,
@@ -4135,7 +4135,7 @@ class SlackAdapter(BasePlatformAdapter):
 
             session_store._ensure_loaded()
             return session_key in session_store._entries
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
 
     async def _download_slack_file(
@@ -4342,7 +4342,7 @@ class SlackAdapter(BasePlatformAdapter):
                     import json as _json
 
                     patterns = _json.loads(raw)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     patterns = [
                         p.strip()
                         for p in raw.replace("\n", ",").split(",")
@@ -4424,7 +4424,7 @@ async def _standalone_send(
         try:
             _fmt_adapter = SlackAdapter.__new__(SlackAdapter)
             formatted = _fmt_adapter.format_message(message)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "Failed to apply Slack mrkdwn formatting in _standalone_send",
                 exc_info=True,

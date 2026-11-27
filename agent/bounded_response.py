@@ -128,7 +128,7 @@ def read_streaming_error_body(
 def _safe_close(response: httpx.Response) -> None:
     try:
         response.close()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
 

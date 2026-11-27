@@ -52,7 +52,7 @@ def _extract_json(text: str):
         s = fence.group(1).strip()
     try:
         return json.loads(s)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     # Fall back to the first {...} or [...] span.
     for opener, closer in (("[", "]"), ("{", "}")):

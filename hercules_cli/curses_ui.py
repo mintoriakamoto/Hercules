@@ -261,7 +261,7 @@ def flush_stdin() -> None:
         import termios
 
         termios.tcflush(sys.stdin, termios.TCIFLUSH)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 

@@ -356,7 +356,7 @@ def check_available(domain):
         with socket.create_connection((domain, 443), timeout=3) as s:
             with ctx.wrap_socket(s, server_hostname=domain):
                 ssl_up = True
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     signals["ssl_reachable"] = ssl_up
 

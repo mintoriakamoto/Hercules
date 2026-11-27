@@ -126,7 +126,7 @@ def _cua_telemetry_disabled() -> bool:
         cu = cfg.get("computer_use") or {}
         # opt-in flag: True => user wants telemetry => do NOT disable.
         return not bool(cu.get("cua_telemetry", False))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         # Config unreadable — default to disabling telemetry (fail safe).
         return True
 
@@ -320,7 +320,7 @@ def _maybe_nudge_update() -> None:
     def _run() -> None:
         try:
             msg = cua_driver_update_nudge()
-        except (AttributeError, ValueError):
+        except Exception:
             return
         if msg:
             logger.info("computer_use: %s", msg)
@@ -551,7 +551,7 @@ class _AsyncBridge:
             finally:
                 try:
                     self._loop.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
         self._thread = threading.Thread(
@@ -1661,7 +1661,7 @@ class CuaDriverBackend(ComputerUseBackend):
                 if detected_width and detected_height:
                     width = detected_width
                     height = detected_height
-            except (AttributeError, ValueError):
+            except Exception:
                 png_bytes_len = len(png_b64) * 3 // 4
 
         return CaptureResult(

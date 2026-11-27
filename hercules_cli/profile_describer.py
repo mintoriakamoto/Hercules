@@ -216,7 +216,7 @@ def describe_profile(
     # Read model + provider from the profile's config.
     try:
         model, provider = profiles_mod._read_config_model(profile_dir)
-    except (AttributeError, ValueError):
+    except Exception:
         model, provider = None, None
 
     try:

@@ -70,7 +70,7 @@ def _resolve_connector_url(override: Optional[str]) -> Optional[str]:
 
             cfg = _load_gateway_config().get("gateway") or {}
             raw = str(cfg.get("relay_url", "") or "").strip()
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             raw = ""
     if not raw:
         return None

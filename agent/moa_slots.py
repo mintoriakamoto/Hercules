@@ -139,7 +139,7 @@ def _credentials_configured(provider: str) -> bool:
             if isinstance(model_cfg, dict):
                 base_url = str(model_cfg.get("base_url") or "").strip()
             return bool(base_url)
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             return True
     try:
         from hercules_cli.auth import get_auth_status, has_usable_secret
@@ -155,7 +155,7 @@ def _credentials_configured(provider: str) -> bool:
             pass
     try:
         status = get_auth_status(provider) or {}
-    except (AttributeError, ValueError):
+    except Exception:
         return True
     return bool(status.get("logged_in") or status.get("configured"))
 
@@ -263,7 +263,7 @@ def session_slot() -> Optional[dict[str, str]]:
         provider = _normalize(model_cfg.get("provider"))
         model = str(model_cfg.get("default") or model_cfg.get("model") or "").strip()
         base_url = str(model_cfg.get("base_url") or "").strip()
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return None
 
     if provider in _VIRTUAL_PROVIDERS:
@@ -286,7 +286,7 @@ def session_slot() -> Optional[dict[str, str]]:
             from hercules_cli.auth import get_active_provider
 
             provider = _normalize(get_active_provider())
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             provider = ""
     if not provider or provider in _VIRTUAL_PROVIDERS:
         return None
@@ -300,7 +300,7 @@ def session_slot() -> Optional[dict[str, str]]:
             from hercules_cli.models import get_default_model_for_provider
 
             model = str(get_default_model_for_provider(provider) or "").strip()
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             model = ""
         # A local endpoint serves whatever it has loaded; there is no catalog
         # to take a default from, so an unknown model there means no fallback

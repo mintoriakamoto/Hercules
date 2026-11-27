@@ -105,7 +105,7 @@ def provider_catalog() -> list[ProviderDescriptor]:
         from providers import list_providers
 
         profiles = {p.name: p for p in list_providers()}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         profiles = {}
 
     try:

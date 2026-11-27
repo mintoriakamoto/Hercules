@@ -77,7 +77,7 @@ def _safe_which(cmd: str) -> str | None:
     """shutil.which wrapper resilient to platform monkeypatching in tests."""
     try:
         return shutil.which(cmd)
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
 
@@ -113,7 +113,7 @@ def _honcho_is_configured_for_doctor() -> bool:
 
         cfg = HonchoClientConfig.from_global_config()
         return bool(cfg.enabled and (cfg.api_key or cfg.base_url))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return False
 
 
@@ -174,14 +174,14 @@ def _has_healthy_oauth_fallback_for_apikey_provider(provider_label: str) -> bool
             from hercules_cli.auth import get_minimax_oauth_auth_status
 
             return bool((get_minimax_oauth_auth_status() or {}).get("logged_in"))
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             return False
     if normalized == "xai":
         try:
             from hercules_cli.auth import get_xai_oauth_auth_status
 
             return bool((get_xai_oauth_auth_status() or {}).get("logged_in"))
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             return False
     return False
 
@@ -232,7 +232,7 @@ def _enabled_cli_toolsets_for_doctor() -> set[str] | None:
         return {
             str(toolset) for toolset in _get_platform_tools(load_config() or {}, "cli")
         }
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return None
 
 
@@ -613,7 +613,7 @@ def _build_apikey_providers_list() -> list:
             )
             _hc = getattr(_pp, "supports_health_check", True)
             _static.append((_label, _key_vars, _models_url, _base_var, _hc))
-    except (AttributeError, ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return _static
 
@@ -630,7 +630,7 @@ def managed_scope_check() -> None:
         from hercules_cli import managed_scope
 
         managed_dir = managed_scope.get_managed_dir()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
     if managed_dir is None:
         return
@@ -672,7 +672,7 @@ def check_tenselerate(issues: list[str]) -> None:
             configured = provider in {"tenselerate", "svmi"} or (
                 provider == "custom" and cfg_base in {base, TENSELERATE_BASE.rstrip("/")}
             )
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         configured = False
 
     detail = ""
@@ -990,7 +990,7 @@ def run_doctor(args):
                     "custom",
                     "auto",
                 }
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _resolve_auth_provider = None
                 pass
             try:
@@ -1010,7 +1010,7 @@ def run_doctor(args):
             if _compatible_custom_providers is not None:
                 try:
                     custom_providers = _compatible_custom_providers(cfg)
-                except (AttributeError, ValueError):
+                except Exception:
                     custom_providers = []
 
             user_providers = cfg.get("providers")
@@ -1035,7 +1035,7 @@ def run_doctor(args):
                         valid_provider_ids.add(
                             _normalize_catalog_provider(known_provider)
                         )
-                    except (AttributeError, ValueError):
+                    except Exception:
                         continue
 
             runtime_provider = provider
@@ -1047,7 +1047,7 @@ def run_doctor(args):
                 try:
                     runtime_provider = _resolve_auth_provider(provider)
                     provider_ids_to_accept.add(runtime_provider)
-                except (AttributeError, ValueError):
+                except Exception:
                     runtime_provider = provider
 
             catalog_provider = provider
@@ -1161,7 +1161,7 @@ def run_doctor(args):
                             ),
                             issues,
                         )
-                except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+                except Exception:
                     pass
 
         except Exception as e:
@@ -1212,7 +1212,7 @@ def run_doctor(args):
                     )
             else:
                 check_ok(f"Config version up to date (v{current_ver})")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # Detect stale root-level model keys (known bug source — PR #4329)
@@ -1333,7 +1333,7 @@ def run_doctor(args):
                     for hint_line in ci.hint.splitlines():
                         check_info(hint_line)
                     issues.append(ci.message)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     _section("xAI Model Retirement (May 15, 2026)")
@@ -1408,7 +1408,7 @@ def run_doctor(args):
             check_warn("xAI OAuth", "(not logged in)")
             if xai_oauth_status.get("error"):
                 check_info(xai_oauth_status["error"])
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     _section("Directory Structure")
@@ -1569,7 +1569,7 @@ def run_doctor(args):
                                 "SELECT COUNT(*) FROM sessions"
                             ).fetchone()[0]
                             conn.close()
-                        except (IndexError, KeyError, ValueError):
+                        except Exception:
                             count = "?"
                         backup_name = (
                             Path(report["backup_path"]).name
@@ -1631,7 +1631,7 @@ def run_doctor(args):
                 check_info(
                     f"WAL file is {wal_size // (1024 * 1024)} MB (normal for active sessions)"
                 )
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             pass
 
     _check_gateway_service_linger(issues)
@@ -1744,7 +1744,7 @@ def run_doctor(args):
         from hercules_constants import is_container as _is_container
 
         running_in_container = _is_container()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         running_in_container = False
 
     if running_in_container:
@@ -1964,7 +1964,7 @@ def run_doctor(args):
             from gateway.platforms.whatsapp_common import resolve_whatsapp_bridge_dir
 
             _whatsapp_bridge_dir = resolve_whatsapp_bridge_dir()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _whatsapp_bridge_dir = PROJECT_ROOT / "scripts" / "whatsapp-bridge"
         npm_audit_targets = [
             (PROJECT_ROOT, "Browser tools (agent-browser)", ["--workspaces=false"]),
@@ -2454,7 +2454,7 @@ def run_doctor(args):
             auth_mode = str(model_cfg.get("auth_mode") or "").strip().lower()
             if cfg_provider != "azure-foundry" or auth_mode != "entra_id":
                 return _ConnectivityResult("Azure Foundry (Entra ID)", [], [])
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             return _ConnectivityResult("Azure Foundry (Entra ID)", [], [])
 
         try:
@@ -2641,7 +2641,7 @@ def run_doctor(args):
                 lock_data = json.loads(lock_file.read_text())
                 count = len(lock_data.get("installed", {}))
                 check_ok(f"Lock file OK ({count} hub-installed skill(s))")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 check_warn("Lock file", "(corrupted or unreadable)")
         quarantine = hub_dir / "quarantine"
         q_count = (
@@ -2697,10 +2697,10 @@ def run_doctor(args):
                 from hercules_cli import managed_scope
 
                 _raw_cfg = managed_scope.apply_managed_overlay(_raw_cfg)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             _active_memory_provider = (_raw_cfg.get("memory") or {}).get("provider", "")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     if not _active_memory_provider:
@@ -2857,11 +2857,11 @@ def run_doctor(args):
                                 check_warn(
                                     f"Orphan alias: {wrapper.name} → profile '{_m.group(1)}' no longer exists"
                                 )
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
     except ImportError:
         pass
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     print()

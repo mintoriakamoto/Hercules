@@ -67,7 +67,7 @@ def mark_background_review_skill_read(path: Path) -> None:
 
         if not is_background_review():
             return
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
 
     try:
@@ -118,7 +118,7 @@ def _guard_agent_created_enabled() -> bool:
             cfg_get(cfg, "skills", "guard_agent_created"),
             default=False,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -293,7 +293,7 @@ def _pinned_guard(name: str) -> Optional[str]:
                 f"Patches and edits are allowed on pinned skills; only "
                 f"deletion is blocked."
             )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("pinned-guard lookup failed for %s", name, exc_info=True)
     return None
 
@@ -315,7 +315,7 @@ def _background_review_write_guard(
 
         if not is_background_review():
             return None
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     # Pin must be respected by autonomous maintenance. The curator already
@@ -337,7 +337,7 @@ def _background_review_write_guard(
                     f"`hercules curator unpin {name}` if they want it changed."
                 ),
             }
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("pinned skill guard lookup failed for %s", name, exc_info=True)
 
     try:
@@ -352,7 +352,7 @@ def _background_review_write_guard(
                     "externally owned and read-only to autonomous curation."
                 ),
             }
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("external skill guard lookup failed for %s", name, exc_info=True)
 
     try:
@@ -381,7 +381,7 @@ def _background_review_write_guard(
                     f"Refusing background curator {action} for bundled skill '{name}'."
                 ),
             }
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("owned skill guard lookup failed for %s", name, exc_info=True)
     return None
 
@@ -398,7 +398,7 @@ def _background_review_read_before_write_guard(
 
         if not is_background_review():
             return None
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     if _background_review_has_read(target):
@@ -455,7 +455,7 @@ def _curator_consolidation_delete_guard(
 
         if not is_background_review():
             return None
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     declared = isinstance(absorbed_into, str) and absorbed_into.strip()
@@ -722,7 +722,7 @@ def _find_skill_in_other_profiles(name: str) -> List[Tuple[str, Path]]:
 
     try:
         root = get_default_hercules_root()
-    except (AttributeError, ValueError):
+    except Exception:
         return matches
 
     # Collect (profile_name, skills_dir) for every profile EXCEPT the
@@ -1125,7 +1125,7 @@ def _patch_skill(
             err_msg += format_no_match_hint(
                 match_error, match_count, old_string, content
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return {
             "success": False,
@@ -1242,7 +1242,7 @@ def _delete_skill(name: str, absorbed_into: Optional[str] = None) -> Dict[str, A
         from tools.skill_provenance import is_background_review
 
         curator_pass = is_background_review()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         curator_pass = False
 
     if curator_pass:
@@ -1630,7 +1630,7 @@ def skill_manage(
             from agent.prompt_builder import clear_skills_system_prompt_cache
 
             clear_skills_system_prompt_cache(clear_snapshot=True)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         # Curator telemetry: bump patch_count on edit/patch/write_file (the actions
         # that mutate an existing skill's guidance), drop the record on delete.
@@ -1653,7 +1653,7 @@ def skill_manage(
                 # status`/`restore` still see it. Only a hard delete forgets.
                 if not result.get("_archived"):
                     forget(name)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     return json.dumps(result, ensure_ascii=False)

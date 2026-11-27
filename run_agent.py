@@ -97,7 +97,7 @@ def _session_source_for_agent(platform: Optional[str]) -> str:
         from gateway.session_context import get_session_env
 
         source = get_session_env("HERCULES_SESSION_SOURCE", "")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         source = os.environ.get("HERCULES_SESSION_SOURCE", "")
     source = str(source or "").strip()
     if source:
@@ -597,7 +597,7 @@ class AIAgent:
 
             self._session_db = SessionDB()
             return self._session_db
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug("SessionDB unavailable for recall", exc_info=True)
             return None
 
@@ -927,7 +927,7 @@ class AIAgent:
         if self.status_callback:
             try:
                 self.status_callback("lifecycle", message)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("status_callback error in _emit_status", exc_info=True)
 
     def _emit_warning(self, message: str) -> None:
@@ -944,7 +944,7 @@ class AIAgent:
         if self.status_callback:
             try:
                 self.status_callback("warn", message)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("status_callback error in _emit_warning", exc_info=True)
 
     def _emit_notice(self, notice) -> None:
@@ -957,7 +957,7 @@ class AIAgent:
         if self.notice_callback:
             try:
                 self.notice_callback(notice)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("notice_callback error in _emit_notice", exc_info=True)
 
     def _emit_notice_clear(self, key: str) -> None:
@@ -965,7 +965,7 @@ class AIAgent:
         if self.notice_clear_callback:
             try:
                 self.notice_clear_callback(key)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "notice_clear_callback error in _emit_notice_clear", exc_info=True
                 )
@@ -1199,7 +1199,7 @@ class AIAgent:
         """Surface a compact warning for failed auxiliary work."""
         try:
             detail = self._summarize_api_error(exc)
-        except (AttributeError, ValueError):
+        except Exception:
             detail = str(exc)
         detail = (detail or exc.__class__.__name__).strip()
         if len(detail) > 220:
@@ -1460,7 +1460,7 @@ class AIAgent:
                 from hercules_cli.models import _should_use_copilot_responses_api
 
                 return _should_use_copilot_responses_api(model)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 # Fall back to the generic GPT-5 rule if Copilot-specific
                 # logic is unavailable for any reason.
                 pass
@@ -2444,7 +2444,7 @@ class AIAgent:
                     max_string=max_string,
                     max_sequence=max_sequence,
                 )
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         try:
             from dataclasses import asdict, is_dataclass
@@ -2457,7 +2457,7 @@ class AIAgent:
                     max_string=max_string,
                     max_sequence=max_sequence,
                 )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         if isinstance(value, SimpleNamespace):
             return cls._hook_jsonable(
@@ -2479,7 +2479,7 @@ class AIAgent:
                     max_string=max_string,
                     max_sequence=max_sequence,
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         return str(value)[:max_string]
 
@@ -2598,7 +2598,7 @@ class AIAgent:
                 },
                 request=self._api_request_payload_for_hook(api_kwargs),
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     def _dump_api_request_debug(
@@ -2685,7 +2685,7 @@ class AIAgent:
         try:
             safe_sid = _safe_session_filename_component(self.session_id)
             log_file = self.logs_dir / f"session_{safe_sid}.json"
-        except (AttributeError, ValueError):
+        except Exception:
             return
 
         try:
@@ -2788,7 +2788,7 @@ class AIAgent:
         if callable(_abort_active_request):
             try:
                 _abort_active_request("interrupt_abort")
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("Failed to abort active inline request", exc_info=True)
         # Signal all tools to abort any in-flight operations immediately.
         # Scope the interrupt to this agent's execution thread so other
@@ -2819,7 +2819,7 @@ class AIAgent:
             for _wtid in _worker_tids:
                 try:
                     _set_interrupt(True, _wtid)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
         # Propagate interrupt to any running child agents (subagent delegation)
         with self._active_children_lock:
@@ -2863,7 +2863,7 @@ class AIAgent:
             for _wtid in _worker_tids:
                 try:
                     _set_interrupt(False, _wtid)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
         # A hard interrupt supersedes any pending /steer — the steer was
         # meant for the agent's next tool-call iteration, which will no
@@ -2991,12 +2991,12 @@ class AIAgent:
                 from hercules_cli.config import load_config as _load_config
 
                 _cfg = _load_config() or {}
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _cfg = {}
             _display = _cfg.get("display") if isinstance(_cfg, dict) else None
             if isinstance(_display, dict) and "file_mutation_verifier" in _display:
                 return bool(_display.get("file_mutation_verifier"))
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return True  # safe default: verifier on
 
@@ -3092,12 +3092,12 @@ class AIAgent:
                 from hercules_cli.config import load_config as _load_config
 
                 _cfg = _load_config() or {}
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _cfg = {}
             _display = _cfg.get("display") if isinstance(_cfg, dict) else None
             if isinstance(_display, dict) and "turn_completion_explainer" in _display:
                 return bool(_display.get("turn_completion_explainer"))
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return True  # safe default: explainer on
 
@@ -3208,7 +3208,7 @@ class AIAgent:
                 from tools.kanban_tools import heartbeat_current_worker_from_env
 
                 heartbeat_current_worker_from_env()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 # Never let the bridge break the agent loop.  The function
                 # already swallows exceptions internally; this outer guard
                 # covers import-time failures (kanban_tools unavailable,
@@ -3232,7 +3232,7 @@ class AIAgent:
             state = parse_rate_limit_headers(headers, provider=self.provider)
             if state is not None:
                 self._rate_limit_state = state
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Never let header parsing break the agent loop
 
     def get_rate_limit_state(self):
@@ -3300,7 +3300,7 @@ class AIAgent:
                 )
             try:
                 self._memory_manager.shutdown_all()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         # Notify context engine of session end (flush DAG, close DBs, etc.)
         if hasattr(self, "context_compressor") and self.context_compressor:
@@ -3427,13 +3427,13 @@ class AIAgent:
             for child in children:
                 try:
                     child.release_clients()
-                except (AttributeError, ValueError):
+                except Exception:
                     # Fall back to full close on children; they're per-turn.
                     try:
                         child.close()
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # Close the OpenAI/httpx client to release sockets immediately.
@@ -3465,19 +3465,19 @@ class AIAgent:
             from tools.process_registry import process_registry
 
             process_registry.kill_all(task_id=task_id)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         # 2. Clean terminal sandbox environments
         try:
             cleanup_vm(task_id)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # 3. Clean browser daemon sessions
         try:
             cleanup_browser(task_id)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # 4. Close active child agents
@@ -3488,9 +3488,9 @@ class AIAgent:
             for child in children:
                 try:
                     child.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # 5. Close the OpenAI/httpx client
@@ -3979,7 +3979,7 @@ class AIAgent:
                 mounts=_mounts or None,
                 verify=verify,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return None
 
     def _create_openai_client(
@@ -4381,7 +4381,7 @@ class AIAgent:
 
         try:
             self._anthropic_client.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         try:
@@ -4443,7 +4443,7 @@ class AIAgent:
                 _ph2 = _gpf2(self.provider)
                 if _ph2 and _ph2.default_headers:
                     _ph_headers = dict(_ph2.default_headers)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             if _ph_headers:
                 self._client_kwargs["default_headers"] = _ph_headers
@@ -4469,7 +4469,7 @@ class AIAgent:
                     self._client_kwargs,
                     base_url,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug("custom-provider extra_headers skipped", exc_info=True)
 
     def _apply_user_default_headers(self) -> None:
@@ -4518,7 +4518,7 @@ class AIAgent:
 
             try:
                 self._anthropic_client.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
             self._anthropic_api_key = runtime_key
@@ -4647,7 +4647,7 @@ class AIAgent:
                     for cb in callbacks:
                         try:
                             cb(think_tail)
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
                     self._record_streamed_assistant_text(think_tail)
         # Flush any benign partial-tag tail held by the context scrubber so it
@@ -4665,7 +4665,7 @@ class AIAgent:
                 for cb in callbacks:
                     try:
                         cb(tail)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                 self._record_streamed_assistant_text(tail)
         self._current_streamed_assistant_text = ""
@@ -4708,7 +4708,7 @@ class AIAgent:
         already_streamed = self._interim_content_was_streamed(visible)
         try:
             cb(visible, already_streamed=already_streamed)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("interim_assistant_callback error", exc_info=True)
 
     def _fire_stream_delta(self, text: str) -> None:
@@ -4763,7 +4763,7 @@ class AIAgent:
             try:
                 cb(text)
                 delivered = True
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         if delivered:
             self._record_streamed_assistant_text(text)
@@ -4774,7 +4774,7 @@ class AIAgent:
         if cb is not None:
             try:
                 cb(text)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     def _fire_tool_gen_started(self, tool_name: str) -> None:
@@ -4789,7 +4789,7 @@ class AIAgent:
         if cb is not None:
             try:
                 cb(tool_name)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     def _has_stream_consumers(self) -> bool:
@@ -4895,7 +4895,7 @@ class AIAgent:
         try:
             with tmp:
                 tmp.write(base64.b64decode(data))
-        except (AttributeError, ValueError):
+        except Exception:
             # delete=False means a corrupt/unsupported data URL would otherwise
             # leak a zero-byte temp file on every failed materialization.
             try:
@@ -4981,7 +4981,7 @@ class AIAgent:
             provider = (getattr(self, "provider", "") or "").strip()
             model = (getattr(self, "model", "") or "").strip()
             return _lookup_supports_vision(provider, model, cfg) is True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
 
     def _provider_supports_vision_tool_messages(self) -> bool:
@@ -4998,7 +4998,7 @@ class AIAgent:
             profile = get_provider_profile(provider)
             if profile is not None:
                 return getattr(profile, "supports_vision_tool_messages", True)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return True  # default: assume compatible
 
@@ -5435,7 +5435,7 @@ class AIAgent:
                 from hercules_cli.models import github_model_reasoning_efforts
 
                 return bool(github_model_reasoning_efforts(self.model))
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 return False
         if (self.provider or "").strip().lower() == "lmstudio":
             opts = self._lmstudio_reasoning_options_cached()
@@ -5492,7 +5492,7 @@ class AIAgent:
                 self.base_url,
                 getattr(self, "api_key", ""),
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             opts = []
         cache[key] = (opts, _time.monotonic())
         return opts

@@ -435,7 +435,7 @@ def _render_tool_calls(tool_calls: Any) -> str:
                 import json
 
                 args_text = json.dumps(args, ensure_ascii=False)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 args_text = str(args)
         else:
             args_text = ""
@@ -552,7 +552,7 @@ def _extract_text(response: Any) -> str:
         text = (normalized.content or "").strip()
         if text:
             return text
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     try:
         message = response.choices[0].message
@@ -563,7 +563,7 @@ def _extract_text(response: Any) -> str:
         if not isinstance(content, str):
             content = str(content) if content else ""
         return content.strip()
-    except (AttributeError, ValueError):
+    except Exception:
         return ""
 
 

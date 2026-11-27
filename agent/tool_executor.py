@@ -91,7 +91,7 @@ def _budget_for_agent(agent) -> BudgetConfig:
             getattr(agent, "context_compressor", None), "context_length", None
         )
         return budget_for_context_window(int(ctx)) if ctx else DEFAULT_BUDGET
-    except (AttributeError, ValueError):
+    except Exception:
         return DEFAULT_BUDGET
 
 
@@ -294,7 +294,7 @@ def _tool_search_scoped_names(agent) -> frozenset:
         names = frozenset()
     try:
         agent._tool_search_scope_cache = (cache_key, names)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     return names
 
@@ -488,7 +488,7 @@ def execute_tool_calls_concurrent(
                             },
                             ensure_ascii=False,
                         )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         function_args, middleware_trace = _apply_tool_request_middleware_for_agent(
@@ -533,7 +533,7 @@ def execute_tool_calls_concurrent(
                     api_request_id=getattr(agent, "_current_api_request_id", "") or "",
                     middleware_trace=list(middleware_trace),
                 )
-            except (AttributeError, ImportError, ModuleNotFoundError):
+            except Exception:
                 block_message = None
 
             if block_message is not None:
@@ -715,7 +715,7 @@ def execute_tool_calls_concurrent(
         if agent._interrupt_requested:
             try:
                 _ra()._set_interrupt(True, _worker_tid)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         # Set the activity callback on THIS worker thread so
         # _wait_for_process (terminal commands) can fire heartbeats.
@@ -725,7 +725,7 @@ def execute_tool_calls_concurrent(
             from tools.environments.base import set_activity_callback
 
             set_activity_callback(agent._touch_activity)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         # Approval/sudo callbacks (thread-local) and the agent turn's
         # ContextVars are propagated by propagate_context_to_thread() at the
@@ -746,7 +746,7 @@ def execute_tool_calls_concurrent(
             except KeyboardInterrupt:
                 try:
                     agent.interrupt("keyboard interrupt")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 result = _emit_cancelled_terminal_post_tool_call(
                     agent,
@@ -810,7 +810,7 @@ def execute_tool_calls_concurrent(
                 agent._tool_worker_threads.discard(_worker_tid)
             try:
                 _ra()._set_interrupt(False, _worker_tid)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     # Start spinner for CLI mode (skip when TUI handles tool progress)
@@ -943,7 +943,7 @@ def execute_tool_calls_concurrent(
                         for tid in worker_tids:
                             try:
                                 _ra()._set_interrupt(True, tid)
-                            except (AttributeError, ValueError):
+                            except Exception:
                                 pass
                         break
 
@@ -1343,7 +1343,7 @@ def execute_tool_calls_sequential(
                             f"'{_underlying}' is not available in this session. "
                             "Use tool_search to find tools you can call."
                         )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         function_args, middleware_trace = _apply_tool_request_middleware_for_agent(
@@ -1374,7 +1374,7 @@ def execute_tool_calls_sequential(
                     api_request_id=getattr(agent, "_current_api_request_id", "") or "",
                     middleware_trace=list(middleware_trace),
                 )
-            except (AttributeError, ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         _guardrail_block_decision: ToolGuardrailDecision | None = None
@@ -1439,7 +1439,7 @@ def execute_tool_calls_sequential(
                 from tools.environments.base import set_activity_callback
 
                 set_activity_callback(agent._touch_activity)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         if not _execution_blocked and agent.tool_progress_callback:
@@ -1914,7 +1914,7 @@ def execute_tool_calls_sequential(
                 _spinner_result = function_result
                 try:
                     agent.interrupt("keyboard interrupt")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 raise
             except Exception as tool_error:
@@ -1967,7 +1967,7 @@ def execute_tool_calls_sequential(
                 )
                 try:
                     agent.interrupt("keyboard interrupt")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 raise
             except Exception as tool_error:

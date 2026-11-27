@@ -211,7 +211,7 @@ def _get_sudo_password_cache_scope() -> str:
         from gateway.session_context import get_session_env
 
         session_key = get_session_env("HERCULES_SESSION_KEY", "")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         session_key = os.getenv("HERCULES_SESSION_KEY", "")
     if session_key:
         return f"session:{session_key}"
@@ -419,7 +419,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
     if _sudo_cb is not None:
         try:
             return _sudo_cb() or ""
-        except (AttributeError, ValueError):
+        except Exception:
             return ""
 
     result = {"password": None, "done": False}
@@ -1576,7 +1576,7 @@ def _create_environment(
                     in inspect.signature(modal.Sandbox.create).parameters
                 ):
                     sandbox_kwargs["ephemeral_disk"] = disk
-            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         modal_state = _get_modal_backend_state(cc.get("modal_mode"))
@@ -2578,7 +2578,7 @@ def terminal_tool(
         session_key = get_current_session_key(default="") or (task_id or "")
         try:
             env.cwd_owner = session_key
-        except (AttributeError, ValueError, KeyError, OSError):
+        except Exception:
             pass
 
         if background:
@@ -2965,7 +2965,7 @@ def terminal_tool(
                     if isinstance(hook_result, str):
                         output = hook_result
                         break
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
             # Truncate output if too long, keeping both head and tail
@@ -3031,7 +3031,7 @@ def terminal_tool(
                         "scope": evidence.get("scope"),
                         "canonical_command": evidence.get("canonical_command"),
                     }
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug("verification evidence recording failed", exc_info=True)
             if approval_note:
                 # Treat rc=130 as an interrupt only when the executor's marker is

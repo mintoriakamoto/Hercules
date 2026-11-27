@@ -48,7 +48,7 @@ def _cua_child_env() -> Dict[str, str]:
         from tools.computer_use.cua_backend import cua_driver_child_env
 
         return cua_driver_child_env()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return dict(os.environ)
 
 
@@ -145,7 +145,7 @@ def _drive_health_report(
     finally:
         try:
             proc.stdin.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         try:
             proc.wait(timeout=timeout)
@@ -279,7 +279,7 @@ def run_doctor(
             from hercules_cli.tools_config import _cua_driver_cmd
 
             driver_cmd = _cua_driver_cmd()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             driver_cmd = os.environ.get("HERCULES_CUA_DRIVER_CMD") or "cua-driver"
 
     binary = shutil.which(driver_cmd)

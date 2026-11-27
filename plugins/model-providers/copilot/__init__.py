@@ -42,7 +42,7 @@ class CopilotProfile(ProviderProfile):
                         extra_body["reasoning"] = {"effort": effort}
                 elif supported_efforts:
                     extra_body["reasoning"] = {"effort": "medium"}
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         return extra_body, {}
 

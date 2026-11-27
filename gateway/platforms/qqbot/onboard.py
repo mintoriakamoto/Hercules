@@ -72,7 +72,7 @@ def _render_qr(url: str) -> bool:
         qr.make(fit=True)
         qr.print_ascii(invert=True)
         return True
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 
@@ -190,7 +190,7 @@ def qr_register(timeout_seconds: int = 600) -> Optional[dict]:
                 status, app_id, encrypted_secret, user_openid = _poll_bind_result(
                     task_id
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 time.sleep(ONBOARD_POLL_INTERVAL)
                 continue
 

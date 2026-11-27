@@ -31,7 +31,7 @@ def load_skills_config() -> dict:
         skills_cfg = cfg.get("skills")
         if isinstance(skills_cfg, dict):
             return skills_cfg
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Could not read skills config", exc_info=True)
     return {}
 

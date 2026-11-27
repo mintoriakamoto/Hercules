@@ -238,7 +238,7 @@ def _parse_twilio_date(value: str | None) -> datetime | None:
             if dt.tzinfo
             else dt.replace(tzinfo=timezone.utc)
         )
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
 

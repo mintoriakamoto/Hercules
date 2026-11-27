@@ -66,7 +66,7 @@ def _config_refresh_lock(path: Path):
             import fcntl
 
             fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug(
             "Honcho OAuth cross-process lock unavailable; in-process only",
             exc_info=True,
@@ -88,7 +88,7 @@ def _config_refresh_lock(path: Path):
                     import fcntl
 
                     fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             fh.close()
 

@@ -748,7 +748,7 @@ def main() -> int:
             idx_s, count_s = slice_raw.split("/", 1)
             slice_index = int(idx_s)
             slice_count = int(count_s)
-        except (ValueError, AttributeError):
+        except Exception:
             print(
                 f"error: --slice must be I/N (e.g. 1/4), got: {slice_raw!r}",
                 file=sys.stderr,

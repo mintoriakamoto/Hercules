@@ -79,14 +79,14 @@ class _ThreadRoutingStream:
     def flush(self):  # type: ignore[no-untyped-def]
         try:
             return self._target().flush()
-        except (AttributeError, ValueError):
+        except Exception:
             return None
 
     def writelines(self, lines):  # type: ignore[no-untyped-def]
         target = self._target()
         try:
             return target.writelines(lines)
-        except (AttributeError, ValueError):
+        except Exception:
             return None
 
     def isatty(self) -> bool:
@@ -143,5 +143,5 @@ def thread_scoped_silence() -> Iterator[None]:
         err_proxy.unsilence(ident)
         try:
             sink.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass

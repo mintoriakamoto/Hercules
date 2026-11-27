@@ -105,7 +105,7 @@ def _load_config() -> dict:
             config.update({
                 k: v for k, v in file_cfg.items() if v is not None and v != ""
             })
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     return config
@@ -251,7 +251,7 @@ class Mem0MemoryProvider(MemoryProvider):
         if config_path.exists():
             try:
                 existing = json.loads(config_path.read_text())
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         existing.update(values)
         from utils import atomic_json_write
@@ -312,7 +312,7 @@ class Mem0MemoryProvider(MemoryProvider):
             _lazy_ensure("memory.mem0", prompt=False)
         except ImportError:
             pass
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         try:
             if self._mode == "oss":
@@ -684,7 +684,7 @@ class Mem0MemoryProvider(MemoryProvider):
             if self._backend:
                 self._backend.close()
                 self._backend = None
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def shutdown(self) -> None:

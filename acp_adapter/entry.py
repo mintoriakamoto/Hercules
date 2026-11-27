@@ -263,7 +263,7 @@ def main(argv: list[str] | None = None) -> None:
         from tools.mcp_tool import discover_mcp_tools
 
         discover_mcp_tools()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("MCP tool discovery failed at ACP startup", exc_info=True)
 
     agent = HerculesACPAgent()

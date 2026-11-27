@@ -517,7 +517,7 @@ try:
         for _alias in _pp.aliases:
             if _alias not in PROVIDER_REGISTRY:
                 PROVIDER_REGISTRY[_alias] = PROVIDER_REGISTRY[_pp.name]
-except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+except Exception:
     pass
 
 
@@ -625,7 +625,7 @@ def _resolve_api_key_provider_secret(
                 return api_token, source
         except ValueError as exc:
             logger.warning("Copilot token validation failed: %s", exc)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return "", ""
 
@@ -653,7 +653,7 @@ def _resolve_api_key_provider_secret(
                 key = str(key).strip()
                 if has_usable_secret(key):
                     return key, f"credential_pool:{provider_id}"
-    except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
 
     return "", ""
@@ -961,7 +961,7 @@ def _auth_file_path() -> Path:
         real_home_auth = (Path.home() / ".hercules" / "auth.json").resolve(strict=False)
         try:
             resolved = path.resolve(strict=False)
-        except (AttributeError, ValueError):
+        except Exception:
             resolved = path
         if resolved == real_home_auth:
             raise RuntimeError(
@@ -986,13 +986,13 @@ def _global_auth_file_path() -> Optional[Path]:
         from hercules_constants import get_default_hercules_root
 
         global_root = get_default_hercules_root()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
     profile_home = get_hercules_home()
     try:
         if profile_home.resolve(strict=False) == global_root.resolve(strict=False):
             return None
-    except (AttributeError, ValueError):
+    except Exception:
         if profile_home == global_root:
             return None
     # No pytest seat belt here: this is a pure read-only path, and
@@ -1030,11 +1030,11 @@ def _load_global_auth_store() -> Dict[str, Any]:
             try:
                 if global_path.resolve(strict=False) == real_root.resolve(strict=False):
                     return {}
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
     try:
         return _load_auth_store(global_path)
-    except (AttributeError, ValueError):
+    except Exception:
         # A malformed global store must not break profile reads. The
         # profile's own auth store is still authoritative.
         return {}
@@ -1144,7 +1144,7 @@ def _load_auth_store(auth_file: Optional[Path] = None) -> Dict[str, Any]:
             import shutil
 
             shutil.copy2(auth_file, corrupt_path)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         logger.warning(
             "auth: failed to parse %s (%s) — starting with empty store. "
@@ -1295,7 +1295,7 @@ def _save_provider_state_to_source(
         same_store = source_path.resolve(strict=False) == active_path.resolve(
             strict=False
         )
-    except (AttributeError, ValueError):
+    except Exception:
         same_store = source_path == active_path
     if same_store:
         _save_provider_state(auth_store, provider_id, state)
@@ -1573,7 +1573,7 @@ def is_provider_explicitly_configured(provider_id: str) -> bool:
             cfg_provider = (model_cfg.get("provider") or "").strip().lower()
             if cfg_provider == normalized:
                 return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # 3. Check provider-specific env vars
@@ -1699,7 +1699,7 @@ def _get_config_hint_for_unknown_provider(provider_name: str) -> str:
             if first_hint:
                 lines.append(f"    → {first_hint}")
         return "\n".join(lines)
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         return ""
 
 
@@ -1821,7 +1821,7 @@ def resolve_provider(
             for _alias in _pp.aliases:
                 if _alias not in _PROVIDER_ALIASES:
                     _PROVIDER_ALIASES[_alias] = _pp.name
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
     normalized = _PROVIDER_ALIASES.get(normalized, normalized)
 
@@ -1992,7 +1992,7 @@ def _parse_iso_timestamp(value: Any) -> Optional[float]:
         text = text[:-1] + "+00:00"
     try:
         parsed = datetime.fromisoformat(text)
-    except (AttributeError, ValueError):
+    except Exception:
         return None
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
@@ -4729,7 +4729,7 @@ def _import_codex_cli_tokens() -> Optional[Dict[str, str]]:
             )
             return None
         return dict(tokens)
-    except (ValueError, ZeroDivisionError):
+    except Exception:
         return None
 
 
@@ -5117,7 +5117,7 @@ def _write_through_xai_oauth_to_global_root(state: Dict[str, Any]) -> None:
             try:
                 if global_path.resolve(strict=False) == real_root.resolve(strict=False):
                     return
-            except (AttributeError, ValueError):
+            except Exception:
                 return
     try:
         if global_path.exists():
@@ -5858,7 +5858,7 @@ def get_codex_auth_status() -> Dict[str, Any]:
                     ),
                     "reset_at": rate_limit.get("reset_at"),
                 }
-    except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
 
     # Fall back to legacy provider state
@@ -5903,7 +5903,7 @@ def get_xai_oauth_auth_status() -> Dict[str, Any]:
                         "source": f"pool:{getattr(entry, 'label', 'unknown')}",
                         "api_key": api_key,
                     }
-    except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
 
     try:
@@ -6051,7 +6051,7 @@ def _get_azure_foundry_auth_status() -> Dict[str, Any]:
         from hercules_cli.config import load_config, get_env_value_prefer_dotenv
 
         cfg = load_config()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         cfg = {}
 
     model_cfg = cfg.get("model") if isinstance(cfg, dict) else None
@@ -6106,7 +6106,7 @@ def _get_azure_foundry_auth_status() -> Dict[str, Any]:
     # api_key mode (default)
     try:
         api_key = get_env_value_prefer_dotenv("AZURE_FOUNDRY_API_KEY") or ""
-    except (AttributeError, ValueError):
+    except Exception:
         api_key = os.getenv("AZURE_FOUNDRY_API_KEY", "")
     info["logged_in"] = has_usable_secret(api_key)
     return info
@@ -6306,7 +6306,7 @@ def _get_config_provider() -> Optional[str]:
     """Return model.provider from config.yaml, normalized, if present."""
     try:
         config = read_raw_config()
-    except (AttributeError, ValueError):
+    except Exception:
         return None
     if not config:
         return None
@@ -6387,7 +6387,7 @@ def _confirm_expensive_model_selection(
             base_url=base_url,
             api_key=api_key,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         warning = None
     if warning is None:
         return True

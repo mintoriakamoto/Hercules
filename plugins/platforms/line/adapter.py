@@ -274,7 +274,7 @@ def verify_line_signature(body: bytes, signature: str, channel_secret: str) -> b
             hashlib.sha256,
         ).digest()
         expected = base64.b64encode(digest).decode("utf-8")
-    except (AttributeError, ValueError):
+    except Exception:
         return False
     return hmac.compare_digest(expected, signature)
 
@@ -850,13 +850,13 @@ class LineAdapter(BasePlatformAdapter):
         if self._site is not None:
             try:
                 await self._site.stop()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self._site = None
         if self._runner is not None:
             try:
                 await self._runner.cleanup()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self._runner = None
         self._app = None
@@ -875,7 +875,7 @@ class LineAdapter(BasePlatformAdapter):
                 from gateway.status import release_scoped_lock
 
                 release_scoped_lock("line", self._lock_key)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             self._lock_key = None
 
@@ -914,7 +914,7 @@ class LineAdapter(BasePlatformAdapter):
         for event in events:
             try:
                 await self._dispatch_event(event)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.exception("LINE: dispatch_event failed")
 
         return web.Response(status=200, text="ok")
@@ -1334,7 +1334,7 @@ class LineAdapter(BasePlatformAdapter):
             from hercules_constants import get_hercules_home
 
             hercules_home = Path(get_hercules_home()).resolve()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             hercules_home = Path.home().joinpath(".hercules").resolve()
 
         allowed_roots = {
@@ -1450,7 +1450,7 @@ class LineAdapter(BasePlatformAdapter):
                 tmp.close()
                 preview_token = self._register_media(tmp.name, cleanup=True)
                 preview_filename = "preview.png"
-            except (AttributeError, ValueError):
+            except Exception:
                 try:
                     os.unlink(tmp.name)
                 except OSError:
@@ -1515,7 +1515,7 @@ def _is_relative_to(child: Path, parent: Path) -> bool:
     cwd-resolution differences across CI runners."""
     try:
         return child.resolve().is_relative_to(parent.resolve())
-    except (AttributeError, ValueError):
+    except Exception:
         try:
             child.resolve().relative_to(parent.resolve())
             return True

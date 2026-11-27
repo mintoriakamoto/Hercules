@@ -143,7 +143,7 @@ def _scan_content(path: str, content: str) -> List[Tuple[str, str]]:
             try:
                 if not path_filter(path or ""):
                     continue
-            except (AttributeError, ValueError):
+            except Exception:
                 continue
         matched = False
         for sub in entry["substrings"]:

@@ -68,7 +68,7 @@ def _resolve_download_timeout() -> float:
         val = cfg_get(cfg, "auxiliary", "vision", "download_timeout")
         if val is not None:
             return float(val)
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     return 30.0
 
@@ -303,7 +303,7 @@ def _rasterize_svg_to_png(svg_path: Path, out_path: Path) -> bool:
 
         cairosvg.svg2png(url=str(svg_path), write_to=str(out_path))
         return out_path.exists() and out_path.stat().st_size > 0
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     # 2) svglib + reportlab
     try:
@@ -314,7 +314,7 @@ def _rasterize_svg_to_png(svg_path: Path, out_path: Path) -> bool:
         if drawing is not None:
             renderPM.drawToFile(drawing, str(out_path), fmt="PNG")
             return out_path.exists() and out_path.stat().st_size > 0
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     # 3) system rasterizers
     import shutil as _shutil
@@ -760,7 +760,7 @@ def _resize_image_for_vision(
             _ensure_dep("tool.vision", prompt=False)
             from PIL import Image
             import io as _io
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.info("Pillow not installed — cannot auto-resize oversized image")
             if data_url is None:
                 data_url = _image_to_base64_data_url(image_path, mime_type=mime_type)
@@ -937,7 +937,7 @@ def _supports_media_in_tool_results(provider: str, model: str) -> bool:
         profile = get_provider_profile(p)
         if profile is not None and profile.supports_vision:
             return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Other vision-capable provider stacks. Conservative default: False.
@@ -1365,7 +1365,7 @@ async def vision_analyze_tool(
             _vtemp = _vision_cfg.get("temperature")
             if _vtemp is not None:
                 vision_temperature = float(_vtemp)
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             pass
         call_kwargs = {
             "task": "vision",
@@ -1525,7 +1525,7 @@ def check_vision_requirements() -> bool:
         # provider can't be resolved.
         _provider, client, _model = resolve_vision_provider_client(provider="auto")
         return client is not None
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 
@@ -1653,7 +1653,7 @@ async def _handle_vision_analyze(args: Dict[str, Any], **kw: Any) -> str:
         _vmodel = cfg_get(_cfg, "auxiliary", "vision", "model")
         if _vmodel:
             model = str(_vmodel).strip() or None
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     if not model:
         model = os.getenv("AUXILIARY_VISION_MODEL", "").strip() or None
@@ -1908,7 +1908,7 @@ async def video_analyze_tool(
             _vtemp = _vision_cfg.get("temperature")
             if _vtemp is not None:
                 vision_temperature = float(_vtemp)
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             pass
 
         call_kwargs = {
@@ -2072,7 +2072,7 @@ def _handle_video_analyze(args: Dict[str, Any], **kw: Any) -> Awaitable[str]:
         )
         if _vmodel:
             model = str(_vmodel).strip() or None
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     if not model:
         model = (

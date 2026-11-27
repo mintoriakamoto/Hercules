@@ -247,14 +247,14 @@ def _detect_environment(env: str) -> bool:
                 from tools.kanban_tools import _profile_has_kanban_toolset
 
                 result = bool(_profile_has_kanban_toolset())
-            except (ImportError, ModuleNotFoundError, ValueError):
+            except Exception:
                 result = False
     elif env == "docker":
         try:
             from hercules_constants import is_container
 
             result = is_container()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             result = False
     elif env == "s6":
         # The Hercules Docker image runs s6-overlay as PID 1 (/init). s6 plants
@@ -537,13 +537,13 @@ def normalize_skill_lookup_name(identifier: str) -> str:
         from tools import skills_tool as _skills_tool
 
         primary_root = Path(_skills_tool.SKILLS_DIR)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         primary_root = get_skills_dir()
 
     trusted_roots = [primary_root]
     try:
         trusted_roots.extend(get_external_skills_dirs())
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     # Prefer the lexical path under a trusted skill root before resolving
@@ -698,7 +698,7 @@ def discover_all_skill_config_vars() -> List[Dict[str, Any]]:
             try:
                 raw = skill_file.read_text(encoding="utf-8")
                 frontmatter, _ = parse_frontmatter(raw)
-            except (AttributeError, ValueError):
+            except Exception:
                 continue
 
             skill_name = frontmatter.get("name") or skill_file.parent.name

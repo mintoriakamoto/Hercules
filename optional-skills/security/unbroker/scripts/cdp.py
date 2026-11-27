@@ -139,7 +139,7 @@ def endpoint_status(
         return None
     try:
         data = json.loads(raw.decode("utf-8", errors="replace"))
-    except (ValueError, AttributeError):
+    except Exception:
         return None
     return data if isinstance(data, dict) else None
 

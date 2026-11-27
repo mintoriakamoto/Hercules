@@ -129,14 +129,14 @@ class _FileLock:
 
                 self._fh.seek(0)
                 msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         else:
             try:
                 import fcntl
 
                 fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         try:
             self._fh.close()
@@ -174,7 +174,7 @@ def _process_start_time(pid: int) -> Optional[float]:
         import psutil  # type: ignore
 
         return float(psutil.Process(pid).create_time())
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return None
 
 
@@ -198,7 +198,7 @@ def _pid_alive(pid: Any, process_start_time: Any = None) -> bool:
         from gateway.status import _pid_exists
 
         exists = bool(_pid_exists(pid_int))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return False
     if not exists:
         return False

@@ -219,9 +219,9 @@ def check_video_generation_requirements() -> bool:
         # Third check: does it report available?
         try:
             return active.is_available()
-        except (AttributeError, ValueError):
+        except Exception:
             return False
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     return False
 
@@ -514,7 +514,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
 
         _ensure_plugins_discovered()
         provider = get_provider(configured)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         provider = None
 
     if provider is None:
@@ -526,7 +526,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
 
     try:
         caps = provider.capabilities() or {}
-    except (AttributeError, ValueError):
+    except Exception:
         caps = {}
     try:
         models = provider.list_models() or []
@@ -589,7 +589,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
             from tools.xai_http import xai_storage_notice_text
 
             notice = xai_storage_notice_text("video_gen")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             notice = ""
         if notice:
             parts.append(f"- storage: {notice}")

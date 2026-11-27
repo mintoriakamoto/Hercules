@@ -334,7 +334,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         try:
             ws.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 

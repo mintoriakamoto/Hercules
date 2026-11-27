@@ -160,7 +160,7 @@ def smoke_test(host: str, headers: dict, ckpt_name: str | None) -> dict:
     cancelled = False
     try:
         cancelled = runner.cancel(pid)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     return {

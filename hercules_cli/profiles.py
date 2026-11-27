@@ -474,7 +474,7 @@ def check_alias_collision(name: str) -> Optional[str]:
                     content = expected.read_text()
                     if "hercules -p" in content:
                         return None  # it's our wrapper, safe to overwrite
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             return f"'{canon}' conflicts with an existing command ({existing_path})"
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -593,7 +593,7 @@ def _migrate_profile_config_if_outdated(profile_dir: Path) -> None:
                 migrate_config(interactive=False, quiet=True)
         finally:
             reset_hercules_home_override(token)
-    except (AttributeError, ValueError):
+    except Exception:
         # Profile creation should not fail because an old copied config could
         # not be migrated. The next `hercules doctor --fix` can still surface the
         # detailed error in the target profile.
@@ -787,7 +787,7 @@ def _check_gateway_running(profile_dir: Path) -> bool:
             is not None
         ):
             return True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     try:
         from gateway.status import (
@@ -800,7 +800,7 @@ def _check_gateway_running(profile_dir: Path) -> bool:
             get_runtime_status_running_pid(runtime, expected_home=profile_dir)
             is not None
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -1225,7 +1225,7 @@ def create_profile(
             from hercules_cli.default_soul import DEFAULT_SOUL_MD
 
             soul_path.write_text(DEFAULT_SOUL_MD, encoding="utf-8")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # best-effort — don't fail profile creation over this
 
     # Write the opt-out marker so seed_profile_skills() and `hercules update`'s
@@ -1259,7 +1259,7 @@ def create_profile(
                 description=description.strip(),
                 description_auto=False,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             pass  # non-fatal — user can describe later with `hercules profile describe`
 
     # Phase 4: when running inside a container under s6, register the
@@ -1411,12 +1411,12 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
         while parent is not None:
             skip.add(parent.pid)
             parent = parent.parent()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     try:
         current_user = psutil.Process(os.getpid()).username()
-    except (AttributeError, ValueError):
+    except Exception:
         current_user = None
 
     backend_tokens = {"serve", "dashboard", "gateway"}
@@ -1758,7 +1758,7 @@ def _maybe_register_gateway_service(profile_name: str) -> None:
         mgr = get_service_manager()
     except RuntimeError:
         return  # no backend on this host — nothing to do
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Defensive: detect_service_manager failed for some other
         # reason. Stay silent on host rather than printing a confusing
         # s6 warning to users who have never touched the container.
@@ -1795,7 +1795,7 @@ def _maybe_unregister_gateway_service(profile_name: str) -> None:
         mgr = get_service_manager()
     except RuntimeError:
         return
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
     if not mgr.supports_runtime_registration():
         return

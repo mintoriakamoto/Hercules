@@ -88,7 +88,7 @@ def _get_webhook_config() -> dict:
 
         cfg = load_config()
         return cfg_get(cfg, "platforms", "webhook", default={})
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 

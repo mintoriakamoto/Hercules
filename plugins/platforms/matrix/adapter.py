@@ -172,7 +172,7 @@ def _resolve_matrix_bang_command(name: str) -> str | None:
         for candidate in candidates:
             if is_gateway_known_command(candidate):
                 return candidate
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug(
             "Matrix: is_gateway_known_command failed for %r", name, exc_info=True
         )
@@ -186,7 +186,7 @@ def _resolve_matrix_bang_command(name: str) -> str | None:
         for candidate in candidates:
             if f"/{candidate}" in skill_commands:
                 return candidate
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Matrix: get_skill_commands failed for %r", name, exc_info=True)
 
     return None
@@ -711,7 +711,7 @@ def _sanitize_matrix_html(html: str) -> str:
         sanitizer.feed(html or "")
         sanitizer.close()
         return sanitizer.get_html()
-    except (AttributeError, ValueError):
+    except Exception:
         return _html_escape(html or "")
 
 
@@ -1237,7 +1237,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 logger.info(
                     "Matrix: deleted stale device %s from server", client.device_id
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             try:
                 await olm.share_keys()
@@ -1682,7 +1682,7 @@ class MatrixAdapter(BasePlatformAdapter):
         if self._client:
             try:
                 await self._client.api.session.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self._client = None
 
@@ -1820,7 +1820,7 @@ class MatrixAdapter(BasePlatformAdapter):
         if self._client:
             try:
                 await self._client.set_typing(RoomID(chat_id), timeout=30000)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     async def stop_typing(self, chat_id: str) -> None:
@@ -1828,7 +1828,7 @@ class MatrixAdapter(BasePlatformAdapter):
         if self._client:
             try:
                 await self._client.set_typing(RoomID(chat_id), timeout=0)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     async def edit_message(
@@ -2214,7 +2214,7 @@ class MatrixAdapter(BasePlatformAdapter):
             from hercules_cli.providers import get_label
 
             provider_label = get_label(current_provider)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             provider_label = current_provider
 
         lines = [
@@ -2297,7 +2297,7 @@ class MatrixAdapter(BasePlatformAdapter):
                     room_encrypted = bool(
                         await state_store.is_encrypted(RoomID(room_id))
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     room_encrypted = False
                 if room_encrypted:
                     try:
@@ -3197,7 +3197,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 try:
                     await self._client.leave_room(RoomID(room_id))
                     logger.info("Matrix: declined dead invite to %s", room_id)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             return False
 
@@ -3936,7 +3936,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 members = await state_store.get_members(room_id)
                 if members is not None:
                     return len(members)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         # Tier 2: API fallback (direct server query) when the cache is empty.
@@ -3959,7 +3959,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 RoomID(room_id),
                 "m.room.name",
             )
-        except (AttributeError, ValueError):
+        except Exception:
             return None
         value = self._state_event_value(event, "name")
         return value.strip() if value and value.strip() else None
@@ -3972,7 +3972,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 RoomID(room_id),
                 "m.room.canonical_alias",
             )
-        except (AttributeError, ValueError):
+        except Exception:
             return None
         value = self._state_event_value(event, "alias")
         return value.strip() if value and value.strip() else None
@@ -3985,7 +3985,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 RoomID(room_id),
                 "m.room.topic",
             )
-        except (AttributeError, ValueError):
+        except Exception:
             return None
         value = self._state_event_value(event, "topic")
         return value.strip() if value and value.strip() else None
@@ -4122,7 +4122,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 dm_data = resp.content
             elif isinstance(resp, dict):
                 dm_data = resp
-        except (AttributeError, ValueError):
+        except Exception:
             pass  # m.direct doesn't exist yet — start fresh
 
         rooms_for_user = dm_data.get(inviter, [])

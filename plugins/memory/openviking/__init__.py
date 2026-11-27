@@ -939,7 +939,7 @@ def _load_hercules_openviking_config() -> dict:
             else {}
         )
         return dict(provider_config) if isinstance(provider_config, dict) else {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -1278,7 +1278,7 @@ def _openviking_server_log_path() -> Path:
         from hercules_constants import get_hercules_home
 
         home = get_hercules_home()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         home = (
             Path(os.environ.get("HERCULES_HOME", "")).expanduser()
             if os.environ.get("HERCULES_HOME")
@@ -1386,7 +1386,7 @@ def _emit_runtime_warning(message: str, warning_callback=None) -> None:
     if warning_callback:
         try:
             warning_callback(message)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("OpenViking runtime warning callback failed", exc_info=True)
 
 
@@ -1395,7 +1395,7 @@ def _emit_runtime_status(message: str, status_callback=None) -> None:
     if status_callback:
         try:
             status_callback(message)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("OpenViking runtime status callback failed", exc_info=True)
 
 
@@ -1453,7 +1453,7 @@ def _confirm_replace_existing_profile(path: Path, values: dict, select, cancelle
         return True
     try:
         existing_data = _load_ovcli_config(path)
-    except (AttributeError, ValueError):
+    except Exception:
         existing_data = {}
     if existing_data == _ovcli_data_from_connection_values(values):
         return True
@@ -3120,7 +3120,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
                 return {}
             try:
                 parsed = json.loads(raw_args)
-            except (AttributeError, ValueError):
+            except Exception:
                 return {"value": raw_args}
             if isinstance(parsed, dict):
                 return parsed
@@ -3141,7 +3141,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
         if text:
             try:
                 parsed = json.loads(text)
-            except (AttributeError, ValueError):
+            except Exception:
                 parsed = None
             if isinstance(parsed, dict):
                 status = str(parsed.get("status") or "").lower()

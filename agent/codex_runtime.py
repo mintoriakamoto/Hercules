@@ -279,7 +279,7 @@ def _record_codex_app_server_compaction(
             from agent.conversation_compression import COMPACTION_STATUS
 
             agent._emit_status(COMPACTION_STATUS)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     compressor = getattr(agent, "context_compressor", None)
@@ -355,7 +355,7 @@ def run_codex_app_server_turn(
             from tools.terminal_tool import _get_approval_callback
 
             approval_callback = _get_approval_callback()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             approval_callback = None
 
         # Gateway / cron contexts have no UI to surface codex's approval
@@ -392,7 +392,7 @@ def run_codex_app_server_turn(
             tool_name, preview, args = mapped
             try:
                 progress_callback("tool.started", tool_name, preview, args)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("codex tool-progress callback raised", exc_info=True)
 
         agent._codex_session = CodexAppServerSession(
@@ -417,7 +417,7 @@ def run_codex_app_server_turn(
         # respawns from scratch instead of reusing a dead client.
         try:
             agent._codex_session.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         agent._codex_session = None
         return {
@@ -444,7 +444,7 @@ def run_codex_app_server_turn(
         )
         try:
             agent._codex_session.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         agent._codex_session = None
 
@@ -469,7 +469,7 @@ def run_codex_app_server_turn(
         if getattr(agent, "_session_db", None) is not None:
             try:
                 agent._flush_messages_to_session_db(messages)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "codex app-server projected-message flush failed",
                     exc_info=True,
@@ -510,7 +510,7 @@ def run_codex_app_server_turn(
                 interrupted=False,
                 messages=messages,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("external memory sync raised", exc_info=True)
 
     # Background review fork — same cadence + signature as the default
@@ -527,7 +527,7 @@ def run_codex_app_server_turn(
                 review_memory=should_review_memory,
                 review_skills=should_review_skills,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("background review spawn raised", exc_info=True)
 
     return {
@@ -682,7 +682,7 @@ def _consume_codex_event_stream(
                 # Control-flow signals from watchdog/cancellation hooks must
                 # propagate, not get swallowed as "debug noise".
                 raise
-            except (ZeroDivisionError):
+            except (Exception):
                 # Genuine bugs in third-party debug/log hooks shouldn't break
                 # stream consumption.
                 logger.debug("Codex stream on_event hook raised", exc_info=True)
@@ -731,7 +731,7 @@ def _consume_codex_event_stream(
                 if on_reasoning_delta is not None:
                     try:
                         on_reasoning_delta(delta_text)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         logger.debug(
                             "Codex stream on_reasoning_delta raised", exc_info=True
                         )
@@ -743,14 +743,14 @@ def _consume_codex_event_stream(
                         if on_first_delta is not None:
                             try:
                                 on_first_delta()
-                            except (AttributeError, ValueError):
+                            except Exception:
                                 logger.debug(
                                     "Codex stream on_first_delta raised", exc_info=True
                                 )
                     if on_text_delta is not None:
                         try:
                             on_text_delta(delta_text)
-                        except (AttributeError, ValueError):
+                        except Exception:
                             logger.debug(
                                 "Codex stream on_text_delta raised", exc_info=True
                             )
@@ -765,7 +765,7 @@ def _consume_codex_event_stream(
             if reasoning_text and on_reasoning_delta is not None:
                 try:
                     on_reasoning_delta(reasoning_text)
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "Codex stream on_reasoning_delta raised", exc_info=True
                     )
@@ -968,7 +968,7 @@ def run_codex_stream(agent, api_kwargs: dict, client: Any = None, on_first_delta
             if callable(close_fn):
                 try:
                     close_fn()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
 

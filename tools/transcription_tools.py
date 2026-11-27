@@ -143,7 +143,7 @@ def _load_stt_config() -> dict:
         from hercules_cli.config import load_config
 
         return load_config().get("stt") or {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -544,7 +544,7 @@ def _terminate_command_stt_process_tree(proc: subprocess.Popen) -> None:
         parent.terminate()
     except psutil.NoSuchProcess:
         return
-    except (AttributeError, ValueError):
+    except Exception:
         proc.terminate()
 
     try:
@@ -563,7 +563,7 @@ def _terminate_command_stt_process_tree(proc: subprocess.Popen) -> None:
         parent.kill()
     except psutil.NoSuchProcess:
         return
-    except (AttributeError, ValueError):
+    except Exception:
         proc.kill()
 
 
@@ -592,7 +592,7 @@ def _run_command_stt(command: str, timeout: float) -> subprocess.CompletedProces
         _terminate_command_stt_process_tree(proc)
         try:
             stdout, stderr = proc.communicate(timeout=1)
-        except (AttributeError, ValueError):
+        except Exception:
             stdout = getattr(exc, "output", None)
             stderr = getattr(exc, "stderr", None)
         raise subprocess.TimeoutExpired(
@@ -887,7 +887,7 @@ def _get_provider(stt_config: dict) -> str:
         if resolve_xai_http_credentials().get("api_key"):
             logger.info("No local STT available, using xAI Grok STT API")
             return "xai"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     if get_env_value("ELEVENLABS_API_KEY"):
         logger.info("No local STT available, using ElevenLabs Scribe STT API")

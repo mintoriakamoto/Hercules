@@ -113,7 +113,7 @@ def _session_is_messaging_surface() -> bool:
             "HERCULES_SESSION_PLATFORM", ""
         )
         source = get_session_env("HERCULES_SESSION_SOURCE", "")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         platform = os.getenv("HERCULES_PLATFORM", "") or os.environ.get(
             "HERCULES_SESSION_PLATFORM", ""
         )
@@ -145,7 +145,7 @@ def verify_on_stop_enabled(config: dict[str, Any] | None = None) -> bool:
             from hercules_cli.config import load_config
 
             config = load_config()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             config = {}
     agent_cfg = (config or {}).get("agent") if isinstance(config, dict) else None
     cfg_val = agent_cfg.get("verify_on_stop") if isinstance(agent_cfg, dict) else None
@@ -272,7 +272,7 @@ def build_verify_on_stop_nudge(
         from agent.verify_hooks import coding_verify_guidance
 
         guidance = coding_verify_guidance()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         guidance = None
     addendum = f"\n\n{guidance}" if guidance else ""
 

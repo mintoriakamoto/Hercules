@@ -90,7 +90,7 @@ def get_spill_config() -> Dict[str, Any]:
             sub = hooks.get("output_spill")
             if isinstance(sub, dict):
                 section = sub
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         section = {}
 
     enabled_raw = section.get("enabled", DEFAULT_ENABLED)
@@ -124,7 +124,7 @@ def _resolve_spill_dir(
             from hercules_constants import get_hercules_home
 
             base = Path(get_hercules_home()) / "hook_outputs"
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             # Last-resort fallback: HERCULES_HOME env var, then ~/.hercules
             home = os.environ.get("HERCULES_HOME") or os.path.expanduser("~/.hercules")
             base = Path(home) / "hook_outputs"

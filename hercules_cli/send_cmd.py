@@ -242,7 +242,7 @@ def _load_hercules_env() -> None:
         from hercules_cli.config import get_hercules_home
 
         home = get_hercules_home()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
 
     env_path = home / ".env"
@@ -268,7 +268,7 @@ def _load_hercules_env() -> None:
 
     try:
         import yaml  # type: ignore[import-not-found]
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         return
 
     try:
@@ -281,7 +281,7 @@ def _load_hercules_env() -> None:
         from hercules_cli.config import _expand_env_vars
 
         raw = _expand_env_vars(raw)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Managed scope: overlay administrator-pinned values before bridging to env,
@@ -290,7 +290,7 @@ def _load_hercules_env() -> None:
         from hercules_cli import managed_scope
 
         raw = managed_scope.apply_managed_overlay(raw if isinstance(raw, dict) else {})
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     if not isinstance(raw, dict):

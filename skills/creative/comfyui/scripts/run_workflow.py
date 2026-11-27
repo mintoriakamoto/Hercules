@@ -381,7 +381,7 @@ class ComfyRunner:
         finally:
             try:
                 ws.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         if error_payload is not None:
@@ -484,7 +484,7 @@ class ComfyRunner:
             try:
                 if out_path.exists():
                     out_path.unlink()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             raise WorkflowRunError(
                 "download_failed",

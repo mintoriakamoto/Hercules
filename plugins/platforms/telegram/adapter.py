@@ -36,7 +36,7 @@ def _redact_telegram_error_text(error: object) -> str:
         from agent.redact import redact_sensitive_text
 
         return redact_sensitive_text(text, force=True)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return "<telegram error redacted>"
 
 
@@ -137,7 +137,7 @@ async def _shutdown_abandoned_app(app) -> None:
         return
     try:
         await app.shutdown()
-    except (AttributeError, ValueError):
+    except Exception:
         logger.debug("Abandoned Telegram app.shutdown() failed", exc_info=True)
     # Directly close the underlying request transports (bypasses PTB's
     # init-gated shutdown so the eagerly-built httpx pool is released even when
@@ -276,7 +276,7 @@ def check_telegram_requirements() -> bool:
         from tools.lazy_deps import ensure as _lazy_ensure
 
         _lazy_ensure("platform.telegram", prompt=False)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
     try:
         from telegram import Update as _Update, Bot as _Bot, Message as _Message
@@ -786,7 +786,7 @@ class TelegramAdapter(BasePlatformAdapter):
                     thread_id=str(thread_id) if thread_id is not None else None,
                 )
                 return bool(auth_fn(source))
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug(
                     "[Telegram] Falling back to env-only callback auth for user %s",
                     normalized_user_id,
@@ -923,7 +923,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         user_name=source.user_name,
                     )
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         runner = getattr(getattr(self, "_message_handler", None), "__self__", None)
@@ -936,7 +936,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 return True
             try:
                 return bool(auth_fn(source))
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "[Telegram] Falling back to env-only auth for user %s",
                     user_id,
@@ -1112,7 +1112,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 chat_id=str(chat_id),
                 thread_id=str(thread_id),
             )
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[%s] delete_telegram_topic_binding failed for "
                 "chat=%s thread=%s — skipping prune",
@@ -1790,7 +1790,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 from gateway import rich_sent_store
 
                 rich_sent_store.record(str(chat_id), str(message_id), content)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         return SendResult(
             success=True,
@@ -1883,7 +1883,7 @@ class TelegramAdapter(BasePlatformAdapter):
             from gateway import rich_sent_store
 
             rich_sent_store.record(str(chat_id), str(message_id), content)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         return SendResult(success=True, message_id=message_id)
 
@@ -1972,7 +1972,7 @@ class TelegramAdapter(BasePlatformAdapter):
             return
         try:
             await polling_req.shutdown()
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[%s] Polling request shutdown failed (non-fatal)",
                 self.name,
@@ -2017,7 +2017,7 @@ class TelegramAdapter(BasePlatformAdapter):
         async with self._get_general_request_drain_lock():
             try:
                 await general_req.shutdown()
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "[%s] General request shutdown failed after pool timeout (non-fatal)",
                     self.name,
@@ -3203,7 +3203,7 @@ class TelegramAdapter(BasePlatformAdapter):
             # (opt-in via extra.status_indicator). Non-fatal.
             try:
                 await self._set_status_indicator(online=True)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
             # Set up DM topics (Bot API 9.4 — Private Chat Topics)
@@ -3816,7 +3816,7 @@ class TelegramAdapter(BasePlatformAdapter):
         # limitation of a profile-text indicator.
         try:
             await self._set_status_indicator(online=False)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         await self._cancel_pending_delivery_tasks()
@@ -3914,7 +3914,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         if not (metadata or {}).get("notify"):
                             try:
                                 await self.send_typing(chat_id, metadata=metadata)
-                            except (AttributeError, ValueError):
+                            except Exception:
                                 pass  # Typing failures are non-fatal
                     return rich_result
 
@@ -4217,7 +4217,7 @@ class TelegramAdapter(BasePlatformAdapter):
             if not (metadata or {}).get("notify"):
                 try:
                     await self.send_typing(chat_id, metadata=metadata)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass  # Typing failures are non-fatal
 
             return SendResult(
@@ -5590,14 +5590,14 @@ class TelegramAdapter(BasePlatformAdapter):
                     parse_mode=ParseMode.MARKDOWN_V2,
                     reply_markup=None,
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 try:
                     await query.edit_message_text(
                         text=result_text,
                         parse_mode=None,
                         reply_markup=None,
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             await query.answer(
                 text="Switch failed." if switch_failed else "Model switched!"
@@ -5635,7 +5635,7 @@ class TelegramAdapter(BasePlatformAdapter):
                     model_id,
                     provider=provider_slug,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 warning = None
             if warning is not None:
                 keyboard = InlineKeyboardMarkup([
@@ -5670,7 +5670,7 @@ class TelegramAdapter(BasePlatformAdapter):
                     parse_mode=ParseMode.MARKDOWN_V2,
                     reply_markup=None,
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 # Markdown parse failure — retry as plain text
                 try:
                     await query.edit_message_text(
@@ -5678,7 +5678,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         parse_mode=None,
                         reply_markup=None,
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             await query.answer(
                 text="Switch failed." if switch_failed else "Model switched!"
@@ -5696,7 +5696,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 _label, _desc, member_slugs = PROVIDER_GROUPS.get(
                     group_id, ("", "", [])
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _label, member_slugs = "", []
 
             by_slug = {p["slug"]: p for p in state["providers"]}
@@ -5784,7 +5784,7 @@ class TelegramAdapter(BasePlatformAdapter):
         """
         try:
             await query.answer(text="⚠️ This prompt expired — please /retry.")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         try:
             await query.edit_message_text(
@@ -5795,7 +5795,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 parse_mode=ParseMode.HTML,
                 reply_markup=None,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     async def _handle_callback_query(
@@ -5885,7 +5885,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         parse_mode=ParseMode.MARKDOWN_V2,
                         reply_markup=None,
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass  # non-fatal if edit fails
 
                 # Resolve the approval — unblocks the agent thread
@@ -5961,7 +5961,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         parse_mode=ParseMode.MARKDOWN_V2,
                         reply_markup=None,
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
                 # Resolve via the module-level primitive.  The runner stored
@@ -6098,7 +6098,7 @@ class TelegramAdapter(BasePlatformAdapter):
                             parse_mode=ParseMode.HTML,
                             reply_markup=None,
                         )
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                     return
 
@@ -6119,7 +6119,7 @@ class TelegramAdapter(BasePlatformAdapter):
                     entry = _clarify_entries.get(clarify_id)
                     if entry and entry.choices and 0 <= idx < len(entry.choices):
                         resolved_text = entry.choices[idx]
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     resolved_text = None
 
                 if resolved_text is None:
@@ -6148,7 +6148,7 @@ class TelegramAdapter(BasePlatformAdapter):
                             parse_mode=ParseMode.HTML,
                             reply_markup=None,
                         )
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                     logger.info(
                         "Telegram clarify button resolved (id=%s, choice=%r, user=%s)",
@@ -6192,7 +6192,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 parse_mode=ParseMode.MARKDOWN_V2,
                 reply_markup=None,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             pass  # non-fatal if edit fails
         # Write the response file
         try:
@@ -6344,7 +6344,7 @@ class TelegramAdapter(BasePlatformAdapter):
             else:
                 # Per-email one-shot: strip keyboard so the action can't fire twice.
                 await query.edit_message_text(text=appended, reply_markup=None)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def _missing_media_path_error(self, label: str, path: str) -> str:
@@ -6608,7 +6608,7 @@ class TelegramAdapter(BasePlatformAdapter):
                     for fh in opened_files:
                         try:
                             fh.seek(0)
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
 
                 await self._send_with_dm_topic_reply_anchor_retry(
@@ -6645,7 +6645,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 for fh in opened_files:
                     try:
                         fh.close()
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
 
     async def send_image_file(
@@ -7488,7 +7488,7 @@ class TelegramAdapter(BasePlatformAdapter):
             if raw:
                 try:
                     loaded = json.loads(raw)
-                except (AttributeError, ValueError):
+                except Exception:
                     loaded = [part.strip() for part in raw.splitlines() if part.strip()]
                     if not loaded:
                         loaded = [
@@ -9386,7 +9386,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         reply_to_text = rich_sent_store.lookup(
                             str(chat.id), reply_to_id
                         )
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         reply_to_text = None
 
         # Per-channel/topic ephemeral prompt
@@ -9531,7 +9531,7 @@ def _resolve_notifications_mode() -> str:
             _raw = cfg_get(_gw_cfg, "display", "platforms", "telegram", "notifications")
             if _raw not in {None, ""}:
                 mode = str(_raw).strip().lower()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
     mode = mode or "important"
     if mode not in {"all", "important"}:
@@ -9550,7 +9550,7 @@ def _build_adapter(config):
     adapter = TelegramAdapter(config)
     try:
         adapter._notifications_mode = _resolve_notifications_mode()
-    except (AttributeError, ValueError):
+    except Exception:
         adapter._notifications_mode = "important"
     return adapter
 

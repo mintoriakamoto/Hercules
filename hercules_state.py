@@ -1031,7 +1031,7 @@ class SessionDB:
                 try:
                     if self._conn is not None:
                         self._conn.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 report = repair_state_db_schema(self.db_path)
                 if not report.get("repaired"):
@@ -1230,7 +1230,7 @@ class SessionDB:
                     except BaseException:
                         try:
                             self._conn.rollback()
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
                         raise
                 # Success — periodic best-effort checkpoint + FTS merge.
@@ -1303,7 +1303,7 @@ class SessionDB:
         """
         try:
             self.optimize_fts()
-        except (AttributeError, ValueError):
+        except Exception:
             pass  # Best effort — never fatal.
 
     def close(self):
@@ -4364,7 +4364,7 @@ class SessionDB:
         # and the reply isn't there" report on large sessions.
         try:
             tip = self.get_compression_tip(session_id)
-        except (AttributeError, ValueError):
+        except Exception:
             tip = session_id
         if tip and tip != session_id:
             session_id = tip

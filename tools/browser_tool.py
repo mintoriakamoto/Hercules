@@ -795,7 +795,7 @@ def _get_cloud_provider() -> Optional[CloudBrowserProvider]:
                 fallback_provider = BrowserbaseProvider()
                 if fallback_provider.is_configured():
                     resolved = fallback_provider
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("Cloud provider auto-detect failed", exc_info=True)
             return None
 
@@ -4459,7 +4459,7 @@ def browser_vision(
             _vtemp = _vision_cfg.get("temperature")
             if _vtemp is not None:
                 vision_temperature = float(_vtemp)
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             pass
 
         call_kwargs = {
@@ -4738,7 +4738,7 @@ def cleanup_all_browsers() -> None:
         from tools.browser_supervisor import SUPERVISOR_REGISTRY  # type: ignore[import-not-found]
 
         SUPERVISOR_REGISTRY.stop_all()
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Reset cached lookups so they are re-evaluated on next use.

@@ -105,7 +105,7 @@ def _set_process_title() -> None:
             libc = ctypes.CDLL("libc.dylib", use_errno=True)
             libc.pthread_setname_np(b"hercules")
         # Windows: the .exe name is already ``hercules.exe`` — nothing to do.
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
 
@@ -178,7 +178,7 @@ def _wants_tui_early(argv: "list[str] | None" = None) -> bool:
     try:
         if not (sys.stdin.isatty() and sys.stdout.isatty()):
             return False
-    except (AttributeError, ValueError):
+    except Exception:
         return False
     return _config_default_interface_early() == "tui"
 
@@ -404,7 +404,7 @@ def _apply_profile_override() -> None:
             import pwd
 
             home = Path(pwd.getpwnam(sudo_user).pw_dir)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return None
 
         candidate = home / ".hercules" / "profiles" / name
@@ -583,7 +583,7 @@ try:
             from hercules_cli import managed_scope
 
             _early_cfg_raw = managed_scope.apply_managed_overlay(_early_cfg_raw)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         if "HERCULES_REDACT_SECRETS" not in os.environ:
             _early_sec_cfg = _early_cfg_raw.get("security", {})
@@ -596,7 +596,7 @@ try:
             _FORCE_IPV4_EARLY = True
         del _early_cfg_raw
     del _cfg_path
-except (ImportError, ModuleNotFoundError, ValueError):
+except Exception:
     pass  # best-effort — redaction stays at default (enabled) on config errors
 
 # Initialize centralized file logging early — all `hercules` subcommands
@@ -614,7 +614,7 @@ try:
             else "cli"
         )
     )
-except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+except Exception:
     pass  # best-effort — don't crash the CLI if logging setup fails
 
 # Apply IPv4 preference early, before any HTTP clients are created.
@@ -625,7 +625,7 @@ if _FORCE_IPV4_EARLY:
         from hercules_constants import apply_ipv4_preference as _apply_ipv4
 
         _apply_ipv4(force=True)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass  # best-effort — don't crash if hercules_constants not importable yet
 
 import logging
@@ -913,7 +913,7 @@ def _has_any_provider_configured() -> bool:
                 status = get_auth_status(active)
                 if status.get("logged_in"):
                     return True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     # Check config.yaml — if model is a dict with an explicit provider set,
@@ -942,7 +942,7 @@ def _has_any_provider_configured() -> bool:
                 is_claude_code_token_valid(creds) or creds.get("refreshToken")
             ):
                 return True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     return False
@@ -1204,13 +1204,13 @@ def _resolve_last_session(source: str = "cli") -> Optional[str]:
         db = SessionDB()
         sessions = db.search_sessions(source=source, limit=1)
         return sessions[0]["id"] if sessions else None
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
     finally:
         if db is not None:
             try:
                 db.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
     return None
 
@@ -1356,12 +1356,12 @@ def _resolve_session_by_name_or_id(name_or_id: str) -> Optional[str]:
             # the live tip instead of a dead compressed parent.
             try:
                 resolved_id = db.get_compression_tip(resolved_id) or resolved_id
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         db.close()
         return resolved_id
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     return None
 
@@ -1414,7 +1414,7 @@ def _print_tui_exit_summary(
             + cache_write_tokens
             + reasoning_tokens
         )
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return
     finally:
         if db is not None:
@@ -1800,7 +1800,7 @@ def _make_tui_argv(tui_dir: Path, tui_dev: bool) -> tuple[list[str], Path]:
 
                 if ensure_dependency("node"):
                     path = shutil.which("node")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         if not path:
             print(f"{bin} not found — install Node.js to use the TUI.")
@@ -2075,7 +2075,7 @@ def _launch_tui(
         from hercules_cli.config import apply_terminal_config_to_env
 
         apply_terminal_config_to_env(env=env)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug(
             "Failed to apply terminal config bridge for TUI launch", exc_info=True
         )
@@ -2198,7 +2198,7 @@ def _launch_tui(
         if wt_info:
             try:
                 _cleanup_worktree(wt_info)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     # Exit code 42 = TUI requested an update. Relaunch as `hercules update` so
@@ -2233,7 +2233,7 @@ def _pin_kanban_board_env() -> None:
         from hercules_cli.kanban_db import get_current_board
 
         os.environ["HERCULES_KANBAN_BOARD"] = get_current_board()
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -2253,7 +2253,7 @@ def _sync_bundled_skills_quietly() -> None:
         from tools.skills_sync import sync_skills
 
         sync_skills(quiet=True)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -2287,7 +2287,7 @@ def _resolve_use_tui(args) -> bool:
     try:
         if not (sys.stdin.isatty() and sys.stdout.isatty()):
             return False
-    except (AttributeError, ValueError):
+    except Exception:
         return False
     if os.environ.get("HERCULES_TUI") == "1":
         return True
@@ -2296,7 +2296,7 @@ def _resolve_use_tui(args) -> bool:
 
         iface = (load_config().get("display", {}) or {}).get("interface", "cli")
         return isinstance(iface, str) and iface.strip().lower() == "tui"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -2364,7 +2364,7 @@ def cmd_chat(args):
             ):
                 os.chdir(_saved_cwd)
                 print(f"↪ restored workspace dir: {_saved_cwd}")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # never let cwd-restore break a resume
 
     # xAI retirement warning — one-shot, non-blocking, never fails startup
@@ -2389,7 +2389,7 @@ def cmd_chat(args):
                 f"  \033[2mMigration guide: {MIGRATION_GUIDE_URL}\033[0m\n"
             )
             sys.stderr.write("  \033[2mRun 'hercules doctor' for details.\033[0m\n\n")
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # First-run guard: check if any provider is configured before launching
@@ -2432,13 +2432,13 @@ def cmd_chat(args):
             from hercules_cli.banner import prefetch_update_check
 
             prefetch_update_check()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     # Sync bundled skills on every CLI launch (fast -- skips unchanged skills)
     try:
         _sync_bundled_skills_for_startup()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     # --yolo: bypass all dangerous command approvals.
@@ -2832,7 +2832,7 @@ def cmd_model(args):
 
             clear_provider_models_cache()
             print("  Cleared model picker cache.")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
     select_provider_and_model(args=args)
 
@@ -2849,7 +2849,7 @@ def _is_profile_api_key_provider(provider_id: str) -> bool:
 
         _p = get_provider_profile(provider_id)
         return _p is not None and _p.auth_type == "api_key"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -3349,7 +3349,7 @@ def _all_aux_tasks() -> list[tuple[str, str, str]]:
 
         for entry in get_plugin_auxiliary_tasks():
             tasks.append((entry["key"], entry["display_name"], entry["description"]))
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         # Plugin discovery failure must not break the aux config UI.
         # Built-in tasks remain available.
         pass
@@ -3598,7 +3598,7 @@ def _aux_flow_provider_model(
     pricing: dict = {}
     try:
         pricing = get_pricing_for_provider(provider_slug) or {}
-    except (AttributeError, ValueError):
+    except Exception:
         pricing = {}
 
     model_list = list(curated_models)
@@ -3705,7 +3705,7 @@ def _prompt_provider_choice(choices, *, default=0, title="Select provider:"):
         if idx >= 0:
             print()
             return idx
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Fallback: numbered list
@@ -4217,7 +4217,7 @@ def _run_anthropic_oauth_flow(save_env_value):
     def _activate_claude_code_credentials_if_available() -> bool:
         try:
             creds = read_claude_code_credentials()
-        except (AttributeError, ValueError):
+        except Exception:
             creds = None
         if creds and (
             is_claude_code_token_valid(creds) or bool(creds.get("refreshToken"))
@@ -4490,7 +4490,7 @@ def _print_version_info(*, check_updates: bool = True) -> None:
             )
         elif behind == 0:
             print("Up to date")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -5508,7 +5508,7 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
     for proc in proc_iter:
         try:
             info = proc.info
-        except (AttributeError, ValueError, KeyError, OSError):
+        except Exception:
             continue
         pid = info.get("pid")
         exe = info.get("exe")
@@ -5535,9 +5535,9 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
             for proc in alive:
                 try:
                     proc.kill()
-                except (AttributeError, ValueError):
+                except Exception:
                     continue
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     return stopped
 
@@ -5710,7 +5710,7 @@ def _desktop_launch_options() -> tuple[list[str], str]:
         from hercules_cli.config import load_config
 
         desktop_cfg = (load_config() or {}).get("desktop") or {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return flags, disable_gpu
 
     raw_flags = desktop_cfg.get("electron_flags")
@@ -5744,7 +5744,7 @@ def cmd_gui(args: argparse.Namespace):
         from hercules_logging import setup_logging as _setup_logging_gui
 
         _setup_logging_gui(mode="gui")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     from hercules_constants import find_node_executable, with_hercules_node_path
@@ -6162,14 +6162,14 @@ def _print_curator_first_run_notice() -> None:
         if not curator.is_enabled():
             return
         state = curator.load_state()
-    except (AttributeError, ValueError):
+    except Exception:
         return
     if state.get("last_run_at"):
         # Curator has run before (real or already seeded) — no notice needed.
         return
     try:
         hours = curator.get_interval_hours()
-    except (AttributeError, ValueError):
+    except Exception:
         hours = 24 * 7
     days = max(1, hours // 24)
     print()
@@ -6206,7 +6206,7 @@ def _print_curator_recent_run_notice() -> None:
         return
     try:
         state = curator.load_state()
-    except (AttributeError, ValueError):
+    except Exception:
         return
 
     last_run_at = state.get("last_run_at")
@@ -6269,7 +6269,7 @@ def _format_time_ago(iso_ts: str) -> str:
         if secs < 86400:
             return f"{secs // 3600}h ago"
         return f"{secs // 86400}d ago"
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return "recently"
 
 
@@ -6609,7 +6609,7 @@ def _update_via_zip(args):
             print(f"  − {len(result['cleaned'])} removed from manifest")
         if not result["copied"] and not result.get("updated"):
             print("  ✓ Skills are up to date")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Seed the model-catalog disk cache from the freshly-unpacked checkout
@@ -6975,7 +6975,7 @@ def _mark_skip_upstream_prompt():
         from hercules_constants import get_hercules_home
 
         (get_hercules_home() / SKIP_UPSTREAM_PROMPT_FILE).touch()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -7160,7 +7160,7 @@ def _invalidate_update_cache():
             cache_file = home / ".update_check"
             if cache_file.exists():
                 cache_file.unlink()
-        except (OSError, ZeroDivisionError):
+        except Exception:
             pass
 
 
@@ -7546,12 +7546,12 @@ def _detect_concurrent_hercules_instances(
         seed = next(iter(exclude_pids))
         try:
             ancestors = psutil.Process(seed).parents()
-        except (AttributeError, ValueError):
+        except Exception:
             ancestors = []
         for ancestor in ancestors:
             try:
                 anc_exe = ancestor.exe()
-            except (AttributeError, ValueError):
+            except Exception:
                 continue
             if not anc_exe:
                 continue
@@ -7576,7 +7576,7 @@ def _detect_concurrent_hercules_instances(
     for proc in proc_iter:
         try:
             info = proc.info
-        except (AttributeError, ValueError, KeyError, OSError):
+        except Exception:
             continue
         pid = info.get("pid")
         exe = info.get("exe")
@@ -8093,9 +8093,9 @@ def _verify_core_dependencies_installed(
             try:
                 req = Requirement(spec)
                 deps.append((req.name, req.marker))
-            except (AttributeError, ValueError):
+            except Exception:
                 continue
-    except (AttributeError, ValueError):
+    except Exception:
         for spec in raw_deps:
             head = spec.split(";", 1)[0]
             for op in ("==", ">=", "<=", "~=", ">", "<", "!="):
@@ -8447,7 +8447,7 @@ class _UpdateOutputStream:
         if self._log is not None:
             try:
                 self._log.flush()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         if self._original_broken:
             return
@@ -8461,7 +8461,7 @@ class _UpdateOutputStream:
             return False
         try:
             return self._original.isatty()
-        except (AttributeError, ValueError):
+        except Exception:
             return False
 
     def fileno(self):
@@ -8616,7 +8616,7 @@ def _finalize_update_output(state):
         try:
             log_file.flush()
             log_file.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -9039,7 +9039,7 @@ def _wait_for_windows_update_gateway_exit(
             try:
                 if not _pid_exists(pid):
                     remaining.discard(pid)
-            except (AttributeError, ValueError):
+            except Exception:
                 remaining.discard(pid)
         if remaining:
             _time.sleep(0.25)
@@ -9049,7 +9049,7 @@ def _wait_for_windows_update_gateway_exit(
         try:
             if _pid_exists(pid):
                 survivors.add(pid)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     return survivors
 
@@ -9179,7 +9179,7 @@ def _detect_venv_python_processes(
     for proc in proc_iter:
         try:
             info = proc.info
-        except (AttributeError, ValueError, KeyError, OSError):
+        except Exception:
             continue
         pid = info.get("pid")
         exe = info.get("exe")
@@ -10278,7 +10278,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
             import hercules_constants as _hc
 
             importlib.reload(_hc)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # non-fatal — worst case a lazy import fails gracefully
 
         # Sync bundled skills (copies new, updates changed, respects user deletions)
@@ -10360,7 +10360,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
                     f"→ Seeded .env for {len(backfilled)} profile(s) "
                     f"(copied from default): {', '.join(backfilled)}"
                 )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # profiles module not available or no profiles
 
         # Sync Honcho host blocks to all profiles
@@ -10370,7 +10370,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
             synced = sync_honcho_profiles_quiet()
             if synced:
                 print(f"\n-> Honcho: synced {synced} profile(s)")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # honcho plugin not installed or not configured
 
         # Check for config migrations
@@ -10776,7 +10776,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
 
                 _cfg_agent = load_config().get("agent") or {}
                 _cfg_drain = _cfg_agent.get("restart_drain_timeout")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             try:
                 _drain_budget = (
@@ -10799,7 +10799,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
             if supports_systemd_services():
                 try:
                     _ensure_user_systemd_env()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
                 for scope, scope_cmd in [
@@ -11512,7 +11512,7 @@ def cmd_profile(args):
 
                     if clone_honcho_for_profile(name):
                         print(f"Honcho config cloned (peer: {name})")
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass  # Honcho plugin not installed or not configured
 
             # Seed bundled skills for fresh profiles only. Clone operations
@@ -12111,7 +12111,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
 
         if not should_require_auth(host):
             return  # loopback bind — gate never engages
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return  # if we can't tell, defer to start_server's own gate
 
     try:
@@ -12119,7 +12119,7 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
 
         if list_providers():
             return  # a provider is already configured/registered
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
 
     # Only prompt an interactive operator. Non-TTY callers fall through to
@@ -12260,7 +12260,7 @@ def cmd_dashboard(args):
         from hercules_cli.profiles import get_active_profile_name
 
         _launch_profile = get_active_profile_name()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _launch_profile = "default"
 
     if (
@@ -12348,7 +12348,7 @@ def cmd_dashboard(args):
         from hercules_logging import setup_logging as _setup_logging_gui
 
         _setup_logging_gui(mode="gui")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     try:
@@ -12450,7 +12450,7 @@ def cmd_dashboard(args):
             logger=logger,
             thread_name="dashboard-mcp-discovery",
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug(
             "Background MCP tool discovery failed at dashboard startup",
             exc_info=True,
@@ -12539,7 +12539,7 @@ def _build_provider_choices() -> list[str]:
         from hercules_cli.models import CANONICAL_PROVIDERS as _cp
 
         return ["auto"] + [p.slug for p in _cp]
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         # Fallback: static list guarantees the CLI always works
         return [
             "auto",
@@ -12800,7 +12800,7 @@ def _prepare_agent_startup(args) -> None:
         from hercules_cli.plugins import discover_plugins
 
         discover_plugins()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.warning(
             "plugin discovery failed at CLI startup",
             exc_info=True,
@@ -12823,7 +12823,7 @@ def _prepare_agent_startup(args) -> None:
                 logger=logger,
                 thread_name="cli-mcp-discovery",
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug(
                 "Background MCP tool discovery failed at CLI startup",
                 exc_info=True,
@@ -12836,7 +12836,7 @@ def _prepare_agent_startup(args) -> None:
             from tools.mcp_tool import discover_mcp_tools
 
             discover_mcp_tools()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug(
                 "MCP tool discovery failed at CLI startup",
                 exc_info=True,
@@ -12846,7 +12846,7 @@ def _prepare_agent_startup(args) -> None:
         from agent.shell_hooks import register_from_config
 
         register_from_config(load_config(), accept_hooks=_accept_hooks)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug(
             "shell-hook registration failed at CLI startup",
             exc_info=True,
@@ -13154,7 +13154,7 @@ def main():
         from hercules_cli.stdio import configure_windows_stdio
 
         configure_windows_stdio()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Sweep stale ``hercules.exe.old.*`` quarantine files left by previous
@@ -13162,7 +13162,7 @@ def main():
     # there's nothing to clean. See ``_quarantine_running_hercules_exe``.
     try:
         _cleanup_quarantined_exes()
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     # Self-heal a venv left half-built by an interrupted ``hercules update``
@@ -13831,7 +13831,7 @@ def main():
                         print(
                             "  Refresh to latest: hercules computer-use install --upgrade"
                         )
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     print(
                         "  Refresh to latest: hercules computer-use install --upgrade"
                     )
@@ -14227,7 +14227,7 @@ def main():
                         .fetchone()[0]
                     )
                     print(f"✓ Repaired — {n} sessions recovered.")
-                except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+                except Exception:
                     print("✓ Repaired.")
             else:
                 print(f"✗ Repair failed: {report.get('error')}")

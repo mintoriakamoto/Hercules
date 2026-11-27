@@ -450,7 +450,7 @@ def _activate_target_on_syspath(target: Path) -> None:
         import importlib
 
         importlib.invalidate_caches()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -584,7 +584,7 @@ def _is_satisfied(spec: str) -> bool:
         installed = version(pkg)
     except PackageNotFoundError:
         return False
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
     spec_tail = _specifier_from_spec(spec)
@@ -622,7 +622,7 @@ def _is_present(spec: str) -> bool:
         return True
     except PackageNotFoundError:
         return False
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 
@@ -859,7 +859,7 @@ def ensure(feature: str, *, prompt: bool = True) -> None:
 
             _app = get_app_or_none()
             _pt_active = _app is not None and getattr(_app, "is_running", False)
-        except (AttributeError, ImportError, ModuleNotFoundError):
+        except Exception:
             _pt_active = False
 
     if prompt and not _pt_active and sys.stdin.isatty() and sys.stdout.isatty():
@@ -900,7 +900,7 @@ def ensure(feature: str, *, prompt: bool = True) -> None:
 
         if hasattr(_md, "_cache_clear"):
             _md._cache_clear()  # type: ignore[attr-defined]
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
     still_missing = feature_missing(feature)

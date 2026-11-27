@@ -77,7 +77,7 @@ def _get_user_plugins_dir() -> Optional[Path]:
 
         d = get_hercules_home() / "plugins"
         return d if d.is_dir() else None
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
 
@@ -175,7 +175,7 @@ def discover_cron_schedulers() -> List[Tuple[str, str, bool]]:
                 with open(yaml_file, encoding="utf-8-sig") as f:
                     meta = yaml.safe_load(f) or {}
                 desc = meta.get("description", "")
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         # Quick availability check — try loading and calling is_available()
@@ -186,7 +186,7 @@ def discover_cron_schedulers() -> List[Tuple[str, str, bool]]:
                 available = provider.is_available()
             else:
                 available = False
-        except (AttributeError, ValueError):
+        except Exception:
             available = False
 
         results.append((name, desc, available))
@@ -265,7 +265,7 @@ def _load_provider_from_dir(provider_dir: Path) -> Optional["CronScheduler"]:
                         sys.modules[parent] = parent_mod
                         try:
                             spec.loader.exec_module(parent_mod)
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
 
         # User-installed plugins need their synthetic parent registered the
@@ -345,7 +345,7 @@ def _load_provider_from_dir(provider_dir: Path) -> Optional["CronScheduler"]:
         ):
             try:
                 return attr()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     return None

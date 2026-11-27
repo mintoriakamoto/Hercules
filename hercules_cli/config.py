@@ -90,7 +90,7 @@ def _backup_corrupt_config(config_path: Path) -> Optional[Path]:
             return None
         shutil.copy2(config_path, backup_path)
         return backup_path
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
 
@@ -561,7 +561,7 @@ def _running_in_container() -> bool:
         from hercules_constants import is_container
 
         return is_container()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -5045,7 +5045,7 @@ def get_custom_provider_tls_settings(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except (AttributeError, ValueError):
+        except Exception:
             custom_providers = []
     if not base_url or not isinstance(custom_providers, list):
         return {}
@@ -5123,7 +5123,7 @@ def get_custom_provider_extra_headers(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except (AttributeError, ValueError):
+        except Exception:
             custom_providers = []
     if not base_url or not isinstance(custom_providers, list):
         return {}
@@ -5193,7 +5193,7 @@ def get_custom_provider_context_length(
     if custom_providers is None:
         try:
             custom_providers = get_compatible_custom_providers(config)
-        except (AttributeError, ValueError):
+        except Exception:
             if config is None:
                 return None
             raw = config.get("custom_providers")
@@ -5346,7 +5346,7 @@ def validate_config_structure(
     if config is None:
         try:
             config = load_config()
-        except (AttributeError, ValueError):
+        except Exception:
             return [
                 ConfigIssue(
                     "error",
@@ -5526,7 +5526,7 @@ def print_config_warnings(config: Optional[Dict[str, Any]] = None) -> None:
     """
     try:
         issues = validate_config_structure(config)
-    except (AttributeError, ValueError):
+    except Exception:
         return
     if not issues:
         return
@@ -5551,7 +5551,7 @@ def warn_deprecated_cwd_env_vars(config: Optional[Dict[str, Any]] = None) -> Non
     if config is None:
         try:
             config = load_config()
-        except (AttributeError, ValueError):
+        except Exception:
             return
 
     terminal_cfg = config.get("terminal", {})
@@ -5732,7 +5732,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
 
                         parsed = urlparse(old_url)
                         key = (parsed.hostname or "endpoint").replace(".", "-")
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         key = f"endpoint-{migrated_count}"
 
                 # Don't overwrite existing entries
@@ -7993,7 +7993,7 @@ def get_env_value_prefer_dotenv(key: str) -> Optional[str]:
         from agent.secret_scope import get_secret as _get_secret
 
         return _get_secret(key)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return os.environ.get(key)
 
 
@@ -8322,7 +8322,7 @@ def show_config():
                 print(
                     f"  {key:<20s} {display_val}  {color(f'[{skill_name}]', Colors.DIM)}"
                 )
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
 
     print()
@@ -8699,7 +8699,7 @@ def _inject_profile_env_vars() -> None:
                     "category": "provider",
                     "advanced": True,
                 }
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
 

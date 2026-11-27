@@ -242,7 +242,7 @@ def _get_session_platform() -> str:
         from gateway.session_context import get_session_env
 
         return get_session_env("HERCULES_SESSION_PLATFORM", "") or ""
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return os.getenv("HERCULES_SESSION_PLATFORM", "") or ""
 
 
@@ -1974,7 +1974,7 @@ def prompt_dangerous_approval(
                 description,
             )
             return "deny"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # prompt_toolkit not installed, or detection failed -- fall through
         # to the legacy input() path (safe in non-TUI contexts: scripts,
         # tests, sshd, etc.).
@@ -2131,7 +2131,7 @@ def _get_cron_approval_mode() -> str:
         if mode in {"approve", "off", "allow", "yes"}:
             return "approve"
         return "deny"
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return "deny"
 
 
@@ -2325,7 +2325,7 @@ def _run_approval_gate(
             from tools.terminal_tool import _get_approval_callback
 
             approval_callback = _get_approval_callback()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             approval_callback = None
 
     is_cli = _is_interactive_cli()
@@ -2872,7 +2872,7 @@ def check_all_command_guards(
                         _sec = (_load_cfg() or {}).get("security", {}) or {}
                         if _sec.get("tirith_enabled", True):
                             _cron_fail_open = _sec.get("tirith_fail_open", True)
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         pass
                     if not _cron_fail_open:
                         return {
@@ -2913,7 +2913,7 @@ def check_all_command_guards(
             _tirith_enabled = _sec.get("tirith_enabled", True)
             if _tirith_enabled:
                 _tirith_fail_open = _sec.get("tirith_fail_open", True)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         if not _tirith_fail_open:
             tirith_result = {

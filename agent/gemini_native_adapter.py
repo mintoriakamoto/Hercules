@@ -133,7 +133,7 @@ def probe_gemini_tier(
         body_text = ""
         try:
             body_text = resp.text or ""
-        except (AttributeError, ValueError, KeyError, OSError):
+        except Exception:
             body_text = ""
         if "free_tier" in body_text.lower():
             return "free"
@@ -796,7 +796,7 @@ def gemini_http_error(
     if body_text is None:
         try:
             body_text = response.text
-        except (AttributeError, ValueError, KeyError, OSError):
+        except Exception:
             body_text = ""
     body_text = body_text or ""
     if body_text:
@@ -935,7 +935,7 @@ class GeminiNativeClient:
         self.is_closed = True
         try:
             self._http.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def __enter__(self):

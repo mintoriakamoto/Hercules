@@ -208,12 +208,12 @@ def _locate_session_db(session_id: str):
         seen.add(key)
         try:
             pdb = SessionDB(db_path=db_path, read_only=True)
-        except (AttributeError, ValueError):
+        except Exception:
             continue
         try:
             if pdb.get_session(session_id):
                 return pdb, name
-        except (AttributeError, ValueError):
+        except Exception:
             logging.debug(
                 "get_session probe failed for %s in %s", session_id, name, exc_info=True
             )
@@ -412,7 +412,7 @@ def _scroll(
                         )
                         try:
                             session_meta = db.get_session(owning) or session_meta
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
                         session_id = owning
                 except Exception as e:
@@ -464,7 +464,7 @@ def _title_match_result(
 
     try:
         session_id = db.resolve_session_by_title(title_query)
-    except (AttributeError, ValueError):
+    except Exception:
         logging.debug(
             "resolve_session_by_title failed for %r", title_query, exc_info=True
         )
@@ -478,7 +478,7 @@ def _title_match_result(
 
     try:
         session_meta = db.get_session(lineage_root) or db.get_session(session_id) or {}
-    except (AttributeError, ValueError):
+    except Exception:
         logging.debug(
             "get_session failed for title match %s", session_id, exc_info=True
         )
@@ -488,7 +488,7 @@ def _title_match_result(
 
     try:
         messages = db.get_messages(session_id)
-    except (AttributeError, ValueError):
+    except Exception:
         logging.debug(
             "get_messages failed for title match %s", session_id, exc_info=True
         )
@@ -498,7 +498,7 @@ def _title_match_result(
     if anchor_id is not None:
         try:
             view = db.get_anchored_view(session_id, anchor_id, window=5, bookend=3)
-        except (AttributeError, ValueError):
+        except Exception:
             logging.debug(
                 "get_anchored_view failed for title match %s/%s",
                 session_id,
@@ -702,7 +702,7 @@ def _discover(
 
         try:
             session_meta = db.get_session(lineage_root) or {}
-        except (AttributeError, ValueError):
+        except Exception:
             session_meta = {}
 
         entry = {
@@ -774,7 +774,7 @@ def session_search(
             from hercules_state import SessionDB
 
             db = SessionDB()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logging.debug("SessionDB unavailable for session_search", exc_info=True)
             from hercules_state import format_session_db_unavailable
 

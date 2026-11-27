@@ -1462,7 +1462,7 @@ def _current_session_platform_hint() -> str:
         return ""
     try:
         return get_session_env("HERCULES_SESSION_PLATFORM") or ""
-    except (AttributeError, ValueError):
+    except Exception:
         return ""
 
 
@@ -1712,7 +1712,7 @@ def build_skills_system_prompt(
             _cfg_cap = cfg_get(load_config_readonly(), "skills", "index_max_chars")
             if _cfg_cap is not None:
                 _index_cap = int(_cfg_cap)
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             pass
         if _index_cap > 0:
             _running = 0

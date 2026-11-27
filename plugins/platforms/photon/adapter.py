@@ -496,7 +496,7 @@ class PhotonAdapter(BasePlatformAdapter):
         if self._http_client is not None:
             try:
                 await self._http_client.aclose()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self._http_client = None
         self._mark_disconnected()
@@ -601,7 +601,7 @@ class PhotonAdapter(BasePlatformAdapter):
             return
         try:
             await self._dispatch_inbound(event)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.exception("[photon] inbound dispatch failed")
 
     def _is_duplicate(self, msg_id: str) -> bool:
@@ -1064,7 +1064,7 @@ class PhotonAdapter(BasePlatformAdapter):
             if proc.stdin is not None:
                 try:
                     proc.stdin.close()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             # Polite shutdown first.
             if self._http_client is not None:
@@ -1074,7 +1074,7 @@ class PhotonAdapter(BasePlatformAdapter):
                         headers={"X-Hercules-Sidecar-Token": self._sidecar_token},
                         timeout=2.0,
                     )
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             try:
                 proc.wait(timeout=3.0)
@@ -1129,7 +1129,7 @@ class PhotonAdapter(BasePlatformAdapter):
             from gateway.platforms.base import cache_image_from_url
 
             local_path = await cache_image_from_url(image_url)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             # Couldn't fetch the URL — fall back to sending it as text.
             return await super().send_image(chat_id, image_url, caption, reply_to)
         return await self._sidecar_send_attachment(

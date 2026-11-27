@@ -1237,7 +1237,7 @@ class DecodeMiddleware(InboundMiddleware):
         else:
             try:
                 push = decode_inbound_push(data)
-            except (AttributeError, ValueError):
+            except Exception:
                 push = None
             if push:
                 return push, "protobuf"
@@ -1488,7 +1488,7 @@ class RecallGuardMiddleware(InboundMiddleware):
                 sid = store.get_or_create_session(
                     cls._build_source(adapter, group_code, from_account),
                 ).session_id
-            except (AttributeError, ValueError):
+            except Exception:
                 return
             # Poll until the recalled content appears in transcript — the
             # interrupted turn hasn't finished writing yet when scheduled.
@@ -1496,7 +1496,7 @@ class RecallGuardMiddleware(InboundMiddleware):
                 await asyncio.sleep(0.5)
                 try:
                     transcript = store.load_transcript(sid)
-                except (AttributeError, ValueError):
+                except Exception:
                     continue
                 for entry in transcript:
                     if (

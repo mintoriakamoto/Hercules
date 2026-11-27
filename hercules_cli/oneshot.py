@@ -70,7 +70,7 @@ def _validate_explicit_toolsets(
 
             discover_plugins()
             plugin_valid = [name for name in unresolved if validate_toolset(name)]
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+        except Exception:
             plugin_valid = []
 
         if plugin_valid:
@@ -106,7 +106,7 @@ def _validate_explicit_toolsets(
                     mcp_names.add(str(name))
                 else:
                     mcp_disabled.add(str(name))
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             mcp_names = set()
             mcp_disabled = set()
 
@@ -170,7 +170,7 @@ def _write_usage_file(
         out = Path(path).expanduser()
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
 
 
@@ -259,7 +259,7 @@ def run_oneshot(
     finally:
         try:
             devnull.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     if failure is not None:
@@ -363,7 +363,7 @@ def _run_agent(
 
                 _ms._ensure_direct_aliases()
                 direct = _ms.DIRECT_ALIASES.get(explicit_model.strip().lower())
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 direct = None
             if direct is not None:
                 effective_model = direct.model

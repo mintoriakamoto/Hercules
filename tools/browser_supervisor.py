@@ -53,7 +53,7 @@ def _redact_cdp_error_text(exc: object) -> str:
         from agent.redact import redact_cdp_url
 
         return redact_cdp_url(str(exc))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return "<error redacted>"
 
 
@@ -388,7 +388,7 @@ class CDPSupervisor:
                 from agent.redact import redact_cdp_url
 
                 _safe_url = redact_cdp_url(self.cdp_url)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _safe_url = "<cdp_url redacted>"
             raise TimeoutError(
                 f"CDP supervisor did not attach within {timeout}s "
@@ -430,7 +430,7 @@ class CDPSupervisor:
                 if fut is not None:
                     try:
                         fut.result(timeout=2.0)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
             except RuntimeError:
                 pass  # loop already shutting down
@@ -663,7 +663,7 @@ class CDPSupervisor:
                 pass
             try:
                 loop.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             with self._state_lock:
                 self._active = False
