@@ -116,7 +116,7 @@ def _safe_stderr():  # type: ignore[return]
             # when it is garbage-collected.
             wrapped.close = lambda: None  # type: ignore[assignment]
             return wrapped
-    except (AttributeError):
+    except Exception:
         pass
     # Best-effort: if wrapping fails, return the original stream.
     return stream
@@ -488,13 +488,13 @@ class _ManagedRotatingFileHandler(RotatingFileHandler):
             try:
                 if self.stream is not None:
                     self.stream.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self.stream = None  # type: ignore[assignment]
             try:
                 self.stream = self._open()
                 self._record_stream_stat()
-            except (OSError):
+            except Exception:
                 # Couldn't reopen — leave stream=None; next emit will
                 # bail rather than write to a stale inode.
                 pass
@@ -512,13 +512,13 @@ class _ManagedRotatingFileHandler(RotatingFileHandler):
             try:
                 if self.stream is not None:
                     self.stream.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self.stream = None  # type: ignore[assignment]
             try:
                 self.stream = self._open()
                 self._stat_dev, self._stat_ino = st.st_dev, st.st_ino
-            except (OSError):
+            except Exception:
                 pass
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -550,7 +550,7 @@ class _ManagedRotatingFileHandler(RotatingFileHandler):
         # created HERCULES_HOME directory.
         try:
             Path(self.baseFilename).parent.mkdir(parents=True, exist_ok=True)
-        except (OSError):
+        except Exception:
             pass  # If mkdir fails, let the parent's _open() handle the error
         stream = super()._open()
         self._chmod_if_managed()
@@ -616,7 +616,7 @@ def _stop_queue_listener_locked() -> None:
     if listener is not None:
         try:
             listener.stop()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -700,7 +700,7 @@ def drain_log_queue(timeout: float = 1.0) -> None:
     def _drain() -> None:
         try:
             listener.stop()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     t = threading.Thread(target=_drain, name="hercules-log-drain", daemon=True)
@@ -729,7 +729,7 @@ def _reset_queued_handlers() -> None:
         for h in list(_queued_file_handlers):
             try:
                 h.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         _queued_file_handlers.clear()
         _log_queue = None
@@ -796,7 +796,7 @@ def _read_logging_config():
                 from hercules_cli import managed_scope
 
                 cfg = managed_scope.apply_managed_overlay(cfg)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             log_cfg = cfg.get("logging", {})
             if isinstance(log_cfg, dict):
@@ -805,6 +805,6 @@ def _read_logging_config():
                     log_cfg.get("max_size_mb"),
                     log_cfg.get("backup_count"),
                 )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return (None, None, None)

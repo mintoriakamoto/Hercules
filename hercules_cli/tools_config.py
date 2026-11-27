@@ -182,7 +182,7 @@ def _xai_credentials_present() -> bool:
 
         if str(_xai_get_env_value("XAI_API_KEY") or "").strip():
             return True
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     return bool(str(os.environ.get("XAI_API_KEY") or "").strip())
 
@@ -231,7 +231,7 @@ def _get_effective_configurable_toolsets():
                 continue
             seen.add(entry[0])
             result.append(entry)
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
     return result
 
@@ -243,7 +243,7 @@ def _get_plugin_toolset_keys() -> set:
 
         discover_plugins()  # idempotent — ensures plugins are loaded
         return {ts_key for ts_key, _, _ in get_plugin_toolsets()}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return set()
 
 
@@ -640,7 +640,7 @@ def _cua_driver_env() -> dict:
         from tools.computer_use.cua_backend import cua_driver_child_env
 
         return cua_driver_child_env()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return dict(os.environ)
 
 
@@ -837,7 +837,7 @@ def install_cua_driver(upgrade: bool = False) -> bool:
             _print_success(
                 f"    {driver_cmd} already installed: {version or 'unknown version'}"
             )
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             _print_success(f"    {driver_cmd} already installed.")
         if is_windows:
             _print_info(
@@ -884,7 +884,7 @@ def install_cua_driver(upgrade: bool = False) -> bool:
                     f"({_state.get('current_version') or 'unknown'})."
                 )
                 return True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     if binary:
@@ -897,7 +897,7 @@ def install_cua_driver(upgrade: bool = False) -> bool:
                 timeout=5,
                 env=_cua_driver_env(),
             ).stdout.strip()
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             before = ""
     else:
         before = ""
@@ -916,7 +916,7 @@ def install_cua_driver(upgrade: bool = False) -> bool:
                 _print_success(f"    {driver_cmd} upgraded: {before} → {after}")
             elif after:
                 _print_info(f"    {driver_cmd} up to date: {after}")
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             pass
     return ok
 
@@ -1172,7 +1172,7 @@ def _run_cua_driver_installer(label: str = "Installing", verbose: bool = True) -
                             + "\n"
                         )
                         _update_log.flush()
-                    except (OSError):
+                    except Exception:
                         pass
                 if result.returncode != 0:
                     logger.debug("cua-driver installer output:\n%s", result.stdout)
@@ -1556,7 +1556,7 @@ def _run_post_setup(post_setup_key: str):
             from hercules_cli.auth import get_xai_oauth_auth_status
 
             oauth_logged_in = bool(get_xai_oauth_auth_status().get("logged_in"))
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             oauth_logged_in = False
         existing_api_key = get_env_value("XAI_API_KEY")
 
@@ -1643,7 +1643,7 @@ def valid_post_setup_keys() -> Set[str]:
                 ps = prov.get("post_setup")
                 if ps:
                     keys.add(ps)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:  # pragma: no cover — defensive; plugins optional
             continue
     return keys
 
@@ -2180,7 +2180,7 @@ def _toolset_has_keys(
 
             _provider, client, _model = resolve_vision_provider_client()
             return client is not None
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
 
     # Check TOOL_CATEGORIES first (provider-aware)
@@ -2234,7 +2234,7 @@ def _estimate_tool_tokens() -> Dict[str, int]:
         import tiktoken
 
         enc = tiktoken.get_encoding("cl100k_base")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("tiktoken unavailable; skipping tool token estimation")
         _tool_token_cache = {}
         return _tool_token_cache
@@ -2243,7 +2243,7 @@ def _estimate_tool_tokens() -> Dict[str, int]:
         # Trigger full tool discovery (imports all tool modules).
         import model_tools  # noqa: F401
         from tools.registry import registry
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Tool registry unavailable; skipping token estimation")
         _tool_token_cache = {}
         return _tool_token_cache
@@ -2359,14 +2359,14 @@ def _plugin_image_gen_providers() -> list[dict]:
 
         _ensure_plugins_discovered()
         providers = list_providers()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     rows: list[dict] = []
     for provider in providers:
         try:
             schema = provider.get_setup_schema()
-        except (AttributeError, ValueError):
+        except Exception:
             continue
         if not isinstance(schema, dict):
             continue
@@ -2397,14 +2397,14 @@ def _plugin_video_gen_providers() -> list[dict]:
 
         _ensure_plugins_discovered()
         providers = list_providers()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     rows: list[dict] = []
     for provider in providers:
         try:
             schema = provider.get_setup_schema()
-        except (AttributeError, ValueError):
+        except Exception:
             continue
         if not isinstance(schema, dict):
             continue
@@ -2450,7 +2450,7 @@ def _plugin_web_search_providers() -> list[dict]:
 
         _ensure_plugins_discovered()
         providers = _list_web_providers()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     rows: list[dict] = []
@@ -2460,7 +2460,7 @@ def _plugin_web_search_providers() -> list[dict]:
             continue
         try:
             schema = provider.get_setup_schema()
-        except (AttributeError, ValueError):
+        except Exception:
             continue
         if not isinstance(schema, dict):
             continue
@@ -2505,7 +2505,7 @@ def _plugin_browser_providers() -> list[dict]:
 
         _ensure_plugins_discovered()
         providers = _list_browser_providers()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     rows: list[dict] = []
@@ -2515,7 +2515,7 @@ def _plugin_browser_providers() -> list[dict]:
             continue
         try:
             schema = provider.get_setup_schema()
-        except (AttributeError, ValueError):
+        except Exception:
             continue
         if not isinstance(schema, dict):
             continue
@@ -2556,7 +2556,7 @@ def _plugin_tts_providers() -> list[dict]:
 
         _ensure_plugins_discovered()
         providers = list_providers()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     rows: list[dict] = []
@@ -2569,7 +2569,7 @@ def _plugin_tts_providers() -> list[dict]:
             continue
         try:
             schema = provider.get_setup_schema()
-        except (AttributeError, ValueError):
+        except Exception:
             continue
         if not isinstance(schema, dict):
             continue
@@ -2661,7 +2661,7 @@ def _post_setup_already_installed(post_setup_key: str) -> bool:
         return True
     try:
         return bool(predicate())
-    except (ValueError):
+    except Exception:
         return True
 
 
@@ -2708,9 +2708,9 @@ def _toolset_needs_configuration_prompt(
                 try:
                     if provider.is_available():
                         return False
-                except (AttributeError, ValueError):
+                except Exception:
                     continue
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         return True
     if ts_key == "video_gen":
@@ -2725,9 +2725,9 @@ def _toolset_needs_configuration_prompt(
                 try:
                     if provider.is_available():
                         return False
-                except (AttributeError, ValueError):
+                except Exception:
                     continue
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         return True
 
@@ -2989,14 +2989,14 @@ def _plugin_image_gen_catalog(plugin_name: str):
 
         _ensure_plugins_discovered()
         provider = get_provider(plugin_name)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}, None
     if provider is None:
         return {}, None
     try:
         models = provider.list_models() or []
         default = provider.default_model()
-    except (IndexError, KeyError):
+    except Exception:
         return {}, None
     catalog = {m["id"]: m for m in models if isinstance(m, dict) and "id" in m}
     return catalog, default
@@ -3131,14 +3131,14 @@ def _plugin_video_gen_catalog(plugin_name: str):
 
         _ensure_plugins_discovered()
         provider = get_provider(plugin_name)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}, None
     if provider is None:
         return {}, None
     try:
         models = provider.list_models() or []
         default = provider.default_model()
-    except (IndexError, KeyError):
+    except Exception:
         return {}, None
     catalog = {m["id"]: m for m in models if isinstance(m, dict) and "id" in m}
     return catalog, default
@@ -3689,7 +3689,7 @@ def _toolset_enabled_for_reconfigure(ts_key: str, config: dict) -> bool:
                 platform,
                 include_default_mcp_servers=False,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             continue
         if ts_key in enabled:
             return True

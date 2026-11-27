@@ -43,7 +43,7 @@ try:
     from dingtalk_stream.frames import CallbackMessage, AckMessage
 
     DINGTALK_STREAM_AVAILABLE = True
-except (ImportError, ModuleNotFoundError):
+except Exception:
     DINGTALK_STREAM_AVAILABLE = False
     dingtalk_stream = None  # type: ignore[assignment]
     ChatbotMessage = None  # type: ignore[assignment]
@@ -86,7 +86,7 @@ try:
     from alibabacloud_tea_util import models as tea_util_models
 
     CARD_SDK_AVAILABLE = True
-except (ImportError, ModuleNotFoundError):
+except Exception:
     CARD_SDK_AVAILABLE = False
     dingtalk_card_client = None
     dingtalk_card_models = None
@@ -136,7 +136,7 @@ def check_dingtalk_requirements() -> bool:
             from tools.lazy_deps import ensure as _lazy_ensure
 
             _lazy_ensure("platform.dingtalk", prompt=False)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
         try:
             import dingtalk_stream as _ds
@@ -146,7 +146,7 @@ def check_dingtalk_requirements() -> bool:
                 AckMessage as _AM,
             )
             import httpx as _httpx
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
         dingtalk_stream = _ds
         ChatbotMessage = _CM
@@ -366,7 +366,7 @@ class DingTalkAdapter(BasePlatformAdapter):
             if hasattr(self._stream_client, "close"):
                 try:
                     await asyncio.to_thread(self._stream_client.close)
-                except (RuntimeError):
+                except Exception:
                     pass
 
             self._stream_task.cancel()
@@ -460,7 +460,7 @@ class DingTalkAdapter(BasePlatformAdapter):
             if raw:
                 try:
                     loaded = json.loads(raw)
-                except (AttributeError, ValueError):
+                except Exception:
                     loaded = [part.strip() for part in raw.splitlines() if part.strip()]
                     if not loaded:
                         loaded = [
@@ -1366,7 +1366,7 @@ class DingTalkAdapter(BasePlatformAdapter):
                 emoji_name,
                 open_msg_id[:24],
             )
-        except (KeyError, IndexError):
+        except Exception:
             logger.debug(
                 "[%s] _send_emotion %s failed", self.name, action, exc_info=True
             )
@@ -1570,7 +1570,7 @@ class _IncomingHandler(
             # exceptions inside the task surface in logs instead of
             # disappearing into the event loop.
             self._adapter._spawn_background_task(self._safe_on_message(chatbot_msg))
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.exception(
                 "[%s] Error preparing incoming message", self._adapter.name
             )
@@ -1582,7 +1582,7 @@ class _IncomingHandler(
         """Wrapper that catches exceptions from _on_message."""
         try:
             await self._adapter._on_message(chatbot_msg)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.exception(
                 "[%s] Error processing incoming message", self._adapter.name
             )
@@ -1649,7 +1649,7 @@ async def _standalone_send(
             from tools.send_message_tool import _error as _redact_error
 
             return _redact_error(f"DingTalk send failed: {e}")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return {"error": f"DingTalk send failed: {e}"}
 
 

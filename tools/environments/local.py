@@ -348,7 +348,7 @@ def _inject_context_hercules_home(env: dict) -> None:
         value = get_hercules_home_override()
         if value:
             env["HERCULES_HOME"] = value
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -384,7 +384,7 @@ def _inject_session_context_env(env: dict) -> None:
             _VAR_MAP,
             session_context_engaged,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
 
     _engaged = session_context_engaged()
@@ -405,7 +405,7 @@ def _sanitize_subprocess_env(
     """Filter Hercules-managed secrets from a subprocess environment."""
     try:
         from tools.env_passthrough import is_env_passthrough as _is_passthrough
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _is_passthrough = lambda _: False
 
     sanitized: dict[str, str] = {}
@@ -873,7 +873,7 @@ def _make_run_env(env: dict) -> dict:
     """Build a run environment with a sane PATH and provider-var stripping."""
     try:
         from tools.env_passthrough import is_env_passthrough as _is_passthrough
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _is_passthrough = lambda _: False
 
     merged = dict(os.environ | env)
@@ -931,7 +931,7 @@ def _read_terminal_shell_init_config() -> tuple[list[str], bool]:
             files = []
         auto_bashrc = bool(terminal_cfg.get("auto_source_bashrc", True))
         return [str(f) for f in files if f], auto_bashrc
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return [], True
 
 
@@ -1041,7 +1041,7 @@ class LocalEnvironment(BaseEnvironment):
                 from hercules_constants import get_hercules_home
 
                 cache_dir = Path(get_hercules_home()) / "cache" / "terminal"
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 cache_dir = Path(tempfile.gettempdir()) / "hercules_terminal"
             cache_dir.mkdir(parents=True, exist_ok=True)
             # Force forward slashes so the same string serves both contexts.
@@ -1164,14 +1164,14 @@ class LocalEnvironment(BaseEnvironment):
                 # still makes killpg(pgid, 0) report the group as alive.
                 try:
                     proc.poll()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 if not _group_alive(pgid):
                     return True
                 time.sleep(0.05)
             try:
                 proc.poll()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             return not _group_alive(pgid)
 
@@ -1181,7 +1181,7 @@ class LocalEnvironment(BaseEnvironment):
                     from gateway.status import terminate_pid
 
                     terminate_pid(proc.pid, force=True)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     proc.kill()
                 try:
                     proc.wait(timeout=2.0)
@@ -1223,7 +1223,7 @@ class LocalEnvironment(BaseEnvironment):
         except (ProcessLookupError, PermissionError, OSError):
             try:
                 proc.kill()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     def _update_cwd(self, result: dict):

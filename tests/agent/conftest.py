@@ -49,7 +49,7 @@ def _clear_model_metadata_caches():
     try:
         if hasattr(mm, "_local_context_cache"):
             mm._local_context_cache.clear()
-    except Exception:
+    except:
         pass
 
     # Remove disk cache files (multiple attempts to handle edge cases)

@@ -378,7 +378,7 @@ def t(key: str, lang: str | None = None, **format_kwargs: Any) -> str:
     if format_kwargs:
         try:
             return value.format(**format_kwargs)
-        except (KeyError, IndexError, ValueError) as exc:
+        except Exception as exc:
             logger.warning(
                 "i18n format failed for key=%r lang=%r kwargs=%r: %s",
                 key,

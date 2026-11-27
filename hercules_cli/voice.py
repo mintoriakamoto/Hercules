@@ -254,7 +254,7 @@ def _beeps_enabled() -> bool:
         voice_cfg = load_config().get("voice", {})
         if isinstance(voice_cfg, dict):
             return bool(voice_cfg.get("beep_enabled", True))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     return True
 
@@ -441,7 +441,7 @@ def start_continuous(
     if on_status:
         try:
             on_status("listening")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     return True
@@ -481,7 +481,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
             if on_status:
                 try:
                     on_status("transcribing")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             try:
                 wav_path = rec.stop()
@@ -533,7 +533,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
                         if should_halt and on_silent_limit:
                             try:
                                 on_silent_limit()
-                            except (AttributeError, ValueError):
+                            except Exception:
                                 pass
 
                     _play_beep(frequency=660, count=2)
@@ -542,7 +542,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
                     if on_status:
                         try:
                             on_status("idle")
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
 
             threading.Thread(target=_transcribe_and_cleanup, daemon=True).start()
@@ -565,7 +565,7 @@ def stop_continuous(force_transcribe: bool = False) -> None:
     if on_status:
         try:
             on_status("idle")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -602,7 +602,7 @@ def _continuous_on_silence() -> None:
     if on_status:
         try:
             on_status("transcribing")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     wav_path = rec.stop()
@@ -670,16 +670,16 @@ def _continuous_on_silence() -> None:
         if on_silent_limit:
             try:
                 on_silent_limit()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         try:
             rec.cancel()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         if on_status:
             try:
                 on_status("idle")
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         return
 
@@ -715,14 +715,14 @@ def _continuous_on_silence() -> None:
             if on_status:
                 try:
                     on_status("idle")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             return
 
         if on_status:
             try:
                 on_status("listening")
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
     else:
         # Do not auto-restart. Clean up state and notify idle.
@@ -732,7 +732,7 @@ def _continuous_on_silence() -> None:
         if on_status:
             try:
                 on_status("idle")
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
 

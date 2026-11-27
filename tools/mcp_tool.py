@@ -170,7 +170,7 @@ def _get_mcp_stderr_log() -> Any:
             logger.debug("Failed to open MCP stderr log, using devnull: %s", exc)
             try:
                 _mcp_stderr_log_fh = open(os.devnull, "w", encoding="utf-8")
-            except (OSError):
+            except Exception:
                 # Last resort: the real stderr.  Not ideal for TUI users but
                 # it matches pre-fix behavior.
                 _mcp_stderr_log_fh = sys.stderr
@@ -189,7 +189,7 @@ def _write_stderr_log_header(server_name: str) -> None:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         fh.write(f"\n===== [{ts}] starting MCP server '{server_name}' =====\n")
         fh.flush()
-    except (IndexError, KeyError):
+    except Exception:
         pass
 
 
@@ -496,7 +496,7 @@ def _exc_str(exc: BaseException) -> str:
 # works even on SDK builds that don't export the constant.
 try:
     from mcp.types import METHOD_NOT_FOUND as _JSONRPC_METHOD_NOT_FOUND
-except (ImportError, ModuleNotFoundError):
+except Exception:  # pragma: no cover — older/newer SDK without the constant
     _JSONRPC_METHOD_NOT_FOUND = -32601
 
 
@@ -759,7 +759,7 @@ def _wrap_command_with_watchdog(command: str, args: list) -> tuple[str, list]:
             create_time = psutil.Process(my_pid).create_time()
         except ImportError:
             create_time = time.time()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Never let watchdog bookkeeping failure block a real MCP connection.
         return command, args
     watchdog_args = [
@@ -1874,7 +1874,7 @@ class MCPServerTask:
             await self._refresh_tools()
         except asyncio.CancelledError:
             raise
-        except (RuntimeError):
+        except Exception:
             logger.exception("MCP server '%s': dynamic tool refresh failed", self.name)
 
     def _schedule_tools_refresh(self) -> asyncio.Task:
@@ -1913,7 +1913,7 @@ class MCPServerTask:
                 logger_name = getattr(params, "logger", None)
                 origin = f"{self.name}/{logger_name}" if logger_name else self.name
                 logger.log(level, "MCP server log [%s]: %s", origin, data)
-            except (AttributeError, IndexError, KeyError, ValueError):
+            except Exception:
                 logger.debug(
                     "Failed to handle MCP log notification from '%s'",
                     self.name,
@@ -1970,7 +1970,7 @@ class MCPServerTask:
                             )
                         case _:
                             pass
-            except (RuntimeError):
+            except Exception:
                 logger.exception("Error in MCP message handler for '%s'", self.name)
 
         return _handler
@@ -3327,7 +3327,7 @@ def _wait_for_server_session_ready(
         if ready is not None and hasattr(ready, "is_set"):
             try:
                 is_ready = bool(ready.is_set())
-            except (ValueError):
+            except Exception:
                 is_ready = True
         if session is not None and session is not old_session and is_ready:
             return True
@@ -3770,7 +3770,7 @@ def _snapshot_child_pids() -> set:
         import psutil
 
         return {c.pid for c in psutil.Process(my_pid).children()}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     return set()
@@ -3873,7 +3873,7 @@ def _wrap_with_home_override(coro: "Coroutine") -> "Coroutine":
         )
 
         home_override = get_hercules_home_override()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return coro
     if not home_override:
         return coro
@@ -4002,7 +4002,7 @@ def _filter_suspicious_mcp_servers(servers: Dict[str, dict]) -> Dict[str, dict]:
         from hercules_cli.mcp_security import (
             validate_mcp_server_entry as _validate_mcp_server_entry,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _validate_mcp_server_entry: (
             Callable[[str, dict[str, Any]], list[str]] | None
         ) = None
@@ -4053,7 +4053,7 @@ def _load_mcp_config() -> Dict[str, dict]:
             from hercules_cli.env_loader import load_hercules_dotenv
 
             load_hercules_dotenv()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         safe_servers: Dict[str, dict] = {}
         for name, cfg in _filter_suspicious_mcp_servers(servers).items():
@@ -5826,7 +5826,7 @@ def _reinject_post_build_tools(agent, tools_list: list, name_set: set) -> set:
                 for schema in get_mem_schemas():
                     if isinstance(schema, dict):
                         _add(schema)
-    except (AttributeError, ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Memory-provider tool re-injection skipped", exc_info=True)
 
     # Context-engine tools (lcm_grep/lcm_describe/…) — the `context_engine`
@@ -5853,7 +5853,7 @@ def _reinject_post_build_tools(agent, tools_list: list, name_set: set) -> set:
                 # dispatch (matches agent_init.py's `continue`-before-claim).
                 if _add(schema) and name:
                     staged_engine_names.add(name)
-    except (AttributeError):
+    except Exception:
         logger.debug("Context-engine tool re-injection skipped", exc_info=True)
 
     return staged_engine_names
@@ -6074,7 +6074,7 @@ def _stop_mcp_loop(*, only_if_idle: bool = False) -> bool:
             thread.join(timeout=5)
         try:
             loop.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         # After closing the loop, any stdio subprocesses that survived the
         # graceful shutdown are now orphaned — include active PIDs too

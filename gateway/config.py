@@ -285,7 +285,7 @@ class Platform(Enum):
                 cls._value2member_map_[value] = pseudo
                 cls._member_map_[pseudo._name_] = pseudo
                 return pseudo
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+        except Exception:
             pass
 
         return None
@@ -307,7 +307,7 @@ class Platform(Enum):
                         )
                     ):
                         names.add(child.name.lower())
-        except (OSError, ZeroDivisionError, yaml.YAMLError):
+        except Exception:
             pass
         return names
 
@@ -786,7 +786,7 @@ class GatewayConfig:
                 from hercules_cli.plugins import discover_plugins
 
                 discover_plugins()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             entry = platform_registry.get(platform.value)
             if entry:
@@ -795,7 +795,7 @@ class GatewayConfig:
                 if entry.validate_config is not None:
                     return entry.validate_config(config)
                 return True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Registry not yet initialised during early import
 
         return False

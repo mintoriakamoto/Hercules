@@ -164,7 +164,7 @@ def _is_interactive() -> bool:
         return True
     try:
         return sys.stdin.isatty()
-    except (AttributeError, ValueError):
+    except Exception:
         return False
 
 
@@ -620,7 +620,7 @@ async def _redirect_handler(authorization_url: str) -> None:
                     "  (Could not open browser — please open the URL manually.)\n",
                     file=sys.stderr,
                 )
-        except (OSError):
+        except Exception:
             print(
                 "  (Could not open browser — please open the URL manually.)\n",
                 file=sys.stderr,

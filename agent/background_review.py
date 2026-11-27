@@ -73,7 +73,7 @@ def _resolve_review_runtime(agent: Any) -> Dict[str, Any]:
         from hercules_cli.config import load_config
 
         cfg = load_config()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return parent
     aux = cfg.get("auxiliary", {}) if isinstance(cfg.get("auxiliary"), dict) else {}
     task = (
@@ -659,7 +659,7 @@ def _run_review_in_thread(
 
     try:
         _set_approval_callback(_bg_review_auto_deny)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     review_agent = None
@@ -841,7 +841,7 @@ def _run_review_in_thread(
                 from tools.skill_manager_tool import _reset_background_review_read_marks
 
                 _reset_background_review_read_marks()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
             try:
@@ -873,11 +873,11 @@ def _run_review_in_thread(
             # below is a safety net for the exception path.
             try:
                 review_agent.shutdown_memory_provider()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             try:
                 review_agent.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             review_agent = None
 
@@ -918,7 +918,7 @@ def _run_review_in_thread(
             if _bg_cb:
                 try:
                     _bg_cb(f"💾 Self-improvement review: {summary}")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
     except Exception as e:
@@ -935,19 +935,19 @@ def _run_review_in_thread(
                 with thread_scoped_silence():
                     try:
                         review_agent.shutdown_memory_provider()
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
                     try:
                         review_agent.close()
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         # Clear the approval callback on this bg-review thread so a
         # recycled thread-id doesn't inherit a stale reference.
         try:
             _set_approval_callback(None)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 

@@ -106,7 +106,7 @@ class RealtimeSession:
         if self._ws is not None:
             try:
                 self._ws.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self._ws = None
 
@@ -220,7 +220,7 @@ class RealtimeSession:
         try:
             self._send_json({"type": "response.cancel"})
             return True
-        except (AttributeError, ValueError):
+        except Exception:
             return False
 
     def _send_json(self, payload: dict) -> None:

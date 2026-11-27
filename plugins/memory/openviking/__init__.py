@@ -210,7 +210,7 @@ def _atexit_commit_sessions():
     _last_active_provider = None
     try:
         provider.on_session_end([])
-    except (KeyError, IndexError):
+    except Exception:
         pass  # best-effort at shutdown time
 
 
@@ -313,7 +313,7 @@ class _VikingClient:
     def _parse_response(self, resp) -> dict:
         try:
             data = resp.json()
-        except (ValueError):
+        except Exception:
             data = None
 
         if resp.status_code >= 400:
@@ -400,7 +400,7 @@ class _VikingClient:
                 self._url("/health"), headers=self._headers(), timeout=3.0
             )
             return resp.status_code == 200
-        except (requests.RequestException, OSError):
+        except Exception:
             return False
 
     def health_payload(self) -> dict:
@@ -939,7 +939,7 @@ def _load_hercules_openviking_config() -> dict:
             else {}
         )
         return dict(provider_config) if isinstance(provider_config, dict) else {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -1278,7 +1278,7 @@ def _openviking_server_log_path() -> Path:
         from hercules_constants import get_hercules_home
 
         home = get_hercules_home()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         home = (
             Path(os.environ.get("HERCULES_HOME", "")).expanduser()
             if os.environ.get("HERCULES_HOME")
@@ -1386,7 +1386,7 @@ def _emit_runtime_warning(message: str, warning_callback=None) -> None:
     if warning_callback:
         try:
             warning_callback(message)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("OpenViking runtime warning callback failed", exc_info=True)
 
 
@@ -1395,7 +1395,7 @@ def _emit_runtime_status(message: str, status_callback=None) -> None:
     if status_callback:
         try:
             status_callback(message)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("OpenViking runtime status callback failed", exc_info=True)
 
 
@@ -1428,7 +1428,7 @@ def _classify_runtime_openviking_health(
             "responded",
             f"OpenViking server at {endpoint} responded with {_format_openviking_exception(e)}.",
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         return "unreachable", ""
     return "unreachable", ""
 
@@ -1453,7 +1453,7 @@ def _confirm_replace_existing_profile(path: Path, values: dict, select, cancelle
         return True
     try:
         existing_data = _load_ovcli_config(path)
-    except (AttributeError, ValueError):
+    except Exception:
         existing_data = {}
     if existing_data == _ovcli_data_from_connection_values(values):
         return True
@@ -1978,7 +1978,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
             # the user's home; an env override pointing elsewhere is skipped
             # there rather than here.
             return [str(cfg)]
-        except (KeyError, IndexError):
+        except Exception:
             return []
 
     def __init__(self):
@@ -2035,7 +2035,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
                     "endpoint"
                 )
             )
-        except (requests.RequestException, OSError):
+        except Exception:
             return False
 
     def get_config_schema(self):
@@ -2618,7 +2618,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
     def _session_has_pending_tokens(self, sid: str) -> bool:
         try:
             response = self._client.get(f"/api/v1/sessions/{sid}")
-        except (requests.RequestException, OSError):
+        except Exception:
             return False
         session = self._unwrap_result(response)
         if not isinstance(session, dict):
@@ -3120,7 +3120,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
                 return {}
             try:
                 parsed = json.loads(raw_args)
-            except (AttributeError, ValueError):
+            except Exception:
                 return {"value": raw_args}
             if isinstance(parsed, dict):
                 return parsed
@@ -3141,7 +3141,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
         if text:
             try:
                 parsed = json.loads(text)
-            except (AttributeError, ValueError):
+            except Exception:
                 parsed = None
             if isinstance(parsed, dict):
                 status = str(parsed.get("status") or "").lower()
@@ -3625,7 +3625,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
         """
         try:
             resp = self._client.get("/api/v1/fs/stat", params={"uri": uri})
-        except (requests.RequestException, OSError):
+        except Exception:
             return None
         result = self._unwrap_result(resp)
         if isinstance(result, dict):
@@ -3721,7 +3721,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
 
         try:
             resp = self._client.get(endpoint, params={"uri": resolved_uri})
-        except (requests.RequestException, OSError):
+        except Exception:
             # OpenViking may return HTTP 500 for abstract/overview reads on normal
             # file URIs (mem_*.md). For those, gracefully fallback to full read.
             if not summary_level or resolved_uri != uri or used_fallback:

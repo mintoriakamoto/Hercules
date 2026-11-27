@@ -44,7 +44,7 @@ def _frontmatter(text: str) -> dict[str, Any]:
 
         fm, _ = parse_frontmatter(text)
         return fm or {}
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
 
@@ -86,7 +86,7 @@ def _load_usage() -> dict[str, dict[str, Any]]:
         from tools.skill_usage import load_usage
 
         return load_usage()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         path = get_hercules_home() / "skills" / ".usage.json"
         try:
             return json.loads(path.read_text(encoding="utf-8"))

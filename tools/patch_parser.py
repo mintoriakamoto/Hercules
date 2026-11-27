@@ -308,7 +308,7 @@ def _validate_operations(
                         msg += format_no_match_hint(
                             match_error, count, search_pattern, simulated
                         )
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         pass
                     errors.append(msg)
                 else:
@@ -601,7 +601,7 @@ def _apply_update(op: PatchOperation, file_ops: Any) -> Tuple[bool, str, Optiona
                         err_msg += format_no_match_hint(
                             error, 0, search_pattern, new_content
                         )
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         pass
                     return False, err_msg, None
         else:

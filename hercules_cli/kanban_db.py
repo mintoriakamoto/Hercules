@@ -168,7 +168,7 @@ def _fire_kanban_lifecycle_hook(event: str, task_id: str, **fields: Any) -> None
 
         try:
             profile_name = get_active_profile_name()
-        except (AttributeError, ValueError):
+        except Exception:
             profile_name = "default"
         invoke_hook(event, task_id=task_id, profile_name=profile_name, **fields)
     except Exception as exc:  # pragma: no cover - defensive
@@ -945,7 +945,7 @@ class Task:
                 parsed = json.loads(row["skills"])
                 if isinstance(parsed, list):
                     skills_value = [str(s) for s in parsed if s]
-            except (IndexError, KeyError, ValueError):
+            except Exception:
                 skills_value = None
         return cls(
             id=row["id"],
@@ -1061,7 +1061,7 @@ class Run:
     def from_row(cls, row: sqlite3.Row) -> "Run":
         try:
             meta = json.loads(row["metadata"]) if row["metadata"] else None
-        except (IndexError, KeyError):
+        except Exception:
             meta = None
         return cls(
             id=int(row["id"]),
@@ -1760,7 +1760,7 @@ def connect(
                 conn.execute("PRAGMA foreign_keys=ON")
                 conn.execute("PRAGMA secure_delete=ON")
                 conn.execute("PRAGMA cell_size_check=ON")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             conn.close()
             raise
         return conn
@@ -1809,7 +1809,7 @@ def connect(
                     conn.executescript(SCHEMA_SQL)
                     _migrate_add_optional_columns(conn)
                     _INITIALIZED_PATHS.add(resolved)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             conn.close()
             raise
     return conn
@@ -1846,7 +1846,7 @@ def connect_closing(
     finally:
         try:
             conn.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -2254,7 +2254,7 @@ def _rebuild_drifted_tables(conn: sqlite3.Connection) -> None:
             for index_sql in index_sqls:
                 conn.execute(index_sql)
         conn.execute("COMMIT")
-    except (IndexError, KeyError):
+    except Exception:
         try:
             conn.execute("ROLLBACK")
         except sqlite3.OperationalError:
@@ -2297,7 +2297,7 @@ def _check_file_length_invariant(conn: sqlite3.Connection) -> None:
             )
     except sqlite3.DatabaseError:
         raise
-    except (IndexError, KeyError, OSError):
+    except Exception:
         pass  # I/O errors during check are non-fatal; let normal ops continue
 
 
@@ -2348,7 +2348,7 @@ def write_txn(conn: sqlite3.Connection):
     _execute_boundary_with_retry(conn, "BEGIN IMMEDIATE")
     try:
         yield conn
-    except (AttributeError, ValueError, KeyError, OSError):
+    except Exception:
         try:
             conn.execute("ROLLBACK")
         except sqlite3.OperationalError:
@@ -2360,7 +2360,7 @@ def write_txn(conn: sqlite3.Connection):
     else:
         try:
             _execute_boundary_with_retry(conn, "COMMIT")
-        except (AttributeError, ValueError):
+        except Exception:
             # COMMIT exhausted retries with the txn still open; roll back so the
             # connection isn't poisoned for the next BEGIN IMMEDIATE.
             try:
@@ -2500,7 +2500,7 @@ def create_task(
 
             with _pdb.connect_closing() as _pconn:
                 project_obj = _pdb.get_project(_pconn, project_id)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             project_obj = None
         if project_obj is None:
             # A project id/slug that doesn't resolve must not crash task
@@ -2666,7 +2666,7 @@ def create_task(
                             branch_name = _pdb.branch_name_for(
                                 project_obj, task_id, title=title or ""
                             )
-                        except (AttributeError, ValueError):
+                        except Exception:
                             branch_name = None
 
                 conn.execute(
@@ -3134,7 +3134,7 @@ def list_events(conn: sqlite3.Connection, task_id: str) -> list[Event]:
     for r in rows:
         try:
             payload = json.loads(r["payload"]) if r["payload"] else None
-        except (IndexError, KeyError):
+        except Exception:
             payload = None
         out.append(
             Event(
@@ -4467,7 +4467,7 @@ def _cleanup_workspace(conn: sqlite3.Connection, task_id: str) -> None:
         # tasks now have all children done — their deferred cleanup can
         # proceed (#33774).
         _try_cleanup_parent_workspaces(conn, task_id)
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, OSError, sqlite3.DatabaseError):
+    except Exception:
         pass  # best-effort — never block completion
 
 
@@ -4516,7 +4516,7 @@ def _try_cleanup_parent_workspaces(conn: sqlite3.Connection, task_id: str) -> No
                     parent_id,
                     wp,
                 )
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass  # best-effort
 
 
@@ -4545,7 +4545,7 @@ def _cleanup_worker_tmux(conn: sqlite3.Connection, task_id: str) -> None:
                 timeout=5,
             )
             _log.debug("Killed stale tmux session: %s", session)
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         pass  # best-effort — never block completion
 
 
@@ -4631,7 +4631,7 @@ def _maybe_emit_scratch_tip(
                 "tip_scratch_workspace",
                 {"message": _SCRATCH_TIP_MESSAGE},
             )
-    except (AttributeError, ValueError):
+    except Exception:
         # Best-effort — never block the spawn loop over a help message.
         pass
     finally:
@@ -5492,7 +5492,7 @@ def _git_toplevel(path: Path) -> Optional[Path]:
             timeout=30,
             check=False,
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         return None
     if result.returncode != 0:
         return None
@@ -5521,7 +5521,7 @@ def _git_branch_exists(repo_root: Path, branch_name: str) -> bool:
             timeout=30,
             check=False,
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         return False
     return result.returncode == 0
 
@@ -5542,7 +5542,7 @@ def _git_common_dir(path: Path) -> Optional[Path]:
             timeout=30,
             check=False,
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         return None
     if result.returncode != 0:
         return None
@@ -5568,7 +5568,7 @@ def _git_dir(path: Path) -> Optional[Path]:
             timeout=30,
             check=False,
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         return None
     if result.returncode != 0:
         return None
@@ -5587,7 +5587,7 @@ def _git_current_branch(path: Path) -> Optional[str]:
             timeout=30,
             check=False,
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         return None
     if result.returncode != 0:
         return None
@@ -6087,7 +6087,7 @@ def _classify_worker_exit(pid: int) -> "tuple[str, Optional[int]]":
             return ("nonzero_exit", code)
         if os.WIFSIGNALED(raw):
             return ("signaled", os.WTERMSIG(raw))
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     return ("unknown", None)
 
@@ -6110,7 +6110,7 @@ def reap_worker_zombies() -> "list[int]":
                     break
                 _record_worker_exit(pid, status)
                 reaped.append(pid)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
     return reaped
 
@@ -7213,7 +7213,7 @@ def has_spawnable_ready(conn: sqlite3.Connection) -> bool:
         return False
     try:
         from hercules_cli.profiles import profile_exists  # local import: avoids cycle
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Can't introspect — assume spawnable, preserve legacy behavior.
         return True
     for row in rows:
@@ -7239,7 +7239,7 @@ def has_spawnable_review(conn: sqlite3.Connection) -> bool:
         return False
     try:
         from hercules_cli.profiles import profile_exists  # local import: avoids cycle
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return True
     for row in rows:
         if profile_exists(row["assignee"]):
@@ -7278,7 +7278,7 @@ def dispatch_once(
     """
     try:
         db_path = kanban_db_path(board=board)
-    except (AttributeError, ValueError):
+    except Exception:
         # Path resolution should never fail, but if it somehow does we
         # must not lose the tick — fall through to an unguarded dispatch
         # rather than dropping work.
@@ -7450,7 +7450,7 @@ def _dispatch_once_locked(
             from hercules_cli.profiles import profile_exists as _pe
 
             _default_assignee_resolved = bool(_pe(_default_assignee))
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             # Profiles module not importable (test stubs, exotic envs).
             # Trust the operator's config and try the assignment; the
             # downstream profile_exists check on the assigned row will
@@ -7493,7 +7493,7 @@ def _dispatch_once_locked(
                                     "source": "kanban.default_assignee",
                                 },
                             )
-                    except (IndexError, KeyError):
+                    except Exception:
                         _log.debug(
                             "kanban dispatch: failed to apply default_assignee=%r "
                             "to task %s",
@@ -7522,7 +7522,7 @@ def _dispatch_once_locked(
             from hercules_cli.profiles import (
                 profile_exists,
             )  # local import: avoids cycle
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             profile_exists = None  # type: ignore[assignment]
         if profile_exists is not None and not profile_exists(row_assignee):
             # Bucket separately from skipped_unassigned: the operator
@@ -7679,7 +7679,7 @@ def _dispatch_once_locked(
             continue
         try:
             from hercules_cli.profiles import profile_exists
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             profile_exists = None  # type: ignore[assignment]
         if profile_exists is not None and not profile_exists(row["assignee"]):
             result.skipped_nonspawnable.append(row["id"])
@@ -7773,7 +7773,7 @@ def worker_log_rotation_config(kanban_cfg: Optional[dict] = None) -> tuple[int, 
             from hercules_cli.config import load_config
 
             kanban_cfg = load_config().get("kanban") or {}
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             kanban_cfg = {}
     max_bytes = _positive_int(
         (kanban_cfg or {}).get("worker_log_rotate_bytes"),
@@ -8270,9 +8270,9 @@ def run_daemon(
             if on_tick is not None:
                 try:
                     on_tick(res)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
-        except (AttributeError, ValueError):
+        except Exception:
             # Don't let any single tick kill the daemon.
             import traceback
 
@@ -8746,7 +8746,7 @@ def unseen_events_for_sub(
     for r in rows:
         try:
             payload = json.loads(r["payload"]) if r["payload"] else None
-        except (IndexError, KeyError):
+        except Exception:
             payload = None
         out.append(
             Event(
@@ -8993,7 +8993,7 @@ def list_profiles_on_disk() -> list[str]:
 
         default_root = get_default_hercules_root()
         profiles_dir = default_root / "profiles"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     names: set[str] = set()

@@ -105,7 +105,7 @@ def _load_supermemory_config(hercules_home: str) -> dict:
             raw = json.loads(config_path.read_text(encoding="utf-8"))
             if isinstance(raw, dict):
                 config.update({k: v for k, v in raw.items() if v is not None})
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("Failed to parse %s", config_path, exc_info=True)
 
     # Keep raw container_tag — template variables like {identity} are resolved
@@ -119,14 +119,14 @@ def _load_supermemory_config(hercules_home: str) -> dict:
             1,
             min(20, int(config.get("max_recall_results", _DEFAULT_MAX_RECALL_RESULTS))),
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         config["max_recall_results"] = _DEFAULT_MAX_RECALL_RESULTS
     try:
         config["profile_frequency"] = max(
             1,
             min(500, int(config.get("profile_frequency", _DEFAULT_PROFILE_FREQUENCY))),
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         config["profile_frequency"] = _DEFAULT_PROFILE_FREQUENCY
     config["capture_mode"] = (
         "everything" if config.get("capture_mode") == "everything" else "all"
@@ -146,7 +146,7 @@ def _load_supermemory_config(hercules_home: str) -> dict:
         config["api_timeout"] = max(
             0.5, min(15.0, float(config.get("api_timeout", _DEFAULT_API_TIMEOUT)))
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         config["api_timeout"] = _DEFAULT_API_TIMEOUT
 
     # Multi-container support
@@ -175,7 +175,7 @@ def _save_supermemory_config(values: dict, hercules_home: str) -> None:
             raw = json.loads(config_path.read_text(encoding="utf-8"))
             if isinstance(raw, dict):
                 existing = raw
-        except (AttributeError, ValueError):
+        except Exception:
             existing = {}
     existing.update(values)
     from utils import atomic_json_write
@@ -210,7 +210,7 @@ def _format_relative_time(iso_timestamp: str) -> str:
         if dt.year == now.year:
             return dt.strftime("%d %b")
         return dt.strftime("%d %b %Y")
-    except (ValueError):
+    except Exception:
         return ""
 
 
@@ -272,7 +272,7 @@ def _format_prefetch_context(
             if similarity is not None:
                 try:
                     prefix_bits.append(f"[{round(float(similarity) * 100)}%]")
-                except (ValueError):
+                except Exception:
                     pass
             prefix = " ".join(prefix_bits)
             lines.append(f"- {prefix} {memory}".strip())
@@ -318,7 +318,7 @@ class _SupermemoryClient:
             _lazy_ensure("memory.supermemory", prompt=False)
         except ImportError:
             pass
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         from supermemory import Supermemory
@@ -768,7 +768,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
                     container_tag=self._container_tag,
                     search_mode=self._search_mode,
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.warning("Supermemory initialization failed", exc_info=True)
                 self._active = False
                 self._client = None
@@ -816,7 +816,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
                 max_results=self._max_recall_results,
             )
             return context
-        except (KeyError, IndexError):
+        except Exception:
             logger.debug("Supermemory prefetch failed", exc_info=True)
             return ""
 
@@ -871,7 +871,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
             )
         except urllib.error.HTTPError:
             logger.warning("Supermemory session ingest failed", exc_info=True)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.warning("Supermemory session ingest failed", exc_info=True)
 
         # Clear buffer so shutdown() doesn't duplicate on normal exit
@@ -914,7 +914,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
                         "partial": not reset,
                     },
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("Supermemory session-switch ingest failed", exc_info=True)
 
         # Reset for new session
@@ -935,7 +935,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
                     metadata={"target": target, "type": "explicit_memory"},
                     entity_context=self._entity_context,
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("Supermemory on_memory_write failed", exc_info=True)
 
         if self._write_thread and self._write_thread.is_alive():
@@ -979,7 +979,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
                         "partial": True,
                     },
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug("Supermemory shutdown ingest failed", exc_info=True)
 
         for attr_name in ("_prefetch_thread", "_sync_thread", "_write_thread"):
@@ -1088,7 +1088,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
             return tool_error(str(exc))
         try:
             limit = max(1, min(20, int(args.get("limit", 5) or 5)))
-        except (requests.RequestException, OSError):
+        except Exception:
             limit = 5
         try:
             results = self._client.search_memories(
@@ -1103,7 +1103,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
                 if item.get("similarity") is not None:
                     try:
                         entry["similarity"] = round(float(item["similarity"]) * 100)
-                    except (ValueError):
+                    except Exception:
                         pass
                 formatted.append(entry)
             resp: dict[str, Any] = {"results": formatted, "count": len(formatted)}

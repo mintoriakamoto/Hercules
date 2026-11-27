@@ -295,13 +295,13 @@ def _to_plain_object(value: Any) -> Any:
     if hasattr(value, "model_dump"):
         try:
             return value.model_dump()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     if hasattr(value, "__dict__"):
         try:
             return {k: v for k, v in value.__dict__.items() if not k.startswith("_")}
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     return value

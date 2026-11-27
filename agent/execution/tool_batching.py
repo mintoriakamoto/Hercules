@@ -103,7 +103,8 @@ class ToolDependencyGraph:
         for tid in tool_ids:
             for other_id in tool_ids:
                 if tid != other_id:
-                    if other_id in self.calls[tid].depends_on:
+                    call = self.calls.get(tid)
+                    if call is not None and other_id in call.depends_on:
                         return False
         return True
 
@@ -191,7 +192,7 @@ class ParallelToolExecutor:
         # Execute each batch
         for batch in batches:
             batch_tasks = [
-                self._execute_tool(calls[cid], results)
+                self._execute_tool(graph.calls[cid], results)
                 for cid in batch
             ]
             batch_results = await asyncio.gather(
@@ -203,7 +204,7 @@ class ParallelToolExecutor:
                 if isinstance(result, Exception):
                     results[tool_id] = ToolResult(
                         tool_id=tool_id,
-                        tool_name=calls[tool_id].name,
+                        tool_name=graph.calls[tool_id].name,
                         result=None,
                         latency_ms=0,
                         error=str(result),

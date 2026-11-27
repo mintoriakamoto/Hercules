@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from hercules_constants import get_hercules_home
-except (ImportError, ModuleNotFoundError):
+except Exception:  # pragma: no cover — plugin may load before constants resolves
     import os
 
     def get_hercules_home() -> Path:  # type: ignore[no-redef]
@@ -122,7 +122,7 @@ def load_tracked() -> List[Dict[str, Any]]:
                 data = json.loads(bak.read_text())
                 _log("WARN: tracked.json corrupted — restored from .bak")
                 return data
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         _log("WARN: tracked.json corrupted, no backup — starting fresh")
         return []

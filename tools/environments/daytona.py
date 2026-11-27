@@ -146,7 +146,7 @@ class DaytonaEnvironment(BaseEnvironment):
                 self._remote_home = home
                 if requested_cwd in {"~", "/home/daytona"}:
                     self.cwd = home
-        except (ZeroDivisionError):
+        except (Exception):
             pass
         logger.info(
             "Daytona: resolved home to %s, cwd to %s", self._remote_home, self.cwd
@@ -203,7 +203,7 @@ class DaytonaEnvironment(BaseEnvironment):
         # Clean up remote temp file
         try:
             self._sandbox.process.exec(f"rm -f {shlex.quote(remote_tar)}")
-        except (AttributeError, ValueError):
+        except Exception:
             pass  # best-effort cleanup
 
     def _daytona_delete(self, remote_paths: list[str]) -> None:
@@ -246,7 +246,7 @@ class DaytonaEnvironment(BaseEnvironment):
             with lock:
                 try:
                     sandbox.stop()
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
 
         if login:

@@ -211,7 +211,7 @@ def _get_sudo_password_cache_scope() -> str:
         from gateway.session_context import get_session_env
 
         session_key = get_session_env("HERCULES_SESSION_KEY", "")
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         session_key = os.getenv("HERCULES_SESSION_KEY", "")
     if session_key:
         return f"session:{session_key}"
@@ -419,7 +419,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
     if _sudo_cb is not None:
         try:
             return _sudo_cb() or ""
-        except (AttributeError, ValueError):
+        except Exception:
             return ""
 
     result = {"password": None, "done": False}
@@ -458,7 +458,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
                 result["password"] = b"".join(chars).decode("utf-8", errors="replace")
         except (EOFError, KeyboardInterrupt, OSError):
             result["password"] = ""
-        except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError, OSError):
+        except Exception:
             result["password"] = ""
         finally:
             if tty_fd is not None and old_attrs is not None:
@@ -533,7 +533,7 @@ def _safe_command_preview(command: Any, limit: int = 200) -> str:
         return command[:limit]
     try:
         return repr(command)[:limit]
-    except (IndexError, KeyError):
+    except Exception:
         return f"<{type(command).__name__}>"
 
 
@@ -731,7 +731,7 @@ def _sudo_nopasswd_works() -> bool:
             check=False,
         )
         return probe.returncode == 0
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return False
 
 
@@ -1576,7 +1576,7 @@ def _create_environment(
                     in inspect.signature(modal.Sandbox.create).parameters
                 ):
                     sandbox_kwargs["ephemeral_disk"] = disk
-            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         modal_state = _get_modal_backend_state(cc.get("modal_mode"))
@@ -2578,7 +2578,7 @@ def terminal_tool(
         session_key = get_current_session_key(default="") or (task_id or "")
         try:
             env.cwd_owner = session_key
-        except (AttributeError, ValueError, KeyError, OSError):
+        except Exception:
             pass
 
         if background:
@@ -2965,7 +2965,7 @@ def terminal_tool(
                     if isinstance(hook_result, str):
                         output = hook_result
                         break
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
             # Truncate output if too long, keeping both head and tail
@@ -3031,7 +3031,7 @@ def terminal_tool(
                         "scope": evidence.get("scope"),
                         "canonical_command": evidence.get("canonical_command"),
                     }
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug("verification evidence recording failed", exc_info=True)
             if approval_note:
                 # Treat rc=130 as an interrupt only when the executor's marker is
@@ -3299,6 +3299,11 @@ TERMINAL_SCHEMA = {
                 "items": {"type": "string"},
                 "description": "Strings to watch for in background process output. HARD RATE LIMIT: at most 1 notification per 15 seconds per process — matches arriving inside the cooldown are dropped. After 3 consecutive 15-second windows with dropped matches, watch_patterns is automatically disabled for that process and promoted to notify_on_complete behavior (one notification on exit, no more mid-process spam). USE ONLY for truly rare, one-shot mid-process signals on LONG-LIVED processes that will never exit on their own — e.g. ['Application startup complete'] on a server so you know when to hit its endpoint, or ['migration done'] on a daemon. DO NOT use for: (1) end-of-run markers like 'DONE'/'PASS' — use notify_on_complete instead; (2) error patterns like 'ERROR'/'Traceback' in loops or multi-item batch jobs — they fire on every iteration and you'll hit the strike limit fast; (3) anything you'd ever combine with notify_on_complete. When in doubt, choose notify_on_complete. MUTUALLY EXCLUSIVE with notify_on_complete — set one, not both.",
             },
+            "heartbeat": {
+                "type": "integer",
+                "minimum": 60,
+                "description": "With background=true: every N seconds (min 60) you get a heartbeat notification carrying the output produced since the last one, plus the normal exit notification (implies notify_on_complete=true). Use it for long bounded jobs you must stay on top of (a full test suite, a build, a deploy) so you react to a failure within N seconds instead of at exit. Leave it off for short jobs and silent daemons.",
+            },
         },
         "required": ["command"],
     },
@@ -3316,6 +3321,7 @@ def _handle_terminal(args, **kw):
         pty=args.get("pty", False),
         notify_on_complete=args.get("notify_on_complete", False),
         watch_patterns=args.get("watch_patterns"),
+        heartbeat=args.get("heartbeat", 0),
     )
 
 

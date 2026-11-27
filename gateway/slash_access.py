@@ -217,7 +217,7 @@ def policy_for_source(gateway_config: Any, source: Any) -> SlashAccessPolicy:
     if platforms is not None:
         try:
             platform_config = platforms.get(source.platform)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             platform_config = None
     extra = _platform_extra(platform_config)
     scope = _scope_for_chat_type(getattr(source, "chat_type", None))

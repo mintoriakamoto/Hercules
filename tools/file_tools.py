@@ -201,7 +201,7 @@ def _terminal_env_type_for_task(task_id: str = "default") -> str:
 
         try:
             container_key = _resolve_container_task_id(task_id)
-        except (AttributeError, ValueError):
+        except Exception:
             container_key = task_id
         with _env_lock:
             env = _active_environments.get(container_key) or _active_environments.get(
@@ -293,7 +293,7 @@ def _registered_task_cwd_override(task_id: str = "default") -> str | None:
         from tools.terminal_tool import resolve_task_overrides
 
         overrides = resolve_task_overrides(task_id)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     return _sentinel_free_abs_cwd(overrides.get("cwd"))
@@ -329,7 +329,7 @@ def _get_live_tracking_cwd(task_id: str = "default") -> str | None:
         from tools.terminal_tool import _resolve_container_task_id
 
         container_key = _resolve_container_task_id(task_id)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         container_key = task_id
 
     with _file_ops_lock:
@@ -357,7 +357,7 @@ def _get_live_tracking_cwd(task_id: str = "default") -> str | None:
         if live_cwd:
             _remember_last_known_cwd(container_key, live_cwd)
             return live_cwd
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     return None
@@ -540,7 +540,7 @@ def _path_resolution_warning(
                 f"intended (e.g. a git-worktree session writing into the main "
                 f"checkout), pass an absolute path under the workspace instead."
             )
-    except (ValueError):
+    except Exception:
         return None
 
 
@@ -694,12 +694,12 @@ def _get_hercules_config_resolved() -> str | None:
         from hercules_cli.config import get_config_path
 
         _hercules_config_resolved = str(get_config_path().resolve())
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         try:
             _hercules_config_resolved = str(
                 Path(_expand_tilde("~/.hercules/config.yaml")).resolve()
             )
-        except (ValueError):
+        except Exception:
             _hercules_config_resolved = None
     return _hercules_config_resolved
 
@@ -747,7 +747,7 @@ def _get_container_mirror_prefix_for_task(task_id: str = "default") -> str | Non
         )
 
         container_key = _resolve_container_task_id(task_id)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     try:
@@ -764,7 +764,7 @@ def _get_container_mirror_prefix_for_task(task_id: str = "default") -> str | Non
             return None
 
         config = _get_env_config()
-    except (AttributeError, ValueError):
+    except Exception:
         return None
 
     if config.get("env_type") == "docker" and config.get("container_persistent", True):
@@ -805,7 +805,7 @@ def _check_cross_profile_path(filepath: str, task_id: str = "default") -> str | 
             get_cross_profile_warning,
             get_sandbox_mirror_warning,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Fail open on import error — the existing sensitive-path guard
         # plus the write_denied list still apply.
         return None
@@ -879,7 +879,7 @@ def _last_known_cwd_for(task_id: str = "default") -> str | None:
         from tools.terminal_tool import _resolve_container_task_id
 
         container_key = _resolve_container_task_id(task_id)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         container_key = task_id
     with _file_ops_lock:
         return _last_known_cwd.get(container_key) or _last_known_cwd.get(task_id)
@@ -1589,7 +1589,7 @@ def read_file_tool(
         try:
             _partial = (offset > 1) or bool(result_dict.get("truncated"))
             file_state.record_read(task_id, resolved_str, partial=_partial)
-        except (ValueError):
+        except Exception:
             logger.debug("file_state.record_read failed", exc_info=True)
 
         if count >= 4:
@@ -1767,7 +1767,7 @@ def _mark_verification_stale(
         for path in paths:
             try:
                 candidate = str(Path(path).parent)
-            except (ValueError):
+            except Exception:
                 continue
             if project_facts_for(candidate):
                 cwd = candidate
@@ -1777,10 +1777,10 @@ def _mark_verification_stale(
         if cwd is None:
             try:
                 cwd = str(Path(paths[0]).parent)
-            except (IndexError, KeyError, ValueError):
+            except Exception:
                 cwd = None
         mark_workspace_edited(session_id=session_id or task_id, cwd=cwd, paths=paths)
-    except (IndexError, KeyError, ValueError):
+    except Exception:
         logger.debug("verification stale marker failed", exc_info=True)
 
 
@@ -1818,7 +1818,7 @@ def write_file_tool(
         # check below still runs.
         try:
             _resolved = str(_resolve_path_for_task(path, task_id))
-        except (ValueError):
+        except Exception:
             _resolved = None
 
         if _resolved is None:
@@ -1955,7 +1955,7 @@ def patch_tool(
         for _p in _paths_to_check:
             try:
                 _r = str(_resolve_path_for_task(_p, task_id))
-            except (ValueError):
+            except Exception:
                 _r = None
             if _r and _r not in _seen:
                 _resolved_paths.append(_r)
@@ -1978,7 +1978,7 @@ def patch_tool(
             for _p in _paths_to_check:
                 try:
                     _r = str(_resolve_path_for_task(_p, task_id))
-                except (ValueError):
+                except Exception:
                     _r = None
                 _path_to_resolved[_p] = _r
                 _cross = file_state.check_stale(task_id, _r) if _r else None

@@ -260,7 +260,7 @@ class CLICommandsMixin:
             from tools.async_delegation import active_count, interrupt_all
 
             n_async = active_count()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             n_async = 0
             interrupt_all = None
 
@@ -299,7 +299,7 @@ class CLICommandsMixin:
             from tools.async_delegation import list_async_delegations
 
             delegations = list_async_delegations()
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             delegations = []
         running_d = [d for d in delegations if d.get("status") == "running"]
         if delegations:
@@ -636,7 +636,7 @@ class CLICommandsMixin:
                 from hercules_state import SessionDB
 
                 self._session_db = SessionDB()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         if not self._session_db:
             _cprint(f"  {format_session_db_unavailable()}")
@@ -665,7 +665,7 @@ class CLICommandsMixin:
             row = self._session_db.get_session(self.session_id)
             if row:
                 session_title = row.get("title") or ""
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
         if not session_title:
             session_title = self.session_id[:8]
@@ -691,7 +691,7 @@ class CLICommandsMixin:
         while _time.time() < deadline:
             try:
                 state_row = self._session_db.get_handoff_state(self.session_id)
-            except (AttributeError, ValueError):
+            except Exception:
                 state_row = None
             current = (state_row or {}).get("state") or "pending"
             if current != last_state:
@@ -722,7 +722,7 @@ class CLICommandsMixin:
             self._session_db.fail_handoff(
                 self.session_id, "timed out waiting for gateway"
             )
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         _cprint("  Timed out waiting for the gateway. Is `hercules gateway` running?")
         _cprint("  Your CLI session is intact.")
@@ -802,7 +802,7 @@ class CLICommandsMixin:
         # the descendant that actually holds the transcript. See #15000.
         try:
             resolved_id = self._session_db.resolve_resume_session_id(target_id)
-        except (AttributeError, ValueError):
+        except Exception:
             resolved_id = target_id
         if resolved_id and resolved_id != target_id:
             _cprint(
@@ -823,12 +823,12 @@ class CLICommandsMixin:
         if self.agent:
             try:
                 self.agent._flush_messages_to_session_db(self.conversation_history)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
         # End current session
         try:
             self._session_db.end_session(self.session_id, "resumed_other")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # Switch to the target session
@@ -845,7 +845,7 @@ class CLICommandsMixin:
         # Re-open the target session so it's not marked as ended
         try:
             self._session_db.reopen_session(target_id)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # Sync the agent if already initialised
@@ -859,7 +859,7 @@ class CLICommandsMixin:
                     from tools.todo_tool import TodoStore
 
                     self.agent._todo_store = TodoStore()
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             if hasattr(self.agent, "_invalidate_system_prompt"):
                 self.agent._invalidate_system_prompt()
@@ -877,7 +877,7 @@ class CLICommandsMixin:
                         reset=False,
                         reason="resume",
                     )
-            except (AttributeError):
+            except Exception:
                 pass
 
         title_part = f' "{session_meta["title"]}"' if session_meta.get("title") else ""
@@ -977,13 +977,13 @@ class CLICommandsMixin:
         if self.agent:
             try:
                 self.agent._flush_messages_to_session_db(self.conversation_history)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
         # End the old session
         try:
             self._session_db.end_session(self.session_id, "branched")
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # Create the new session with parent link.
@@ -1019,13 +1019,13 @@ class CLICommandsMixin:
                     tool_call_id=msg.get("tool_call_id"),
                     reasoning=msg.get("reasoning"),
                 )
-            except (requests.RequestException, httpx.RequestError, OSError):
+            except Exception:
                 pass  # Best-effort copy
 
         # Set title on the branch
         try:
             self._session_db.set_session_title(new_session_id, branch_title)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         # Switch to the new session
@@ -1048,7 +1048,7 @@ class CLICommandsMixin:
                     from tools.todo_tool import TodoStore
 
                     self.agent._todo_store = TodoStore()
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
             if hasattr(self.agent, "_invalidate_system_prompt"):
                 self.agent._invalidate_system_prompt()
@@ -1066,7 +1066,7 @@ class CLICommandsMixin:
                         reset=False,
                         reason="branch",
                     )
-            except (AttributeError):
+            except Exception:
                 pass
 
         msg_count = len([
@@ -1793,7 +1793,7 @@ class CLICommandsMixin:
             set_approval_callback(self._approval_callback)
             try:
                 set_secret_capture_callback(self._secret_capture_callback)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             try:
                 bg_agent = AIAgent(
@@ -1868,7 +1868,7 @@ class CLICommandsMixin:
                         _resp_text = _maybe_remap_for_light_mode(
                             _skin.get_color("banner_text", "#FFF8DC")
                         )
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         label = "⚕ Hercules"
                         _resp_color = "#C73E3A"
                         _resp_text = "#FFF8DC"
@@ -1908,7 +1908,7 @@ class CLICommandsMixin:
                     set_sudo_password_callback(None)
                     set_approval_callback(None)
                     set_secret_capture_callback(None)
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
                 self._background_tasks.pop(task_id, None)
                 # Clear spinner only if no foreground agent owns it
@@ -2020,7 +2020,7 @@ class CLICommandsMixin:
                 from tools.browser_tool import cleanup_all_browsers
 
                 cleanup_all_browsers()
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
             print()
@@ -2088,7 +2088,7 @@ class CLICommandsMixin:
                 from tools.browser_tool import _ensure_cdp_supervisor  # type: ignore[import-not-found]
 
                 _ensure_cdp_supervisor("default")
-            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+            except Exception:
                 pass
             print()
             print("🌐 Browser connected to live Chromium-family browser via CDP")
@@ -2121,7 +2121,7 @@ class CLICommandsMixin:
 
                     _stop_cdp_supervisor("default")
                     cleanup_all_browsers()
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     pass
                 print()
                 print("🌐 Browser disconnected from live Chromium-family browser")
@@ -2168,7 +2168,7 @@ class CLICommandsMixin:
                     from tools.browser_tool import _get_cloud_provider
 
                     provider = _get_cloud_provider()
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     provider = None
 
                 if provider is not None:
@@ -2179,7 +2179,7 @@ class CLICommandsMixin:
                         from tools.browser_tool import _get_browser_engine
 
                         engine = _get_browser_engine()
-                    except (ImportError, ModuleNotFoundError):
+                    except Exception:
                         engine = "auto"
                     if engine == "lightpanda":
                         print(
@@ -2345,7 +2345,7 @@ class CLICommandsMixin:
         # separate message after setting the goal.
         try:
             self._pending_input.put(state.goal)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
 
     def _handle_goal_draft(self, objective: str) -> None:
@@ -2392,7 +2392,7 @@ class CLICommandsMixin:
             )
         try:
             self._pending_input.put(state.goal)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
 
     def _handle_subgoal_command(self, cmd: str) -> None:
@@ -2551,7 +2551,7 @@ class CLICommandsMixin:
                     fh.write(initial_text)
             try:
                 subprocess.call([*shlex.split(editor), path])
-            except (IndexError, KeyError, subprocess.CalledProcessError):
+            except Exception:
                 # Fall back to a bare invocation (editor value may not be a
                 # simple argv-splittable string on some platforms).
                 subprocess.call(f"{editor} {shlex.quote(path)}", shell=True)
@@ -2613,7 +2613,7 @@ class CLICommandsMixin:
             parts = (cmd_original or "").strip().split(None, 1)
             if len(parts) > 1:
                 arg = parts[1].strip().lower()
-        except (IndexError, KeyError):
+        except Exception:
             arg = ""
 
         cfg = load_config() or {}
@@ -2669,7 +2669,7 @@ class CLICommandsMixin:
             parts = (cmd_original or "").strip().split(None, 1)
             if len(parts) > 1:
                 arg = parts[1].strip().lower()
-        except (IndexError, KeyError):
+        except Exception:
             arg = ""
 
         current = bool(getattr(self, "show_timestamps", False))
@@ -2879,7 +2879,7 @@ class CLICommandsMixin:
                 if _is_anthropic_fast_model(model)
                 else "Priority Processing"
             )
-        except (AttributeError, ImportError, ModuleNotFoundError):
+        except Exception:
             feature_name = "Fast mode"
 
         parts = cmd.strip().split(maxsplit=1)

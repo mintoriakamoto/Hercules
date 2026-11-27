@@ -704,7 +704,7 @@ class ToolRegistry:
                 from model_tools import _sanitize_tool_error
 
                 sanitized = _sanitize_tool_error(raw)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 sanitized = (
                     raw  # defensive: never let the sanitizer block error propagation
                 )

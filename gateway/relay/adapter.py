@@ -237,7 +237,7 @@ class RelayAdapter(BasePlatformAdapter):
         )
         try:
             await self._notify_fatal_error()
-        except (RuntimeError):
+        except Exception:
             logger.debug("relay revocation fatal-error notify failed", exc_info=True)
 
     def _apply_descriptor(self, descriptor: CapabilityDescriptor) -> None:
@@ -296,7 +296,7 @@ class RelayAdapter(BasePlatformAdapter):
             user_id = getattr(src, "user_id", None)
             if user_id:
                 _remember_chat_hint(self._dm_user_by_chat, str(chat), str(user_id))
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def _with_scope(
@@ -391,7 +391,7 @@ class RelayAdapter(BasePlatformAdapter):
                 getattr(forward, "method", "?"),
                 getattr(forward, "path", "?"),
             )
-        except (AttributeError):
+        except Exception:
             logger.warning("relay passthrough_forward handling failed", exc_info=True)
 
     def _discord_interaction_to_event(self, forward):
@@ -410,7 +410,7 @@ class RelayAdapter(BasePlatformAdapter):
 
         try:
             payload = json.loads(bytes(getattr(forward, "body", b"")).decode("utf-8"))
-        except (AttributeError):
+        except Exception:
             return None
         if not isinstance(payload, dict):
             return None
@@ -476,7 +476,7 @@ class RelayAdapter(BasePlatformAdapter):
                     result: Any = go_idle()
                     if asyncio.iscoroutine(result):
                         await result
-                except (RuntimeError):
+                except Exception:
                     logger.debug("relay going_idle failed during drain", exc_info=True)
             await self._transport.disconnect()
 
@@ -503,7 +503,7 @@ class RelayAdapter(BasePlatformAdapter):
             if asyncio.iscoroutine(result):
                 return bool(await result)
             return bool(result)
-        except (ValueError):
+        except Exception:
             logger.debug("relay go_dormant failed", exc_info=True)
             return False
 

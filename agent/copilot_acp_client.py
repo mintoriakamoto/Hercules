@@ -95,7 +95,7 @@ def _resolve_home_dir() -> str:
         ).pw_dir.strip()  # windows-footgun: ok — POSIX fallback inside try/except (pwd import fails on Windows)
         if resolved:
             return resolved
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Last resort: /tmp (writable on any POSIX system). Avoids crashing the
@@ -442,10 +442,10 @@ class CopilotACPClient:
         try:
             proc.terminate()
             proc.wait(timeout=2)
-        except (AttributeError, ValueError):
+        except Exception:
             try:
                 proc.kill()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     def _create_chat_completion(

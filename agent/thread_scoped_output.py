@@ -73,26 +73,26 @@ class _ThreadRoutingStream:
     def write(self, data):  # type: ignore[no-untyped-def]
         try:
             return self._target().write(data)
-        except (OSError):
+        except Exception:
             return len(data) if isinstance(data, str) else 0
 
     def flush(self):  # type: ignore[no-untyped-def]
         try:
             return self._target().flush()
-        except (AttributeError, ValueError):
+        except Exception:
             return None
 
     def writelines(self, lines):  # type: ignore[no-untyped-def]
         target = self._target()
         try:
             return target.writelines(lines)
-        except (AttributeError, ValueError):
+        except Exception:
             return None
 
     def isatty(self) -> bool:
         try:
             return bool(self._target().isatty())
-        except (ValueError):
+        except Exception:
             return False
 
     def fileno(self):  # type: ignore[no-untyped-def]
@@ -143,5 +143,5 @@ def thread_scoped_silence() -> Iterator[None]:
         err_proxy.unsilence(ident)
         try:
             sink.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass

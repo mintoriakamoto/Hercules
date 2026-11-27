@@ -215,7 +215,7 @@ def _remux_aac_to_m4a(aac_data: bytes) -> Optional[Tuple[bytes, str]]:
     except subprocess.TimeoutExpired:
         logger.warning("Signal: AAC→M4A remux timed out (>10s)")
         return None
-    except (subprocess.CalledProcessError):
+    except Exception:
         logger.exception("Signal: AAC→M4A remux error")
         return None
 
@@ -508,7 +508,7 @@ class SignalAdapter(BasePlatformAdapter):
                                     logger.debug(
                                         "Signal SSE: invalid JSON: %s", data_str[:100]
                                     )
-                                except (IndexError, KeyError):
+                                except Exception:
                                     logger.exception("Signal SSE: error handling event")
 
             except asyncio.CancelledError:
@@ -604,7 +604,7 @@ class SignalAdapter(BasePlatformAdapter):
                 task = asyncio.create_task(self._sse_response.aclose())
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
-            except (RuntimeError):
+            except Exception:
                 pass
             self._sse_response = None
 
@@ -789,7 +789,7 @@ class SignalAdapter(BasePlatformAdapter):
                         content_type = att.get("contentType") or _ext_to_mime(ext)
                         media_urls.append(cached_path)
                         media_types.append(content_type)
-                except (RuntimeError):
+                except Exception:
                     logger.exception("Signal: failed to fetch attachment %s", att_id)
 
         # Skip envelopes with no meaningful content (no text, no attachments).
@@ -1708,7 +1708,7 @@ class SignalAdapter(BasePlatformAdapter):
                 rpc_id="typing-stop",
                 log_failures=False,
             )
-        except (IndexError, KeyError):
+        except Exception:
             # Best-effort: any RPC failure (or recipient-resolution failure)
             # must not prevent backoff cleanup.
             pass

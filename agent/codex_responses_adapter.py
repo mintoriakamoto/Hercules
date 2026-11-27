@@ -1072,7 +1072,7 @@ def _preflight_codex_api_kwargs(
             from tools.schema_sanitizer import strip_slash_enum
 
             normalized["tools"], _ = strip_slash_enum(normalized["tools"])
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+        except Exception:
             pass  # Best-effort — the caller-level sanitization should have handled it
 
     unexpected = sorted(key for key in api_kwargs if key not in allowed_keys)

@@ -140,7 +140,7 @@ class HookRegistry:
                 sys.modules[module_name] = module
                 try:
                     spec.loader.exec_module(module)
-                except (AttributeError, ValueError):
+                except Exception:
                     sys.modules.pop(module_name, None)
                     raise
 

@@ -42,7 +42,7 @@ def _driver_cmd(override: Optional[str]) -> str:
         from hercules_cli.tools_config import _cua_driver_cmd
 
         return _cua_driver_cmd()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return os.environ.get("HERCULES_CUA_DRIVER_CMD", "").strip() or "cua-driver"
 
 
@@ -57,13 +57,13 @@ def _child_env() -> Dict[str, str]:
         from tools.computer_use.cua_backend import cua_driver_child_env
 
         env = cua_driver_child_env()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         env = dict(os.environ)
     try:
         from tools.environments.local import _sanitize_subprocess_env
 
         return _sanitize_subprocess_env(env)
-    except (ImportError, ModuleNotFoundError, subprocess.CalledProcessError):
+    except Exception:
         return env
 
 
@@ -88,7 +88,7 @@ def _doctor(binary: str) -> Optional[Dict[str, Any]]:
     """``cua-driver doctor --json`` → ``{ok, checks:[{label,status,message}]}``."""
     try:
         data = _json_out(binary, "doctor", "--json", timeout=12)
-    except (AttributeError, ValueError):
+    except Exception:
         return None
     if not isinstance(data, dict):
         return None
@@ -148,7 +148,7 @@ def computer_use_status(driver_cmd: Optional[str] = None) -> Dict[str, Any]:
         out["version"] = (
             _run(binary, "--version", timeout=5).stdout or ""
         ).strip() or None
-    except (IndexError, KeyError):
+    except Exception:
         pass
 
     doctor = _doctor(binary)

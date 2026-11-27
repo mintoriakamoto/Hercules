@@ -611,7 +611,7 @@ def build_or_headers(or_config: dict | None = None) -> dict:
             from hercules_cli.config import load_config
 
             or_config = load_config().get("openrouter", {})
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             or_config = {}
 
     # Determine cache enabled: env var overrides config.
@@ -708,7 +708,7 @@ def _codex_cloudflare_headers(access_token: str) -> Dict[str, str]:
         )
         if isinstance(acct_id, str) and acct_id:
             headers["ChatGPT-Account-ID"] = acct_id
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return headers
 
@@ -832,7 +832,7 @@ def _is_anthropic_compatible_host(url: str) -> bool:
 
         host = (urlparse(url).hostname or "").strip().lower().rstrip(".")
         return host in _ANTHROPIC_COMPATIBLE_HOSTS
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -1012,7 +1012,7 @@ class _CodexCompletionsAdapter:
                 _cache_key = _content_cache_key(instructions, resp_kwargs.get("tools"))
                 if _cache_key:
                     resp_kwargs["prompt_cache_key"] = _cache_key
-        except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             logger.debug(
                 "Codex auxiliary: prompt_cache_key derivation skipped", exc_info=True
             )
@@ -1037,7 +1037,7 @@ class _CodexCompletionsAdapter:
             if callable(close):
                 try:
                     close()
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "Codex auxiliary: client close during timeout failed",
                         exc_info=True,
@@ -1050,7 +1050,7 @@ class _CodexCompletionsAdapter:
             # and fails fast with a connection error.  See issue #23432.
             try:
                 _evict_cached_client_instance(self._client)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "Codex auxiliary: cache eviction on timeout failed", exc_info=True
                 )
@@ -1073,7 +1073,7 @@ class _CodexCompletionsAdapter:
                     )
             except InterruptedError:
                 raise
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 # Interrupt state is a best-effort UX hook; never make it a
                 # new failure mode for auxiliary calls.
                 pass
@@ -1119,7 +1119,7 @@ class _CodexCompletionsAdapter:
                 if callable(close_fn):
                     try:
                         close_fn()
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
 
             if final is None:
@@ -1731,7 +1731,7 @@ def _read_codex_access_token() -> Optional[str]:
             if exp and time.time() > exp:
                 logger.debug("Codex access token expired (exp=%s), skipping", exp)
                 return None
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Non-JWT token or decode error — use as-is
 
         return access_token.strip()
@@ -1815,7 +1815,7 @@ def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
                     _ph_aux = _gpf_aux(provider_id)
                     if _ph_aux and _ph_aux.default_headers:
                         extra["default_headers"] = dict(_ph_aux.default_headers)
-                except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+                except Exception:
                     pass
             _merged_aux = _apply_user_default_headers(extra.get("default_headers"))
             if _merged_aux:
@@ -1862,7 +1862,7 @@ def _resolve_api_key_provider() -> Tuple[Optional[OpenAI], Optional[str]]:
                 _ph_aux2 = _gpf_aux2(provider_id)
                 if _ph_aux2 and _ph_aux2.default_headers:
                     extra["default_headers"] = dict(_ph_aux2.default_headers)
-            except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+            except Exception:
                 pass
         _merged_aux2 = _apply_user_default_headers(extra.get("default_headers"))
         if _merged_aux2:
@@ -1947,7 +1947,7 @@ def _read_main_model() -> str:
             default = model_cfg.get("default", "")
             if isinstance(default, str) and default.strip():
                 return default.strip()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return ""
 
@@ -1973,7 +1973,7 @@ def _read_main_provider() -> str:
             provider = model_cfg.get("provider", "")
             if isinstance(provider, str) and provider.strip():
                 return provider.strip().lower()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return ""
 
@@ -2003,7 +2003,7 @@ def _read_main_api_key() -> str:
             key = model_cfg.get("api_key", "")
             if isinstance(key, str) and key.strip():
                 return key.strip()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return ""
 
@@ -2025,7 +2025,7 @@ def _read_main_base_url() -> str:
             base = model_cfg.get("base_url", "")
             if isinstance(base, str) and base.strip():
                 return base.strip()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
     return ""
 
@@ -2385,7 +2385,7 @@ def _try_azure_foundry(
         model_cfg = cfg.get("model") if isinstance(cfg, dict) else {}
         if not isinstance(model_cfg, dict):
             model_cfg = {}
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         model_cfg = {}
 
     try:
@@ -2518,7 +2518,7 @@ def _try_anthropic(
                 cfg_base_url = (model_cfg.get("base_url") or "").strip().rstrip("/")
                 if cfg_base_url and _is_anthropic_compatible_host(cfg_base_url):
                     base_url = cfg_base_url
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
 
     from agent.anthropic_adapter import _is_oauth_token
@@ -2930,7 +2930,7 @@ def _transient_retry_count() -> int:
             return _DEFAULT_TRANSIENT_RETRIES
         n = int(val)
         return max(0, min(n, 6))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return _DEFAULT_TRANSIENT_RETRIES
 
 
@@ -3269,7 +3269,7 @@ def _recoverable_pool_provider(
                         base, base_url_hostname(rt_base)
                     ):
                         return rt_provider
-            except (AttributeError, ImportError, ModuleNotFoundError, ValueError):
+            except Exception:
                 pass
     return None
 
@@ -3806,7 +3806,7 @@ def _try_main_agent_model_fallback(
             provider=main_provider,
             model=main_model,
         )
-    except (AttributeError, ValueError):
+    except Exception:
         client, resolved_model = None, None
 
     if client is None:
@@ -3947,7 +3947,7 @@ def _try_configured_fallback_chain(
 
         try:
             fb_client, resolved_model = _resolve_fallback_entry(entry)
-        except (AttributeError, ValueError):
+        except Exception:
             fb_client, resolved_model = None, None
 
         if fb_client is not None:
@@ -4258,7 +4258,7 @@ def _resolve_auto(
                 runtime_base_url = ""
                 runtime_api_key = ""
                 runtime_api_mode = ""
-        except (ImportError, ModuleNotFoundError, ValueError):
+        except Exception:
             logger.debug("MoA aux resolution to aggregator failed", exc_info=True)
 
     if main_provider and main_model and main_provider not in {"auto", ""}:
@@ -4423,7 +4423,7 @@ def _to_async_client(sync_client, model: str, is_vision: bool = False):
                 _ph_async = _gpf_async(_inferred)
                 if _ph_async and _ph_async.default_headers:
                     async_kwargs["default_headers"] = dict(_ph_async.default_headers)
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+        except Exception:
             pass
     _merged_async = _apply_user_default_headers(async_kwargs.get("default_headers"))
     if _merged_async:
@@ -4448,7 +4448,7 @@ def _normalize_resolved_model(
         from hercules_cli.model_normalize import normalize_model_for_provider
 
         return normalize_model_for_provider(model_name, provider)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return model_name
 
 
@@ -4828,7 +4828,7 @@ def _resolve_provider_client_impl(
                     _ph_custom = _gpf_custom(provider)
                     if _ph_custom and _ph_custom.default_headers:
                         extra["default_headers"] = dict(_ph_custom.default_headers)
-                except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+                except Exception:
                     pass
             _merged_custom = _apply_user_default_headers(extra.get("default_headers"))
             if _merged_custom:
@@ -5151,7 +5151,7 @@ def _resolve_provider_client_impl(
                 _ph_main = _gpf_main(provider)
                 if _ph_main and _ph_main.default_headers:
                     headers.update(_ph_main.default_headers)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         _merged_main = _apply_user_default_headers(headers)
         if _merged_main:
@@ -5458,7 +5458,7 @@ def _main_model_supports_vision(provider: str, model: Optional[str]) -> bool:
         return True
     try:
         supports = _lookup_supports_vision(provider, model, load_config())
-    except (AttributeError, ValueError):
+    except Exception:  # pragma: no cover - defensive
         return True
     if supports is None:
         # No capability data — keep current behaviour and let the call attempt
@@ -6206,7 +6206,7 @@ def _resolve_task_provider_model(
             from hercules_cli.providers import get_provider
 
             return get_provider(normalized) is not None
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             # Keep the high-risk provider-backed routes safe even if provider
             # catalog loading is unavailable during early import/test paths.
             return normalized in {
@@ -6334,7 +6334,7 @@ def _get_auxiliary_task_config(task: str) -> Dict[str, Any]:
                     merged.update(task_config)
                     return merged
                 break
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Plugin discovery failure must not break aux task config reads.
         pass
 
@@ -7271,7 +7271,7 @@ def call_llm(
         if _is_connection_error(first_err):
             try:
                 _evict_cached_client_instance(client)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "Auxiliary: cache eviction after connection error failed",
                     exc_info=True,
@@ -7775,7 +7775,7 @@ async def async_call_llm(
         if _is_connection_error(first_err):
             try:
                 _evict_cached_client_instance(client)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "Auxiliary (async): cache eviction after connection error failed",
                     exc_info=True,

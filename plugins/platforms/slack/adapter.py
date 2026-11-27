@@ -325,7 +325,7 @@ def _serialize_slack_blocks_for_agent(blocks: list, max_chars: int = 6000) -> st
 
     try:
         payload = json.dumps(_sanitize(blocks), ensure_ascii=False, indent=2)
-    except (AttributeError, ValueError):
+    except Exception:
         payload = repr(blocks)
 
     if len(payload) > max_chars:
@@ -595,7 +595,7 @@ class SlackAdapter(BasePlatformAdapter):
                 await task
             except asyncio.CancelledError:
                 pass
-            except (RuntimeError):
+            except Exception:  # pragma: no cover - defensive logging
                 logger.debug(
                     "[Slack] Socket Mode task failed while stopping", exc_info=True
                 )
@@ -615,7 +615,7 @@ class SlackAdapter(BasePlatformAdapter):
             if asyncio.iscoroutine(value):
                 value = await value
             return bool(value)
-        except (RuntimeError):
+        except Exception:  # pragma: no cover - optional client API
             logger.debug(
                 "[Slack] Could not inspect Socket Mode transport state", exc_info=True
             )
@@ -667,7 +667,7 @@ class SlackAdapter(BasePlatformAdapter):
                     await self._restart_socket_mode("transport disconnected")
             except asyncio.CancelledError:
                 raise
-            except (RuntimeError):
+            except Exception:  # pragma: no cover - defensive logging
                 logger.warning(
                     "[Slack] Socket Mode watchdog iteration failed; continuing",
                     exc_info=True,
@@ -713,7 +713,7 @@ class SlackAdapter(BasePlatformAdapter):
             exc = task.exception()
         except asyncio.CancelledError:
             return
-        except (RuntimeError):
+        except Exception:  # pragma: no cover - defensive logging
             logger.debug(
                 "[Slack] Could not inspect Socket Mode task exception", exc_info=True
             )
@@ -788,7 +788,7 @@ class SlackAdapter(BasePlatformAdapter):
 
         try:
             import httpx
-        except (ImportError, ModuleNotFoundError):
+        except Exception:  # pragma: no cover
             httpx = None
 
         if httpx is not None and isinstance(exc, httpx.HTTPStatusError):
@@ -953,7 +953,7 @@ class SlackAdapter(BasePlatformAdapter):
                     "manifest with these already included.",
                     team_key or "this workspace",
                 )
-        except (requests.RequestException, OSError):
+        except Exception:  # pragma: no cover - diagnostics must never break connect
             pass
 
     def _warn_if_not_bot_token(self, auth_response, team_name: str) -> None:
@@ -994,7 +994,7 @@ class SlackAdapter(BasePlatformAdapter):
             try:
                 bot_id = auth_response.get("bot_id", "") or ""
                 user_id = auth_response.get("user_id", "") or ""
-            except (requests.RequestException, OSError):
+            except Exception:
                 # Some response shapes are attribute-only; fall back to .data.
                 data = getattr(auth_response, "data", None) or {}
                 bot_id = data.get("bot_id", "") or ""
@@ -1017,7 +1017,7 @@ class SlackAdapter(BasePlatformAdapter):
                     team_key or "this workspace",
                     user_id,
                 )
-        except (requests.RequestException, OSError):
+        except Exception:  # pragma: no cover - diagnostics must never break connect
             pass
 
     async def connect(self, *, is_reconnect: bool = False) -> bool:
@@ -1092,7 +1092,7 @@ class SlackAdapter(BasePlatformAdapter):
                     await watchdog_task
                 except asyncio.CancelledError:
                     pass
-                except (RuntimeError):
+                except Exception:  # pragma: no cover - defensive logging
                     logger.debug(
                         "[Slack] Prior watchdog task failed while stopping",
                         exc_info=True,
@@ -1295,7 +1295,7 @@ class SlackAdapter(BasePlatformAdapter):
                         # Best-effort ack so Slack doesn't retry the click.
                         try:
                             await ack()
-                        except (AttributeError, ValueError):
+                        except Exception:
                             pass
 
                 return _wrapped
@@ -1322,11 +1322,11 @@ class SlackAdapter(BasePlatformAdapter):
                 self._start_socket_mode_handler()
                 self._running = True
                 self._ensure_socket_watchdog()
-            except (AttributeError, ValueError):
+            except Exception:
                 self._running = False
                 try:
                     await self._stop_socket_mode_handler()
-                except (AttributeError, ValueError):
+                except Exception:  # pragma: no cover - defensive logging
                     logger.debug(
                         "[Slack] Cleanup after failed start raised", exc_info=True
                     )
@@ -1400,7 +1400,7 @@ class SlackAdapter(BasePlatformAdapter):
                 await watchdog_task
             except asyncio.CancelledError:
                 pass
-            except (RuntimeError):
+            except Exception:  # pragma: no cover - defensive logging
                 # Watchdog may have lost the cancellation race and exited with
                 # an unrelated exception. Log and continue so handler cleanup
                 # and lock release still happen.
@@ -1699,7 +1699,7 @@ class SlackAdapter(BasePlatformAdapter):
                     "platforms.slack.extra.reply_in_thread: false to pair them.",
                     team_name,
                 )
-        except (requests.RequestException, OSError):
+        except Exception:
             pass
 
     def _resolve_thread_ts(
@@ -1807,7 +1807,7 @@ class SlackAdapter(BasePlatformAdapter):
             import httpx as _httpx
             from urllib.parse import unquote as _unquote
             from tools.url_safety import is_safe_url as _is_safe_url
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             await super().send_multiple_images(chat_id, images, metadata, human_delay)
             return
 
@@ -1968,7 +1968,7 @@ class SlackAdapter(BasePlatformAdapter):
             return None
         try:
             return render_blocks(content, mrkdwn_fn=self.format_message)
-        except (AttributeError, ValueError):
+        except Exception:  # pragma: no cover - renderer already guards itself
             logger.debug("[Slack] block render failed; using plain text", exc_info=True)
             return None
 
@@ -2566,7 +2566,7 @@ class SlackAdapter(BasePlatformAdapter):
 
         try:
             session_store.get_or_create_session(source)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[Slack] Failed to seed assistant thread session for %s/%s",
                 channel_id,
@@ -2718,7 +2718,7 @@ class SlackAdapter(BasePlatformAdapter):
                     and is_gateway_known_command(cmd_name)
                 ):
                     original_text = "/" + original_text[1:]
-            except (ImportError, ModuleNotFoundError):
+            except Exception:  # pragma: no cover - defensive
                 pass
 
         text = original_text
@@ -3291,7 +3291,7 @@ class SlackAdapter(BasePlatformAdapter):
                     )
                     or None
                 )
-            except (AttributeError, ValueError):
+            except Exception:  # pragma: no cover - defensive
                 reply_to_text = None
 
         msg_event = MessageEvent(
@@ -3514,7 +3514,7 @@ class SlackAdapter(BasePlatformAdapter):
                     user_name=str(user_name).strip() if user_name else None,
                 )
                 return bool(auth_fn(source))
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug(
                     "[Slack] Falling back to env-only interactive auth for user %s",
                     normalized_user_id,
@@ -4135,7 +4135,7 @@ class SlackAdapter(BasePlatformAdapter):
 
             session_store._ensure_loaded()
             return session_key in session_store._entries
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
 
     async def _download_slack_file(
@@ -4342,7 +4342,7 @@ class SlackAdapter(BasePlatformAdapter):
                     import json as _json
 
                     patterns = _json.loads(raw)
-                except (ImportError, ModuleNotFoundError):
+                except Exception:
                     patterns = [
                         p.strip()
                         for p in raw.replace("\n", ",").split(",")
@@ -4424,7 +4424,7 @@ async def _standalone_send(
         try:
             _fmt_adapter = SlackAdapter.__new__(SlackAdapter)
             formatted = _fmt_adapter.format_message(message)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "Failed to apply Slack mrkdwn formatting in _standalone_send",
                 exc_info=True,

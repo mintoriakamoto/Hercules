@@ -41,7 +41,7 @@ def write_txn(conn: sqlite3.Connection):
     conn.execute("BEGIN IMMEDIATE")
     try:
         yield conn
-    except (AttributeError, ValueError, KeyError, OSError):
+    except Exception:
         try:
             conn.execute("ROLLBACK")
         except sqlite3.OperationalError:

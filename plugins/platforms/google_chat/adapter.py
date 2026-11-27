@@ -267,7 +267,7 @@ def _is_google_owned_host(url: str) -> bool:
         from urllib.parse import urlparse
 
         parsed = urlparse(url)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
     if parsed.scheme != "https":
         return False
@@ -532,7 +532,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
             from hercules_constants import get_hercules_home as _get_hercules_home
 
             _hercules_home = _get_hercules_home()
-        except (ModuleNotFoundError, ImportError):
+        except Exception:
             _hercules_home = _Path.home() / ".hercules"
         self._thread_count_store = _ThreadCountStore(
             _hercules_home / "google_chat_thread_counts.json"
@@ -668,7 +668,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
     def _log_background_failure(future: Any) -> None:
         try:
             future.result()
-        except (AttributeError, ValueError):
+        except Exception:
             logger.exception("[GoogleChat] Background inbound processing failed")
 
     @staticmethod
@@ -875,7 +875,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
         # heuristic in _build_message_event survives gateway restarts.
         try:
             await asyncio.to_thread(self._thread_count_store.load)
-        except (RuntimeError):
+        except Exception:
             logger.warning(
                 "[GoogleChat] thread-count store load failed (treating "
                 "all threads as fresh)",
@@ -953,13 +953,13 @@ class GoogleChatAdapter(BasePlatformAdapter):
             try:
                 self._streaming_pull_future.cancel()
                 await asyncio.to_thread(self._streaming_pull_future.result, 10.0)
-            except (RuntimeError):
+            except Exception:
                 pass
             self._streaming_pull_future = None
         if self._subscriber is not None:
             try:
                 await asyncio.to_thread(self._subscriber.close)
-            except (RuntimeError):
+            except Exception:
                 pass
             self._subscriber = None
         self._mark_disconnected()
@@ -1178,7 +1178,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
             return
         try:
             envelope = json.loads(message.data.decode("utf-8"))
-        except (AttributeError, ValueError):
+        except Exception:
             logger.exception("[GoogleChat] Could not parse Pub/Sub envelope")
             message.ack()
             return
@@ -1199,7 +1199,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                 from agent.redact import redact_sensitive_text
 
                 dump = redact_sensitive_text(json.dumps(envelope))
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 dump = "<redact filter unavailable>"
             logger.debug("[GoogleChat] RAW envelope (redacted): %s", dump[:2000])
 
@@ -1278,11 +1278,11 @@ class GoogleChatAdapter(BasePlatformAdapter):
 
             self._submit_on_loop(self._dispatch_message(msg_with_space, enriched_env))
             message.ack()
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.exception("[GoogleChat] Error in _on_pubsub_message")
             try:
                 message.ack()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     async def _dispatch_message(
@@ -1322,7 +1322,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                     return
 
             await self.handle_message(event)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.exception("[GoogleChat] _dispatch_message failed")
 
     async def _handle_setup_files_command(
@@ -1371,7 +1371,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                 body["thread"] = {"name": thread_id}
             try:
                 await self._create_message(chat_id, body)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "[GoogleChat] /setup-files reply send failed",
                     exc_info=True,
@@ -1600,7 +1600,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
         for att in attachments:
             try:
                 local_path, mime = await self._download_attachment(att)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.exception("[GoogleChat] attachment download failed")
                 continue
             if not local_path:
@@ -1981,7 +1981,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                 _redact_sensitive(str(exc)),
             )
             return False
-        except (AttributeError):
+        except Exception:
             logger.debug("[GoogleChat] delete_message failed", exc_info=True)
             return False
 
@@ -2277,7 +2277,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
         if chat_id and resp_thread:
             try:
                 self._thread_count_store.incr(chat_id, resp_thread)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.debug(
                     "[GoogleChat] outbound thread-count incr failed",
                     exc_info=True,
@@ -2364,7 +2364,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                         self._orphan_typing_messages.setdefault(chat_id, []).append(
                             result.message_id
                         )
-            except (KeyError, IndexError):
+            except Exception:
                 logger.debug(
                     "[GoogleChat] send_typing background create failed",
                     exc_info=True,
@@ -2457,7 +2457,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                 )
                 try:
                     await self._patch_message(current, {"text": label})
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "[GoogleChat] on_processing_complete patch fallback failed",
                         exc_info=True,
@@ -2470,13 +2470,13 @@ class GoogleChatAdapter(BasePlatformAdapter):
             for orphan_id in orphans:
                 try:
                     await self._patch_message(orphan_id, {"text": "·"})
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "[GoogleChat] orphan typing-card patch failed: %s",
                         orphan_id,
                         exc_info=True,
                     )
-        except (KeyError, IndexError):
+        except Exception:
             logger.debug(
                 "[GoogleChat] cleanup in on_processing_complete failed", exc_info=True
             )
@@ -2695,7 +2695,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
         if cached_api is not None and cached_creds is not None:
             try:
                 refreshed = await asyncio.to_thread(_refresh, cached_creds, email)
-            except (RuntimeError):
+            except Exception:
                 logger.debug(
                     "[GoogleChat] cached per-user refresh raised",
                     exc_info=True,
@@ -2713,7 +2713,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
             if creds is None:
                 return None
             api = await asyncio.to_thread(lambda: _build(creds))
-        except (RuntimeError):
+        except Exception:
             logger.debug(
                 "[GoogleChat] per-user creds load/build failed for %s",
                 email,
@@ -2757,7 +2757,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                     self._user_credentials,
                     None,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 logger.debug(
                     "[GoogleChat] legacy creds refresh raised",
                     exc_info=True,
@@ -2846,7 +2846,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
         # posted.
         try:
             await self._consume_typing_card_with_text(chat_id, caption or " ")
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[GoogleChat] _send_file pre-patch typing-card failed",
                 exc_info=True,
@@ -2923,7 +2923,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
             if chat_id and resp_thread:
                 try:
                     self._thread_count_store.incr(chat_id, resp_thread)
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug(
                         "[GoogleChat] outbound thread-count incr failed",
                         exc_info=True,
@@ -2966,7 +2966,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
             body["thread"] = {"name": thread_id}
         try:
             await self._create_message(chat_id, body)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "[GoogleChat] attachment fallback notice send failed",
                 exc_info=True,

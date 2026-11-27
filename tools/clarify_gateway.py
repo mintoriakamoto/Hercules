@@ -120,7 +120,7 @@ def wait_for_response(clarify_id: str, timeout: float) -> Optional[str]:
 
     try:
         from tools.environments.base import touch_activity_if_due
-    except (ImportError, ModuleNotFoundError):
+    except Exception:  # pragma: no cover - optional
         touch_activity_if_due = None
 
     deadline = time.monotonic() + max(timeout, 0.0)
@@ -286,7 +286,7 @@ def get_clarify_timeout() -> int:
         cfg = load_config() or {}
         agent_cfg = cfg.get("agent", {}) or {}
         return int(agent_cfg.get("clarify_timeout", 3600))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return 3600
 
 

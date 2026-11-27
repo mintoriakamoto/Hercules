@@ -531,7 +531,7 @@ if HAS_REQUESTS:
                     for key in list(headers.keys()):
                         if key.lower() in _SENSITIVE_HEADERS:
                             del headers[key]
-            except (KeyError, IndexError):
+            except Exception:
                 # Defensive: never let header stripping break a redirect.
                 pass
 

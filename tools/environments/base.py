@@ -75,7 +75,7 @@ def touch_activity_if_due(
         if cb:
             elapsed = int(now - state["start"])
             cb(f"{label} ({elapsed}s elapsed)")
-    except (IndexError, KeyError, ValueError):
+    except Exception:
         pass
 
 
@@ -265,7 +265,7 @@ class _ThreadedProcessHandle:
         if self._cancel_fn:
             try:
                 self._cancel_fn()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     def wait(self, timeout: float | None = None) -> int:
@@ -602,14 +602,14 @@ class BaseEnvironment(ABC):
                         output_chunks.append(decoder.decode(piece))
                     else:
                         output_chunks.append(str(piece))
-            except (ValueError):
+            except Exception:
                 pass
             finally:
                 try:
                     tail = decoder.decode(b"", final=True)
                     if tail:
                         output_chunks.append(tail)
-                except (UnicodeDecodeError):
+                except Exception:
                     pass
 
         def _drain():
@@ -625,7 +625,7 @@ class BaseEnvironment(ABC):
             fileno = getattr(stream, "fileno", None)
             try:
                 fd = fileno() if callable(fileno) else None
-            except (AttributeError, ValueError):
+            except Exception:
                 fd = None
             if not isinstance(fd, int) or fd < 0:
                 _drain_iterable(stream)
@@ -647,7 +647,7 @@ class BaseEnvironment(ABC):
                         tail = decoder.decode(b"", final=True)
                         if tail:
                             output_chunks.append(tail)
-                    except (UnicodeDecodeError):
+                    except Exception:
                         pass
                 return
             idle_after_exit = 0
@@ -681,7 +681,7 @@ class BaseEnvironment(ABC):
                     tail = decoder.decode(b"", final=True)
                     if tail:
                         output_chunks.append(tail)
-                except (UnicodeDecodeError):
+                except Exception:
                     pass
 
         drain_thread = threading.Thread(target=_drain, daemon=True)
@@ -810,7 +810,7 @@ class BaseEnvironment(ABC):
             try:
                 self._kill_process(proc)
                 drain_thread.join(timeout=2)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass  # cleanup is best-effort
             raise
 
@@ -821,7 +821,7 @@ class BaseEnvironment(ABC):
 
         try:
             proc.stdout.close()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         if _DEBUG_INTERRUPT:
@@ -964,7 +964,7 @@ class BaseEnvironment(ABC):
     def __del__(self):
         try:
             self.cleanup()
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def _prepare_command(self, command: str) -> tuple[str, str | None]:

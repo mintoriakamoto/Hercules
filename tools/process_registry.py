@@ -262,7 +262,7 @@ class ProcessRegistry:
             return
         try:
             sink(session, chunk)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
     def _check_watch_patterns(self, session: ProcessSession, new_text: str) -> None:
@@ -588,7 +588,7 @@ class ProcessRegistry:
             from gateway.status import get_process_start_time
 
             return get_process_start_time(pid)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return None
 
     @classmethod
@@ -655,7 +655,7 @@ class ProcessRegistry:
             if not proc.is_running():
                 return False
             return proc.status() != psutil.STATUS_ZOMBIE
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
 
     @staticmethod
@@ -674,7 +674,7 @@ class ProcessRegistry:
             if val is None:
                 val = DEFAULT_CONFIG["terminal"]["daemon_term_grace_seconds"]
             return max(float(val), 0.0)
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
+        except Exception:
             return 2.0
 
     @classmethod
@@ -944,7 +944,7 @@ class ProcessRegistry:
                 self._running[session.id] = session
 
             self._write_checkpoint()
-        except (IndexError, KeyError):
+        except Exception:
             # Post-Popen setup failed — kill the orphaned subprocess (and any
             # descendants spawned via setsid) before re-raising so they do not
             # leak as untracked background processes.
@@ -959,11 +959,11 @@ class ProcessRegistry:
                         proc.kill()
                 else:
                     proc.kill()
-            except (AttributeError):
+            except Exception:
                 pass
             try:
                 proc.wait(timeout=5)
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             raise
 
@@ -1186,7 +1186,7 @@ class ProcessRegistry:
                     self._move_to_finished(session)
                     return
 
-            except (IndexError, KeyError, ValueError):
+            except Exception:
                 # Environment might be gone (sandbox reaped, etc.)
                 session.exited = True
                 session.exit_code = -1
@@ -1220,7 +1220,7 @@ class ProcessRegistry:
                         self._emit_output(session, text)
                 except EOFError:
                     break
-                except (IndexError, KeyError, OSError):
+                except Exception:
                     break
         except Exception as e:
             logger.debug("PTY stdout reader ended: %s", e)
@@ -1301,7 +1301,7 @@ class ProcessRegistry:
         # Refresh detached/remote state so .exited is current.
         try:
             self._refresh_detached_session(session)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         if session.exited:
             return False
@@ -1360,7 +1360,7 @@ class ProcessRegistry:
         while not self.completion_queue.empty():
             try:
                 evt = self.completion_queue.get_nowait()
-            except (AttributeError, ValueError):
+            except Exception:
                 break
             _evt_sid = evt.get("session_id", "")
             if evt.get("type") == "completion" and self._drain_should_skip(_evt_sid):
@@ -1372,7 +1372,7 @@ class ProcessRegistry:
                 if owns_event is not None:
                     try:
                         owned = bool(owns_event(evt))
-                    except (ValueError):
+                    except Exception:
                         owned = False  # fail closed — never leak on a broken check
                     if not owned:
                         requeue.append(evt)
@@ -1422,7 +1422,7 @@ class ProcessRegistry:
             return
         try:
             rc = proc.poll()
-        except (AttributeError, ValueError):
+        except Exception:
             return
         if rc is None:
             return  # Direct child still running — reader block is legitimate.
@@ -1453,7 +1453,7 @@ class ProcessRegistry:
                 finally:
                     try:
                         fcntl.fcntl(fd, fcntl.F_SETFL, flags)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         pass
             except Exception as e:
                 logger.debug("Non-blocking drain failed for %s: %s", session.id, e)
@@ -1669,7 +1669,7 @@ class ProcessRegistry:
                 # PTY process -- terminate via ptyprocess
                 try:
                     session._pty.terminate(force=True)
-                except (AttributeError, ValueError):
+                except Exception:
                     if session.pid:
                         os.kill(session.pid, signal.SIGTERM)
             elif session.process:
@@ -1824,7 +1824,7 @@ class ProcessRegistry:
         """
         try:
             return len(self._running)
-        except (AttributeError, ValueError):
+        except Exception:
             return 0
 
     def list_sessions(self, task_id: str = None, session_key: str = None) -> list:
@@ -2474,7 +2474,7 @@ def _handle_process(args, **kw):
             from tools.approval import get_current_session_key
 
             session_key = get_current_session_key(default="") or ""
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             session_key = ""
         return json.dumps(
             {

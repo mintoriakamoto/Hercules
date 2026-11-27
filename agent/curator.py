@@ -850,7 +850,7 @@ def _parse_structured_summary(
         import yaml  # type: ignore
 
         data = yaml.safe_load(body)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return empty
 
     if not isinstance(data, dict):
@@ -1639,7 +1639,7 @@ def run_curator_review(
                 "archived": 0,
                 "reactivated": 0,
             }
-        except (AttributeError, ValueError):
+        except Exception:
             counts = {"checked": 0, "marked_stale": 0, "archived": 0, "reactivated": 0}
     else:
         # Pre-mutation snapshot — best-effort, never blocks the run. A
@@ -1654,7 +1654,7 @@ def run_curator_review(
             if snap is not None and on_summary:
                 try:
                     on_summary(f"curator: snapshot created ({snap.name})")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
         except Exception as e:
             logger.debug("Curator pre-run snapshot failed: %s", e, exc_info=True)
@@ -1687,7 +1687,7 @@ def run_curator_review(
         # Snapshot skill state BEFORE the LLM pass so the report can diff.
         try:
             before_report = skill_usage.agent_created_report()
-        except (AttributeError, ValueError):
+        except Exception:
             before_report = []
         before_names = {r.get("name") for r in before_report if isinstance(r, dict)}
 
@@ -1711,7 +1711,7 @@ def run_curator_review(
             state2["last_run_summary"] = final_summary
             try:
                 after_report = skill_usage.agent_created_report()
-            except (AttributeError, ValueError):
+            except Exception:
                 after_report = []
             try:
                 report_path = _write_run_report(
@@ -1732,7 +1732,7 @@ def run_curator_review(
             if on_summary:
                 try:
                     on_summary(f"curator: {final_summary}")
-                except (AttributeError, ValueError):
+                except Exception:
                     pass
             return
 
@@ -1816,7 +1816,7 @@ def run_curator_review(
         # recorded in state so `hercules curator status` can point at it.
         try:
             after_report = skill_usage.agent_created_report()
-        except (AttributeError, ValueError):
+        except Exception:
             after_report = []
         try:
             report_path = _write_run_report(
@@ -1839,7 +1839,7 @@ def run_curator_review(
         if on_summary:
             try:
                 on_summary(f"curator: {final_summary}")
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
 
     if synchronous:
@@ -2094,7 +2094,7 @@ def _run_llm_review(prompt: str) -> Dict[str, Any]:
         if review_agent is not None:
             try:
                 review_agent.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
     return result_meta
 

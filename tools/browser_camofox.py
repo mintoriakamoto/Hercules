@@ -107,7 +107,7 @@ def _config_cdp_url() -> str:
         browser_cfg = read_raw_config().get("browser", {})
         if isinstance(browser_cfg, dict):
             return str(browser_cfg.get("cdp_url", "") or "").strip()
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         pass
     return ""
 
@@ -153,7 +153,7 @@ def check_camofox_available() -> bool:
                 pass
             _vnc_url_checked = True
         return resp.status_code == 200
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return False
 
 
@@ -581,7 +581,7 @@ def camofox_navigate(url: str, task_id: Optional[str] = None) -> str:
                 snapshot_text = _truncate_snapshot(snapshot_text)
             result["snapshot"] = snapshot_text
             result["element_count"] = snap_data.get("refsCount", 0)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass  # Navigation succeeded; snapshot is a bonus
 
         return json.dumps(result)
@@ -931,7 +931,7 @@ def camofox_vision(
                     params={"userId": session["user_id"]},
                 )
                 annotation_context = f"\n\nAccessibility tree (element refs for interaction):\n{snap_data.get('snapshot', '')[:3000]}"
-            except (IndexError, KeyError):
+            except Exception:
                 pass
 
         # Redact secrets from annotation context before sending to vision LLM.
@@ -954,7 +954,7 @@ def camofox_vision(
             _vision_cfg = cfg_get(_cfg, "auxiliary", "vision", default={})
             _vision_timeout = float(_vision_cfg.get("timeout", 120))
             _vision_temperature = float(_vision_cfg.get("temperature", 0.1))
-        except (ValueError):
+        except Exception:
             _vision_timeout = 120.0
             _vision_temperature = 0.1
 

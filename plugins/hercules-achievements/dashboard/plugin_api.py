@@ -26,7 +26,7 @@ except ImportError:
 
 try:
     from fastapi import APIRouter
-except (ImportError, ModuleNotFoundError):
+except Exception:  # Allows local unit tests without dashboard dependencies.
 
     class APIRouter:  # type: ignore
         def get(self, *_args, **_kwargs):
@@ -736,7 +736,7 @@ def load_state() -> Dict[str, Any]:
         return {"unlocks": {}}
     try:
         return json.loads(path.read_text())
-    except (AttributeError, ValueError):
+    except Exception:
         return {"unlocks": {}}
 
 
@@ -764,7 +764,7 @@ def load_snapshot() -> Optional[Dict[str, Any]]:
         data = json.loads(path.read_text())
         if isinstance(data, dict):
             return data
-    except (AttributeError, ValueError):
+    except Exception:
         return None
     return None
 
@@ -787,7 +787,7 @@ def load_checkpoint() -> Dict[str, Any]:
             data.setdefault("sessions", {})
             if isinstance(data.get("sessions"), dict):
                 return data
-    except (requests.RequestException, OSError):
+    except Exception:
         pass
     return {"schema_version": 1, "generated_at": 0, "sessions": {}}
 
@@ -859,7 +859,7 @@ def _content(msg: Dict[str, Any]) -> str:
         return content
     try:
         return json.dumps(content)
-    except (AttributeError, ValueError):
+    except Exception:
         return str(content)
 
 
@@ -1465,7 +1465,7 @@ def scan_sessions(
             ):
                 try:
                     progress_callback(list(sessions), idx, total_sessions)
-                except (AttributeError, ValueError):
+                except Exception:
                     # Progress callbacks are advisory — a broken publisher
                     # must never abort the scan itself.
                     pass
@@ -1621,7 +1621,7 @@ def aggregate_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
                     agg["weekend_sessions"] += 1
                 if lt.tm_hour < 6 or lt.tm_hour >= 23:
                     agg["night_sessions"] += 1
-            except (requests.RequestException, OSError):
+            except Exception:
                 pass
     agg["distinct_model_count"] = len({m for m in model_names if m and m != "None"})
     agg["distinct_provider_count"] = len(provider_names)
@@ -1810,7 +1810,7 @@ def _run_scan_and_update_cache(publish_partial_snapshots: bool = True) -> None:
                 # partials are visible but are never mistaken for finished.
                 _SNAPSHOT_CACHE = _json_safe(partial)
                 _SNAPSHOT_CACHE_AT = 0
-            except (AttributeError, ValueError):
+            except Exception:
                 # Intermediate publication is best-effort; don't kill the scan.
                 pass
 
@@ -1985,10 +1985,10 @@ async def reset_state():
     _SCAN_STATUS["last_duration_ms"] = None
     try:
         snapshot_path().unlink(missing_ok=True)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     try:
         checkpoint_path().unlink(missing_ok=True)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     return {"ok": True}

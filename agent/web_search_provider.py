@@ -74,7 +74,7 @@ def get_provider_env(name: str) -> str:
         from hercules_cli.config import get_env_value
 
         val = get_env_value(name)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         val = None
     if val is None:
         val = os.getenv(name, "")

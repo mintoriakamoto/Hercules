@@ -78,7 +78,7 @@ def _get_git_commit(project_root: Path) -> str:
             value = result.stdout.strip()
             if value:
                 return value
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         pass
 
     # Fall back to the build-time baked SHA (populated in published Docker
@@ -90,7 +90,7 @@ def _get_git_commit(project_root: Path) -> str:
         baked = get_build_sha(short=8)
         if baked:
             return baked
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     return "(unknown)"
@@ -116,7 +116,7 @@ def _get_git_commit_date(project_root: Path) -> str:
             value = result.stdout.strip()
             if value:
                 return value
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         pass
 
     return ""
@@ -148,7 +148,7 @@ def _gateway_status() -> str:
         if snapshot.service_installed and not snapshot.service_running:
             return f"stopped ({snapshot.manager})"
         return f"stopped ({snapshot.manager})"
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         return "unknown" if sys.platform.startswith(("linux", "darwin")) else "N/A"
 
 
@@ -183,7 +183,7 @@ def _cron_summary(hercules_home: Path) -> str:
         jobs = data.get("jobs", [])
         active = sum(1 for j in jobs if j.get("enabled", True))
         return f"{active} active / {len(jobs)} total"
-    except (OSError):
+    except Exception:
         return "(error reading)"
 
 
@@ -312,7 +312,7 @@ def run_dump(args):
 
     try:
         config = load_config()
-    except (AttributeError, ValueError):
+    except Exception:
         config = {}
 
     model, provider = _get_model_and_provider(config)
@@ -322,7 +322,7 @@ def run_dump(args):
         from hercules_cli.profiles import get_active_profile_name
 
         profile = get_active_profile_name() or "(default)"
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         profile = "(default)"
 
     # Terminal backend — report the EFFECTIVE backend, not just config.yaml.
@@ -430,7 +430,7 @@ def run_dump(args):
 
                 if _load_pool("openrouter").has_credentials():
                     display = "set (auth pool)"
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         lines.append(f"  {label:<20} {display}")
 

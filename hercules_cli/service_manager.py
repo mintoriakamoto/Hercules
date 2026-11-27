@@ -932,7 +932,7 @@ class S6ServiceManager:
                 from gateway.status import write_planned_stop_marker
 
                 write_planned_stop_marker(pid)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
         self._run_svc("-d", "stop", name)
         _write_gateway_desired_state(name, "stopped")
@@ -1051,7 +1051,7 @@ class S6ServiceManager:
                 (tmp_dir / "down").touch()
 
             tmp_dir.rename(svc_dir)
-        except (OSError, ValueError):
+        except Exception:
             shutil.rmtree(tmp_dir, ignore_errors=True)
             raise
 

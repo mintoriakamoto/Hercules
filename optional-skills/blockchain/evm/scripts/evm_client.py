@@ -350,7 +350,7 @@ def _http_post(url: str, payload: Any, retries: int = 5, timeout: int = 20) -> A
             body_text = ""
             try:
                 body_text = e.read().decode()
-            except (OSError):
+            except Exception:
                 pass
             raise RuntimeError(f"HTTP {e.code}: {body_text}") from e
         except Exception as e:
@@ -381,7 +381,7 @@ def _http_get(url: str, retries: int = 5, timeout: int = 20) -> Any:
             body_text = ""
             try:
                 body_text = e.read().decode()
-            except (OSError):
+            except Exception:
                 pass
             raise RuntimeError(f"HTTP {e.code}: {body_text}") from e
         except Exception as e:
@@ -585,7 +585,7 @@ def decode_string(hex_data: str) -> str:
         length = int(raw[64:128], 16)
         chars = raw[128 : 128 + length * 2]
         return bytes.fromhex(chars).decode("utf-8", errors="replace").strip()
-    except (ValueError):
+    except Exception:
         return ""
 
 
@@ -595,7 +595,7 @@ def decode_uint256(hex_data: str) -> int:
         if not raw:
             return 0
         return int(raw, 16)
-    except (ValueError):
+    except Exception:
         return 0
 
 
@@ -615,7 +615,7 @@ def cg_price_by_id(cg_id: str) -> Optional[float]:
         url = f"{COINGECKO_BASE}/simple/price?ids={cg_id}&vs_currencies=usd"
         data = _http_get(url)
         return data.get(cg_id, {}).get("usd")
-    except (requests.RequestException, OSError):
+    except Exception:
         return None
 
 
@@ -628,7 +628,7 @@ def cg_price_by_ids(cg_ids: List[str]) -> Dict[str, float]:
         url = f"{COINGECKO_BASE}/simple/price?ids={joined}&vs_currencies=usd"
         data = _http_get(url)
         return {k: v.get("usd", 0.0) for k, v in data.items() if "usd" in v}
-    except (requests.RequestException, OSError):
+    except Exception:
         return {}
 
 
@@ -657,7 +657,7 @@ def cg_price_by_contract(chain: str, contract: str) -> Optional[float]:
             if k.lower() == addr_lower:
                 return v.get("usd")
         return None
-    except (requests.RequestException, OSError):
+    except Exception:
         return None
 
 
@@ -699,7 +699,7 @@ def cmd_stats(args: argparse.Namespace) -> None:
                 tx_count = len(latest_block.get("transactions", []))
                 if t1 > t0:
                     tps = round(tx_count / (t1 - t0), 2)
-    except (requests.RequestException, OSError):
+    except Exception:
         pass
 
     native_price = get_native_price(chain)
@@ -780,7 +780,7 @@ def cmd_wallet(args: argparse.Namespace) -> None:
                     if token_price is not None:
                         token_usd = round(bal_human * token_price, 4)
                         portfolio_usd += token_usd
-                except (requests.RequestException, OSError):
+                except Exception:
                     pass
 
             tokens_out.append({
@@ -828,7 +828,7 @@ def cmd_tx(args: argparse.Namespace) -> None:
         blk = rpc_call(chain, "eth_getBlockByNumber", [hex(block_num), False])
         if blk:
             timestamp = hex_to_int(blk.get("timestamp", "0x0"))
-    except (requests.RequestException, OSError):
+    except Exception:
         pass
 
     value_wei = hex_to_int(tx.get("value", "0x0"))
@@ -944,7 +944,7 @@ def cmd_activity(args: argparse.Namespace) -> None:
             break
         try:
             blk = rpc_call(chain, "eth_getBlockByNumber", [hex(bn), True])
-        except (KeyError, IndexError):
+        except Exception:
             continue
         if not blk:
             continue
@@ -1060,7 +1060,7 @@ def _fetch_chain_stats(chain: str) -> Dict[str, Any]:
         gas_hex = rpc_call(chain, "eth_gasPrice", [])
         gas_wei = hex_to_int(gas_hex or "0x0")
         gas_gwei = round(gwei_from_wei(gas_wei), 4)
-    except (ValueError):
+    except Exception:
         gas_gwei = None
 
     cg_id = CHAINS[chain]["coingecko"]
@@ -1138,7 +1138,7 @@ def cmd_whale(args: argparse.Namespace) -> None:
     for bn in range(latest, max(0, latest - blocks), -1):
         try:
             blk = rpc_call(chain, "eth_getBlockByNumber", [hex(bn), True])
-        except (KeyError, IndexError):
+        except Exception:
             continue
         if not blk:
             continue
@@ -1215,7 +1215,7 @@ def cmd_multichain(args: argparse.Namespace) -> None:
                     continue
                 try:
                     bal_int = int(raw, 16)
-                except (ValueError):
+                except Exception:
                     continue
                 if bal_int == 0:
                     continue
@@ -1287,7 +1287,7 @@ def cmd_allowance(args: argparse.Namespace) -> None:
                 continue
             try:
                 allowance_int = int(raw, 16)
-            except (ValueError):
+            except Exception:
                 continue
             if allowance_int == 0:
                 continue
@@ -1357,7 +1357,7 @@ def cmd_decode(args: argparse.Namespace) -> None:
             try:
                 amount = int(amount_hex, 16)
                 decoded_args = {"to": to_addr, "amount_raw": amount}
-            except (ValueError):
+            except Exception:
                 pass
 
     print_json({
@@ -1451,7 +1451,7 @@ def cmd_contract(args: argparse.Namespace) -> None:
         supports_erc165 = bool(
             erc165_raw and erc165_raw != "0x" and int(erc165_raw, 16) == 1
         )
-    except (ValueError):
+    except Exception:
         pass
 
     # Try to detect ERC-20 (has totalSupply)
@@ -1459,7 +1459,7 @@ def cmd_contract(args: argparse.Namespace) -> None:
     try:
         ts_raw = eth_call_erc20(chain, address, "totalSupply()")
         is_erc20 = ts_raw is not None and ts_raw != "0x" and int(ts_raw, 16) > 0
-    except (ValueError):
+    except Exception:
         pass
 
     # Try to detect ERC-721 (supportsInterface 0x80ac58cd)
@@ -1472,7 +1472,7 @@ def cmd_contract(args: argparse.Namespace) -> None:
             chain, "eth_call", [{"to": address, "data": erc721_data}, "latest"]
         )
         is_erc721 = bool(erc721_raw and erc721_raw != "0x" and int(erc721_raw, 16) == 1)
-    except (ValueError):
+    except Exception:
         pass
 
     detected_standards = []

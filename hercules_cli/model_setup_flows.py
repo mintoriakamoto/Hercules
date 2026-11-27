@@ -78,7 +78,7 @@ def _prune_replaced_custom_model_config_credentials(
                 retained.append(entry)
             if changed:
                 write_credential_pool(pool_key, retained, removed_ids=removed_ids)
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return
 
 
@@ -100,7 +100,7 @@ def _prompt_auth_credentials_choice(title: str) -> str:
         if idx >= 0:
             print()
             return ("use", "reauth", "cancel")[idx]
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
     print(title)
@@ -237,7 +237,7 @@ def _model_flow_moa(config, current_model=""):
         idx = _curses_prompt_choice(
             "Select a Mixture of Agents preset:", rows, default_idx
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         print("Select a Mixture of Agents preset:")
         for i, row in enumerate(rows, 1):
             marker = "→" if (i - 1) == default_idx else " "
@@ -346,7 +346,7 @@ def _model_flow_openai_codex(config, current_model=""):
         _codex_status = get_codex_auth_status()
         if _codex_status.get("logged_in"):
             _codex_token = _codex_status.get("api_key")
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         pass
     if not _codex_token:
         try:
@@ -354,7 +354,7 @@ def _model_flow_openai_codex(config, current_model=""):
 
             _codex_creds = resolve_codex_runtime_credentials()
             _codex_token = _codex_creds.get("api_key")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
     codex_models = get_codex_model_ids(access_token=_codex_token)
@@ -445,7 +445,7 @@ def _model_flow_xai_oauth(_config, current_model="", *, args=None):
     try:
         creds = resolve_xai_oauth_runtime_credentials()
         base_url = (creds.get("base_url") or "").strip().rstrip("/") or base_url
-    except (ZeroDivisionError):
+    except (Exception):
         pass
 
     models = list(
@@ -494,7 +494,7 @@ def _model_flow_qwen_oauth(_config, current_model=""):
     try:
         creds = resolve_qwen_runtime_credentials(refresh_if_expiring=True)
         models = fetch_api_models(creds["api_key"], creds["base_url"])
-    except (IndexError, KeyError):
+    except Exception:
         pass
     if not models:
         models = list(_DEFAULT_QWEN_PORTAL_MODELS)
@@ -555,7 +555,7 @@ def _model_flow_kimi_oauth(_config, current_model=""):
         creds = resolve_kimi_oauth_runtime_credentials(refresh_if_expiring=True)
         base_url = creds.get("base_url", base_url) or base_url
         models = fetch_api_models(creds["api_key"], base_url)
-    except (IndexError, KeyError):
+    except Exception:
         pass
     if not models:
         # Curated fallback when live discovery is unavailable (the /coding
@@ -1750,7 +1750,7 @@ def _model_flow_copilot_acp(config, current_model=""):
     try:
         catalog_creds = resolve_api_key_provider_credentials("copilot")
         catalog_api_key = catalog_creds.get("api_key", "")
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         pass
 
     catalog = fetch_github_model_catalog(catalog_api_key)
@@ -2530,7 +2530,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
     if provider_id == "gemini" and existing_key:
         try:
             from agent.gemini_native_adapter import probe_gemini_tier
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             probe_gemini_tier = None
         if probe_gemini_tier is not None:
             print("  Checking Gemini API tier...")
@@ -2594,7 +2594,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
             _m = load_config().get("model") or {}
             if str(_m.get("provider") or "").strip().lower() == provider_id:
                 current_base = str(_m.get("base_url") or "").strip()
-        except (ValueError):
+        except Exception:
             pass
     effective_base = current_base or pconfig.inference_base_url
 
@@ -2687,7 +2687,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
                 from agent.models_dev import list_agentic_models
 
                 mdev_models = list_agentic_models(provider_id)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
             if mdev_models:
                 seen = {m.lower() for m in mdev_models}
@@ -2712,7 +2712,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
             from agent.models_dev import list_agentic_models
 
             mdev_models = list_agentic_models(provider_id)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
 
         if mdev_models:
@@ -2830,7 +2830,7 @@ def _model_flow_anthropic(config, current_model=""):
         cc_creds = read_claude_code_credentials()
         if cc_creds and is_claude_code_token_valid(cc_creds):
             cc_available = True
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     # Stale-OAuth guard: if the only existing cred is an expired OAuth token

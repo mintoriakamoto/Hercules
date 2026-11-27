@@ -90,7 +90,7 @@ def _format_updated_at(value: Any) -> str | None:
         return value
     try:
         return datetime.fromtimestamp(float(value), tz=timezone.utc).isoformat()
-    except (ValueError, TypeError):
+    except Exception:
         return None
 
 
@@ -104,10 +104,10 @@ def _updated_at_sort_key(value: Any) -> float:
         return float("-inf")
     try:
         return datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()
-    except (AttributeError, ValueError):
+    except Exception:
         try:
             return float(raw)
-        except (ValueError, TypeError):
+        except Exception:
             return float("-inf")
 
 
@@ -136,7 +136,7 @@ def _register_task_cwd(task_id: str, cwd: str) -> None:
         from tools.terminal_tool import register_task_env_overrides
 
         register_task_env_overrides(task_id, {"cwd": _translate_acp_cwd(cwd)})
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Failed to register ACP task cwd override", exc_info=True)
 
 
@@ -166,7 +166,7 @@ def _clear_task_cwd(task_id: str) -> None:
         from tools.terminal_tool import clear_task_env_overrides
 
         clear_task_env_overrides(task_id)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Failed to clear ACP task cwd override", exc_info=True)
 
 
@@ -294,7 +294,7 @@ class SessionManager:
             try:
                 for row in db.list_sessions_rich(source="acp", limit=1000):
                     persisted_rows[str(row["id"])] = dict(row)
-            except (KeyError, IndexError):
+            except Exception:
                 logger.debug("Failed to load ACP sessions from DB", exc_info=True)
 
         # Collect in-memory sessions first.
@@ -401,7 +401,7 @@ class SessionManager:
                     sid = row["id"]
                     _clear_task_cwd(sid)
                     db.delete_session(sid)
-            except (KeyError, IndexError):
+            except Exception:
                 logger.debug("Failed to cleanup ACP sessions from DB", exc_info=True)
 
     def save_session(self, session_id: str) -> None:
@@ -436,7 +436,7 @@ class SessionManager:
             hercules_home = get_hercules_home()
             self._db_instance = SessionDB(db_path=hercules_home / "state.db")
             return self._db_instance
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.debug("SessionDB unavailable for ACP persistence", exc_info=True)
             return None
 
@@ -478,7 +478,7 @@ class SessionManager:
                 # Update model_config (contains cwd) if changed.
                 try:
                     db.update_session_meta(state.session_id, cwd_json, model_str)
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.debug("Failed to update ACP session metadata", exc_info=True)
 
             # When the agent owns persistence to this same SessionDB it has
@@ -517,12 +517,12 @@ class SessionManager:
                 # safe (fresh create/fork with no archived history to lose).
                 try:
                     has_archived = db.has_archived_messages(state.session_id)
-                except (AttributeError, ValueError):
+                except Exception:
                     has_archived = False
                 db.replace_messages(
                     state.session_id, state.history, active_only=has_archived
                 )
-        except (AttributeError, ValueError):
+        except Exception:
             logger.warning(
                 "Failed to persist ACP session %s", state.session_id, exc_info=True
             )
@@ -537,7 +537,7 @@ class SessionManager:
 
         try:
             row = db.get_session(session_id)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "Failed to query DB for ACP session %s", session_id, exc_info=True
             )
@@ -572,7 +572,7 @@ class SessionManager:
         # Load conversation history.
         try:
             history = db.get_messages_as_conversation(session_id)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.warning(
                 "Failed to load messages for ACP session %s", session_id, exc_info=True
             )
@@ -587,7 +587,7 @@ class SessionManager:
                 base_url=restored_base_url,
                 api_mode=restored_api_mode,
             )
-        except (AttributeError, ValueError):
+        except Exception:
             logger.warning(
                 "Failed to recreate agent for ACP session %s", session_id, exc_info=True
             )
@@ -616,7 +616,7 @@ class SessionManager:
             return False
         try:
             return db.delete_session(session_id)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "Failed to delete ACP session %s from DB", session_id, exc_info=True
             )
@@ -681,7 +681,7 @@ class SessionManager:
                 "command": runtime.get("command"),
                 "args": list(runtime.get("args") or []),
             })
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.debug(
                 "ACP session falling back to default provider resolution", exc_info=True
             )

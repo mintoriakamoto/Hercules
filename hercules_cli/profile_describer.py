@@ -216,7 +216,7 @@ def describe_profile(
     # Read model + provider from the profile's config.
     try:
         model, provider = profiles_mod._read_config_model(profile_dir)
-    except (AttributeError, ValueError):
+    except Exception:
         model, provider = None, None
 
     try:
@@ -264,7 +264,7 @@ def describe_profile(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except (IndexError, KeyError):
+    except Exception:
         raw = ""
 
     parsed = _extract_json_blob(raw)

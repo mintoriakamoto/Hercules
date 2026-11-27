@@ -120,7 +120,7 @@ class WsPublisherTransport:
             with self._lock:
                 if self._ws is not None:
                     self._ws.close()  # type: ignore[union-attr]
-        except (KeyError, IndexError):
+        except Exception:
             pass
 
         self._ws = None

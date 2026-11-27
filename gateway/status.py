@@ -170,7 +170,7 @@ def _get_process_start_time(pid: int) -> Optional[int]:
         import psutil  # type: ignore
 
         return int(round(psutil.Process(pid).create_time() * 100))
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return None
 
 
@@ -216,7 +216,7 @@ def _read_process_cmdline(pid: int) -> Optional[str]:
         cmdline_parts = proc.cmdline()
         if cmdline_parts:
             return " ".join(cmdline_parts)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
     return None
@@ -625,7 +625,7 @@ def _pid_exists(pid: int) -> bool:
                 return False
         except getattr(psutil, "NoSuchProcess", ()):
             return False
-        except (AttributeError, ValueError):
+        except Exception:
             pass
         return bool(psutil.pid_exists(int(pid)))
 
@@ -687,7 +687,7 @@ def _pid_exists(pid: int) -> bool:
                 )
                 if r.returncode == 0 and r.stdout.strip().startswith("Z"):
                     return False
-            except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+            except Exception:
                 pass
         except (IndexError, PermissionError, OSError):
             pass
@@ -796,7 +796,7 @@ def write_pid_file() -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(record)
         _clear_running_pid_cache()
-    except (OSError):
+    except Exception:
         try:
             path.unlink(missing_ok=True)
         except OSError:
@@ -989,7 +989,7 @@ def remove_pid_file() -> None:
                 return
         path.unlink(missing_ok=True)
         _clear_running_pid_cache()
-    except (IndexError, KeyError, ValueError):
+    except Exception:
         pass
 
 
@@ -1110,7 +1110,7 @@ def acquire_scoped_lock(
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(record, handle)
-    except (OSError):
+    except Exception:
         try:
             lock_path.unlink(missing_ok=True)
         except OSError:

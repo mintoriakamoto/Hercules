@@ -77,7 +77,7 @@ class CLIAgentSetupMixin:
                         self.model = _fb_model
                         _primary_exc = None
                         break
-                    except (ZeroDivisionError):
+                    except (Exception):
                         continue
 
         if runtime is None:
@@ -182,7 +182,7 @@ class CLIAgentSetupMixin:
                         _default,
                         resolved_provider,
                     )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 pass
 
         # Normalize model for the resolved provider (e.g. swap non-Codex
@@ -238,7 +238,7 @@ class CLIAgentSetupMixin:
 
         try:
             overrides = resolve_fast_mode_overrides(route["model"])
-        except (IndexError, KeyError):
+        except Exception:
             overrides = None
         route["request_overrides"] = overrides
         return route
@@ -326,7 +326,7 @@ class CLIAgentSetupMixin:
                 resolved_id = self._session_db.resolve_resume_session_id(
                     self.session_id
                 )
-            except (AttributeError, ValueError):
+            except Exception:
                 resolved_id = self.session_id
             if resolved_id and resolved_id != self.session_id:
                 ChatConsole().print(
@@ -378,7 +378,7 @@ class CLIAgentSetupMixin:
                     (self.session_id,),
                 )
                 self._session_db._conn.commit()
-            except (sqlite3.DatabaseError):
+            except Exception:
                 pass
 
         try:
@@ -525,7 +525,7 @@ class CLIAgentSetupMixin:
         # walk to the descendant that actually holds the messages. See #15000.
         try:
             resolved_id = self._session_db.resolve_resume_session_id(self.session_id)
-        except (AttributeError, ValueError):
+        except Exception:
             resolved_id = self.session_id
         if resolved_id and resolved_id != self.session_id:
             self._console_print(
@@ -568,7 +568,7 @@ class CLIAgentSetupMixin:
                 (self.session_id,),
             )
             self._session_db._conn.commit()
-        except (sqlite3.DatabaseError):
+        except Exception:
             pass
 
         return True
@@ -704,7 +704,7 @@ class CLIAgentSetupMixin:
             _session_label_c = _skin.get_color("session_label", "#DAA520")
             _session_border_c = _skin.get_color("session_border", "#8B8682")
             _assistant_label_c = _skin.get_color("ui_ok", "#8FBC8F")
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _history_text_c = "#FFF8DC"
             _session_label_c = "#DAA520"
             _session_border_c = "#8B8682"

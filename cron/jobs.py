@@ -210,7 +210,7 @@ def _job_running_in_this_process(job_id: str) -> bool:
         from cron.scheduler import get_running_job_ids
 
         return job_id in get_running_job_ids()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -649,7 +649,7 @@ def _recoverable_oneshot_run_at(
 
     try:
         run_at_dt = _ensure_aware(datetime.fromisoformat(run_at))
-    except (AttributeError, ValueError):
+    except Exception:
         return None
     if run_at_dt >= now - timedelta(seconds=ONESHOT_GRACE_SECONDS):
         return run_at
@@ -684,7 +684,7 @@ def _compute_grace_seconds(schedule: dict) -> int:
                 period_seconds = int((second - first).total_seconds())
                 grace = period_seconds // 2
                 return max(MIN_GRACE, min(grace, MAX_GRACE))
-            except (ValueError, TypeError):
+            except Exception:
                 pass
 
     return MIN_GRACE
@@ -717,7 +717,7 @@ def compute_next_run(
             try:
                 last = _ensure_aware(datetime.fromisoformat(last_run_at))
                 next_run = last + timedelta(minutes=minutes)
-            except (AttributeError, ValueError):
+            except Exception:
                 next_run = now + timedelta(minutes=minutes)
         else:
             # First run is now + interval
@@ -745,7 +745,7 @@ def compute_next_run(
         if last_run_at:
             try:
                 base_time = _ensure_aware(datetime.fromisoformat(last_run_at))
-            except (AttributeError, ValueError):
+            except Exception:
                 base_time = now
         cron = croniter(expr, base_time)
         next_run = cron.get_next(datetime)
@@ -796,12 +796,12 @@ def record_ticker_heartbeat(success: bool = False) -> None:
     """
     try:
         _atomic_write_epoch(TICKER_HEARTBEAT_FILE)
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     if success:
         try:
             _atomic_write_epoch(TICKER_SUCCESS_FILE)
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
 
@@ -809,7 +809,7 @@ def _epoch_file_age(path: Path) -> Optional[float]:
     try:
         raw = path.read_text(encoding="utf-8").strip()
         return max(0.0, time.time() - float(raw))
-    except (ValueError, TypeError):
+    except Exception:
         return None
 
 
@@ -969,7 +969,7 @@ def _resolve_default_model_snapshot() -> Optional[str]:
             from hercules_cli import managed_scope
 
             cfg = managed_scope.apply_managed_overlay(cfg)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
         cfg = _expand_env_vars(cfg)
         model_cfg = cfg.get("model") or {}
@@ -980,7 +980,7 @@ def _resolve_default_model_snapshot() -> Optional[str]:
             if isinstance(default, str):
                 return default.strip() or None
         return None
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
 
@@ -1030,12 +1030,12 @@ def _compute_provider_model_snapshots(
             snap = resolve_runtime_provider(**runtime_kwargs)
             snap_provider = str(snap.get("provider") or "").strip().lower()
             provider_snapshot = snap_provider or None
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             provider_snapshot = None
     if normalized_model is None:
         try:
             model_snapshot = _resolve_default_model_snapshot() or None
-        except (AttributeError, ValueError):
+        except Exception:
             model_snapshot = None
     return provider_snapshot, model_snapshot
 
@@ -1742,7 +1742,7 @@ def _machine_id() -> str:
         import socket
 
         host = socket.gethostname()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         host = "unknown"
     return f"{host}:{os.getpid()}"
 
@@ -1789,7 +1789,7 @@ def claim_job_for_fire(job_id: str, *, claim_ttl_seconds: int = 300) -> bool:
                     _age = (now - claimed_at).total_seconds()
                     if 0 <= _age < claim_ttl_seconds:
                         return False  # someone holds a fresh claim
-                except (KeyError, IndexError):
+                except Exception:
                     pass  # malformed claim → overwrite
             job["fire_claim"] = {"at": now.isoformat(), "by": _machine_id()}
             kind = job.get("schedule", {}).get("kind")
@@ -1877,7 +1877,7 @@ def _get_due_jobs_locked() -> List[Dict[str, Any]]:
             else:
                 try:
                     datetime.fromisoformat(nr)
-                except (AttributeError, ValueError):
+                except Exception:
                     j.pop("next_run_at", None)
                     needs_save = True
     for rj in raw_jobs:
@@ -1889,7 +1889,7 @@ def _get_due_jobs_locked() -> List[Dict[str, Any]]:
             else:
                 try:
                     datetime.fromisoformat(nr)
-                except (AttributeError, ValueError):
+                except Exception:
                     rj.pop("next_run_at", None)
                     needs_save = True
 
@@ -1902,7 +1902,7 @@ def _get_due_jobs_locked() -> List[Dict[str, Any]]:
         elif isinstance(lr, str):
             try:
                 datetime.fromisoformat(lr)
-            except (AttributeError, ValueError):
+            except Exception:
                 j.pop("last_run_at", None)
                 needs_save = True
     for rj in raw_jobs:
@@ -1913,7 +1913,7 @@ def _get_due_jobs_locked() -> List[Dict[str, Any]]:
         elif isinstance(lr, str):
             try:
                 datetime.fromisoformat(lr)
-            except (AttributeError, ValueError):
+            except Exception:
                 rj.pop("last_run_at", None)
                 needs_save = True
 
@@ -2177,7 +2177,7 @@ def _cron_output_keep() -> int:
         cfg = load_config() or {}
         cron_cfg = cfg.get("cron", {}) if isinstance(cfg, dict) else {}
         return int(cron_cfg.get("output_retention", _CRON_OUTPUT_DEFAULT_KEEP))
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return _CRON_OUTPUT_DEFAULT_KEEP
 
 
@@ -2262,7 +2262,7 @@ def referenced_skill_names() -> Set[str]:
     """
     try:
         jobs = load_jobs()
-    except (AttributeError, ValueError):
+    except Exception:
         logger.debug("referenced_skill_names: failed to load cron jobs", exc_info=True)
         return set()
 

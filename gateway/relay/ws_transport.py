@@ -184,7 +184,7 @@ def _passthrough_from_wire(raw: Dict[str, Any]) -> PassthroughForward:
     body_b64 = raw.get("bodyB64", "") or ""
     try:
         body = base64.b64decode(body_b64)
-    except (AttributeError, ValueError):
+    except Exception:
         body = b""
     headers_raw = raw.get("headers", []) or []
     headers: list[tuple[str, str]] = []
@@ -364,7 +364,7 @@ class WebSocketRelayTransport:
         if self._ws is not None:
             try:
                 await self._ws.close()
-            except (RuntimeError):
+            except Exception:
                 pass
             self._ws = None
         # Fail any in-flight outbound waiters so callers don't hang.
@@ -509,7 +509,7 @@ class WebSocketRelayTransport:
         self._dormant = True
         try:
             await self._ws.close()
-        except (RuntimeError):
+        except Exception:
             logger.debug("relay go_dormant: ws.close() raised", exc_info=True)
         return acked
 
@@ -522,7 +522,7 @@ class WebSocketRelayTransport:
         """
         try:
             await self._send({"type": "inbound_ack", "bufferId": buffer_id})
-        except (RuntimeError):
+        except Exception:
             logger.debug("relay: inbound_ack send failed for %s", buffer_id)
 
     async def _request_response(

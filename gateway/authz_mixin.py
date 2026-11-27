@@ -124,7 +124,7 @@ def _platform_auth_env(platform, platform_value: str) -> tuple:
             from gateway.platform_registry import platform_registry
 
             entry = platform_registry.get(platform_value)
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             entry = None
         if entry is not None:
             allowed_env = allowed_env or (getattr(entry, "allowed_users_env", "") or "")

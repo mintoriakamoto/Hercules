@@ -149,19 +149,19 @@ def _collect_memory_provider_external_paths() -> List[Path]:
     """
     try:
         from plugins.memory import _get_active_memory_provider, load_memory_provider
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     try:
         active = _get_active_memory_provider()
-    except (AttributeError, ValueError):
+    except Exception:
         active = None
     if not active:
         return []
 
     try:
         provider = load_memory_provider(active)
-    except (AttributeError, ValueError):
+    except Exception:
         provider = None
     if provider is None:
         return []

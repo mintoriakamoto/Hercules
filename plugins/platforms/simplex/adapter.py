@@ -266,7 +266,7 @@ class SimplexAdapter(BasePlatformAdapter):
         if self._ws:
             try:
                 await self._ws.close()
-            except (AttributeError, ValueError):
+            except Exception:
                 pass
             self._ws = None
 
@@ -321,7 +321,7 @@ class SimplexAdapter(BasePlatformAdapter):
                             await self._handle_event(msg)
                         except json.JSONDecodeError:
                             logger.debug("SimpleX WS: invalid JSON: %.100s", raw)
-                        except (AttributeError, ValueError):
+                        except Exception:
                             logger.exception("SimpleX WS: error handling event")
 
             except asyncio.CancelledError:
@@ -431,7 +431,7 @@ class SimplexAdapter(BasePlatformAdapter):
             for item in chat_items:
                 try:
                     await self._handle_chat_item(item)
-                except (AttributeError, ValueError):
+                except Exception:
                     logger.exception("SimpleX: error processing chat item")
             return
 
@@ -439,7 +439,7 @@ class SimplexAdapter(BasePlatformAdapter):
         if resp_type == "newChatItem":
             try:
                 await self._handle_chat_item(resp)
-            except (AttributeError, ValueError):
+            except Exception:
                 logger.exception("SimpleX: error processing chat item")
             return
 
@@ -465,7 +465,7 @@ class SimplexAdapter(BasePlatformAdapter):
                     pending["chatItem"] = pending_item_data
                     try:
                         await self._handle_chat_item(pending)
-                    except (AttributeError, ValueError):
+                    except Exception:
                         logger.exception(
                             "SimpleX: error processing deferred file message"
                         )
@@ -641,7 +641,7 @@ class SimplexAdapter(BasePlatformAdapter):
                 timestamp = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
             else:
                 timestamp = datetime.now(tz=timezone.utc)
-        except (ValueError, AttributeError):
+        except Exception:
             timestamp = datetime.now(tz=timezone.utc)
 
         msg_event = MessageEvent(

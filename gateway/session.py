@@ -375,7 +375,7 @@ def _discord_tools_loaded() -> bool:
         cfg = load_config()
         enabled = _get_platform_tools(cfg, "discord", include_default_mcp_servers=False)
         return "discord" in enabled or "discord_admin" in enabled
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
 
@@ -422,7 +422,7 @@ def build_session_context_prompt(
             entry = platform_registry.get(context.source.platform.value)
             if entry and entry.pii_safe:
                 _is_pii_safe = True
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             pass
     redact_pii = redact_pii and _is_pii_safe
     lines = [
@@ -1073,7 +1073,7 @@ class SessionStore:
         """
         try:
             return str(Path(self.sessions_dir).resolve())
-        except (ValueError):
+        except Exception:
             return str(self.sessions_dir)
 
     def _ensure_loaded_locked(self) -> None:
@@ -1360,7 +1360,7 @@ class SessionStore:
             from hercules_cli.profiles import get_active_profile_name
 
             return get_active_profile_name() or "default"
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return None
 
     @staticmethod
@@ -1380,7 +1380,7 @@ class SessionStore:
             from hercules_cli.profiles import get_active_profile_name
 
             return get_active_profile_name() or "default"
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return "default"
 
     def _recovered_row_allowed_for_active_profile(
@@ -1702,7 +1702,7 @@ class SessionStore:
                 session_type=entry.chat_type,
             )
             return policy.mode != "none"
-        except (AttributeError, ValueError):
+        except Exception:
             return False
 
     def _is_session_ended_in_db(self, session_id: str) -> bool:
@@ -1727,7 +1727,7 @@ class SessionStore:
             return False
         try:
             row = db.get_session(session_id)
-        except (AttributeError, ValueError):
+        except Exception:
             return False
         return bool(row is not None and row.get("end_reason") is not None)
 
@@ -1791,7 +1791,7 @@ class SessionStore:
             return session_id
         try:
             return self._db.get_compression_tip(session_id) or session_id
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug(
                 "Compression-tip lookup failed for session %s",
                 session_id,
@@ -1835,7 +1835,7 @@ class SessionStore:
         if self._db:
             try:
                 return self._db.session_count() > 1
-            except (AttributeError, ValueError):
+            except Exception:
                 pass  # fall through to heuristic
         # Fallback: check if sessions.json was loaded with existing data.
         # This covers the rare case where the DB is unavailable.
@@ -2534,7 +2534,7 @@ class SessionStore:
             return False
         try:
             return self._db.has_platform_message_id(session_id, platform_message_id)
-        except (AttributeError, ValueError):
+        except Exception:
             logger.debug("has_platform_message_id lookup failed", exc_info=True)
             return False
 

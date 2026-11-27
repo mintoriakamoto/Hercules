@@ -261,7 +261,7 @@ def flush_stdin() -> None:
         import termios
 
         termios.tcflush(sys.stdin, termios.TCIFLUSH)
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -533,7 +533,7 @@ def _run_curses_menu(
 
     except KeyboardInterrupt:
         return cancel_value
-    except (IndexError, KeyError):
+    except Exception:
         return fallback()
 
 

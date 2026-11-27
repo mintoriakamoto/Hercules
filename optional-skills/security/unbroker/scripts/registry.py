@@ -286,7 +286,7 @@ def _fetch_ca_latest() -> tuple[str, list[dict]]:
     for url in ca_candidate_urls():
         try:
             recs = parse(fetch(url), jurisdiction="US-CA", has_drop=True)
-        except (AttributeError, ValueError):
+        except Exception:  # noqa: BLE001 - a missing year 404s; fall through to older years
             continue
         if recs:
             return url, recs

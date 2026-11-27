@@ -292,7 +292,7 @@ def _run_reference(
                     provider=runtime.get("provider"),
                     api_mode=runtime.get("api_mode"),
                 )
-            except (requests.RequestException, httpx.RequestError, OSError):
+            except Exception:  # pragma: no cover - defensive
                 usage = CanonicalUsage()
         # Price this advisor at ITS OWN model/provider rate (with correct
         # cache-read/cache-write split), not the aggregator's. This is why
@@ -312,7 +312,7 @@ def _run_reference(
             cost_usd = cost.amount_usd
             cost_status = cost.status
             cost_source = cost.source
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:  # pragma: no cover - defensive
             pass
         _output_text = _extract_text(response) or "(empty response)"
         acct = _RefAccounting(
@@ -435,7 +435,7 @@ def _render_tool_calls(tool_calls: Any) -> str:
                 import json
 
                 args_text = json.dumps(args, ensure_ascii=False)
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 args_text = str(args)
         else:
             args_text = ""
@@ -552,7 +552,7 @@ def _extract_text(response: Any) -> str:
         text = (normalized.content or "").strip()
         if text:
             return text
-    except (AttributeError, ValueError):
+    except Exception:
         pass
     try:
         message = response.choices[0].message
@@ -563,7 +563,7 @@ def _extract_text(response: Any) -> str:
         if not isinstance(content, str):
             content = str(content) if content else ""
         return content.strip()
-    except (AttributeError, ValueError):
+    except Exception:
         return ""
 
 

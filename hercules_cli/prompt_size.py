@@ -92,7 +92,7 @@ def compute_prompt_breakdown(platform: str = "cli") -> Dict[str, Any]:
                 memory_block = store.format_for_system_prompt("memory") or ""
             if getattr(agent, "_user_profile_enabled", True):
                 user_block = store.format_for_system_prompt("user") or ""
-        except (AttributeError):
+        except Exception:
             pass
 
     # Tool-schema JSON — the other half of the fixed per-call payload.

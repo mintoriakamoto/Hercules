@@ -28,7 +28,7 @@ def get_provider_request_timeout(
         from hercules_cli.config import load_config_readonly
 
         config = load_config_readonly()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     providers = config.get("providers", {}) if isinstance(config, dict) else {}
@@ -58,7 +58,7 @@ def get_provider_stale_timeout(
         from hercules_cli.config import load_config_readonly
 
         config = load_config_readonly()
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     providers = config.get("providers", {}) if isinstance(config, dict) else {}

@@ -46,7 +46,7 @@ def _get_anthropic_sdk():
             _lazy_ensure("provider.anthropic", prompt=False)
         except ImportError:
             pass
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             # FeatureUnavailable — fall through to ImportError handling below
             pass
         try:
@@ -219,7 +219,7 @@ def _resolve_positive_anthropic_max_tokens(value) -> Optional[int]:
 
         if not math.isfinite(value):
             return None
-    except (ImportError, ModuleNotFoundError, ValueError):
+    except Exception:
         return None
     floored = int(value)  # truncates toward zero for floats
     return floored if floored > 0 else None
@@ -385,7 +385,7 @@ def _detect_claude_code_version() -> str:
                 version = result.stdout.strip().split()[0]
                 if version and version[0].isdigit():
                     return version
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        except Exception:
             pass
     return _CLAUDE_CODE_VERSION_FALLBACK
 
@@ -1310,7 +1310,7 @@ def _resolve_anthropic_pool_token() -> Optional[str]:
         # is deliberately NOT used — it runs clear_expired=True, refresh=True,
         # which would violate this read-only contract.
         entries = pool._available_entries(clear_expired=False, refresh=False)
-    except (OSError):
+    except Exception:
         logger.debug("Failed to read Anthropic credential_pool", exc_info=True)
         return None
 

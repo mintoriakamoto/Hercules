@@ -1230,9 +1230,9 @@ def check_image_generation_requirements() -> bool:
             try:
                 if provider.is_available():
                     return True
-            except (AttributeError, ValueError):
+            except Exception:
                 continue
-    except (AttributeError, ValueError):
+    except Exception:
         pass
 
     return False
@@ -1712,7 +1712,7 @@ def _active_image_capabilities() -> Dict[str, Any]:
                 caps = {}
                 try:
                     caps = provider.capabilities() or {}
-                except (AttributeError, ValueError):
+                except Exception:
                     caps = {}
                 info["provider"] = provider.display_name
                 info["model"] = _read_configured_image_model() or (
@@ -1723,7 +1723,7 @@ def _active_image_capabilities() -> Dict[str, Any]:
                 if caps.get("max_reference_images"):
                     info["max_reference_images"] = int(caps["max_reference_images"])
                 return info
-        except (ValueError):
+        except Exception:
             pass
 
     # In-tree FAL path (provider unset or == "fal").
@@ -1737,7 +1737,7 @@ def _active_image_capabilities() -> Dict[str, Any]:
         else:
             info["modalities"] = ["text"]
             info["max_reference_images"] = 0
-    except (ValueError):
+    except Exception:
         pass
 
     return info
@@ -1749,7 +1749,7 @@ def _build_dynamic_image_schema() -> Dict[str, Any]:
 
     try:
         info = _active_image_capabilities()
-    except (AttributeError, ValueError):
+    except Exception:
         return {"description": _GENERIC_IMAGE_DESCRIPTION}
 
     provider = info.get("provider")

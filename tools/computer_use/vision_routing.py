@@ -116,7 +116,7 @@ def _lookup_supports_vision(
         from agent.image_routing import (
             _lookup_supports_vision as _lookup_image_supports,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _lookup_image_supports = None
     if _lookup_image_supports is not None:
         try:
