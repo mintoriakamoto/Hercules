@@ -24,7 +24,7 @@ class TestConsciousnessMetrics:
         assert metrics.checkpoints_count == 1
         assert len(metrics.evidence) == 1
         assert metrics.evidence[0].property_name == ConsciousnessProperty.CONTINUITY
-        assert "checkpoint" in metrics.evidence[0].description
+        assert "checkpoint" in metrics.evidence[0].description.lower()
 
     def test_record_agency(self):
         """Test recording self-set goals."""

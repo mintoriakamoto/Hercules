@@ -164,6 +164,8 @@ def _install_fake_tools_package():
         check_all_command_guards=lambda *args, **kwargs: {"approved": True},
         load_permanent_allowlist=lambda *args, **kwargs: [],
         DANGEROUS_PATTERNS=[],
+        set_hercules_spinner_pause_context=lambda paused: None,
+        reset_hercules_spinner_pause_context=lambda token: None,
     )
 
     class _Registry:

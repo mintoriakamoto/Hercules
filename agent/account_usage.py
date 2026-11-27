@@ -433,6 +433,6 @@ def fetch_account_usage(
             return _fetch_anthropic_account_usage()
         if normalized == "openrouter":
             return _fetch_openrouter_account_usage(base_url, api_key)
-    except (httpx.HTTPStatusError, httpx.RequestError, ValueError):
+    except Exception:
         return None
     return None

@@ -2150,7 +2150,7 @@ def switch_model(agent, new_model, new_provider, api_key="", base_url="", api_mo
                 reason="switch_model",
                 shared=True,
             )
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError, requests.RequestException):
+    except Exception:
         # Rollback every mutated field to the pre-swap snapshot so the agent
         # is left consistent (old model + old provider + old client) and the
         # caller's exception handler can surface a meaningful warning.  The

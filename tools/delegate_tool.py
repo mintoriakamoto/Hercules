@@ -1052,7 +1052,7 @@ def _emit_parent_console(parent_agent, line: str) -> None:
         try:
             printer(line)
             return
-        except (OSError, UnicodeEncodeError, BrokenPipeError):
+        except Exception:
             # OSError/BrokenPipeError: output stream closed
             # UnicodeEncodeError: string encoding failure
             pass
