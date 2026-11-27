@@ -231,11 +231,12 @@ class SpeculativeExecutionPipeline:
         if task_category in ["complex", "critical", "security"]:
             return True
 
-        # Check success rate for category
-        if task_category:
-            success_rate = self.metrics.success_rate_by_category.get(
-                task_category, 0.5
-            )
+        # Check success rate for category, but only once that category has
+        # been observed. An unseen category has no rate; a made-up 0.5 made
+        # every new category fire the capable model in parallel.
+        by_category = self.metrics.success_rate_by_category
+        if task_category and by_category.get(f"{task_category}_count", 0) > 0:
+            success_rate = by_category.get(task_category, 0.0)
             # If success rate is low, speculate capable
             if success_rate < 0.7:
                 return True
