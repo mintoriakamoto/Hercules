@@ -30,7 +30,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from hercules_constants import get_hercules_home
-except (ImportError, ModuleNotFoundError):
+except Exception:  # pragma: no cover — plugin may load before constants resolves
     import os
 
     def get_hercules_home() -> Path:  # type: ignore[no-redef]

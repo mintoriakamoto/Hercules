@@ -1029,7 +1029,7 @@ def fetch_openrouter_models(
         )
         with _urlopen_model_catalog_request(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode())
-    except (OSError):
+    except Exception:
         return list(_openrouter_catalog_cache or fallback)
 
     live_items = payload.get("data", [])
@@ -1132,7 +1132,7 @@ def fetch_models_with_pricing(
         req = urllib.request.Request(url, headers=headers)
         with _urlopen_model_catalog_request(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode())
-    except (OSError):
+    except Exception:
         _pricing_cache[cache_key] = {}
         return {}
 
@@ -1212,7 +1212,7 @@ def _fetch_novita_pricing(
         req = urllib.request.Request(url, headers=headers)
         with _urlopen_model_catalog_request(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode())
-    except (OSError):
+    except Exception:
         _pricing_cache[cache_key] = {}
         return {}
 
@@ -1427,7 +1427,7 @@ def _resolve_static_model_alias(
     """Resolve short aliases (e.g. sonnet/opus) using static catalogs only."""
     try:
         from hercules_cli.model_switch import MODEL_ALIASES
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     identity = MODEL_ALIASES.get(name_lower)
@@ -1972,7 +1972,7 @@ def provider_model_ids(
                         # so the picker still offers sane defaults.
                         return curated or live
                     return live
-            except (IndexError, KeyError):
+            except Exception:
                 pass
     if normalized == "gmi":
         try:
@@ -2033,7 +2033,7 @@ def provider_model_ids(
                 creds = resolve_api_key_provider_credentials(normalized)
                 api_key = str(creds.get("api_key") or "").strip()
                 base_url = str(creds.get("base_url") or "").strip()
-            except (ValueError):
+            except Exception:
                 api_key, base_url = "", _p.base_url
             if not base_url:
                 base_url = _p.base_url
@@ -2075,7 +2075,7 @@ def provider_model_ids(
             # Use profile's fallback_models if defined
             if _p.fallback_models:
                 return list(_p.fallback_models)
-    except (ValueError):
+    except Exception:
         pass
 
     curated_static = list(_PROVIDER_MODELS.get(normalized, []))
@@ -2196,7 +2196,7 @@ def _load_provider_models_cache() -> dict:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}
-    except (OSError):
+    except Exception:
         return {}
 
 
@@ -2284,7 +2284,7 @@ def clear_provider_models_cache(provider: Optional[str] = None) -> None:
         if normalized in cache:
             del cache[normalized]
             _save_provider_models_cache(cache)
-    except (IndexError, KeyError):
+    except Exception:
         pass
 
 
@@ -2342,7 +2342,7 @@ def _fetch_anthropic_models(
             if is_oauth and http_err.code == 400:
                 try:
                     body_text = http_err.read().decode(errors="ignore").lower()
-                except (OSError):
+                except Exception:
                     body_text = ""
                 if (
                     "long context beta" in body_text
@@ -2465,7 +2465,7 @@ def fetch_github_model_catalog(
                     models.append(item)
                 if models:
                     return models
-        except (OSError, ValueError):
+        except Exception:
             continue
     return None
 
@@ -2728,7 +2728,7 @@ def ensure_lmstudio_model_loaded(
         )
         with _urlopen_model_catalog_request(load_request, timeout=timeout) as resp:
             resp.read()
-    except (OSError):
+    except Exception:
         return None
     return target_context_length
 
@@ -3089,7 +3089,7 @@ def normalize_opencode_base_url(
         return url
     try:
         host = urllib.parse.urlparse(url).netloc.lower()
-    except (OSError, urllib.error.URLError):
+    except Exception:
         host = ""
     if host == "opencode.ai" or host.endswith(".opencode.ai"):
         return url + "/v1"
@@ -3219,7 +3219,7 @@ def probe_api_models(
                     else normalized,
                     "used_fallback": is_fallback,
                 }
-        except (OSError):
+        except Exception:
             continue
 
     return {
@@ -3302,7 +3302,7 @@ def _load_ollama_cloud_cache(*, ignore_ttl: bool = False) -> Optional[dict]:
             if (time.time() - cached_at) > _OLLAMA_CLOUD_CACHE_TTL:
                 return None  # stale
         return data
-    except (OSError):
+    except Exception:
         pass
     return None
 

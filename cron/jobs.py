@@ -684,7 +684,7 @@ def _compute_grace_seconds(schedule: dict) -> int:
                 period_seconds = int((second - first).total_seconds())
                 grace = period_seconds // 2
                 return max(MIN_GRACE, min(grace, MAX_GRACE))
-            except (ValueError, TypeError):
+            except Exception:
                 pass
 
     return MIN_GRACE
@@ -809,7 +809,7 @@ def _epoch_file_age(path: Path) -> Optional[float]:
     try:
         raw = path.read_text(encoding="utf-8").strip()
         return max(0.0, time.time() - float(raw))
-    except (ValueError, TypeError):
+    except Exception:
         return None
 
 
@@ -1789,7 +1789,7 @@ def claim_job_for_fire(job_id: str, *, claim_ttl_seconds: int = 300) -> bool:
                     _age = (now - claimed_at).total_seconds()
                     if 0 <= _age < claim_ttl_seconds:
                         return False  # someone holds a fresh claim
-                except (KeyError, IndexError):
+                except Exception:
                     pass  # malformed claim → overwrite
             job["fire_claim"] = {"at": now.isoformat(), "by": _machine_id()}
             kind = job.get("schedule", {}).get("kind")

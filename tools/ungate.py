@@ -78,7 +78,7 @@ def open_guardrails_enabled() -> bool:
             from utils import is_truthy_value
 
             opted_in = is_truthy_value(raw)
-        except Exception:
+        except Exception:  # pragma: no cover - utils must not be a hard dep here
             opted_in = str(raw).strip().lower() not in {"0", "false", "no", "off"}
         if not opted_in:
             return False

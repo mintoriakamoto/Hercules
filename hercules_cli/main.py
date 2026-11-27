@@ -147,7 +147,7 @@ def _config_default_interface_early() -> str:
                 iface = disp.get("interface")
                 if isinstance(iface, str) and iface.strip().lower() == "tui":
                     value = "tui"
-    except (AttributeError, ImportError, ModuleNotFoundError, OSError):
+    except Exception:
         value = "cli"  # best-effort — default to classic REPL on any error
     _EARLY_INTERFACE_CACHE = [value]
     return value
@@ -887,7 +887,7 @@ def _has_any_provider_configured() -> bool:
                 val = val.strip().strip("'\"")
                 if key.strip() in provider_env_vars and val:
                     return True
-        except (IndexError, KeyError):
+        except Exception:
             pass
 
     # Check provider-specific auth fallbacks (for example, Copilot via gh auth).
@@ -898,7 +898,7 @@ def _has_any_provider_configured() -> bool:
             status = get_auth_status(provider_id)
             if status.get("logged_in"):
                 return True
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         pass
 
     # Check for stored provider OAuth credentials
@@ -1164,7 +1164,7 @@ def _session_browse_picker(sessions: list) -> Optional[str]:
         curses.wrapper(_curses_browse)
         return result_holder[0]
 
-    except (IndexError, KeyError):
+    except Exception:
         pass
 
     # Fallback: numbered list (Windows without curses, etc.)
@@ -1373,7 +1373,7 @@ def _read_tui_active_session_file(path: Optional[str]) -> Optional[str]:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         sid = str(data.get("session_id") or "").strip()
         return sid or None
-    except (ValueError):
+    except Exception:
         return None
 
 
@@ -4885,7 +4885,7 @@ def _nixos_build_env() -> dict[str, str] | None:
             python3_path = result.stdout.strip()
             if python3_path and Path(python3_path).exists():
                 return {**os.environ, "PYTHON": python3_path}
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         pass  # nix-shell not available — caller will get None
 
     return None
@@ -5490,7 +5490,7 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
         return []
     try:
         import psutil
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
     try:
         release_dir = (desktop_dir / "release").resolve()
@@ -5503,7 +5503,7 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
     victims = []
     try:
         proc_iter = psutil.process_iter(["pid", "exe"])
-    except (IndexError, KeyError):
+    except Exception:
         return []
     for proc in proc_iter:
         try:
@@ -5526,7 +5526,7 @@ def _stop_desktop_processes_locking_build(desktop_dir: Path) -> list[int]:
         try:
             proc.terminate()
             stopped.append(int(proc.pid))
-        except (ValueError):
+        except Exception:
             continue
     if stopped:
         # Wait for the handles (and thus the file locks) to actually release.
@@ -6156,7 +6156,7 @@ def _print_curator_first_run_notice() -> None:
     """
     try:
         from agent import curator
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
     try:
         if not curator.is_enabled():
@@ -6202,7 +6202,7 @@ def _print_curator_recent_run_notice() -> None:
     """
     try:
         from agent import curator
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
     try:
         state = curator.load_state()
@@ -6229,7 +6229,7 @@ def _print_curator_recent_run_notice() -> None:
         try:
             state["last_run_summary_shown_at"] = last_run_at
             curator.save_state(state)
-        except (IndexError, KeyError):
+        except Exception:
             pass
         return
 
@@ -6248,7 +6248,7 @@ def _print_curator_recent_run_notice() -> None:
     try:
         state["last_run_summary_shown_at"] = last_run_at
         curator.save_state(state)
-    except (IndexError, KeyError):
+    except Exception:
         pass
 
 
@@ -6896,7 +6896,7 @@ def _get_origin_url(git_cmd: list[str], cwd: Path) -> Optional[str]:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         pass
     return None
 
@@ -6928,7 +6928,7 @@ def _has_upstream_remote(git_cmd: list[str], cwd: Path) -> bool:
             text=True,
         )
         return result.returncode == 0
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return False
 
 
@@ -6942,7 +6942,7 @@ def _add_upstream_remote(git_cmd: list[str], cwd: Path) -> bool:
             text=True,
         )
         return result.returncode == 0
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return False
 
 
@@ -6957,7 +6957,7 @@ def _count_commits_between(git_cmd: list[str], cwd: Path, base: str, head: str) 
         )
         if result.returncode == 0:
             return int(result.stdout.strip())
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         pass
     return -1
 
@@ -6992,7 +6992,7 @@ def _sync_fork_with_upstream(git_cmd: list[str], cwd: Path) -> bool:
             text=True,
         )
         return result.returncode == 0
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return False
 
 
@@ -7175,7 +7175,7 @@ def _load_installable_optional_extras(group: str = "all") -> list[str]:
 
         with (PROJECT_ROOT / "pyproject.toml").open("rb") as handle:
             project = tomllib.load(handle).get("project", {})
-    except (ImportError, ModuleNotFoundError, OSError):
+    except Exception:
         return []
 
     optional_deps = project.get("optional-dependencies", {})
@@ -7304,7 +7304,7 @@ def _recover_from_interrupted_install() -> None:
                         try:
                             _anc_exe = _anc.exe()
                             _anc_norm = str(Path(_anc_exe).resolve()).lower()
-                        except (ValueError):
+                        except Exception:
                             continue
                         if _anc_norm in _shim_set:
                             print(
@@ -7504,7 +7504,7 @@ def _detect_concurrent_hercules_instances(
 
     try:
         import psutil
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     # Resolve every shim path to its canonical form once for cheap comparison.
@@ -7562,7 +7562,7 @@ def _detect_concurrent_hercules_instances(
             if anc_norm in shim_paths:
                 try:
                     exclude_pids.add(int(ancestor.pid))
-                except (ValueError):
+                except Exception:
                     continue
     except (ValueError):
         pass
@@ -7570,7 +7570,7 @@ def _detect_concurrent_hercules_instances(
     matches: list[tuple[int, str]] = []
     try:
         proc_iter = psutil.process_iter(["pid", "exe", "name"])
-    except (IndexError, KeyError):
+    except Exception:
         return []
 
     for proc in proc_iter:
@@ -7753,7 +7753,7 @@ def _schedule_replace_on_reboot(shim: Path, quarantine_target: Path) -> bool:
             MOVEFILE_REPLACE_EXISTING | MOVEFILE_DELAY_UNTIL_REBOOT,
         )
         return bool(ok)
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
+    except Exception:
         return False
 
 
@@ -8117,7 +8117,7 @@ def _verify_core_dependencies_installed(
         try:
             if marker.evaluate():  # type: ignore[union-attr]
                 applicable.append(name)
-        except (IndexError, KeyError):
+        except Exception:
             applicable.append(name)
 
     if not applicable:
@@ -8332,7 +8332,7 @@ def _ensure_uv_for_termux(pip_cmd: list[str]) -> str | None:
         )
         if result.returncode != 0:
             return None
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         pass
     # After pip install, check managed path first, then PATH
     return resolve_uv() or shutil.which("uv")
@@ -8428,7 +8428,7 @@ class _UpdateOutputStream:
         if self._log is not None:
             try:
                 self._log.write(data)
-            except (OSError):
+            except Exception:
                 # Log errors should never abort the update.
                 pass
 
@@ -8546,7 +8546,7 @@ def _install_hangup_protection(gateway_mode: bool = False):
         sys.stdout = _UpdateOutputStream(state["prev_stdout"], log_file)
         sys.stderr = _UpdateOutputStream(state["prev_stderr"], log_file)
         state["installed"] = True
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, OSError):
+    except Exception:
         # Leave stdio untouched on any setup failure.  Update continues
         # without mirroring.
         state["log_file"] = None
@@ -8573,7 +8573,7 @@ def _log_only_write(text: str) -> None:
     try:
         log_file.write(text if text.endswith("\n") else text + "\n")
         log_file.flush()
-    except (OSError):
+    except Exception:
         pass
 
 
@@ -8605,11 +8605,11 @@ def _finalize_update_output(state):
     if state.get("installed"):
         try:
             sys.stdout = state.get("prev_stdout", sys.stdout)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
         try:
             sys.stderr = state.get("prev_stderr", sys.stderr)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
     log_file = state.get("log_file")
     if log_file is not None:
@@ -8988,7 +8988,7 @@ def _run_pre_update_backup(args) -> None:
             display_path = f"{display_hercules_home()}/{out_path.relative_to(home)}"
         except ValueError:
             display_path = str(out_path)
-    except (ValueError):
+    except Exception:
         display_path = str(out_path)
 
     print(f"  Saved:    {display_path} ({size_str}, {elapsed:.1f}s)")
@@ -9150,7 +9150,7 @@ def _detect_venv_python_processes(
         return []
     try:
         import psutil
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     venv_dir = PROJECT_ROOT / "venv"
@@ -9168,13 +9168,13 @@ def _detect_venv_python_processes(
     try:
         for anc in psutil.Process().parents():
             skip.add(int(anc.pid))
-    except (ValueError):
+    except Exception:
         pass
 
     matches: list[tuple[int, str, str]] = []
     try:
         proc_iter = psutil.process_iter(["pid", "exe", "name", "cmdline", "cwd"])
-    except (IndexError, KeyError):
+    except Exception:
         return []
     for proc in proc_iter:
         try:
@@ -9318,7 +9318,7 @@ def _pause_windows_gateways_for_update() -> dict | None:
     print("→ Stopping Windows gateway process(es) before updating Hercules...")
     try:
         drain_timeout = max(float(_get_restart_drain_timeout()), 1.0)
-    except (ValueError):
+    except Exception:
         drain_timeout = 10.0
     survivors = _wait_for_windows_update_gateway_exit(
         mapped_pids,
@@ -9521,7 +9521,7 @@ def _discard_lockfile_churn(git_cmd, repo_root):
             check=False,
         )
         print(f"→ Discarded npm lockfile churn ({len(dirty)} file(s))")
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         # Never let lockfile cleanup block an update.
         pass
 
@@ -10344,7 +10344,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
                         print(f"  {p.name}: {status}")
                     except Exception as pe:
                         print(f"  {p.name}: error ({pe})")
-        except (IndexError, KeyError):
+        except Exception:
             pass  # profiles module not available or no profiles
 
         # Backfill per-profile .env files for profiles created before the
@@ -10768,7 +10768,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
                 from hercules_constants import (
                     DEFAULT_GATEWAY_RESTART_DRAIN_TIMEOUT as _DEFAULT_DRAIN,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _DEFAULT_DRAIN = 60.0
             _cfg_drain = None
             try:
@@ -12281,7 +12281,7 @@ def cmd_dashboard(args):
                     import webbrowser
 
                     webbrowser.open(url)
-                except (ImportError, ModuleNotFoundError, OSError):
+                except Exception:
                     pass
             sys.exit(0)
 
@@ -12327,7 +12327,7 @@ def cmd_dashboard(args):
             from hercules_constants import get_default_hercules_root
 
             env["HERCULES_HOME"] = str(get_default_hercules_root())
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
+        except Exception:
             # Best-effort: if root resolution fails, fall back to the prior
             # behaviour (drop HERCULES_HOME) rather than block the reroute.
             env.pop("HERCULES_HOME", None)
@@ -13178,7 +13178,7 @@ def main():
     try:
         if "update" not in sys.argv[1:]:
             _recover_from_interrupted_install()
-    except (IndexError, KeyError):
+    except Exception:
         pass
 
     if _try_termux_fast_tui_launch():
@@ -13810,7 +13810,7 @@ def main():
                         timeout=5,
                         env=_cua_driver_env(),
                     ).stdout.strip()
-                except (ImportError, IndexError, KeyError, ModuleNotFoundError, subprocess.CalledProcessError):
+                except Exception:
                     pass
                 if version:
                     print(f"cua-driver: installed at {path} ({version})")

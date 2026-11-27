@@ -619,7 +619,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
             if callable(_hint_fn):
                 try:
                     _silent_hint = _hint_fn(model=api_kwargs.get("model"))
-                except (requests.RequestException, httpx.RequestError, OSError):
+                except Exception:
                     _silent_hint = None
             logger.warning(
                 "Codex stream produced no bytes within TTFB cutoff "
@@ -712,7 +712,7 @@ def interruptible_api_call(agent, api_kwargs: dict):
             if callable(_hint_fn):
                 try:
                     _silent_hint = _hint_fn(model=api_kwargs.get("model"))
-                except (requests.RequestException, httpx.RequestError, OSError):
+                except Exception:
                     _silent_hint = None
             logger.warning(
                 "Non-streaming API call stale for %.0fs (threshold %.0fs). "

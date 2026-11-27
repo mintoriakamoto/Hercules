@@ -73,7 +73,7 @@ def _save_subscriptions(subs: Dict[str, dict]) -> None:
         # Re-assert after rename in case the destination existed with a
         # broader mode and atomic_replace preserved it.
         os.chmod(path, _SUBSCRIPTIONS_FILE_MODE)
-    except (OSError):
+    except Exception:
         try:
             tmp_path.unlink(missing_ok=True)
         except OSError:

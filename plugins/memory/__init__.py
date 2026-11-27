@@ -87,7 +87,7 @@ def _is_memory_provider_dir(path: Path) -> bool:
     try:
         source = init_file.read_text(errors="replace")[:8192]
         return "register_memory_provider" in source or "MemoryProvider" in source
-    except (KeyError, IndexError):
+    except Exception:
         return False
 
 

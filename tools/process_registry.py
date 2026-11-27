@@ -674,7 +674,7 @@ class ProcessRegistry:
             if val is None:
                 val = DEFAULT_CONFIG["terminal"]["daemon_term_grace_seconds"]
             return max(float(val), 0.0)
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
+        except Exception:
             return 2.0
 
     @classmethod
@@ -944,7 +944,7 @@ class ProcessRegistry:
                 self._running[session.id] = session
 
             self._write_checkpoint()
-        except (IndexError, KeyError):
+        except Exception:
             # Post-Popen setup failed — kill the orphaned subprocess (and any
             # descendants spawned via setsid) before re-raising so they do not
             # leak as untracked background processes.
@@ -959,7 +959,7 @@ class ProcessRegistry:
                         proc.kill()
                 else:
                     proc.kill()
-            except (AttributeError):
+            except Exception:
                 pass
             try:
                 proc.wait(timeout=5)
@@ -1220,7 +1220,7 @@ class ProcessRegistry:
                         self._emit_output(session, text)
                 except EOFError:
                     break
-                except (IndexError, KeyError, OSError):
+                except Exception:
                     break
         except Exception as e:
             logger.debug("PTY stdout reader ended: %s", e)
@@ -1372,7 +1372,7 @@ class ProcessRegistry:
                 if owns_event is not None:
                     try:
                         owned = bool(owns_event(evt))
-                    except (ValueError):
+                    except Exception:
                         owned = False  # fail closed — never leak on a broken check
                     if not owned:
                         requeue.append(evt)

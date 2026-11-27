@@ -1669,7 +1669,7 @@ class PluginManager:
                                 "treating as kind='model-provider'",
                                 key,
                             )
-                    except (IndexError, KeyError):
+                    except Exception:
                         pass
 
             logger.debug(
@@ -2525,7 +2525,7 @@ def get_plugin_toolsets() -> List[tuple]:
 
     try:
         from tools.registry import registry
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     # Group plugin tool names by their toolset

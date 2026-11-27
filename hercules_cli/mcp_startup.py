@@ -75,7 +75,7 @@ def _discover_mcp_tools_without_interactive_oauth() -> None:
     """Run MCP discovery without letting OAuth read from the user's stdin."""
     try:
         from tools.mcp_oauth import suppress_interactive_oauth
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         suppress_interactive_oauth = nullcontext
 
     with suppress_interactive_oauth():

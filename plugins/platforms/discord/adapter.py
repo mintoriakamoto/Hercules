@@ -234,7 +234,7 @@ class _DiscordNonConversationalMessageTracker:
                 return [
                     str(message_id) for message_id in data if str(message_id).strip()
                 ]
-        except (KeyError, IndexError):
+        except Exception:
             logger.debug(
                 "[%s] Failed to load non-conversational Discord IDs", "Discord"
             )
@@ -694,7 +694,7 @@ class VoiceReceiver:
                     "Auto-mapped ssrc=%d -> user=%d (sole allowed member)", ssrc, uid
                 )
                 return uid
-        except (KeyError, IndexError):
+        except Exception:
             pass
         return 0
 
@@ -1749,7 +1749,7 @@ class DiscordAdapter(BasePlatformAdapter):
             for key in ("Retry-After", "X-RateLimit-Reset-After"):
                 try:
                     raw = headers.get(key)
-                except (requests.RequestException, OSError):
+                except Exception:
                     raw = None
                 if raw is None:
                     continue
@@ -2751,7 +2751,7 @@ class DiscordAdapter(BasePlatformAdapter):
             import discord as _discord_mod
             import io as _io
             from urllib.parse import unquote as _unquote
-        except (ImportError, ModuleNotFoundError):
+        except Exception:  # pragma: no cover
             await super().send_multiple_images(chat_id, images, metadata, human_delay)
             return
 
@@ -3506,7 +3506,7 @@ class DiscordAdapter(BasePlatformAdapter):
                         vc = self._voice_clients.get(guild_id)
                         if vc and vc.is_connected():
                             vc._connection.send_packet(b"\xf8\xff\xfe")
-                    except (requests.RequestException, OSError):
+                    except Exception:
                         pass
 
                 completed = receiver.check_silence()
@@ -4529,7 +4529,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 _chan_id,
                 getattr(interaction, "guild_id", None),
             )
-        except (AttributeError):
+        except Exception:
             pass  # logging must never block command dispatch
 
         # Auth gate — must run before defer() so an ephemeral rejection can
@@ -5864,7 +5864,7 @@ class DiscordAdapter(BasePlatformAdapter):
             return channel
         try:
             return await self._client.fetch_channel(int(channel_id))
-        except (ValueError):
+        except Exception:
             return None
 
     async def _create_thread(
@@ -6107,7 +6107,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 cleaned,
             )
             return True
-        except (KeyError, IndexError):
+        except Exception:
             logger.debug(
                 "[%s] Failed to rename Discord thread %s",
                 self.name,
@@ -7676,7 +7676,7 @@ def _define_discord_view_classes() -> None:
             user = getattr(interaction, "user", None)
             try:
                 uid = str(getattr(user, "id", "") or "")
-            except (AttributeError):
+            except Exception:
                 uid = ""
             if uid and uid in self.admin_user_ids:
                 return True
@@ -7785,7 +7785,7 @@ def _define_discord_view_classes() -> None:
                         embed.color = discord.Color.greyple()
                         embed.set_footer(text="⏱ Prompt expired — no action taken")
                     await msg.edit(embed=embed, view=self)
-                except (KeyError, IndexError):
+                except Exception:
                     pass  # message deleted or too old to edit
 
     class SlashConfirmView(discord.ui.View):
@@ -7928,7 +7928,7 @@ def _define_discord_view_classes() -> None:
                         embed.color = discord.Color.greyple()
                         embed.set_footer(text="⏱ Prompt expired — no action taken")
                     await msg.edit(embed=embed, view=self)
-                except (KeyError, IndexError):
+                except Exception:
                     pass
 
     class UpdatePromptView(discord.ui.View):
@@ -8033,7 +8033,7 @@ def _define_discord_view_classes() -> None:
                         embed.color = discord.Color.greyple()
                         embed.set_footer(text="⏱ Prompt expired — no action taken")
                     await msg.edit(embed=embed, view=self)
-                except (KeyError, IndexError):
+                except Exception:
                     pass
 
     class ModelPickerView(discord.ui.View):
@@ -8621,7 +8621,7 @@ def _define_discord_view_classes() -> None:
                         embed.color = discord.Color.greyple()
                         embed.set_footer(text="⏱ Prompt expired — no action taken")
                     await msg.edit(embed=embed, view=self)
-                except (KeyError, IndexError):
+                except Exception:
                     pass
 
 

@@ -235,7 +235,7 @@ def _load_hercules_env() -> None:
     # Step 1: dotenv
     try:
         from dotenv import load_dotenv
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         load_dotenv = None  # type: ignore[assignment]
 
     try:
@@ -252,7 +252,7 @@ def _load_hercules_env() -> None:
         except UnicodeDecodeError:
             try:
                 load_dotenv(str(env_path), override=True, encoding="latin-1")
-            except (ValueError):
+            except Exception:
                 pass
         except (ValueError):
             pass
@@ -274,7 +274,7 @@ def _load_hercules_env() -> None:
     try:
         with open(config_path, "r", encoding="utf-8") as fh:
             raw = yaml.safe_load(fh) or {}
-    except (OSError):
+    except Exception:
         return
 
     try:

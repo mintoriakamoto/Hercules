@@ -147,7 +147,7 @@ def _send_imap_id(imap: "imaplib.IMAP4") -> None:
     try:
         try:
             from hercules_cli import __version__ as _hercules_version
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _hercules_version = "0"
         imap.xatom(
             "ID",

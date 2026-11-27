@@ -60,7 +60,7 @@ def _extract_json(text: str):
         if 0 <= i < j:
             try:
                 return json.loads(s[i : j + 1])
-            except (KeyError, IndexError):
+            except Exception:
                 continue
     return None
 

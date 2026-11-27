@@ -166,7 +166,7 @@ def _http_get_json(
             body = resp.read()
             try:
                 return resp.status, json.loads(body.decode("utf-8", errors="replace"))
-            except (UnicodeDecodeError):
+            except Exception:
                 return resp.status, None
     except HTTPError as exc:
         return exc.code, None
@@ -293,11 +293,11 @@ def _probe_anthropic_messages(
             if exc.code == 400 and ("messages" in lowered or "model" in lowered):
                 return True
             return False
-        except (OSError):
+        except Exception:
             return False
     except (URLError, TimeoutError, OSError):
         return False
-    except (OSError):
+    except Exception:  # pragma: no cover
         return False
 
 
@@ -393,7 +393,7 @@ def lookup_context_length(
             DEFAULT_FALLBACK_CONTEXT,
             get_model_context_length,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     # Resolve the credential once. For Entra mode this calls the token

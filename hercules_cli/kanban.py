@@ -150,7 +150,7 @@ def _check_dispatcher_presence() -> tuple[bool, str]:
     """
     try:
         from gateway.status import get_running_pid  # type: ignore
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return (True, "")  # can't probe — silent
     try:
         pid = get_running_pid()
@@ -2619,7 +2619,7 @@ def _cmd_watch(args: argparse.Namespace) -> int:
                     continue
                 try:
                     payload = json.loads(r["payload"]) if r["payload"] else None
-                except (IndexError, KeyError):
+                except Exception:
                     payload = None
                 pl = f" {payload}" if payload else ""
                 print(

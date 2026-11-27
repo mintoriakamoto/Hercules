@@ -584,7 +584,7 @@ def _write_matrix_recovery_key_output_file(recovery_key: str) -> Optional[Path]:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(recovery_key)
             fh.write("\n")
-    except (OSError):
+    except Exception:
         try:
             os.close(fd)
         except OSError:
@@ -722,7 +722,7 @@ def _redact_url_for_log(url: str) -> str:
         if not parts.scheme and not parts.netloc:
             return str(url).split("?", 1)[0].split("#", 1)[0]
         return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
-    except (KeyError, IndexError):
+    except Exception:
         return "<url>"
 
 
@@ -1917,7 +1917,7 @@ class MatrixAdapter(BasePlatformAdapter):
             raw = None
             try:
                 raw = headers.get("Content-Length") or headers.get("content-length")
-            except (requests.RequestException, OSError):
+            except Exception:
                 raw = None
             if raw is None:
                 return
@@ -3946,7 +3946,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 resp = await client.joined_members(room_id)
                 if getattr(resp, "members", None) is not None:
                     return len(resp.members)
-            except (AttributeError):
+            except Exception:
                 pass
 
         return None
@@ -4329,7 +4329,7 @@ class MatrixAdapter(BasePlatformAdapter):
                 member = await state_store.get_member(room_id, user_id)
                 if member and getattr(member, "displayname", None):
                     return member.displayname
-            except (AttributeError):
+            except Exception:
                 pass
         # Strip the @...:server format to just the localpart.
         if user_id.startswith("@") and ":" in user_id:

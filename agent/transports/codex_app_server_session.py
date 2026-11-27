@@ -305,7 +305,7 @@ class CodexAppServerSession:
         if self._client is not None:
             try:
                 self._client.close()
-            except Exception:
+            except Exception:  # pragma: no cover - best-effort cleanup
                 pass
             self._client = None
         self._thread_id = None
@@ -352,7 +352,7 @@ class CodexAppServerSession:
             return base
         try:
             tail = self._client.stderr_tail(tail_lines)
-        except Exception:
+        except Exception:  # pragma: no cover - diagnostic best-effort
             return base
         if not tail:
             return base
@@ -552,7 +552,7 @@ class CodexAppServerSession:
             if self._on_event is not None:
                 try:
                     self._on_event(note)
-                except Exception:
+                except Exception:  # pragma: no cover - display callback
                     logger.debug("on_event callback raised", exc_info=True)
 
             _apply_token_usage_notification(result, note)
@@ -742,7 +742,7 @@ class CodexAppServerSession:
             if self._on_event is not None:
                 try:
                     self._on_event(note)
-                except Exception:
+                except Exception:  # pragma: no cover - display callback
                     logger.debug("on_event callback raised", exc_info=True)
 
             _apply_token_usage_notification(result, note)
@@ -1086,5 +1086,5 @@ def _get_hercules_version() -> str:
         from importlib.metadata import version
 
         return version("hercules-agent")
-    except Exception:
+    except Exception:  # pragma: no cover
         return "0.0.0"

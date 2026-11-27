@@ -210,7 +210,7 @@ def _atexit_commit_sessions():
     _last_active_provider = None
     try:
         provider.on_session_end([])
-    except (KeyError, IndexError):
+    except Exception:
         pass  # best-effort at shutdown time
 
 
@@ -313,7 +313,7 @@ class _VikingClient:
     def _parse_response(self, resp) -> dict:
         try:
             data = resp.json()
-        except (ValueError):
+        except Exception:
             data = None
 
         if resp.status_code >= 400:
@@ -400,7 +400,7 @@ class _VikingClient:
                 self._url("/health"), headers=self._headers(), timeout=3.0
             )
             return resp.status_code == 200
-        except (requests.RequestException, OSError):
+        except Exception:
             return False
 
     def health_payload(self) -> dict:
@@ -1428,7 +1428,7 @@ def _classify_runtime_openviking_health(
             "responded",
             f"OpenViking server at {endpoint} responded with {_format_openviking_exception(e)}.",
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         return "unreachable", ""
     return "unreachable", ""
 
@@ -1978,7 +1978,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
             # the user's home; an env override pointing elsewhere is skipped
             # there rather than here.
             return [str(cfg)]
-        except (KeyError, IndexError):
+        except Exception:
             return []
 
     def __init__(self):
@@ -2035,7 +2035,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
                     "endpoint"
                 )
             )
-        except (requests.RequestException, OSError):
+        except Exception:
             return False
 
     def get_config_schema(self):
@@ -2618,7 +2618,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
     def _session_has_pending_tokens(self, sid: str) -> bool:
         try:
             response = self._client.get(f"/api/v1/sessions/{sid}")
-        except (requests.RequestException, OSError):
+        except Exception:
             return False
         session = self._unwrap_result(response)
         if not isinstance(session, dict):
@@ -3625,7 +3625,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
         """
         try:
             resp = self._client.get("/api/v1/fs/stat", params={"uri": uri})
-        except (requests.RequestException, OSError):
+        except Exception:
             return None
         result = self._unwrap_result(resp)
         if isinstance(result, dict):
@@ -3721,7 +3721,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
 
         try:
             resp = self._client.get(endpoint, params={"uri": resolved_uri})
-        except (requests.RequestException, OSError):
+        except Exception:
             # OpenViking may return HTTP 500 for abstract/overview reads on normal
             # file URIs (mem_*.md). For those, gracefully fallback to full read.
             if not summary_level or resolved_uri != uri or used_fallback:

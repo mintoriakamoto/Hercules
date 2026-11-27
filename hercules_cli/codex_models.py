@@ -143,7 +143,7 @@ def _read_default_model(codex_home: Path) -> Optional[str]:
         return None
     try:
         import tomllib
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
     try:
         payload = tomllib.loads(config_path.read_text(encoding="utf-8"))

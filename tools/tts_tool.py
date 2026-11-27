@@ -759,7 +759,7 @@ def _terminate_command_tts_process_tree(proc: subprocess.Popen) -> None:
                 timeout=5,
                 stdin=subprocess.DEVNULL,
             )
-        except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+        except Exception:
             proc.kill()
         return
 
@@ -1507,7 +1507,7 @@ def _generate_minimax_tts(
                 raise RuntimeError(
                     f"MiniMax TTS API error (code {status_code}): {status_msg}"
                 )
-        except (ValueError):
+        except Exception:
             response.raise_for_status()
             raise RuntimeError(
                 f"MiniMax TTS returned unexpected Content-Type '{content_type}' "
@@ -1858,7 +1858,7 @@ def _generate_gemini_tts(
         try:
             err = response.json().get("error", {})
             detail = err.get("message") or response.text[:300]
-        except (ValueError):
+        except Exception:
             detail = response.text[:300]
         raise RuntimeError(
             f"Gemini TTS API error (HTTP {response.status_code}): {detail}"

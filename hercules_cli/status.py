@@ -98,7 +98,7 @@ def _effective_provider_label() -> str:
             model_cfg = load_config().get("model")
             if isinstance(model_cfg, dict):
                 config_base_url = (model_cfg.get("base_url") or "").strip()
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
         if config_base_url or get_env_value("OPENAI_BASE_URL"):
             effective = "custom"
@@ -494,7 +494,7 @@ def show_status(args):
                 jobs = data.get("jobs", [])
                 enabled_jobs = [j for j in jobs if j.get("enabled", True)]
                 print(f"  Jobs:         {len(enabled_jobs)} active, {len(jobs)} total")
-        except (OSError):
+        except Exception:
             print("  Jobs:         (error reading jobs file)")
     else:
         print("  Jobs:         0")
@@ -518,7 +518,7 @@ def show_status(args):
                 _session_count = len(_lister(active_only=True))
         finally:
             _db.close()
-    except (AttributeError):
+    except Exception:
         _session_count = None
 
     if _session_count is not None and _session_count > 0:
@@ -537,7 +537,7 @@ def show_status(args):
                         else {}
                     )
                     print(f"  Active:       {len(_entries)} session(s)")
-            except (OSError, ValueError):
+            except Exception:
                 print("  Active:       (error reading sessions file)")
         else:
             print(

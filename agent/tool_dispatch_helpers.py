@@ -320,7 +320,7 @@ def _extract_error_preview(result: Any, max_len: int = 180) -> str:
     if not isinstance(text, str):
         try:
             text = str(text)
-        except (ValueError):
+        except Exception:
             return ""
     # Try to parse JSON and pull the ``error`` field — tool handlers return
     # ``{"success": false, "error": "..."}``; raw string wins if parse fails.
@@ -330,7 +330,7 @@ def _extract_error_preview(result: Any, max_len: int = 180) -> str:
             data = json.loads(stripped)
             if isinstance(data, dict) and isinstance(data.get("error"), str):
                 text = data["error"]
-        except (IndexError, KeyError):
+        except Exception:
             pass
     # Collapse whitespace, trim to max_len.
     text = " ".join(text.split())

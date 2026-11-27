@@ -993,7 +993,7 @@ def judge_goal(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except (IndexError, KeyError):
+    except Exception:
         raw = ""
 
     verdict, reason, parse_failed, wait_directive = _parse_judge_response(raw)
@@ -1081,7 +1081,7 @@ def draft_contract(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except (IndexError, KeyError):
+    except Exception:
         raw = ""
 
     data = _extract_json_object(raw)
@@ -1720,7 +1720,7 @@ def run_kanban_goal_loop(
         if log is not None:
             try:
                 log(msg)
-            except (ValueError):
+            except Exception:
                 pass
 
     max_turns = int(max_turns or DEFAULT_MAX_TURNS)

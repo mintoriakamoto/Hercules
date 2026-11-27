@@ -835,7 +835,7 @@ async def _submit_xai_video_payload(
             detail = ""
             try:
                 detail = exc.response.text[:500]
-            except (KeyError, IndexError):
+            except Exception:
                 pass
             return error_response(
                 error=f"xAI submit failed ({exc.response.status_code}): {detail or exc}",

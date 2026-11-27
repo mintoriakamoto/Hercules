@@ -655,7 +655,7 @@ def get_authenticated_provider_slugs(
             max_models=0,
         )
         return [p["slug"] for p in providers]
-    except (IndexError, KeyError):
+    except Exception:
         return []
 
 
@@ -1230,7 +1230,7 @@ def switch_model(
                 api_key = runtime.get("api_key", "") or _ukey
                 base_url = runtime.get("base_url", "") or _user_pdef.base_url
                 api_mode = runtime.get("api_mode", "")
-            except (requests.RequestException, httpx.RequestError, OSError):
+            except Exception:
                 api_key = _ukey
                 base_url = _user_pdef.base_url
                 api_mode = ""
@@ -1271,7 +1271,7 @@ def switch_model(
             api_key = runtime.get("api_key", "")
             base_url = runtime.get("base_url", "")
             api_mode = runtime.get("api_mode", "")
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
 
     # --- Direct alias override: use exact base_url from the alias if set ---
@@ -1612,7 +1612,7 @@ def list_authenticated_providers(
         that URL into custom_providers would actually hit."""
         try:
             from hercules_cli.auth import PROVIDER_REGISTRY as _reg
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return
         pcfg = _reg.get(slug)
         if not pcfg:
@@ -1923,7 +1923,7 @@ def list_authenticated_providers(
                     if _ids
                     else (curated.get(hercules_slug, []) or curated.get(pid, []))
                 )
-            except (IndexError, KeyError):
+            except Exception:
                 model_ids = curated.get(hercules_slug, []) or curated.get(pid, [])
         else:
             # Unified pathway — see Section 1 rationale. Fall back to the
@@ -2010,7 +2010,7 @@ def list_authenticated_providers(
             try:
                 _ids = cached_provider_model_ids(_cp.slug)
                 _cp_model_ids = _ids if _ids else curated.get(_cp.slug, [])
-            except (IndexError, KeyError):
+            except Exception:
                 _cp_model_ids = curated.get(_cp.slug, [])
         else:
             # Unified pathway — same as sections 1 and 2.
@@ -2530,7 +2530,7 @@ def list_picker_providers(
             try:
                 live = fetch_openrouter_models()
                 live_ids = [mid for mid, _ in live]
-            except (IndexError, KeyError):
+            except Exception:
                 live_ids = list(provider.get("models", []))
             p = dict(provider)
             p["models"] = live_ids[:max_models] if max_models is not None else live_ids

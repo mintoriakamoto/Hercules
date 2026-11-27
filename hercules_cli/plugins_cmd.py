@@ -998,7 +998,7 @@ def _read_manifest_info(d: Path, prefix: str):
             name = manifest.get("name", d.name)
             version = manifest.get("version", "")
             description = manifest.get("description", "")
-        except (OSError):
+        except Exception:
             pass
     key = f"{prefix}/{d.name}" if prefix else name
     return name, version, description, key
@@ -1865,7 +1865,7 @@ def _get_plugin_toolset_key(name: str) -> Optional[str]:
     """
     try:
         from tools.registry import registry
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     # Check the plugin manager for tools this plugin registered

@@ -204,7 +204,7 @@ def _emit_terminal_post_tool_call(
             error_message=error_message,
             middleware_trace=list(middleware_trace or []),
         )
-    except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -266,7 +266,7 @@ def _tool_search_scoped_names(agent) -> frozenset:
         import model_tools
         from tools import tool_search as _ts
         from tools.registry import registry as _registry
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return frozenset()
 
     enabled = getattr(agent, "enabled_toolsets", None)
@@ -290,7 +290,7 @@ def _tool_search_scoped_names(agent) -> frozenset:
             or []
         )
         names = _ts.scoped_deferrable_names(scoped_defs)
-    except (IndexError, KeyError):
+    except Exception:
         names = frozenset()
     try:
         agent._tool_search_scope_cache = (cache_key, names)
@@ -587,7 +587,7 @@ def execute_tool_calls_concurrent(
                         agent._checkpoint_mgr.ensure_checkpoint(
                             work_dir, f"before {function_name}"
                         )
-                except (requests.RequestException, httpx.RequestError, OSError):
+                except Exception:
                     pass
 
             # Checkpoint before destructive terminal commands
@@ -601,7 +601,7 @@ def execute_tool_calls_concurrent(
                         agent._checkpoint_mgr.ensure_checkpoint(
                             cwd, f"before terminal: {cmd[:60]}"
                         )
-                except (IndexError, KeyError):
+                except Exception:
                     pass
 
         parsed_calls.append((
@@ -1478,7 +1478,7 @@ def execute_tool_calls_sequential(
                     agent._checkpoint_mgr.ensure_checkpoint(
                         work_dir, f"before {function_name}"
                     )
-            except (requests.RequestException, httpx.RequestError, OSError):
+            except Exception:
                 pass  # never block tool execution
 
         # Checkpoint before destructive terminal commands
@@ -1496,7 +1496,7 @@ def execute_tool_calls_sequential(
                     agent._checkpoint_mgr.ensure_checkpoint(
                         cwd, f"before terminal: {cmd[:60]}"
                     )
-            except (IndexError, KeyError):
+            except Exception:
                 pass  # never block tool execution
 
         tool_start_time = time.time()

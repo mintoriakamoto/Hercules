@@ -135,7 +135,7 @@ def _post_enroll(
         detail = ""
         try:
             detail = (json.loads(exc.read().decode()) or {}).get("error", "")
-        except (OSError):
+        except Exception:
             pass
         if exc.code == 401:
             raise RuntimeError(

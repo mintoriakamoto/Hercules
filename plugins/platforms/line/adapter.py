@@ -544,7 +544,7 @@ class _LineClient:
                         return None
                     data = await resp.json()
                     return data.get("userId")
-        except (requests.RequestException, OSError):
+        except Exception:
             return None
 
 
@@ -1072,7 +1072,7 @@ class LineAdapter(BasePlatformAdapter):
                 await self._client.reply(
                     reply_token, [_text_message(self.delivered_text)]
                 )
-            except (KeyError, IndexError):
+            except Exception:
                 pass
         elif entry.state is State.PENDING:
             # Still working — re-issue the wait notice.
@@ -1080,7 +1080,7 @@ class LineAdapter(BasePlatformAdapter):
                 await self._client.reply(
                     reply_token, [_text_message(self.pending_text)]
                 )
-            except (KeyError, IndexError):
+            except Exception:
                 pass
 
     async def _download_media(self, message_id: str, msg_type: str) -> Optional[str]:

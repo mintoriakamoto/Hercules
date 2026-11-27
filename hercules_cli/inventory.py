@@ -207,7 +207,7 @@ def build_models_payload(
         from hercules_cli.providers import (
             is_routing_aggregator as _is_routing_aggregator,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _is_routing_aggregator = None  # type: ignore[assignment]
 
     if _is_routing_aggregator is not None:
@@ -276,7 +276,7 @@ def _apply_capabilities(rows: list[dict]) -> None:
 
     try:
         from agent.models_dev import get_model_capabilities
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         get_model_capabilities = None  # type: ignore[assignment]
 
     for row in rows:
@@ -290,7 +290,7 @@ def _apply_capabilities(rows: list[dict]) -> None:
                     meta = get_model_capabilities(slug, model)
                     if meta is not None:
                         reasoning = bool(meta.supports_reasoning)
-                except (ValueError):
+                except Exception:
                     reasoning = True
 
             caps[model] = {

@@ -90,7 +90,7 @@ def _discover_venv() -> list[Component]:
     for dist in distributions():
         try:
             name = (dist.metadata["Name"] or "").strip()
-        except (IndexError, KeyError):
+        except Exception:
             continue
         version = (dist.version or "").strip()
         if not name or not version:
@@ -277,7 +277,7 @@ def _discover_mcp() -> list[Component]:
     """Pinned MCP server packages from ``config.yaml``."""
     try:
         from hercules_cli.mcp_config import _get_mcp_servers
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     out: list[Component] = []

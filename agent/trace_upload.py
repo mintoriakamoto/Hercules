@@ -181,7 +181,7 @@ def build_trace_jsonl(
             )
             if r.returncode == 0:
                 git_branch = r.stdout.strip()
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, subprocess.CalledProcessError):
+    except Exception:
         git_branch = ""
 
     def _common(turn_uuid: str) -> Dict[str, Any]:

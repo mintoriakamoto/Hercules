@@ -188,7 +188,7 @@ def _scrub_child_env(source_env, is_passthrough=None, is_windows=None):
     if is_passthrough is None:
         try:
             from tools.env_passthrough import is_env_passthrough as _ep
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _ep = lambda _: False
         is_passthrough = _ep
     if is_windows is None:
@@ -1142,7 +1142,7 @@ def _execute_remote(
                 cwd="/",
                 timeout=15,
             )
-        except (sqlite3.DatabaseError):
+        except Exception:
             logger.debug("Failed to clean up remote sandbox %s", sandbox_dir)
 
     duration = round(time.monotonic() - exec_start, 2)
@@ -1563,7 +1563,7 @@ def execute_code(
         }
         try:
             from tools.environments.base import touch_activity_if_due
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             touch_activity_if_due = None
 
         try:

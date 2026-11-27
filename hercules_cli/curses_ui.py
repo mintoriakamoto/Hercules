@@ -533,7 +533,7 @@ def _run_curses_menu(
 
     except KeyboardInterrupt:
         return cancel_value
-    except (IndexError, KeyError):
+    except Exception:
         return fallback()
 
 

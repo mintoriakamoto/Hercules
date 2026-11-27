@@ -96,7 +96,7 @@ def _install_dependencies(provider_name: str) -> None:
 
         with open(yaml_path, encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
-    except (ImportError, ModuleNotFoundError, OSError):
+    except Exception:
         return
 
     pip_deps = meta.get("pip_dependencies", [])
@@ -153,7 +153,7 @@ def _install_dependencies(provider_name: str) -> None:
                 subprocess.run(
                     shlex.split(check_cmd), check=True, capture_output=True, timeout=5
                 )
-            except (subprocess.CalledProcessError):
+            except Exception:
                 if install_cmd:
                     print(f"\n  ⚠ '{dep_name}' not found. Install with:")
                     print(f"    {install_cmd}")

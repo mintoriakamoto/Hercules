@@ -92,7 +92,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from hercules_cli import __version__ as HERCULES_VERSION
-except (ImportError, ModuleNotFoundError):
+except Exception:
     HERCULES_VERSION = "0.0.0"
 
 # Thread pool for running AIAgent (synchronous) in parallel.
@@ -1344,7 +1344,7 @@ class HerculesACPAgent(acp.Agent):
             try:
                 if getattr(state, "agent", None) and hasattr(state.agent, "interrupt"):
                     state.agent.interrupt()
-            except (AttributeError):
+            except Exception:
                 logger.debug(
                     "Failed to interrupt ACP session %s", session_id, exc_info=True
                 )
@@ -1726,7 +1726,7 @@ class HerculesACPAgent(acp.Agent):
             # particular — used by the interactive sudo password cache scope).
             ctx = contextvars.copy_context()
             result = await loop.run_in_executor(_executor, ctx.run, _run_agent)
-        except (AttributeError):
+        except Exception:
             logger.exception("Executor error for session %s", session_id)
             with state.runtime_lock:
                 state.is_running = False

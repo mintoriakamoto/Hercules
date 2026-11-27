@@ -266,7 +266,7 @@ class IRCAdapter(BasePlatformAdapter):
             try:
                 await self._send_raw("QUIT :Hercules Agent shutting down")
                 await asyncio.sleep(0.5)
-            except (RuntimeError):
+            except Exception:
                 pass
             try:
                 self._writer.close()

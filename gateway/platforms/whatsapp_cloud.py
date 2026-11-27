@@ -469,13 +469,13 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         if self._runner is not None:
             try:
                 await self._runner.cleanup()
-            except (RuntimeError):
+            except Exception:
                 logger.exception("[whatsapp_cloud] webhook server cleanup failed")
             self._runner = None
         if self._http_client is not None:
             try:
                 await self._http_client.aclose()
-            except (RuntimeError):
+            except Exception:
                 logger.exception("[whatsapp_cloud] http client close failed")
             self._http_client = None
         self._mark_disconnected()
@@ -530,7 +530,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                 # to the caller so log lines have actionable context.
                 try:
                     body = resp.json()
-                except (ValueError):
+                except Exception:
                     body = {"raw": resp.text[:500]}
                 error_msg = self._format_graph_error(body, resp.status_code)
                 logger.warning(
@@ -545,7 +545,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                 ids = data.get("messages") or []
                 if ids:
                     last_message_id = ids[0].get("id")
-            except (ValueError):
+            except Exception:
                 pass
 
         # Remember (chat_id, wamid) -> text so that when the user replies to
@@ -604,7 +604,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         }
         try:
             resp = await self._http_client.post(url, headers=headers, json=payload)
-        except (RuntimeError):
+        except Exception:
             # Network / connection error — silent fail. Typing UX must
             # never block message dispatch.
             return
@@ -616,7 +616,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             try:
                 body = resp.json()
                 code = ((body or {}).get("error") or {}).get("code")
-            except (ValueError):
+            except Exception:
                 code = None
             if code == 131009:
                 logger.info(
@@ -688,7 +688,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         if resp.status_code != 200:
             try:
                 body = resp.json()
-            except (ValueError):
+            except Exception:
                 body = {"raw": resp.text[:500]}
             error_msg = self._format_graph_error(body, resp.status_code)
             logger.warning(
@@ -704,7 +704,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             ids = data.get("messages") or []
             if ids:
                 last_message_id = ids[0].get("id")
-        except (ValueError):
+        except Exception:
             pass
         return SendResult(success=True, message_id=last_message_id)
 
@@ -996,14 +996,14 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         if resp.status_code != 200:
             try:
                 body = resp.json()
-            except (ValueError):
+            except Exception:
                 body = {"raw": resp.text[:500]}
             return None, self._format_graph_error(body, resp.status_code)
 
         try:
             data = resp.json()
             media_id = data.get("id")
-        except (ValueError):
+        except Exception:
             media_id = None
         if not media_id:
             return None, "Upload response missing 'id'"
@@ -1070,7 +1070,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         if resp.status_code != 200:
             try:
                 body = resp.json()
-            except (ValueError):
+            except Exception:
                 body = {"raw": resp.text[:500]}
             error_msg = self._format_graph_error(body, resp.status_code)
             logger.warning(
@@ -1085,7 +1085,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             data = resp.json()
             ids = data.get("messages") or []
             wamid = ids[0].get("id") if ids else None
-        except (ValueError):
+        except Exception:
             wamid = None
         return SendResult(success=True, message_id=wamid)
 
@@ -1294,7 +1294,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                 )
                 return None
             return out_path
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             logger.exception("[whatsapp_cloud] ffmpeg subprocess raised")
             return None
 
@@ -1346,7 +1346,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                 f"{GRAPH_API_BASE}/{self._api_version}/{media_id}",
                 headers=headers,
             )
-        except (RuntimeError):
+        except Exception:
             logger.exception(
                 "[whatsapp_cloud] media metadata fetch raised (id=%s)", media_id
             )
@@ -1361,7 +1361,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
 
         try:
             meta = meta_resp.json()
-        except (ValueError):
+        except Exception:
             return None, None
         temp_url = meta.get("url")
         mime = meta.get("mime_type") or ""
@@ -1372,7 +1372,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
         # documents this explicitly — the URL alone is not enough).
         try:
             blob_resp = await self._http_client.get(temp_url, headers=headers)
-        except (RuntimeError):
+        except Exception:
             logger.exception(
                 "[whatsapp_cloud] media bytes fetch raised (id=%s)", media_id
             )
@@ -1477,7 +1477,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             )
         except ValueError:
             return web.Response(status=413)
-        except (RuntimeError):
+        except Exception:
             return web.Response(status=400)
 
         # Refuse to accept anything if app_secret isn't configured. Without
@@ -1620,7 +1620,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                         event = await self._build_message_event_from_cloud(
                             raw_message, contacts_by_waid, metadata
                         )
-                    except (RuntimeError):
+                    except Exception:
                         # Build errors must not bubble out either: the wamid
                         # is already dedup-marked above, so a 500 here would
                         # make Meta retry the batch and every message in it
@@ -1636,7 +1636,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                     self._accepted_count += 1
                     try:
                         await self.handle_message(event)
-                    except (RuntimeError):
+                    except Exception:
                         # Dispatch errors must not bubble out — Meta would
                         # retry the whole batch, multiplying the bug.
                         logger.exception(
@@ -1745,7 +1745,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                         str(raw_message.get("from") or ""),
                         "✏️ Type your answer:",
                     )
-                except (ValueError):
+                except Exception:
                     logger.exception("[whatsapp_cloud] clarify other-prompt failed")
                 return True  # claim so we don't also dispatch the tap as text
             try:
@@ -1810,7 +1810,7 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
             try:
                 confirm_text = "✅ Approved." if choice == "approve" else "❌ Denied."
                 await self.send(str(raw_message.get("from") or ""), confirm_text)
-            except (ValueError):
+            except Exception:
                 logger.exception("[whatsapp_cloud] approval confirm failed")
             return True
 
@@ -1840,13 +1840,13 @@ class WhatsAppCloudAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                 result_text = await _slash_confirm_mod.resolve(
                     session_key, confirm_id, choice
                 )
-            except (RuntimeError):
+            except Exception:
                 logger.exception("[whatsapp_cloud] slash_confirm.resolve failed")
                 return True  # still claim the tap; surfacing it as text wouldn't help
             if result_text:
                 try:
                     await self.send(str(raw_message.get("from") or ""), result_text)
-                except (ValueError):
+                except Exception:
                     logger.exception("[whatsapp_cloud] slash_confirm reply failed")
             return True
 

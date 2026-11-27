@@ -891,7 +891,7 @@ def is_wsl() -> bool:
     try:
         with open("/proc/version", "r", encoding="utf-8") as f:
             _wsl_detected = "microsoft" in f.read().lower()
-    except (OSError):
+    except Exception:
         _wsl_detected = False
     return _wsl_detected
 

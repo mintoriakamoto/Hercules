@@ -349,7 +349,7 @@ def decompose_task(
 
     try:
         raw = resp.choices[0].message.content or ""
-    except (IndexError, KeyError):
+    except Exception:
         raw = ""
 
     parsed = _extract_json_blob(raw)

@@ -384,7 +384,7 @@ def _inject_session_context_env(env: dict) -> None:
             _VAR_MAP,
             session_context_engaged,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
 
     _engaged = session_context_engaged()
@@ -405,7 +405,7 @@ def _sanitize_subprocess_env(
     """Filter Hercules-managed secrets from a subprocess environment."""
     try:
         from tools.env_passthrough import is_env_passthrough as _is_passthrough
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _is_passthrough = lambda _: False
 
     sanitized: dict[str, str] = {}
@@ -873,7 +873,7 @@ def _make_run_env(env: dict) -> dict:
     """Build a run environment with a sane PATH and provider-var stripping."""
     try:
         from tools.env_passthrough import is_env_passthrough as _is_passthrough
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _is_passthrough = lambda _: False
 
     merged = dict(os.environ | env)

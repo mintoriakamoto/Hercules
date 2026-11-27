@@ -1073,7 +1073,7 @@ class SessionStore:
         """
         try:
             return str(Path(self.sessions_dir).resolve())
-        except (ValueError):
+        except Exception:
             return str(self.sessions_dir)
 
     def _ensure_loaded_locked(self) -> None:

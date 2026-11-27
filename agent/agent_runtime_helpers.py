@@ -1680,7 +1680,7 @@ def anthropic_prompt_cache_policy(
                     )
                     _agg_base_url = _rt.get("base_url") or ""
                     _agg_api_mode = _rt.get("api_mode") or ""
-                except (requests.RequestException, httpx.RequestError, OSError):
+                except Exception:
                     pass
                 return anthropic_prompt_cache_policy(
                     agent,

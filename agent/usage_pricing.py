@@ -629,14 +629,14 @@ def _to_decimal(value: Any) -> Optional[Decimal]:
         return None
     try:
         return Decimal(str(value))
-    except (ValueError):
+    except Exception:
         return None
 
 
 def _to_int(value: Any) -> int:
     try:
         return int(value or 0)
-    except (ValueError):
+    except Exception:
         return 0
 
 

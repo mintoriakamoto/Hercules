@@ -1962,7 +1962,7 @@ class ShellFileOperations(FileOperations):
             return False
         try:
             from tools.environments.local import LocalEnvironment
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
         return isinstance(env, LocalEnvironment)
 
@@ -1981,7 +1981,7 @@ class ShellFileOperations(FileOperations):
             return False
         try:
             from agent.lsp.servers import SERVERS
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
         ext_lower = ext.lower()
         for srv in SERVERS:
@@ -2010,7 +2010,7 @@ class ShellFileOperations(FileOperations):
             return False
         try:
             from agent.lsp import get_service
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return False
         try:
             svc = get_service()
@@ -2020,7 +2020,7 @@ class ShellFileOperations(FileOperations):
             return False
         try:
             return bool(svc.enabled_for(path))
-        except (ValueError):
+        except Exception:
             return False
 
     def _snapshot_lsp_baseline(self, path: str) -> None:
@@ -2078,7 +2078,7 @@ class ShellFileOperations(FileOperations):
             return ""
         try:
             from agent.lsp import get_service
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return ""
         try:
             svc = get_service()

@@ -309,7 +309,7 @@ def _basic(project_id: str, project_secret: str) -> Dict[str, str]:
 def _response_error_detail(resp: Any) -> str:
     try:
         data = resp.json()
-    except (ValueError):
+    except Exception:
         data = None
     if isinstance(data, dict):
         for key in ("error", "message", "detail"):
@@ -933,7 +933,7 @@ def _configured_operator_phone() -> Optional[str]:
 def _get_config_env_value(key: str) -> Optional[str]:
     try:
         from hercules_cli.config import get_env_value
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return os.getenv(key)
     return get_env_value(key)
 

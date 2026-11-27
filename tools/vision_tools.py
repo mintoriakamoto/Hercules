@@ -691,7 +691,7 @@ def _image_exceeds_dimension(image_path: Path, max_dimension: int) -> bool:
 
         with _PILImage.open(image_path) as _img:
             return max(_img.size) > max_dimension
-    except (ImportError, ModuleNotFoundError, OSError):
+    except Exception:
         return False
 
 
@@ -730,7 +730,7 @@ def _resize_image_for_vision(
             with _PILQuick.open(image_path) as _quick_img:
                 if max(_quick_img.size) > max_dimension:
                     needs_resize_for_dims = True
-        except (ImportError, ModuleNotFoundError, OSError):
+        except Exception:
             pass  # can't check; Pillow path below will handle or skip
 
     if not needs_resize_for_bytes and not needs_resize_for_dims:

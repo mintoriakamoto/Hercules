@@ -178,7 +178,7 @@ def _resolve_mcp_invocation(
             # fallback spawns below; #53503/#55709/#58889 lineage).
             env=_sanitize_subprocess_env(cua_driver_child_env()),
         )
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, subprocess.CalledProcessError):
+    except Exception:
         return driver_cmd, list(_CUA_DRIVER_ARGS)
     out = (proc.stdout or "").strip()
     if proc.returncode != 0 or not out:
@@ -276,7 +276,7 @@ def cua_driver_update_check(*, timeout: float = 8.0) -> Optional[Dict[str, Any]]
             # binary, no inherited provider keys (#53503/#55709/#58889).
             env=_sanitize_subprocess_env(cua_driver_child_env()),
         )
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, subprocess.CalledProcessError):
+    except Exception:
         return None
     out = (proc.stdout or "").strip()
     if not out:

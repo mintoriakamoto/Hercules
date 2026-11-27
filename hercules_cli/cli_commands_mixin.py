@@ -665,7 +665,7 @@ class CLICommandsMixin:
             row = self._session_db.get_session(self.session_id)
             if row:
                 session_title = row.get("title") or ""
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
         if not session_title:
             session_title = self.session_id[:8]
@@ -877,7 +877,7 @@ class CLICommandsMixin:
                         reset=False,
                         reason="resume",
                     )
-            except (AttributeError):
+            except Exception:
                 pass
 
         title_part = f' "{session_meta["title"]}"' if session_meta.get("title") else ""
@@ -1019,7 +1019,7 @@ class CLICommandsMixin:
                     tool_call_id=msg.get("tool_call_id"),
                     reasoning=msg.get("reasoning"),
                 )
-            except (requests.RequestException, httpx.RequestError, OSError):
+            except Exception:
                 pass  # Best-effort copy
 
         # Set title on the branch
@@ -1066,7 +1066,7 @@ class CLICommandsMixin:
                         reset=False,
                         reason="branch",
                     )
-            except (AttributeError):
+            except Exception:
                 pass
 
         msg_count = len([
@@ -2345,7 +2345,7 @@ class CLICommandsMixin:
         # separate message after setting the goal.
         try:
             self._pending_input.put(state.goal)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
 
     def _handle_goal_draft(self, objective: str) -> None:
@@ -2392,7 +2392,7 @@ class CLICommandsMixin:
             )
         try:
             self._pending_input.put(state.goal)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
 
     def _handle_subgoal_command(self, cmd: str) -> None:
@@ -2551,7 +2551,7 @@ class CLICommandsMixin:
                     fh.write(initial_text)
             try:
                 subprocess.call([*shlex.split(editor), path])
-            except (IndexError, KeyError, subprocess.CalledProcessError):
+            except Exception:
                 # Fall back to a bare invocation (editor value may not be a
                 # simple argv-splittable string on some platforms).
                 subprocess.call(f"{editor} {shlex.quote(path)}", shell=True)
@@ -2613,7 +2613,7 @@ class CLICommandsMixin:
             parts = (cmd_original or "").strip().split(None, 1)
             if len(parts) > 1:
                 arg = parts[1].strip().lower()
-        except (IndexError, KeyError):
+        except Exception:
             arg = ""
 
         cfg = load_config() or {}
@@ -2669,7 +2669,7 @@ class CLICommandsMixin:
             parts = (cmd_original or "").strip().split(None, 1)
             if len(parts) > 1:
                 arg = parts[1].strip().lower()
-        except (IndexError, KeyError):
+        except Exception:
             arg = ""
 
         current = bool(getattr(self, "show_timestamps", False))

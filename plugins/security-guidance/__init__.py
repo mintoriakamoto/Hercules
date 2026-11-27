@@ -132,7 +132,7 @@ def _scan_content(path: str, content: str) -> List[Tuple[str, str]]:
             try:
                 if path_check(path or ""):
                     hits.append((entry["ruleName"], entry["reminder"]))
-            except (KeyError, IndexError):
+            except Exception:
                 pass
             # Path-check rules don't also pattern-match content; move on.
             continue

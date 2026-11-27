@@ -63,7 +63,7 @@ def _child_env() -> Dict[str, str]:
         from tools.environments.local import _sanitize_subprocess_env
 
         return _sanitize_subprocess_env(env)
-    except (ImportError, ModuleNotFoundError, subprocess.CalledProcessError):
+    except Exception:
         return env
 
 
@@ -148,7 +148,7 @@ def computer_use_status(driver_cmd: Optional[str] = None) -> Dict[str, Any]:
         out["version"] = (
             _run(binary, "--version", timeout=5).stdout or ""
         ).strip() or None
-    except (IndexError, KeyError):
+    except Exception:
         pass
 
     doctor = _doctor(binary)

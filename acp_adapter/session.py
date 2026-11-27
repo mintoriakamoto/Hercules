@@ -90,7 +90,7 @@ def _format_updated_at(value: Any) -> str | None:
         return value
     try:
         return datetime.fromtimestamp(float(value), tz=timezone.utc).isoformat()
-    except (ValueError, TypeError):
+    except Exception:
         return None
 
 
@@ -107,7 +107,7 @@ def _updated_at_sort_key(value: Any) -> float:
     except Exception:
         try:
             return float(raw)
-        except (ValueError, TypeError):
+        except Exception:
             return float("-inf")
 
 
@@ -294,7 +294,7 @@ class SessionManager:
             try:
                 for row in db.list_sessions_rich(source="acp", limit=1000):
                     persisted_rows[str(row["id"])] = dict(row)
-            except (KeyError, IndexError):
+            except Exception:
                 logger.debug("Failed to load ACP sessions from DB", exc_info=True)
 
         # Collect in-memory sessions first.
@@ -401,7 +401,7 @@ class SessionManager:
                     sid = row["id"]
                     _clear_task_cwd(sid)
                     db.delete_session(sid)
-            except (KeyError, IndexError):
+            except Exception:
                 logger.debug("Failed to cleanup ACP sessions from DB", exc_info=True)
 
     def save_session(self, session_id: str) -> None:
@@ -681,7 +681,7 @@ class SessionManager:
                 "command": runtime.get("command"),
                 "args": list(runtime.get("args") or []),
             })
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.debug(
                 "ACP session falling back to default provider resolution", exc_info=True
             )

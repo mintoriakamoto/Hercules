@@ -471,7 +471,7 @@ def _discover_named_profiles():
     default root."""
     try:
         from hercules_cli.profiles import list_profiles
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
     try:
         return [p for p in list_profiles() if not getattr(p, "is_default", False)]

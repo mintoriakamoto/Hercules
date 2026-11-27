@@ -448,7 +448,7 @@ def _mac_audio_device_index(device_name: str) -> str:
             text=True,
             timeout=10,
         )
-    except (KeyError, IndexError):
+    except Exception:
         return "0"
     # ffmpeg prints the table on stderr. Lines look like:
     #   [AVFoundation indev @ 0x...] [0] BlackHole 2ch
@@ -700,7 +700,7 @@ def run_bot() -> int:
                                         cancelled = rt["session"].cancel_response()
                                         if cancelled:
                                             state.set(last_barge_in_at=now)
-                                    except (KeyError, IndexError):
+                                    except Exception:
                                         pass
                 except (KeyError, IndexError):
                     # Meet reloaded or we got booted — try to detect and
@@ -727,7 +727,7 @@ def run_bot() -> int:
                     "() => { const b = document.querySelector('button[aria-label*=\"eave call\"]');"
                     " if (b) b.click(); }"
                 )
-            except (KeyError, IndexError):
+            except Exception:
                 pass
 
             context.close()
@@ -737,27 +737,27 @@ def run_bot() -> int:
                 try:
                     rt["pcm_pump"].terminate()
                     rt["pcm_pump"].wait(timeout=3)
-                except (KeyError, IndexError):
+                except Exception:
                     pass
             if rt["speaker_stop"]:
                 try:
                     rt["speaker_stop"]()
-                except (KeyError, IndexError):
+                except Exception:
                     pass
             if rt["speaker_thread"] is not None:
                 try:
                     rt["speaker_thread"].join(timeout=5.0)
-                except (KeyError, IndexError):
+                except Exception:
                     pass
             if rt["session"]:
                 try:
                     rt["session"].close()
-                except (KeyError, IndexError):
+                except Exception:
                     pass
             if rt["bridge"]:
                 try:
                     rt["bridge"].teardown()
-                except (KeyError, IndexError):
+                except Exception:
                     pass
             state.set(in_call=False, captioning=False, exited=True)
             return 0
@@ -774,7 +774,7 @@ def _try_guest_name(page, guest_name: str) -> None:
         locator = page.locator('input[aria-label*="name" i]').first
         if locator.count() and locator.is_visible():
             locator.fill(guest_name, timeout=2_000)
-    except (KeyError, IndexError):
+    except Exception:
         pass
 
 

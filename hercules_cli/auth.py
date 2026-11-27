@@ -97,7 +97,7 @@ CODEX_OAUTH_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 CODEX_OAUTH_TOKEN_URL = "https://auth.openai.com/oauth/token"
 try:  # Version tag for the Codex token-endpoint User-Agent; fall back if unavailable.
     from hercules_cli import __version__ as _HERCULES_CLI_VERSION
-except (ImportError, ModuleNotFoundError):
+except Exception:  # pragma: no cover - version import should always succeed
     _HERCULES_CLI_VERSION = "unknown"
 CODEX_OAUTH_USER_AGENT = f"hercules-cli/{_HERCULES_CLI_VERSION}"
 CODEX_ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 120
@@ -880,7 +880,7 @@ def _parse_retry_after_seconds(headers: Any) -> Optional[int]:
         return None
     try:
         raw = headers.get("retry-after")
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         return None
     if raw is None:
         return None
@@ -1490,7 +1490,7 @@ def is_source_suppressed(provider_id: str, source: str) -> bool:
         auth_store = _load_auth_store()
         suppressed = auth_store.get("suppressed_sources", {})
         return source in suppressed.get(provider_id, [])
-    except (IndexError, KeyError):
+    except Exception:
         return False
 
 
@@ -1560,7 +1560,7 @@ def is_provider_explicitly_configured(provider_id: str) -> bool:
         active = (auth_store.get("active_provider") or "").strip().lower()
         if active and active == normalized:
             return True
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         pass
 
     # 2. Check config.yaml model.provider
@@ -1614,7 +1614,7 @@ def is_provider_explicitly_configured(provider_id: str) -> bool:
                 "manual",
             } or source.startswith("manual:"):
                 return True
-    except (ValueError):
+    except Exception:
         pass
 
     return False
@@ -2009,7 +2009,7 @@ def _is_expiring(expires_at_iso: Any, skew_seconds: int) -> bool:
 def _coerce_ttl_seconds(expires_in: Any) -> int:
     try:
         ttl = int(expires_in)
-    except (ValueError):
+    except Exception:
         ttl = 0
     return max(0, ttl)
 
@@ -2029,7 +2029,7 @@ def _decode_jwt_claims(token: Any) -> Dict[str, Any]:
     try:
         raw = base64.urlsafe_b64decode(payload.encode("utf-8"))
         claims = json.loads(raw.decode("utf-8"))
-    except (UnicodeDecodeError):
+    except Exception:
         return {}
     return claims if isinstance(claims, dict) else {}
 
@@ -2125,7 +2125,7 @@ def _qwen_access_token_is_expiring(
 ) -> bool:
     try:
         expiry_ms = int(expiry_date_ms)
-    except (ValueError):
+    except Exception:
         return True
     return (time.time() + max(0, int(skew_seconds))) * 1000 >= expiry_ms
 
@@ -2193,7 +2193,7 @@ def _refresh_qwen_cli_tokens(
     expires_in = payload.get("expires_in")
     try:
         expires_in_seconds = int(expires_in)
-    except (ValueError):
+    except Exception:
         expires_in_seconds = 6 * 60 * 60
 
     refreshed = {
@@ -2816,7 +2816,7 @@ def kimi_oauth_device_code_login(
         ):
             try:
                 opened = webbrowser.open(verification_url)
-            except (OSError):
+            except Exception:
                 opened = False
             print(
                 "  (Opened browser for verification)"
@@ -2932,7 +2932,7 @@ def _fetch_published_gemini_client_secret(timeout_seconds: float = 15.0) -> str:
         if not _re.fullmatch(r"GOCSPX-[A-Za-z0-9_-]{10,64}", secret):
             return ""
         return secret
-    except (httpx.HTTPStatusError, httpx.RequestError):
+    except Exception:
         return ""
 
 
@@ -3349,7 +3349,7 @@ def _gemini_google_loopback_login(
         print(f"  {url}")
         try:
             opened = webbrowser.open(url)
-        except (OSError):
+        except Exception:
             opened = False
         print(
             "  (Opened your browser)"
@@ -4018,7 +4018,7 @@ def _spotify_interactive_setup(redirect_uri_hint: str) -> str:
     if not _is_remote_session():
         try:
             webbrowser.open(SPOTIFY_DASHBOARD_URL)
-        except (OSError):
+        except Exception:
             pass
 
     try:
@@ -4100,7 +4100,7 @@ def login_spotify_command(args) -> None:
     if open_browser and not _is_remote_session() and _can_open_graphical_browser():
         try:
             opened = webbrowser.open(authorize_url)
-        except (OSError):
+        except Exception:
             opened = False
         if opened:
             print("Browser opened for Spotify authorization.")
@@ -4240,7 +4240,7 @@ def _can_open_graphical_browser() -> bool:
 
     try:
         controller = _webbrowser.get()
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         # No browser resolvable at all → definitely don't auto-open.
         return False
 
@@ -4600,7 +4600,7 @@ def refresh_codex_oauth_pure(
                     err_desc = err.get("error_description") or err.get("message")
                     if isinstance(err_desc, str) and err_desc.strip():
                         message = f"Codex token refresh failed: {err_desc.strip()}"
-        except (ValueError):
+        except Exception:
             pass
         if code in {"invalid_grant", "invalid_token", "invalid_request"}:
             relogin_required = True
@@ -4931,7 +4931,7 @@ def _codex_pool_rate_limit_status() -> Optional[Dict[str, Any]]:
                 "reason": entry.get("last_error_reason"),
                 "message": entry.get("last_error_message"),
             }
-    except (ValueError):
+    except Exception:
         logger.debug("Codex pool rate-limit lookup failed", exc_info=True)
     return None
 
@@ -4971,7 +4971,7 @@ def _pool_codex_access_token() -> str:
         for entry in entries:
             if _entry_usable(entry):
                 return str(entry.get("access_token", "")).strip()
-    except (ValueError):
+    except Exception:
         logger.debug("Codex pool fallback lookup failed", exc_info=True)
     return ""
 
@@ -5179,7 +5179,7 @@ def _xai_access_token_is_expiring(access_token: str, skew_seconds: int = 0) -> b
         if not isinstance(exp, (int, float)):
             return False
         return float(exp) <= (time.time() + max(0, int(skew_seconds)))
-    except (ValueError):
+    except Exception:
         return False
 
 
@@ -5215,7 +5215,7 @@ def _xai_proactive_refresh_skew_seconds(access_token: str) -> int:
         if remaining <= 45 * 60:
             return min(120, max_skew)
         return max_skew
-    except (ValueError):
+    except Exception:
         return max_skew
 
 
@@ -5487,7 +5487,7 @@ def _refresh_xai_oauth_tokens(
     try:
         state = _load_provider_state(_load_auth_store(), "xai-oauth") or {}
         auth_mode = str(state.get("auth_mode") or "oauth_device_code")
-    except (ValueError):
+    except Exception:
         auth_mode = "oauth_device_code"
     refreshed = refresh_xai_oauth_pure(
         str(tokens.get("access_token", "") or ""),
@@ -6943,7 +6943,7 @@ def _xai_oauth_device_code_login(
         if open_browser and not _is_remote_session() and _can_open_graphical_browser():
             try:
                 opened = webbrowser.open(verification_url)
-            except (OSError):
+            except Exception:
                 opened = False
             if opened:
                 print("  (Opened browser for verification)")
@@ -7311,7 +7311,7 @@ def _minimax_poll_token(
         )
         try:
             payload = response.json() if response.text else {}
-        except (ValueError):
+        except Exception:
             payload = {}
 
         if response.status_code != 200:
@@ -7469,7 +7469,7 @@ def _refresh_minimax_oauth_state(
         )
     try:
         expires_at = datetime.fromisoformat(state.get("expires_at", "")).timestamp()
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         expires_at = 0.0
     now = time.time()
     if not force and (expires_at - now) > MINIMAX_OAUTH_REFRESH_SKEW_SECONDS:
@@ -7670,7 +7670,7 @@ def get_minimax_oauth_auth_status() -> Dict[str, Any]:
     try:
         expires_at = datetime.fromisoformat(state.get("expires_at", "")).timestamp()
         token_valid = (expires_at - time.time()) > 0
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         token_valid = bool(state.get("access_token"))
     return {
         "logged_in": token_valid,

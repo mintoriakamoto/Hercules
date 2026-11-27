@@ -253,7 +253,7 @@ def _detect_macos_system_proxy() -> str | None:
             text=True,
             stderr=subprocess.DEVNULL,
         )
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return None
 
     props: dict[str, str] = {}
@@ -2057,7 +2057,7 @@ def coerce_plaintext_gateway_command(event: "MessageEvent") -> None:
             if pattern.match(text):
                 event.text = "/restart"
                 return
-    except (AttributeError):
+    except Exception:
         return
 
 
@@ -3068,7 +3068,7 @@ class BasePlatformAdapter(ABC):
             return
         try:
             event.source = dataclasses.replace(source, thread_id=str(recovered))
-        except (ValueError):
+        except Exception:
             logger.debug("topic recovery rewrite failed", exc_info=True)
 
     def set_busy_session_handler(
@@ -3108,7 +3108,7 @@ class BasePlatformAdapter(ABC):
             return None
         try:
             return bool(self._authorization_check(user_id, chat_type, chat_id))
-        except (ValueError):
+        except Exception:
             logger.warning(
                 "[%s] Authorization check raised for user %s; treating as unknown",
                 self.name,
@@ -3267,7 +3267,7 @@ class BasePlatformAdapter(ABC):
         """
         try:
             from hercules_cli.config import load_config as _load_config
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return 0
         try:
             cfg = _load_config()
@@ -4165,7 +4165,7 @@ class BasePlatformAdapter(ABC):
             if hasattr(self, "stop_typing"):
                 try:
                     await self.stop_typing(chat_id)
-                except (RuntimeError):
+                except Exception:
                     pass
             self._typing_paused.discard(chat_id)
 
@@ -4194,7 +4194,7 @@ class BasePlatformAdapter(ABC):
             for attempt in range(attempts):
                 try:
                     await self.stop_typing(chat_id)
-                except (RuntimeError):
+                except Exception:
                     pass
                 if attempt < attempts - 1:
                     await asyncio.sleep(0)
@@ -4221,7 +4221,7 @@ class BasePlatformAdapter(ABC):
                 interrupt_event.set()
         try:
             await self.stop_typing(chat_id)
-        except (RuntimeError):
+        except Exception:
             pass
 
     def register_post_delivery_callback(
@@ -4281,7 +4281,7 @@ class BasePlatformAdapter(ABC):
                             _result = _cb()
                             if inspect.isawaitable(_result):
                                 await _result
-                        except (RuntimeError):
+                        except Exception:
                             logger.debug("Post-delivery callback failed", exc_info=True)
 
                 callback = _chained
@@ -4377,7 +4377,7 @@ class BasePlatformAdapter(ABC):
             if ttl is None:
                 try:
                     ttl = int(self._get_ephemeral_system_ttl_default())
-                except (ValueError):
+                except Exception:
                     ttl = 0
             if (
                 ttl
@@ -4835,7 +4835,7 @@ class BasePlatformAdapter(ABC):
                     self.name,
                     session_key,
                 )
-            except (IndexError, KeyError):
+            except Exception:
                 logger.debug(
                     "[%s] Session cancellation raised while unwinding %s",
                     self.name,
@@ -4933,7 +4933,7 @@ class BasePlatformAdapter(ABC):
                 release_guard=False,
                 discard_pending=False,
             )
-        except (IndexError, KeyError):
+        except Exception:
             # On failure, restore the original guard if one still exists so
             # we don't leave the session in a half-reset state.
             if self._active_sessions.get(session_key) is command_guard:

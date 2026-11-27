@@ -437,7 +437,7 @@ class ResponseStore:
         self._db_path: Optional[str] = db_path if db_path != ":memory:" else None
         try:
             self._conn = sqlite3.connect(db_path, check_same_thread=False)
-        except (OSError, sqlite3.DatabaseError):
+        except Exception:
             self._conn = sqlite3.connect(":memory:", check_same_thread=False)
             self._db_path = None
         # Use shared WAL-fallback helper so response_store.db degrades
@@ -894,7 +894,7 @@ def _notify_cron_provider_jobs_changed() -> None:
 # must not disable the cron REST API.
 try:
     from tools.cronjob_tools import _scan_cron_prompt as _scan_cron_prompt
-except (ImportError, ModuleNotFoundError):
+except Exception:  # pragma: no cover - scanner is optional hardening
     _scan_cron_prompt = None
 
 
@@ -1787,7 +1787,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     "configured": _toolset_has_keys(name, config),
                     "tools": tools,
                 })
-        except (IndexError, KeyError):
+        except Exception:
             logger.exception("GET /v1/toolsets failed")
             return web.json_response(
                 _openai_error("Failed to enumerate toolsets", err_type="server_error"),
@@ -1871,7 +1871,7 @@ class APIServerAdapter(BasePlatformAdapter):
     ) -> tuple[Dict[str, Any], Optional["web.Response"]]:
         try:
             body = await request.json()
-        except (ValueError):
+        except Exception:
             return {}, web.json_response(
                 _openai_error("Invalid JSON in request body"), status=400
             )
@@ -3117,7 +3117,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 }
                 await response.write(f"data: {json.dumps(error_chunk)}\n\n".encode())
                 await response.write(b"data: [DONE]\n\n")
-            except (IndexError, KeyError):
+            except Exception:
                 pass
 
         return response
@@ -3660,7 +3660,7 @@ class APIServerAdapter(BasePlatformAdapter):
                                         + " chars — truncated for response.completed]"
                                     )
                             _item["arguments"] = json.dumps(_args)
-                    except (ValueError):
+                    except Exception:
                         pass
                 elif _item.get("type") == "function_call_output":
                     _output = _item.get("output", [])
@@ -3816,7 +3816,7 @@ class APIServerAdapter(BasePlatformAdapter):
                         "response": failed_env,
                     },
                 )
-            except (IndexError, KeyError, RuntimeError):
+            except Exception:
                 pass
             logger.error(
                 "Agent crashed mid-stream for %s: %s",
@@ -4522,7 +4522,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except (ValueError):
+        except Exception:
             body = {}
         job_id = (body or {}).get("job_id")
         if not job_id:
@@ -4934,7 +4934,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except (ValueError):
+        except Exception:
             return web.json_response(_openai_error("Invalid JSON"), status=400)
 
         raw_input = body.get("input")
@@ -5387,7 +5387,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             body = await request.json()
-        except (ValueError):
+        except Exception:
             return web.json_response(_openai_error("Invalid JSON"), status=400)
 
         raw_choice = str(body.get("choice", "")).strip().lower()

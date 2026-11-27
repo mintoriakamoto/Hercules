@@ -93,7 +93,7 @@ def _is_cron_provider_dir(path: Path) -> bool:
     try:
         source = init_file.read_text(errors="replace")[:8192]
         return "register_cron_scheduler" in source or "CronScheduler" in source
-    except (KeyError, IndexError):
+    except Exception:
         return False
 
 

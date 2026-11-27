@@ -84,7 +84,7 @@ def _credential_host_paths() -> set[str]:
     """Return credential files that are upload-only for remote sandboxes."""
     try:
         from tools.credential_files import get_credential_file_mounts
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return set()
 
     paths: set[str] = set()

@@ -477,7 +477,7 @@ def _resolve_host_user_spec() -> Optional[str]:
         return None
     try:
         return f"{get_uid()}:{get_gid()}"
-    except Exception:
+    except Exception:  # pragma: no cover - defensive
         return None
 
 
@@ -594,7 +594,7 @@ def _ensure_docker_available() -> None:
         raise RuntimeError(
             "Docker daemon is not responding. Ensure Docker is running and try again."
         )
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         logger.error(
             "Unexpected error while checking Docker availability.",
             exc_info=True,
@@ -1352,7 +1352,7 @@ class DockerEnvironment(BaseEnvironment):
                 _storage_opt_ok = True
             else:
                 _storage_opt_ok = False
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             _storage_opt_ok = False
         logger.debug("Docker --storage-opt support: %s", _storage_opt_ok)
         return _storage_opt_ok

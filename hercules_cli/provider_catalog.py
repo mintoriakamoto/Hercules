@@ -98,7 +98,7 @@ def provider_catalog() -> list[ProviderDescriptor]:
     # never want a provider-plugin import error to blank the whole catalog.
     try:
         from hercules_cli.auth import PROVIDER_REGISTRY
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         PROVIDER_REGISTRY = {}
 
     try:
@@ -110,7 +110,7 @@ def provider_catalog() -> list[ProviderDescriptor]:
 
     try:
         from hercules_cli.config import OPTIONAL_ENV_VARS
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         OPTIONAL_ENV_VARS = {}
 
     # Hercules overlays carry auth_type for providers that have no registry/profile
@@ -118,7 +118,7 @@ def provider_catalog() -> list[ProviderDescriptor]:
     # "virtual"), which has no real credential and no network endpoint.
     try:
         from hercules_cli.providers import HERCULES_OVERLAYS
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         HERCULES_OVERLAYS = {}
 
     out: list[ProviderDescriptor] = []

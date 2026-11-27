@@ -448,7 +448,7 @@ def _capture_required_environment_variables(
                 entry["prompt"],
                 metadata,
             )
-        except (IndexError, KeyError):
+        except Exception:
             logger.warning(
                 f"Secret capture callback failed for {entry['name']}", exc_info=True
             )
@@ -1046,7 +1046,7 @@ def _serve_plugin_skill(
             banner = (
                 f"[Bundle context: This skill is part of the '{namespace}' plugin.]\n\n"
             )
-    except (IndexError, KeyError):
+    except Exception:
         banner = ""
 
     rendered_content = content
@@ -1358,7 +1358,7 @@ def skill_view(
         _trusted_dirs = [active_skills_dir.resolve()]
         try:
             _trusted_dirs.extend(d.resolve() for d in all_dirs[1:])
-        except (IndexError, KeyError):
+        except Exception:
             pass
         for _td in _trusted_dirs:
             try:

@@ -128,7 +128,7 @@ async def resolve_image_source(src: str, ctx: ResolveContext) -> ResolvedImage:
         # a real block always propagates.
         try:
             from agent.file_safety import raise_if_read_blocked
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             raise_if_read_blocked = None
         if raise_if_read_blocked is not None:
             try:

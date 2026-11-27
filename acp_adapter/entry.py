@@ -271,7 +271,7 @@ def main(argv: list[str] | None = None) -> None:
         asyncio.run(acp.run_agent(agent, use_unstable_protocol=True))
     except KeyboardInterrupt:
         logger.info("Shutting down (KeyboardInterrupt)")
-    except (RuntimeError):
+    except Exception:
         logger.exception("ACP agent crashed")
         sys.exit(1)
 

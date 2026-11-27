@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from langfuse import Langfuse, propagate_attributes
-except (ImportError, ModuleNotFoundError):
+except Exception:  # pragma: no cover - fail-open when optional dep is missing
     Langfuse = None
     propagate_attributes = None
 
@@ -720,7 +720,7 @@ def _start_root_trace(
                     end_on_exit=False,
                 )
                 root_span = root_ctx.__enter__()
-        except (KeyError, IndexError):
+        except Exception:
             root_ctx = client.start_as_current_observation(
                 trace_context=trace_ctx,
                 name="Hercules turn",

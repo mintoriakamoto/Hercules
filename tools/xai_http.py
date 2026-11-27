@@ -73,7 +73,7 @@ def hercules_xai_user_agent() -> str:
     """Return a stable Hercules-specific User-Agent for xAI HTTP calls."""
     try:
         from hercules_cli import __version__
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         __version__ = "unknown"
     return f"Hercules-Agent/{__version__}"
 

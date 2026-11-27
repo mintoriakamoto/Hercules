@@ -867,7 +867,7 @@ def do_install(
                     "[dim]You can still schedule it any time by asking the agent "
                     "or via[/] [bold]hercules cron add[/][dim].[/]\n"
                 )
-    except (IndexError, KeyError):
+    except Exception:  # pragma: no cover - blueprint detection is best-effort
         pass
 
     if invalidate_cache:
@@ -1771,7 +1771,7 @@ def _github_publish(skill_path: Path, skill_name: str, target_repo: str, auth) -
             timeout=15,
         )
         default_branch = resp.json().get("default_branch", "main")
-    except (ValueError, httpx.HTTPStatusError, httpx.RequestError):
+    except Exception:
         default_branch = "main"
 
     # 3. Get the base tree SHA

@@ -150,7 +150,7 @@ def enrich_model_switch_warnings_for_gateway(
                 and model_cfg.get("context_length") is not None
             ):
                 cfg_ctx = int(model_cfg["context_length"])
-        except (ValueError):
+        except Exception:
             pass
 
     messages = None

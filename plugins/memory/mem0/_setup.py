@@ -378,7 +378,7 @@ def _check_selfhosted_server(host: str) -> None:
     except urllib.error.HTTPError:
         # Any HTTP response (401/403/404) still means something is listening.
         print(f"  ✓ Mem0 server responding at {host}")
-    except (OSError):
+    except Exception:
         print(
             f"  ⚠ Could not reach {host} — check the URL and that the server is running."
         )
@@ -608,7 +608,7 @@ def _ensure_pgvector(host: str = "localhost", port: int = 5432) -> dict | None:
                 if ok:
                     print("  ✓ PostgreSQL container restarted")
                     return None
-        except (subprocess.CalledProcessError, OSError):
+        except Exception:
             pass
 
         answer = input("  Start pgvector via Docker? [Y/n]: ").strip().lower()
@@ -760,7 +760,7 @@ def _ollama_has_model(url: str, model: str) -> bool:
         names = [m.get("name", "") for m in data.get("models", [])]
         base_model = model.split(":")[0]
         return any(model in n or base_model in n for n in names)
-    except (requests.RequestException, OSError):
+    except Exception:
         return False
 
 
@@ -1001,7 +1001,7 @@ def _install_provider_deps(llm_id: str, embedder_id: str, vector_id: str) -> Non
                 timeout=60,
             )
             print(f"  ✓ Installed {dep}")
-        except (subprocess.CalledProcessError, OSError):
+        except Exception:
             print(
                 f"  Warning: Could not install {dep}. Install manually: uv pip install {dep}"
             )

@@ -249,7 +249,7 @@ class _Client:
         )
         try:
             payload = resp.json()
-        except (ValueError):
+        except Exception:
             payload = resp.text
         if not resp.ok:
             msg = ""

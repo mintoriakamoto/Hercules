@@ -291,7 +291,7 @@ class XAIWebSearchProvider(WebSearchProvider):
                 body = ""
                 try:
                     body = exc.response.text[:300] if exc.response is not None else ""
-                except (KeyError, IndexError):
+                except Exception:
                     body = ""
                 logger.warning("xAI web search HTTP %d: %s", status, body)
                 return {

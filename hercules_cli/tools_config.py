@@ -837,7 +837,7 @@ def install_cua_driver(upgrade: bool = False) -> bool:
             _print_success(
                 f"    {driver_cmd} already installed: {version or 'unknown version'}"
             )
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             _print_success(f"    {driver_cmd} already installed.")
         if is_windows:
             _print_info(
@@ -897,7 +897,7 @@ def install_cua_driver(upgrade: bool = False) -> bool:
                 timeout=5,
                 env=_cua_driver_env(),
             ).stdout.strip()
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             before = ""
     else:
         before = ""
@@ -916,7 +916,7 @@ def install_cua_driver(upgrade: bool = False) -> bool:
                 _print_success(f"    {driver_cmd} upgraded: {before} → {after}")
             elif after:
                 _print_info(f"    {driver_cmd} up to date: {after}")
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             pass
     return ok
 
@@ -1172,7 +1172,7 @@ def _run_cua_driver_installer(label: str = "Installing", verbose: bool = True) -
                             + "\n"
                         )
                         _update_log.flush()
-                    except (OSError):
+                    except Exception:
                         pass
                 if result.returncode != 0:
                     logger.debug("cua-driver installer output:\n%s", result.stdout)
@@ -1643,7 +1643,7 @@ def valid_post_setup_keys() -> Set[str]:
                 ps = prov.get("post_setup")
                 if ps:
                     keys.add(ps)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:  # pragma: no cover — defensive; plugins optional
             continue
     return keys
 
@@ -2243,7 +2243,7 @@ def _estimate_tool_tokens() -> Dict[str, int]:
         # Trigger full tool discovery (imports all tool modules).
         import model_tools  # noqa: F401
         from tools.registry import registry
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.debug("Tool registry unavailable; skipping token estimation")
         _tool_token_cache = {}
         return _tool_token_cache
@@ -2661,7 +2661,7 @@ def _post_setup_already_installed(post_setup_key: str) -> bool:
         return True
     try:
         return bool(predicate())
-    except (ValueError):
+    except Exception:
         return True
 
 
@@ -2996,7 +2996,7 @@ def _plugin_image_gen_catalog(plugin_name: str):
     try:
         models = provider.list_models() or []
         default = provider.default_model()
-    except (IndexError, KeyError):
+    except Exception:
         return {}, None
     catalog = {m["id"]: m for m in models if isinstance(m, dict) and "id" in m}
     return catalog, default
@@ -3138,7 +3138,7 @@ def _plugin_video_gen_catalog(plugin_name: str):
     try:
         models = provider.list_models() or []
         default = provider.default_model()
-    except (IndexError, KeyError):
+    except Exception:
         return {}, None
     catalog = {m["id"]: m for m in models if isinstance(m, dict) and "id" in m}
     return catalog, default

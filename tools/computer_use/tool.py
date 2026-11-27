@@ -968,7 +968,7 @@ def _route_capture_through_aux_vision(
         if temp_image_path is not None:
             try:
                 _os.unlink(str(temp_image_path))
-            except (ValueError):
+            except Exception:
                 pass
 
     analysis_text = ""

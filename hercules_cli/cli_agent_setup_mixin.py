@@ -238,7 +238,7 @@ class CLIAgentSetupMixin:
 
         try:
             overrides = resolve_fast_mode_overrides(route["model"])
-        except (IndexError, KeyError):
+        except Exception:
             overrides = None
         route["request_overrides"] = overrides
         return route
@@ -378,7 +378,7 @@ class CLIAgentSetupMixin:
                     (self.session_id,),
                 )
                 self._session_db._conn.commit()
-            except (sqlite3.DatabaseError):
+            except Exception:
                 pass
 
         try:
@@ -568,7 +568,7 @@ class CLIAgentSetupMixin:
                 (self.session_id,),
             )
             self._session_db._conn.commit()
-        except (sqlite3.DatabaseError):
+        except Exception:
             pass
 
         return True

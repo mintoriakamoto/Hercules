@@ -458,7 +458,7 @@ def _prompt_for_sudo_password(timeout_seconds: int = 45) -> str:
                 result["password"] = b"".join(chars).decode("utf-8", errors="replace")
         except (EOFError, KeyboardInterrupt, OSError):
             result["password"] = ""
-        except (AttributeError, ImportError, IndexError, KeyError, ModuleNotFoundError, OSError):
+        except Exception:
             result["password"] = ""
         finally:
             if tty_fd is not None and old_attrs is not None:
@@ -533,7 +533,7 @@ def _safe_command_preview(command: Any, limit: int = 200) -> str:
         return command[:limit]
     try:
         return repr(command)[:limit]
-    except (IndexError, KeyError):
+    except Exception:
         return f"<{type(command).__name__}>"
 
 
@@ -731,7 +731,7 @@ def _sudo_nopasswd_works() -> bool:
             check=False,
         )
         return probe.returncode == 0
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return False
 
 

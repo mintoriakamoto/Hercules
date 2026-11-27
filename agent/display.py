@@ -1128,7 +1128,7 @@ class KawaiiSpinner:
                 faces = skin.spinner.get("waiting_faces", [])
                 if faces:
                     return faces
-        except (IndexError, KeyError):
+        except Exception:
             pass
         return cls.KAWAII_WAITING
 
@@ -1141,7 +1141,7 @@ class KawaiiSpinner:
                 faces = skin.spinner.get("thinking_faces", [])
                 if faces:
                     return faces
-        except (IndexError, KeyError):
+        except Exception:
             pass
         return cls.KAWAII_THINKING
 
@@ -1154,7 +1154,7 @@ class KawaiiSpinner:
                 verbs = skin.spinner.get("thinking_verbs", [])
                 if verbs:
                     return verbs
-        except (IndexError, KeyError):
+        except Exception:
             pass
         return cls.THINKING_VERBS
 
@@ -1514,7 +1514,7 @@ def _get_cute_tool_message(
                     s = data.get("summary", {})
                     total = s.get("total", 0)
                     done = s.get("completed", 0)
-            except (requests.RequestException, httpx.RequestError, OSError):
+            except Exception:
                 pass
         if todos_arg is None:
             if total > 0:

@@ -544,7 +544,7 @@ class HolographicMemoryProvider(MemoryProvider):
             total = self._store._conn.execute("SELECT COUNT(*) FROM facts").fetchone()[
                 0
             ]
-        except (sqlite3.DatabaseError, OSError):
+        except Exception:
             total = 0
         if total == 0:
             return (
@@ -566,7 +566,7 @@ class HolographicMemoryProvider(MemoryProvider):
             profile = self._store.list_profile_facts(
                 limit=int(self._config.get("profile_inject_limit", 15))
             )
-        except (requests.RequestException, OSError):
+        except Exception:
             profile = []
         if profile:
             lines = "\n".join(f"- {p.get('content', '')}" for p in profile)
@@ -1234,7 +1234,7 @@ class HolographicMemoryProvider(MemoryProvider):
                     try:
                         self._store.add_fact(content[:400], category="user_pref")
                         extracted += 1
-                    except (KeyError, IndexError):
+                    except Exception:
                         pass
                     break
 
@@ -1243,7 +1243,7 @@ class HolographicMemoryProvider(MemoryProvider):
                     try:
                         self._store.add_fact(content[:400], category="project")
                         extracted += 1
-                    except (KeyError, IndexError):
+                    except Exception:
                         pass
                     break
 

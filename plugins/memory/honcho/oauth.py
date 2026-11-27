@@ -228,7 +228,7 @@ def _atomic_write_config(path: Path, raw: dict[str, Any]) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
-    except (OSError):
+    except Exception:
         tmp.unlink(missing_ok=True)
         raise
     os.replace(tmp, path)

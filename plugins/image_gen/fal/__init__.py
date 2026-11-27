@@ -202,7 +202,7 @@ class FalImageGenProvider(ImageGenProvider):
             try:
                 model_id, _meta = _it._resolve_fal_model()
                 response["model"] = model_id
-            except (KeyError, IndexError):
+            except Exception:
                 pass
         return response
 

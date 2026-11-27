@@ -116,7 +116,7 @@ def _safe_stderr():  # type: ignore[return]
             # when it is garbage-collected.
             wrapped.close = lambda: None  # type: ignore[assignment]
             return wrapped
-    except (AttributeError):
+    except Exception:
         pass
     # Best-effort: if wrapping fails, return the original stream.
     return stream
@@ -494,7 +494,7 @@ class _ManagedRotatingFileHandler(RotatingFileHandler):
             try:
                 self.stream = self._open()
                 self._record_stream_stat()
-            except (OSError):
+            except Exception:
                 # Couldn't reopen — leave stream=None; next emit will
                 # bail rather than write to a stale inode.
                 pass
@@ -518,7 +518,7 @@ class _ManagedRotatingFileHandler(RotatingFileHandler):
             try:
                 self.stream = self._open()
                 self._stat_dev, self._stat_ino = st.st_dev, st.st_ino
-            except (OSError):
+            except Exception:
                 pass
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -550,7 +550,7 @@ class _ManagedRotatingFileHandler(RotatingFileHandler):
         # created HERCULES_HOME directory.
         try:
             Path(self.baseFilename).parent.mkdir(parents=True, exist_ok=True)
-        except (OSError):
+        except Exception:
             pass  # If mkdir fails, let the parent's _open() handle the error
         stream = super()._open()
         self._chmod_if_managed()

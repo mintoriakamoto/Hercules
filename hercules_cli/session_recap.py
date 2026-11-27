@@ -198,7 +198,7 @@ def _shortened_path(path: str) -> str:
         if abs_path.startswith(home + os.sep):
             return "~/" + abs_path[len(home) + 1 :]
         return abs_path
-    except (IndexError, KeyError):
+    except Exception:
         return path
 
 

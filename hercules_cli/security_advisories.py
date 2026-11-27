@@ -230,7 +230,7 @@ def ack_advisory(advisory_id: str) -> bool:
         return False
     try:
         from hercules_cli.config import load_config, save_config
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         logger.warning("Could not import config module to persist ack")
         return False
     try:
@@ -244,7 +244,7 @@ def ack_advisory(advisory_id: str) -> bool:
             sec["acked_advisories"] = existing
             save_config(cfg)
         return True
-    except (IndexError, KeyError):
+    except Exception:
         logger.exception("Failed to persist advisory ack for %s", advisory_id)
         return False
 
@@ -369,7 +369,7 @@ def _write_banner_cache(seen: dict[str, float]) -> None:
     try:
         lines = [f"{aid} {ts}" for aid, ts in seen.items()]
         p.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    except (IndexError, KeyError):
+    except Exception:
         logger.debug("Could not write advisory banner cache", exc_info=True)
 
 

@@ -371,7 +371,7 @@ def check_whatsapp_requirements() -> bool:
             [_node, "--version"], capture_output=True, text=True, timeout=5
         )
         return result.returncode == 0
-    except (subprocess.CalledProcessError, OSError):
+    except Exception:
         return False
 
 
@@ -666,7 +666,7 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                                 print(
                                     f"[{self.name}] Bridge found but not connected (status: {bridge_status}), restarting"
                                 )
-            except (requests.RequestException, OSError):
+            except Exception:
                 pass  # Bridge not running, start a new one
 
             # Kill any orphaned bridge from a previous gateway run
@@ -751,7 +751,7 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                                         f"[{self.name}] Bridge ready (status: connected)"
                                     )
                                     break
-                except (requests.RequestException, OSError):
+                except Exception:
                     continue
 
             if not http_ready:
@@ -786,7 +786,7 @@ class WhatsAppAdapter(WhatsAppBehaviorMixin, BasePlatformAdapter):
                                             f"[{self.name}] Bridge ready (status: connected)"
                                         )
                                         break
-                    except (requests.RequestException, OSError):
+                    except Exception:
                         continue
                 else:
                     # Still not connected — warn but proceed (bridge may
@@ -1823,7 +1823,7 @@ async def _standalone_send(
                                     last_message_id = (await resp.json()).get(
                                         "messageId"
                                     )
-                        except (requests.RequestException, OSError):
+                        except Exception:
                             logger.warning(
                                 "WhatsApp caption-fallback send failed for missing media"
                             )

@@ -150,7 +150,7 @@ def _read_entries(path: Path) -> list[dict[str, Any]]:
             data = json.load(fh)
     except FileNotFoundError:
         return []
-    except (IndexError, KeyError, OSError):
+    except Exception:
         logger.warning("Ignoring corrupt active session registry at %s", path)
         return []
     entries = data.get("entries") if isinstance(data, dict) else data

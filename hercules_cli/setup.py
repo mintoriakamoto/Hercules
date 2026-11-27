@@ -217,7 +217,7 @@ def is_interactive_stdin() -> bool:
         return False
     try:
         return bool(stdin.isatty())
-    except (ValueError):
+    except Exception:
         return False
 
 
@@ -2338,7 +2338,7 @@ def _model_section_has_credentials(config: dict) -> bool:
 
     try:
         from hercules_cli.auth import PROVIDER_REGISTRY
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         PROVIDER_REGISTRY = {}  # type: ignore[assignment]
 
     def _has_key(pconfig) -> bool:

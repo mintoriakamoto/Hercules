@@ -519,7 +519,7 @@ def _terminate_command_stt_process_tree(proc: subprocess.Popen) -> None:
                 timeout=5,
                 stdin=subprocess.DEVNULL,
             )
-        except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+        except Exception:
             proc.kill()
         return
 
@@ -1677,7 +1677,7 @@ def _transcribe_xai(file_path: str, model_name: str) -> Dict[str, Any]:
                 detail = (
                     err_body.get("error", {}).get("message", "") or response.text[:300]
                 )
-            except (ValueError):
+            except Exception:
                 detail = response.text[:300]
             return {
                 "success": False,
@@ -1781,7 +1781,7 @@ def _transcribe_elevenlabs(file_path: str, model_name: str) -> Dict[str, Any]:
                     detail = str(error_value)
                 else:
                     detail = response.text[:300]
-            except (ValueError):
+            except Exception:
                 detail = response.text[:300]
             return {
                 "success": False,

@@ -171,7 +171,7 @@ class GatewayKanbanWatchersMixin:
         # TODO: gate per-board when per-board dispatcher_owner tracking lands.
         try:
             from hercules_cli.config import load_config as _load_config
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.warning("kanban notifier: config loader unavailable; disabled")
             return
         env_override = (
@@ -197,7 +197,7 @@ class GatewayKanbanWatchersMixin:
 
         try:
             from hercules_cli import kanban_db as _kb
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.warning(
                 "kanban notifier: kanban_db not importable; notifier disabled"
             )
@@ -290,7 +290,7 @@ class GatewayKanbanWatchersMixin:
                                 if db_path
                                 else str(_kb.kanban_db_path(slug).resolve())
                             )
-                        except (ValueError):
+                        except Exception:
                             resolved_db_path = f"slug:{slug}"
                         if resolved_db_path in seen_db_paths:
                             logger.debug(
@@ -980,7 +980,7 @@ class GatewayKanbanWatchersMixin:
         # as an escape hatch (false-y value disables without editing YAML).
         try:
             from hercules_cli.config import load_config as _load_config
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.warning("kanban dispatcher: config loader unavailable; disabled")
             return
         env_override = (
@@ -1006,7 +1006,7 @@ class GatewayKanbanWatchersMixin:
 
         try:
             from hercules_cli import kanban_db as _kb
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             logger.warning(
                 "kanban dispatcher: kanban_db not importable; dispatcher disabled"
             )
@@ -1191,7 +1191,7 @@ class GatewayKanbanWatchersMixin:
             path = _kb.kanban_db_path(slug)
             try:
                 resolved = str(path.expanduser().resolve())
-            except (ValueError):
+            except Exception:
                 resolved = str(path)
             try:
                 stat = path.stat()
@@ -1463,7 +1463,7 @@ class GatewayKanbanWatchersMixin:
                         len(pids),
                         pids,
                     )
-            except (RuntimeError):
+            except Exception:
                 logger.exception("kanban dispatcher: zombie reaper failed")
 
             try:
@@ -1517,7 +1517,7 @@ class GatewayKanbanWatchersMixin:
                 _release_singleton_lock(self._kanban_dispatcher_lock_handle)
                 self._kanban_dispatcher_lock_handle = None
                 raise
-            except (AttributeError, OSError, RuntimeError, ValueError):
+            except Exception:
                 logger.exception("kanban dispatcher: unexpected watcher error")
 
             # Sleep in 1s slices so shutdown is snappy — otherwise a stop()

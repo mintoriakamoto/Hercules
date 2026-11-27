@@ -79,7 +79,7 @@ def _effective_temperature_for_model(
             _fixed_temperature_for_model,
             OMIT_TEMPERATURE,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return requested_temperature
 
     fixed_temperature = _fixed_temperature_for_model(model, base_url)

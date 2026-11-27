@@ -641,7 +641,7 @@ def _cron_mirror_delivery_enabled(job: dict, cfg: Optional[dict] = None) -> bool
         if cfg is None:
             cfg = load_config() or {}
         return bool((cfg.get("cron", {}) or {}).get("mirror_delivery", False))
-    except (requests.RequestException, OSError):
+    except Exception:
         return False
 
 
@@ -1544,7 +1544,7 @@ def _deliver_result(job: dict, content: str, adapters=None, loop=None) -> Option
     try:
         user_cfg = load_config()
         wrap_response = user_cfg.get("cron", {}).get("wrap_response", True)
-    except (requests.RequestException, OSError):
+    except Exception:
         pass
 
     if wrap_response:
@@ -1668,7 +1668,7 @@ def _deliver_result(job: dict, content: str, adapters=None, loop=None) -> Option
                 and str(surface_raw).strip().lower() == "in_channel"
             ):
                 surface_mode = "in_channel"
-        except (requests.RequestException, OSError):
+        except Exception:
             surface_mode = "thread"
         in_channel_surface = surface_mode == "in_channel"
         if (
@@ -2164,7 +2164,7 @@ def _get_script_timeout() -> int:
             timeout = int(float(_SCRIPT_TIMEOUT))
             if timeout > 0:
                 return timeout
-        except (ValueError, TypeError):
+        except Exception:
             logger.warning(
                 "Invalid patched _SCRIPT_TIMEOUT=%r; using env/config/default",
                 _SCRIPT_TIMEOUT,
@@ -2176,7 +2176,7 @@ def _get_script_timeout() -> int:
             timeout = int(float(env_value))
             if timeout > 0:
                 return timeout
-        except (ValueError, TypeError):
+        except Exception:
             logger.warning(
                 "Invalid HERCULES_CRON_SCRIPT_TIMEOUT=%r; using config/default",
                 env_value,
@@ -3440,12 +3440,12 @@ def run_job(
                         try:
                             _act = agent.get_activity_summary()
                             _idle_secs = _act.get("seconds_since_activity", 0.0)
-                        except (requests.RequestException, OSError):
+                        except Exception:
                             pass
                     if _idle_secs >= _cron_inactivity_limit:
                         _inactivity_timeout = True
                         break
-        except (requests.RequestException, OSError):
+        except Exception:
             _cron_pool.shutdown(wait=False, cancel_futures=True)
             raise
         finally:
@@ -3932,7 +3932,7 @@ def tick(verbose: bool = True, adapters=None, loop=None, sync: bool = True) -> i
                 ).get("max_parallel_jobs")
                 if _cfg_par is not None:
                     _max_workers = int(_cfg_par) or None
-            except (requests.RequestException, OSError):
+            except Exception:
                 pass
 
         if verbose:

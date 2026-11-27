@@ -81,7 +81,7 @@ def _reconfigure_stream(
         if reconfigure is None:
             return
         reconfigure(encoding=encoding, errors=errors)
-    except (AttributeError):
+    except Exception:
         pass
 
 

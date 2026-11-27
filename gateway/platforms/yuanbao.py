@@ -1124,7 +1124,7 @@ class InboundPipeline:
                     continue
                 try:
                     await handler(ctx, next_fn)
-                except (RuntimeError):
+                except Exception:
                     logger.error(
                         "[InboundPipeline] middleware [%s] error", name, exc_info=True
                     )
@@ -1227,7 +1227,7 @@ class DecodeMiddleware(InboundMiddleware):
         """Decode a single raw frame into (push_dict, decoded_via) or (None, '')."""
         try:
             conn_json = json.loads(data.decode("utf-8"))
-        except (UnicodeDecodeError):
+        except Exception:
             conn_json = None
 
         if isinstance(conn_json, dict):
@@ -1871,7 +1871,7 @@ class ExtractContentMiddleware(InboundMiddleware):
             query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
             ids = query.get("resourceId") or query.get("resourceid") or []
             return str(ids[0]).strip() if ids else ""
-        except (ValueError):
+        except Exception:
             return ""
 
     @classmethod
@@ -2657,7 +2657,7 @@ class ForwardedRecordsParseMiddleware(InboundMiddleware):
                 ctx.chat_id,
                 WS_HEARTBEAT_RUNNING,
             )
-        except (RuntimeError):
+        except Exception:
             pass
 
     # -- Record rendering helpers -----------------------------------------
@@ -2969,7 +2969,7 @@ class MediaResolveMiddleware(InboundMiddleware):
         """
         try:
             parsed = urllib.parse.urlparse(url)
-        except (OSError, urllib.error.URLError):
+        except Exception:
             return url
 
         query = urllib.parse.parse_qs(parsed.query)
@@ -2982,7 +2982,7 @@ class MediaResolveMiddleware(InboundMiddleware):
             return await MediaResolveMiddleware._fetch_resource_url(
                 adapter, resource_id
             )
-        except (RuntimeError):
+        except Exception:
             return url
 
     @classmethod
@@ -3629,7 +3629,7 @@ class DispatchMiddleware(InboundMiddleware):
                     await dispatch_fn()
                     while session_key in adapter._active_sessions:
                         await asyncio.sleep(0.1)
-                except (RuntimeError):
+                except Exception:
                     logger.exception("[%s] Group queue consumer error", adapter.name)
         finally:
             adapter._group_queues.pop(session_key, None)
@@ -3725,7 +3725,7 @@ class ConnectionManager:
         if callable(open_attr):
             try:
                 return bool(open_attr())
-            except (ValueError):
+            except Exception:
                 return False
         return False
 
@@ -3764,7 +3764,7 @@ class ConnectionManager:
                         "[%s] Already connected, skipping connect()", adapter.name
                     )
                     return True
-            except (AttributeError, IndexError, KeyError):
+            except Exception:
                 pass
 
         # Acquire platform-scoped lock to prevent duplicate connections
@@ -3921,7 +3921,7 @@ class ConnectionManager:
 
                 try:
                     msg = decode_conn_msg(bytes(raw))
-                except (ValueError):
+                except Exception:
                     continue
 
                 head = msg.get("head", {})
@@ -4183,14 +4183,14 @@ class ConnectionManager:
                 )
                 if from_account:
                     return f"{from_account}:{group_code}"
-        except (UnicodeDecodeError):
+        except Exception:
             pass
         # Protobuf: try decode_inbound_push for sender info
         try:
             push = decode_inbound_push(raw_data)
             if push:
                 return f"{push.get('from_account', '')}:{push.get('group_code', '')}"
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             pass
         # Fallback: unique key (no aggregation)
         return f"__unknown_{id(raw_data)}"
@@ -4282,7 +4282,7 @@ class ConnectionManager:
             return result
         except asyncio.TimeoutError:
             raise
-        except (RuntimeError):
+        except Exception:
             raise
         finally:
             self._pending_acks.pop(req_id, None)
@@ -4417,7 +4417,7 @@ class ConnectionManager:
                     self._adapter.name,
                     WS_CLOSE_TIMEOUT_S,
                 )
-            except (IndexError, KeyError):
+            except Exception:
                 pass
 
 
@@ -4958,7 +4958,7 @@ class HeartbeatManager:
 
         except asyncio.CancelledError:
             cancelled = True
-        except (RuntimeError):
+        except Exception:
             cancelled = False
         else:
             cancelled = False
@@ -4966,7 +4966,7 @@ class HeartbeatManager:
             if not cancelled:
                 try:
                     await self.send_heartbeat_once(chat_id, WS_HEARTBEAT_FINISH)
-                except (RuntimeError):
+                except Exception:
                     pass
             self._reply_heartbeat_tasks.pop(chat_id, None)
             self._reply_hb_last_active.pop(chat_id, None)
@@ -4983,7 +4983,7 @@ class HeartbeatManager:
         if send_finish:
             try:
                 await self.send_heartbeat_once(chat_id, WS_HEARTBEAT_FINISH)
-            except (RuntimeError):
+            except Exception:
                 pass
 
     async def close(self) -> None:
@@ -5159,7 +5159,7 @@ class MessageSender:
         if self._on_send_finish:
             try:
                 await self._on_send_finish(chat_id)
-            except (RuntimeError):
+            except Exception:
                 pass
         return SendResult(success=True)
 
@@ -5897,7 +5897,7 @@ class YuanbaoAdapter(BasePlatformAdapter):
         """Send "typing" status heartbeat (RUNNING). Delegates to OutboundManager."""
         try:
             await self._outbound.start_typing(chat_id)
-        except (RuntimeError):
+        except Exception:
             pass
 
     async def stop_typing(self, chat_id: str) -> None:
@@ -5908,7 +5908,7 @@ class YuanbaoAdapter(BasePlatformAdapter):
         """
         try:
             await self._outbound.stop_typing(chat_id, send_finish=False)
-        except (RuntimeError):
+        except Exception:
             pass
 
     async def _process_message_background(self, event, session_key: str) -> None:

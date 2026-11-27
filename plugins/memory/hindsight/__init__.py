@@ -783,7 +783,7 @@ class HindsightMemoryProvider(MemoryProvider):
                 cfg.get("api_url") or os.environ.get("HINDSIGHT_API_URL", "")
             )
             return has_key or has_url
-        except (requests.RequestException, OSError):
+        except Exception:
             return False
 
     def save_config(self, values, hercules_home):
@@ -1788,7 +1788,7 @@ class HindsightMemoryProvider(MemoryProvider):
                 # Hercules get sluggish. (issue #13125)
                 try:
                     print(f"  ⚠ {msg}", file=sys.stderr, flush=True)
-                except (ValueError):
+                except Exception:
                     pass
                 self._mode = "disabled"
                 return
@@ -2420,7 +2420,7 @@ class HindsightMemoryProvider(MemoryProvider):
                         _run_sync(inner_client.aclose())
                         try:
                             self._client._client = None
-                        except (AttributeError, ValueError, OSError):
+                        except Exception:
                             pass
                     try:
                         self._client.close()

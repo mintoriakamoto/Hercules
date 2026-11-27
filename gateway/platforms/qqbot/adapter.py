@@ -2357,7 +2357,7 @@ class QQAdapter(BasePlatformAdapter):
                     ext,
                 )
                 return cache_document_from_bytes(audio_data, f"qq_voice{ext}")
-        except (IndexError, KeyError):
+        except Exception:
             return cache_document_from_bytes(audio_data, f"qq_voice{ext}")
         finally:
             try:

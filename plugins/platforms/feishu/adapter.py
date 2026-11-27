@@ -2612,7 +2612,7 @@ class FeishuAdapter(BasePlatformAdapter):
             }
             self._chat_info_cache[chat_id] = info
             return dict(info)
-        except (AttributeError):
+        except Exception:
             logger.warning(
                 "[Feishu] Failed to get chat info for %s", chat_id, exc_info=True
             )
@@ -2663,7 +2663,7 @@ class FeishuAdapter(BasePlatformAdapter):
                     event = getattr(dropped, "event", None)
                     message = getattr(event, "message", None)
                     message_id = str(getattr(message, "message_id", "") or "unknown")
-                except (AttributeError):
+                except Exception:
                     message_id = "unknown"
                 logger.error(
                     "[Feishu] Pending-inbound queue full (%d); dropped oldest event %s",
@@ -3278,7 +3278,7 @@ class FeishuAdapter(BasePlatformAdapter):
             chat_type_raw = str(getattr(msg, "chat_type", "p2p") or "p2p")
             if not chat_id:
                 return
-        except (AttributeError):
+        except Exception:
             logger.debug(
                 "[Feishu] Failed to fetch message for reaction routing", exc_info=True
             )
@@ -3959,7 +3959,7 @@ class FeishuAdapter(BasePlatformAdapter):
             )
             self._record_webhook_anomaly(remote_ip, "408")
             return web.Response(status=408, text="Request Timeout")
-        except (KeyError, IndexError):
+        except Exception:
             self._record_webhook_anomaly(remote_ip, "400")
             return web.json_response(
                 {"code": 400, "msg": "failed to read body"}, status=400
@@ -4407,7 +4407,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 content_type, default=self._default_image_media_type(ext)
             )
             return cached_path, media_type
-        except (AttributeError):
+        except Exception:
             logger.warning(
                 "[Feishu] Failed to cache image resource %s", image_key, exc_info=True
             )
@@ -4506,7 +4506,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 return cached_path, (
                     media_type or self._guess_document_media_type(filename)
                 )
-            except (AttributeError):
+            except Exception:
                 logger.warning(
                     "[Feishu] Failed to cache message resource %s/%s",
                     message_id,
@@ -4748,7 +4748,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 for oid, info in bots.items()
                 if oid
             }
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.debug(
                 "[Feishu] Failed to fetch bot names for %s", bot_ids, exc_info=True
             )
@@ -4788,7 +4788,7 @@ class FeishuAdapter(BasePlatformAdapter):
             while len(self._message_text_cache) > _FEISHU_MESSAGE_TEXT_CACHE_SIZE:
                 self._message_text_cache.popitem(last=False)
             return text
-        except (AttributeError):
+        except Exception:
             logger.warning(
                 "[Feishu] Failed to fetch parent message %s", message_id, exc_info=True
             )
@@ -5042,7 +5042,7 @@ class FeishuAdapter(BasePlatformAdapter):
                             "[Feishu] FEISHU_BOT_NAME differs from /bot/v3/info; using hydrated bot name for group @mention gating."
                         )
                     self._bot_name = bot_name
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.debug(
                 "[Feishu] /bot/v3/info probe failed during hydration",
                 exc_info=True,
@@ -5073,7 +5073,7 @@ class FeishuAdapter(BasePlatformAdapter):
             app_name = (getattr(app, "app_name", None) or "").strip()
             if app_name and not self._bot_name:
                 self._bot_name = app_name
-        except (AttributeError):
+        except Exception:
             logger.debug(
                 "[Feishu] Failed to hydrate bot name from application info",
                 exc_info=True,

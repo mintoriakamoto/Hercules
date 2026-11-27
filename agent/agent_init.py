@@ -1985,7 +1985,7 @@ def init_agent(
     try:
         _ctx_cfg = _agent_cfg.get("context", {}) if isinstance(_agent_cfg, dict) else {}
         _engine_name = _ctx_cfg.get("engine", "compressor") or "compressor"
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         pass
 
     if _engine_name != "compressor":

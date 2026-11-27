@@ -34,7 +34,7 @@ def _load_channel_aliases() -> Dict[str, Dict[str, str]]:
         with open(CHANNEL_ALIASES_PATH, encoding="utf-8") as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}
-    except (OSError):
+    except Exception:
         return {}
 
 
@@ -403,7 +403,7 @@ def load_directory() -> Dict[str, Any]:
         # even between timed rebuilds and for brand-new alias entries.
         _apply_channel_aliases(data.setdefault("platforms", {}))
         return data
-    except (OSError):
+    except Exception:
         base = {"updated_at": None, "platforms": {}}
         _apply_channel_aliases(base["platforms"])
         return base

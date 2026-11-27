@@ -119,14 +119,14 @@ def _load_supermemory_config(hercules_home: str) -> dict:
             1,
             min(20, int(config.get("max_recall_results", _DEFAULT_MAX_RECALL_RESULTS))),
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         config["max_recall_results"] = _DEFAULT_MAX_RECALL_RESULTS
     try:
         config["profile_frequency"] = max(
             1,
             min(500, int(config.get("profile_frequency", _DEFAULT_PROFILE_FREQUENCY))),
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         config["profile_frequency"] = _DEFAULT_PROFILE_FREQUENCY
     config["capture_mode"] = (
         "everything" if config.get("capture_mode") == "everything" else "all"
@@ -146,7 +146,7 @@ def _load_supermemory_config(hercules_home: str) -> dict:
         config["api_timeout"] = max(
             0.5, min(15.0, float(config.get("api_timeout", _DEFAULT_API_TIMEOUT)))
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         config["api_timeout"] = _DEFAULT_API_TIMEOUT
 
     # Multi-container support
@@ -210,7 +210,7 @@ def _format_relative_time(iso_timestamp: str) -> str:
         if dt.year == now.year:
             return dt.strftime("%d %b")
         return dt.strftime("%d %b %Y")
-    except (ValueError):
+    except Exception:
         return ""
 
 
@@ -272,7 +272,7 @@ def _format_prefetch_context(
             if similarity is not None:
                 try:
                     prefix_bits.append(f"[{round(float(similarity) * 100)}%]")
-                except (ValueError):
+                except Exception:
                     pass
             prefix = " ".join(prefix_bits)
             lines.append(f"- {prefix} {memory}".strip())
@@ -816,7 +816,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
                 max_results=self._max_recall_results,
             )
             return context
-        except (KeyError, IndexError):
+        except Exception:
             logger.debug("Supermemory prefetch failed", exc_info=True)
             return ""
 
@@ -1088,7 +1088,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
             return tool_error(str(exc))
         try:
             limit = max(1, min(20, int(args.get("limit", 5) or 5)))
-        except (requests.RequestException, OSError):
+        except Exception:
             limit = 5
         try:
             results = self._client.search_memories(
@@ -1103,7 +1103,7 @@ class SupermemoryMemoryProvider(MemoryProvider):
                 if item.get("similarity") is not None:
                     try:
                         entry["similarity"] = round(float(item["similarity"]) * 100)
-                    except (ValueError):
+                    except Exception:
                         pass
                 formatted.append(entry)
             resp: dict[str, Any] = {"results": formatted, "count": len(formatted)}

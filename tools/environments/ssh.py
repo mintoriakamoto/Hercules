@@ -135,7 +135,7 @@ class SSHEnvironment(BaseEnvironment):
             if home and result.returncode == 0:
                 logger.debug("SSH: remote home = %s", home)
                 return home
-        except (subprocess.CalledProcessError):
+        except Exception:
             pass
         if self.user == "root":
             return "/root"
@@ -270,7 +270,7 @@ class SSHEnvironment(BaseEnvironment):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
-            except (OSError, subprocess.CalledProcessError):
+            except Exception:
                 tar_proc.kill()
                 tar_proc.wait()
                 raise

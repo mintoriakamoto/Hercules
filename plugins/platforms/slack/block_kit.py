@@ -504,7 +504,7 @@ def render_blocks(
             # back to plain text rather than truncating and losing content.
             return None
         return blocks
-    except (KeyError, IndexError):
+    except Exception:
         # Never let a rendering bug drop a message.
         return None
 

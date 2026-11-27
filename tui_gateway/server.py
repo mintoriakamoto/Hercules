@@ -70,7 +70,7 @@ def _panic_hook(exc_type, exc_value, exc_tb):
                 f"\n=== unhandled exception · {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n"
             )
             f.write(trace)
-    except (OSError, IOError):
+    except Exception:
         pass
     # Stderr goes through to the TUI as a gateway.stderr Activity line —
     # the first line here is what the user will see without opening any
@@ -103,7 +103,7 @@ def _thread_panic_hook(args):
                 f"· thread={args.thread.name} ===\n"
             )
             f.write(trace)
-    except (OSError, IOError):
+    except Exception:
         pass
     first_line = (
         str(args.exc_value).strip().splitlines()[0]
@@ -656,7 +656,7 @@ def _finalize_session(session: dict | None, end_reason: str = "tui_close") -> No
                 _tui_owns_lifecycle = not _is_gateway_owned_source(source)
                 if _tui_owns_lifecycle:
                     db.end_session(session_id, end_reason)
-        except (requests.RequestException, OSError):
+        except Exception:
             pass
 
     # A session's in-flight async delegations end WITH the session (#55578):
@@ -699,7 +699,7 @@ def _finalize_session(session: dict | None, end_reason: str = "tui_close") -> No
         worker = session.get("slash_worker")
         if worker:
             worker.close()
-    except (requests.RequestException, OSError):
+    except Exception:
         pass
 
 
@@ -727,7 +727,7 @@ def _teardown_session(session: dict | None, *, end_reason: str = "tui_close") ->
         agent = session.get("agent")
         if agent is not None and hasattr(agent, "close"):
             agent.close()
-    except (requests.RequestException, OSError):
+    except Exception:
         pass
     # NOTE: the slash-worker is closed inside _finalize_session (the single
     # _finalized-guarded chokepoint that main folded it into), exactly once.
@@ -1425,7 +1425,7 @@ def _start_agent_build(sid: str, session: dict) -> None:
                     profile_home=current.get("profile_home"),
                 )
                 _attach_worker(sid, current, worker)
-            except (requests.RequestException, OSError):
+            except Exception:
                 pass
 
             try:
@@ -1565,7 +1565,7 @@ def _terminal_task_cwd(session: dict | None) -> str:
                 terminal_cfg = _load_cfg().get("terminal", {})
                 if isinstance(terminal_cfg, dict):
                     raw = str(terminal_cfg.get("cwd") or "").strip()
-            except (requests.RequestException, OSError):
+            except Exception:
                 raw = ""
         if raw and raw not in {".", "auto", "cwd"}:
             return raw
@@ -1651,7 +1651,7 @@ def _display_session_cwd(session: dict | None) -> str:
             with _session_db(session) as db:
                 if db is not None:
                     db.update_session_cwd(session.get("session_key", ""), healed)
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.debug("failed to persist healed session cwd", exc_info=True)
         _persist_session_git_meta(session, healed)
 
@@ -1706,7 +1706,7 @@ def _ensure_session_db_row(session: dict) -> None:
 
         try:
             db = SessionDB(db_path=Path(profile_home) / "state.db")
-        except (OSError):
+        except Exception:
             logger.debug("failed to open profile db for session row", exc_info=True)
             return
         close_db = True
@@ -1777,7 +1777,7 @@ def _ensure_session_db_row(session: dict) -> None:
             parent_session_id=parent_session_id,
             cwd=_session_cwd(session) if session.get("explicit_cwd") else None,
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         logger.debug("failed to persist desktop session row", exc_info=True)
     finally:
         if close_db:
@@ -1816,7 +1816,7 @@ def _persist_branch_seed(session: dict) -> None:
                     content=msg.get("content"),
                 )
             session["_branch_seed_persisted"] = True
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.debug("branch seed persist failed", exc_info=True)
 
 
@@ -1836,7 +1836,7 @@ def _session_db(session: dict):
 
         try:
             db, close_db = SessionDB(db_path=Path(profile_home) / "state.db"), True
-        except (OSError):
+        except Exception:
             logger.debug("failed to open profile db for session", exc_info=True)
     else:
         db = _get_db()
@@ -1899,7 +1899,7 @@ def _set_session_cwd(session: dict, cwd: str) -> str:
         if db is not None:
             try:
                 db.update_session_cwd(session.get("session_key", ""), resolved)
-            except (requests.RequestException, OSError):
+            except Exception:
                 logger.debug("failed to persist session cwd", exc_info=True)
     # Branch/repo-root probes are git subprocesses — capture them off the hot path.
     _persist_session_git_meta(session, resolved)
@@ -2425,7 +2425,7 @@ def _persist_live_session_runtime(session: dict | None) -> None:
             db.update_session_meta(session_key, json.dumps(model_config), model or None)
         elif model and hasattr(db, "update_session_model"):
             db.update_session_model(session_key, model)
-    except (requests.RequestException, OSError):
+    except Exception:
         logger.debug("failed to persist live session runtime", exc_info=True)
 
 
@@ -2448,7 +2448,7 @@ def _persist_live_session_system_prompt(session: dict | None) -> None:
         db.update_system_prompt(
             getattr(agent, "session_id", None) or session_key, prompt
         )
-    except (AttributeError):
+    except Exception:
         logger.debug("failed to persist live session system prompt", exc_info=True)
 
 
@@ -2496,7 +2496,7 @@ def _append_model_switch_marker(
                 scoped_db.append_message(
                     session_id=session_key, role="user", content=marker
                 )
-    except (requests.RequestException, OSError):
+    except Exception:
         logger.debug("failed to persist model switch marker", exc_info=True)
 
 
@@ -2603,7 +2603,7 @@ def _load_provider_routing() -> dict:
     """
     try:
         return _load_cfg().get("provider_routing", {}) or {}
-    except (requests.RequestException, OSError):
+    except Exception:
         return {}
 
 
@@ -2673,7 +2673,7 @@ def _load_enabled_toolsets() -> list[str] | None:
 
     try:
         from toolsets import validate_toolset
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         validate_toolset = None
 
     if explicit and validate_toolset is not None:
@@ -2818,7 +2818,7 @@ def _restart_slash_worker(sid: str, session: dict):
             getattr(session.get("agent"), "model", _resolve_model()),
             profile_home=session.get("profile_home"),
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         session["slash_worker"] = None
         return
     # Route through the same store-iff-still-mapped guard as the spawn sites:
@@ -3290,7 +3290,7 @@ def _probe_credentials(agent) -> str:
         provider = getattr(agent, "provider", "") or ""
         if not key or key == "no-key-required":
             return f"No API key configured for provider '{provider}'. First message will fail."
-    except (AttributeError):
+    except Exception:
         pass
     return ""
 
@@ -3456,7 +3456,7 @@ def _session_info(agent, session: dict | None = None) -> dict:
         info["mcp_servers"] = []
     try:
         info["system_prompt"] = getattr(agent, "_cached_system_prompt", "") or ""
-    except (AttributeError):
+    except Exception:
         pass
     try:
         from hercules_cli.banner import get_update_result
@@ -3654,7 +3654,7 @@ def _on_tool_complete(sid: str, tool_call_id: str, name: str, args: dict, result
         payload["duration_s"] = duration_s
     try:
         payload["result"] = json.loads(result)
-    except (KeyError, IndexError):
+    except Exception:
         payload["result"] = result
     summary = _tool_summary(name, result, duration_s)
     if summary:
@@ -3668,7 +3668,7 @@ def _on_tool_complete(sid: str, tool_call_id: str, name: str, args: dict, result
             data = json.loads(result)
             if isinstance(data, dict) and isinstance(data.get("todos"), list):
                 payload["todos"] = data.get("todos")
-        except (requests.RequestException, OSError):
+        except Exception:
             pass
     try:
         from agent.display import render_edit_diff_with_delta
@@ -3994,7 +3994,7 @@ def _apply_project_workspace(task_id: str, path: str, _name: str = "") -> None:
         if db is not None:
             try:
                 db.update_session_cwd(session.get("session_key", ""), resolved)
-            except (requests.RequestException, OSError):
+            except Exception:
                 logger.debug("failed to persist project workspace cwd", exc_info=True)
 
     _persist_session_git_meta(session, resolved)
@@ -4011,7 +4011,7 @@ def _apply_project_workspace(task_id: str, path: str, _name: str = "") -> None:
             }
         )
         _emit("session.info", sid, info)
-    except (requests.RequestException, OSError):
+    except Exception:
         logger.debug(
             "failed to emit session.info after project workspace move", exc_info=True
         )
@@ -4267,7 +4267,7 @@ def _preview_restart_history(
     try:
         with session["history_lock"]:
             history = list(session.get("history", []) or [])
-    except (requests.RequestException, OSError):
+    except Exception:
         history = list(session.get("history", []) or [])
 
     if not history:
@@ -4444,7 +4444,7 @@ def _schedule_mcp_late_refresh(sid: str, agent) -> None:
     """
     try:
         from tui_gateway.entry import mcp_discovery_in_flight, join_mcp_discovery
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
     if not mcp_discovery_in_flight():
         return
@@ -4753,7 +4753,7 @@ def _init_session(
                 db.update_session_cwd(key, _cwd)
                 # git branch/root probes run off the hot path (see _set_session_cwd).
                 _persist_session_git_meta(_sessions[sid], _cwd)
-            except (KeyError, IndexError):
+            except Exception:
                 logger.debug("failed to persist resumed session cwd", exc_info=True)
     _register_session_cwd(_sessions[sid])
     try:
@@ -4766,7 +4766,7 @@ def _init_session(
                 profile_home=_sessions[sid].get("profile_home"),
             ),
         )
-    except (requests.RequestException, OSError):
+    except Exception:
         # Defer hard-failure to slash.exec; chat still works without slash worker.
         _sessions[sid]["slash_worker"] = None
     try:
@@ -4852,7 +4852,7 @@ def _enrich_with_attached_images(user_text: str, image_paths: list[str]) -> str:
                 if desc
                 else f"[The user attached an image but analysis failed.]\n{hint}"
             )
-        except (requests.RequestException, OSError):
+        except Exception:
             parts.append(f"[The user attached an image but analysis failed.]\n{hint}")
 
     text = user_text or ""
@@ -5167,7 +5167,7 @@ def _handle_busy_submit(
             if agent.steer(text):
                 session["last_active"] = time.time()
                 return _ok(rid, {"status": "steered"})
-        except (KeyError, IndexError):
+        except Exception:
             pass  # fall through to queue
     if mode != "queue" and agent is not None and hasattr(agent, "interrupt"):
         try:
@@ -5245,7 +5245,7 @@ def _(rid, params: dict) -> dict:
         explicit_cwd = bool(raw_cwd) and os.path.isdir(
             os.path.abspath(os.path.expanduser(raw_cwd))
         )
-    except (ValueError, TypeError):
+    except Exception:
         explicit_cwd = False
     resolved_cwd = _completion_cwd(params)
     source = _resolve_session_source(str(params.get("source") or "").strip() or None)
@@ -5470,7 +5470,7 @@ def _(rid, params: dict) -> dict:
                 },
             )
         return _ok(rid, {"session_id": None})
-    except (requests.RequestException, OSError):
+    except Exception:
         logger.exception("session.most_recent failed")
         return _ok(rid, {"session_id": None})
 
@@ -6297,7 +6297,7 @@ def _(rid, params: dict) -> dict:
                         resolved_title = fallback
             elif resolved_title:
                 session["pending_title"] = None
-        except (requests.RequestException, OSError):
+        except Exception:
             resolved_title = fallback
         _emit_session_info_for_session(params.get("session_id", ""), session)
         return _ok(
@@ -7659,7 +7659,7 @@ def _(rid, params: dict) -> dict:
         if value:
             try:
                 return datetime.fromtimestamp(float(value))
-            except (ValueError, TypeError):
+            except Exception:
                 pass
         return fallback or datetime.now()
 
@@ -7704,7 +7704,7 @@ def _(rid, params: dict) -> dict:
             history = db.get_messages_as_conversation(
                 session["session_key"], include_ancestors=True
             )
-        except (KeyError, IndexError):
+        except Exception:
             pass
     return _ok(
         rid,
@@ -8415,7 +8415,7 @@ def _notification_event_belongs_elsewhere(sid: str, session: dict, evt: dict) ->
                 owner_live = evt_ui_sid in _sessions and not _sessions[evt_ui_sid].get(
                     "_finalized"
                 )
-        except (requests.RequestException, OSError):
+        except Exception:
             owner_live = False
         if owner_live:
             return True
@@ -8460,7 +8460,7 @@ def _notification_event_belongs_elsewhere(sid: str, session: dict, evt: dict) ->
                     )
                     for s in _sessions.values()
                 )
-        except (requests.RequestException, OSError):
+        except Exception:
             continuation_live = False
         if continuation_live:
             return True
@@ -8582,7 +8582,7 @@ def _notification_poller_loop(
     while not stop_event.is_set() and not session.get("_finalized"):
         try:
             evt = process_registry.completion_queue.get(timeout=0.5)
-        except (requests.RequestException, OSError):
+        except Exception:
             continue
 
         # Multiple desktop sessions share this one process-wide queue. Only
@@ -9087,7 +9087,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                         try:
                             goals_cfg = _load_cfg().get("goals") or {}
                             goal_max_turns = int(goals_cfg.get("max_turns", 20) or 20)
-                        except (requests.RequestException, OSError):
+                        except Exception:
                             goal_max_turns = 20
                         goal_mgr = GoalManager(
                             session_id=sid_key,
@@ -9143,7 +9143,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                             _session_key,
                             exc,
                         )
-                    except (KeyError, IndexError):
+                    except Exception:
                         # Transient DB failure — keep pending_title for retry.
                         pass
 
@@ -9207,7 +9207,7 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                         f"{time.strftime('%Y-%m-%d %H:%M:%S')} · sid={sid} ===\n"
                     )
                     f.write(trace)
-            except (OSError, IOError):
+            except Exception:
                 pass
             print(
                 f"[gateway-turn] {type(e).__name__}: {e}", file=sys.stderr, flush=True
@@ -9759,7 +9759,7 @@ def _resolve_gateway_attachment_path(raw: str) -> Path | None:
         return None
     try:
         from cli import _detect_file_drop, _resolve_attachment_path, _split_path_input
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     dropped = _detect_file_drop(raw)
@@ -12099,7 +12099,7 @@ def _(rid, params: dict) -> dict:
                             "output": f"⏩ Steer queued — arrives after the next tool call: {arg[:80]}{'...' if len(arg) > 80 else ''}",
                         },
                     )
-            except (KeyError, IndexError):
+            except Exception:
                 pass
         # Fallback: no active run, treat as next-turn message
         return _ok(rid, {"type": "send", "message": arg})
@@ -12119,7 +12119,7 @@ def _(rid, params: dict) -> dict:
         try:
             goals_cfg = _load_cfg().get("goals") or {}
             max_turns = int(goals_cfg.get("max_turns", 20) or 20)
-        except (requests.RequestException, OSError):
+        except Exception:
             max_turns = 20
         mgr = GoalManager(session_id=sid_key, default_max_turns=max_turns)
 
@@ -13715,7 +13715,7 @@ def _http_ok(url: str, timeout: float) -> bool:
     try:
         with urllib.request.urlopen(url, timeout=timeout) as resp:
             return 200 <= getattr(resp, "status", 200) < 300
-    except (OSError, IOError):
+    except Exception:
         return False
 
 

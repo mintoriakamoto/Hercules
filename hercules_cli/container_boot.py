@@ -502,7 +502,7 @@ def _register_service(scandir: Path, profile: str, *, start: bool) -> None:
         if service_dir.exists():
             shutil.rmtree(service_dir)
         tmp_dir.replace(service_dir)
-    except (OSError, ValueError):
+    except Exception:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         raise
 

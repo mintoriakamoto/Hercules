@@ -346,7 +346,7 @@ def _model_flow_openai_codex(config, current_model=""):
         _codex_status = get_codex_auth_status()
         if _codex_status.get("logged_in"):
             _codex_token = _codex_status.get("api_key")
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         pass
     if not _codex_token:
         try:
@@ -494,7 +494,7 @@ def _model_flow_qwen_oauth(_config, current_model=""):
     try:
         creds = resolve_qwen_runtime_credentials(refresh_if_expiring=True)
         models = fetch_api_models(creds["api_key"], creds["base_url"])
-    except (IndexError, KeyError):
+    except Exception:
         pass
     if not models:
         models = list(_DEFAULT_QWEN_PORTAL_MODELS)
@@ -555,7 +555,7 @@ def _model_flow_kimi_oauth(_config, current_model=""):
         creds = resolve_kimi_oauth_runtime_credentials(refresh_if_expiring=True)
         base_url = creds.get("base_url", base_url) or base_url
         models = fetch_api_models(creds["api_key"], base_url)
-    except (IndexError, KeyError):
+    except Exception:
         pass
     if not models:
         # Curated fallback when live discovery is unavailable (the /coding
@@ -1750,7 +1750,7 @@ def _model_flow_copilot_acp(config, current_model=""):
     try:
         catalog_creds = resolve_api_key_provider_credentials("copilot")
         catalog_api_key = catalog_creds.get("api_key", "")
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         pass
 
     catalog = fetch_github_model_catalog(catalog_api_key)
@@ -2530,7 +2530,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
     if provider_id == "gemini" and existing_key:
         try:
             from agent.gemini_native_adapter import probe_gemini_tier
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             probe_gemini_tier = None
         if probe_gemini_tier is not None:
             print("  Checking Gemini API tier...")
@@ -2594,7 +2594,7 @@ def _model_flow_api_key_provider(config, provider_id, current_model=""):
             _m = load_config().get("model") or {}
             if str(_m.get("provider") or "").strip().lower() == provider_id:
                 current_base = str(_m.get("base_url") or "").strip()
-        except (ValueError):
+        except Exception:
             pass
     effective_base = current_base or pconfig.inference_base_url
 

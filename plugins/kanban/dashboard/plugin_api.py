@@ -97,7 +97,7 @@ def _ws_upgrade_authorized(ws: "WebSocket") -> bool:
     """
     try:
         from hercules_cli import web_server as _ws
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # No dashboard context (tests). Accept so the tail loop is still
         # testable; in production the dashboard module always imports
         # cleanly because it's the caller.
@@ -187,7 +187,7 @@ def _task_dict(
     # computing deltas client-side.
     try:
         d["age"] = kanban_db.task_age(task)
-    except (KeyError, IndexError):
+    except Exception:
         d["age"] = {
             "created_age_seconds": None,
             "started_age_seconds": None,
@@ -1848,7 +1848,7 @@ def _configured_home_channels() -> list[dict]:
     """
     try:
         from gateway.config import load_gateway_config
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
     try:
         gw_cfg = load_gateway_config()
@@ -2126,7 +2126,7 @@ def _board_counts(slug: str) -> dict[str, int]:
             return {r["status"]: int(r["n"]) for r in rows}
         finally:
             conn.close()
-    except (sqlite3.DatabaseError, OSError):
+    except Exception:
         return {}
 
 
@@ -2475,7 +2475,7 @@ def set_orchestration_settings(payload: OrchestrationSettingsBody):
     # Validate any non-empty profile names exist before saving.
     try:
         from hercules_cli import profiles as profiles_mod
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         profiles_mod = None  # type: ignore
 
     if payload.orchestrator_profile is not None:
@@ -2566,7 +2566,7 @@ async def stream_events(ws: WebSocket):
                 for r in rows:
                     try:
                         payload = json.loads(r["payload"]) if r["payload"] else None
-                    except (KeyError, IndexError):
+                    except Exception:
                         payload = None
                     out.append({
                         "id": r["id"],

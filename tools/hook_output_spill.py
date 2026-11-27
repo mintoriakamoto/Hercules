@@ -202,7 +202,7 @@ def spill_if_oversized(
     if not isinstance(text, str):
         try:
             text = str(text)
-        except (ValueError):
+        except Exception:
             return ""
 
     cfg = config if config is not None else get_spill_config()

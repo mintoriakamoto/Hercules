@@ -429,7 +429,7 @@ def _post_provision(
         detail = ""
         try:
             detail = (json.loads(exc.read().decode()) or {}).get("error", "")
-        except (OSError):
+        except Exception:
             pass
         raise RuntimeError(
             f"connector returned HTTP {exc.code}" + (f": {detail}" if detail else "")

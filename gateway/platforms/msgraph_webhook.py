@@ -246,7 +246,7 @@ class MSGraphWebhookAdapter(BasePlatformAdapter):
 
         try:
             raw_body = await request.read()
-        except (OSError):
+        except Exception:
             return web.Response(status=400)
         if len(raw_body) > self._max_body_bytes:
             return web.Response(status=413)

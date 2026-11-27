@@ -503,7 +503,7 @@ def _scan_gateway_pids(
                         except (OSError, PermissionError):
                             continue
                     _found_via_proc = True
-                except (OSError):
+                except Exception:
                     pass
 
             if not _found_via_proc:
@@ -640,7 +640,7 @@ def find_profile_gateway_processes(
     try:
         from gateway.status import get_running_pid
         from hercules_cli.profiles import list_profiles
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return processes
 
     seen: set[int] = set()
@@ -688,7 +688,7 @@ def _capture_gateway_argv(pid: int) -> list[str] | None:
         argv = list(psutil.Process(pid).cmdline() or [])
     except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
         return None
-    except (IndexError, KeyError):
+    except Exception:
         return None
     if not argv:
         return None
@@ -1202,7 +1202,7 @@ def _recover_pending_systemd_restart(
 
     try:
         from gateway.status import read_runtime_status
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
 
     runtime_state = read_runtime_status() or {}
@@ -1328,12 +1328,12 @@ def get_gateway_runtime_snapshot(system: bool = False) -> GatewayRuntimeSnapshot
                     service_dir = getattr(mgr, "scandir", None)
                     if service_dir is not None:
                         service_installed = (service_dir / service_name).is_dir()
-                except (AttributeError):
+                except Exception:
                     service_installed = False
                 if service_installed:
                     try:
                         service_running = bool(mgr.is_running(service_name))
-                    except (ValueError):
+                    except Exception:
                         service_running = False
                 return GatewayRuntimeSnapshot(
                     manager="s6 (container supervisor)",
@@ -1342,7 +1342,7 @@ def get_gateway_runtime_snapshot(system: bool = False) -> GatewayRuntimeSnapshot
                     gateway_pids=gateway_pids,
                     service_scope="s6",
                 )
-        except (ValueError):
+        except Exception:
             pass  # Fall through to the legacy label on any detection error.
         return GatewayRuntimeSnapshot(
             manager="docker (foreground)",
@@ -1447,7 +1447,7 @@ def _gateway_list() -> None:
     """
     try:
         from hercules_cli.profiles import list_profiles, get_active_profile_name
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         print("Unable to list profiles.")
         return
 
@@ -1537,7 +1537,7 @@ def _reap_unsupervised_gateway_orphans() -> bool:
         # find_gateway_pids() includes no-supervisor `gateway restart` runtimes
         # for the current profile when no systemd supervisor is present.
         orphans = [p for p in find_gateway_pids(exclude_pids=own) if p and p > 0]
-    except (IndexError, KeyError):
+    except Exception:
         return False
     if not orphans:
         return False
@@ -2735,7 +2735,7 @@ def _stable_service_working_dir() -> str:
         home = get_hercules_home()
         if home and Path(home).is_dir():
             return str(Path(home).resolve())
-    except (ValueError):
+    except Exception:
         pass
     return str(PROJECT_ROOT)
 
@@ -4677,7 +4677,7 @@ def _guard_named_profile_under_multiplexer(force: bool = False) -> None:
             )
         if not multiplex:
             return
-    except (ImportError, ModuleNotFoundError, OSError, ValueError):
+    except Exception:
         logger.debug("Multiplexer-conflict probe failed", exc_info=True)
         return
 
@@ -4920,7 +4920,7 @@ def run_gateway(
 
             with open(log_dir / "gateway-exit-diag.log", "a", encoding="utf-8") as f:
                 f.write(_json.dumps(line, default=str) + "\n")
-        except (ImportError, IndexError, KeyError, ModuleNotFoundError, OSError):
+        except Exception:
             pass  # never let the diagnostic itself crash the gateway
 
     _exit_diag(
@@ -5211,7 +5211,7 @@ def _all_platforms() -> list[dict]:
 
     try:
         from gateway.platform_registry import platform_registry
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return platforms
 
     for entry in platform_registry.all_entries():
@@ -5260,7 +5260,7 @@ def _platform_status(platform: dict) -> str:
             # report the platform as ready.
             try:
                 configured = bool(entry.check_fn())
-            except (ValueError):
+            except Exception:
                 configured = False
         return "configured" if configured else "not configured"
 
@@ -5317,7 +5317,7 @@ def _runtime_health_lines() -> list[str]:
     """Summarize the latest persisted gateway runtime health state."""
     try:
         from gateway.status import read_runtime_status
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     state = read_runtime_status()

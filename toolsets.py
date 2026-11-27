@@ -958,7 +958,7 @@ def get_toolset(
 
     try:
         from tools.registry import registry
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return toolset if toolset else None
 
     if toolset:

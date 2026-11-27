@@ -1287,7 +1287,7 @@ class SessionDB:
                         result[2],
                         result[1],
                     )
-        except (sqlite3.DatabaseError, OSError):
+        except Exception:
             pass  # Best effort — never fatal.
 
     def _try_optimize_fts(self) -> None:
@@ -1316,7 +1316,7 @@ class SessionDB:
             if self._conn:
                 try:
                     self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-                except (sqlite3.DatabaseError, OSError):
+                except Exception:
                     pass
                 self._conn.close()
                 self._conn = None
@@ -4381,7 +4381,7 @@ class SessionDB:
                         "SELECT 1 FROM messages WHERE session_id = ? LIMIT 1",
                         (current,),
                     ).fetchone()
-                except (sqlite3.DatabaseError, OSError):
+                except Exception:
                     return session_id
                 if row is not None:
                     best = current
@@ -4402,7 +4402,7 @@ class SessionDB:
                         "ORDER BY started_at DESC, id DESC LIMIT 1",
                         (current,),
                     ).fetchone()
-                except (sqlite3.DatabaseError, OSError):
+                except Exception:
                     return session_id
                 if child_row is None:
                     break
@@ -5198,7 +5198,7 @@ class SessionDB:
                             "content": preview[:200],
                         })
                 match["context"] = context_msgs
-            except (requests.RequestException, OSError):
+            except Exception:
                 match["context"] = []
 
         # Remove full content from result (snippet is enough, saves tokens)
@@ -6657,7 +6657,7 @@ class SessionDB:
             # Best-effort WAL checkpoint first, then VACUUM.
             try:
                 self._conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            except (sqlite3.DatabaseError, OSError):
+            except Exception:
                 pass
             self._conn.execute("VACUUM")
         return optimized
@@ -6788,7 +6788,7 @@ class SessionDB:
                 "platform": row["handoff_platform"],
                 "error": row["handoff_error"],
             }
-        except (sqlite3.DatabaseError, OSError):
+        except Exception:
             return None
 
     def list_pending_handoffs(self) -> List[Dict[str, Any]]:
@@ -6803,7 +6803,7 @@ class SessionDB:
                 "ORDER BY started_at ASC"
             )
             return [dict(r) for r in cur.fetchall()]
-        except (sqlite3.DatabaseError, OSError):
+        except Exception:
             return []
 
     def claim_handoff(self, session_id: str) -> bool:

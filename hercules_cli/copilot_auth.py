@@ -249,7 +249,7 @@ def copilot_device_code_login(
         try:
             with urllib.request.urlopen(poll_req, timeout=10) as resp:
                 result = json.loads(resp.read().decode())
-        except (OSError):
+        except Exception:
             print(".", end="", flush=True)
             continue
 

@@ -189,7 +189,7 @@ def _unsign(token: str, secret: bytes) -> Optional[dict]:
         if not hmac.compare_digest(sig, expected):
             return None
         return json.loads(raw)
-    except (KeyError, IndexError):
+    except Exception:
         return None
 
 

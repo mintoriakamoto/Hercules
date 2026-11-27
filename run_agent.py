@@ -922,7 +922,7 @@ class AIAgent:
         """
         try:
             self._vprint(f"{self.log_prefix}{message}", force=True)
-        except (ValueError):
+        except Exception:
             pass
         if self.status_callback:
             try:
@@ -939,7 +939,7 @@ class AIAgent:
         """
         try:
             self._vprint(f"{self.log_prefix}{message}", force=True)
-        except (ValueError):
+        except Exception:
             pass
         if self.status_callback:
             try:
@@ -997,7 +997,7 @@ class AIAgent:
                 buf = []
                 self._retry_status_buffer = buf
             buf.append(("status", message))
-        except (AttributeError):
+        except Exception:
             # Never break the retry loop on a buffer hiccup.
             pass
 
@@ -1009,7 +1009,7 @@ class AIAgent:
                 buf = []
                 self._retry_status_buffer = buf
             buf.append(("vprint", message))
-        except (AttributeError):
+        except Exception:
             pass
 
     def _clear_status_buffer(self) -> None:
@@ -1018,7 +1018,7 @@ class AIAgent:
             buf = getattr(self, "_retry_status_buffer", None)
             if buf:
                 buf.clear()
-        except (AttributeError):
+        except Exception:
             pass
 
     def _emit_pending_fallback_notice(self) -> None:
@@ -1040,7 +1040,7 @@ class AIAgent:
                 # leave the notice set for a stale re-emit on a later turn.
                 self._pending_fallback_notice = None
                 self._emit_status(notice)
-        except (AttributeError):
+        except Exception:
             # Never break the conversation loop on a notice hiccup.
             pass
 
@@ -1069,7 +1069,7 @@ class AIAgent:
                         self._emit_warning(msg)
                     else:
                         self._vprint(f"{self.log_prefix}{msg}", force=True)
-                except (ValueError):
+                except Exception:
                     pass
         except (ValueError):
             pass
@@ -2265,7 +2265,7 @@ class AIAgent:
         if response is not None:
             try:
                 snippet = (getattr(response, "text", None) or "").strip()
-            except (AttributeError):
+            except Exception:
                 snippet = ""
             if snippet:
                 status_code = getattr(error, "status_code", None)
@@ -2489,14 +2489,14 @@ class AIAgent:
         limit = cls._hook_payload_max_chars()
         try:
             encoded = json.dumps(payload, ensure_ascii=False, default=str)
-        except (ValueError):
+        except Exception:
             return str(payload)[:limit]
         if len(encoded) <= limit:
             return payload
         payload = cls._hook_jsonable(value, max_string=1000, max_sequence=50)
         try:
             encoded = json.dumps(payload, ensure_ascii=False, default=str)
-        except (ValueError):
+        except Exception:
             return str(payload)[:limit]
         if len(encoded) <= limit:
             return payload
@@ -2725,7 +2725,7 @@ class AIAgent:
                             len(cleaned),
                         )
                         return
-                except (requests.RequestException, OSError):
+                except Exception:
                     pass  # corrupted existing file — allow the overwrite
 
             entry = {
@@ -3260,7 +3260,7 @@ class AIAgent:
                 )
             else:
                 logger.debug("OpenRouter response cache %s", status.upper())
-        except (requests.RequestException, OSError):
+        except Exception:
             pass  # Never let header parsing break the agent loop
 
     def get_activity_summary(self) -> dict:
@@ -3309,7 +3309,7 @@ class AIAgent:
                     self.session_id or "",
                     messages or [],
                 )
-            except (KeyError, IndexError):
+            except Exception:
                 pass
 
     def commit_memory_session(self, messages: Optional[list] = None) -> None:
@@ -3320,7 +3320,7 @@ class AIAgent:
         if self._memory_manager:
             try:
                 self._memory_manager.on_session_end(messages or [])
-            except (KeyError, IndexError):
+            except Exception:
                 pass
         # Notify context engine of session end too — same lifecycle moment as
         # the memory manager's on_session_end. Without this, engines that
@@ -3334,7 +3334,7 @@ class AIAgent:
                     self.session_id or "",
                     messages or [],
                 )
-            except (KeyError, IndexError):
+            except Exception:
                 pass
 
     def _sync_external_memory_for_turn(
@@ -3395,7 +3395,7 @@ class AIAgent:
                 user_text,
                 session_id=self.session_id or "",
             )
-        except (KeyError, IndexError):
+        except Exception:
             pass
 
     def release_clients(self) -> None:
@@ -3442,7 +3442,7 @@ class AIAgent:
             if client is not None:
                 self._close_openai_client(client, reason="cache_evict", shared=True)
                 self.client = None
-        except (AttributeError):
+        except Exception:
             pass
 
     def close(self) -> None:
@@ -3499,7 +3499,7 @@ class AIAgent:
             if client is not None:
                 self._close_openai_client(client, reason="agent_close", shared=True)
                 self.client = None
-        except (AttributeError):
+        except Exception:
             pass
 
         # 6. Free conversation history.  Mirrors _release_evicted_agent_soft's
@@ -3510,7 +3510,7 @@ class AIAgent:
         # still holds the closed agent (e.g. a draining background task).
         try:
             self._session_messages = []
-        except (KeyError, IndexError):
+        except Exception:
             pass
 
         # 7. Finalize the owned SQLite session row unless this agent is only a
@@ -3526,7 +3526,7 @@ class AIAgent:
                 session_id = getattr(self, "session_id", None)
                 if session_db and session_id:
                     session_db.end_session(session_id, "agent_close")
-        except (AttributeError):
+        except Exception:
             pass
 
     def _hydrate_todo_store(self, history: List[Dict[str, Any]]) -> None:
@@ -5515,7 +5515,7 @@ class AIAgent:
         """Format reasoning payload for GitHub Models/OpenAI-compatible routes."""
         try:
             from hercules_cli.models import github_model_reasoning_efforts
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             return None
 
         supported_efforts = github_model_reasoning_efforts(self.model)

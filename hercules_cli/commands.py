@@ -844,7 +844,7 @@ def _iter_plugin_command_entries() -> list[tuple[str, str, str]]:
     """
     try:
         from hercules_cli.plugins import get_plugin_commands
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
     try:
         commands = get_plugin_commands() or {}
@@ -1481,7 +1481,7 @@ def discord_skill_commands_by_category(
                 categories.setdefault(cat, []).append((discord_name, desc, cmd_key))
             else:
                 uncategorized.append((discord_name, desc, cmd_key))
-    except (IndexError, KeyError, OSError):
+    except Exception:
         pass
 
     return categories, uncategorized, hidden
@@ -1730,7 +1730,7 @@ class SlashCommandCompleter(Completer):
             return True
         try:
             return bool(self._command_filter(slash_command))
-        except (ValueError):
+        except Exception:
             return True
 
     def _iter_skill_commands(self) -> Mapping[str, dict[str, Any]]:
@@ -1778,7 +1778,7 @@ class SlashCommandCompleter(Completer):
         """
         try:
             from agent.skill_commands import _MAX_STACKED_SKILLS as _cap
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _cap = 5
 
         tokens = text.split()

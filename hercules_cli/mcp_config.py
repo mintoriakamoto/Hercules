@@ -254,7 +254,7 @@ def _resolve_mcp_server_config(config: dict) -> dict:
         from hercules_cli.env_loader import load_hercules_dotenv
 
         load_hercules_dotenv()
-    except Exception:
+    except Exception:  # pragma: no cover — defensive
         pass
     return _interpolate_env_vars(config)
 
@@ -345,13 +345,13 @@ def _probe_single_server(
                     try:
                         result = await server.session.list_prompts()
                         details["prompts"] = len(result.prompts)
-                    except (IndexError, KeyError):
+                    except Exception:
                         pass
                 if resources_enabled and _advertises("resources"):
                     try:
                         result = await server.session.list_resources()
                         details["resources"] = len(result.resources)
-                    except (IndexError, KeyError):
+                    except Exception:
                         pass
         finally:
             await server.shutdown()

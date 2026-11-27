@@ -875,7 +875,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
         # heuristic in _build_message_event survives gateway restarts.
         try:
             await asyncio.to_thread(self._thread_count_store.load)
-        except (RuntimeError):
+        except Exception:
             logger.warning(
                 "[GoogleChat] thread-count store load failed (treating "
                 "all threads as fresh)",
@@ -953,13 +953,13 @@ class GoogleChatAdapter(BasePlatformAdapter):
             try:
                 self._streaming_pull_future.cancel()
                 await asyncio.to_thread(self._streaming_pull_future.result, 10.0)
-            except (RuntimeError):
+            except Exception:
                 pass
             self._streaming_pull_future = None
         if self._subscriber is not None:
             try:
                 await asyncio.to_thread(self._subscriber.close)
-            except (RuntimeError):
+            except Exception:
                 pass
             self._subscriber = None
         self._mark_disconnected()
@@ -1278,7 +1278,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
 
             self._submit_on_loop(self._dispatch_message(msg_with_space, enriched_env))
             message.ack()
-        except (requests.RequestException, OSError):
+        except Exception:
             logger.exception("[GoogleChat] Error in _on_pubsub_message")
             try:
                 message.ack()
@@ -1981,7 +1981,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                 _redact_sensitive(str(exc)),
             )
             return False
-        except (AttributeError):
+        except Exception:
             logger.debug("[GoogleChat] delete_message failed", exc_info=True)
             return False
 
@@ -2364,7 +2364,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                         self._orphan_typing_messages.setdefault(chat_id, []).append(
                             result.message_id
                         )
-            except (KeyError, IndexError):
+            except Exception:
                 logger.debug(
                     "[GoogleChat] send_typing background create failed",
                     exc_info=True,
@@ -2476,7 +2476,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
                         orphan_id,
                         exc_info=True,
                     )
-        except (KeyError, IndexError):
+        except Exception:
             logger.debug(
                 "[GoogleChat] cleanup in on_processing_complete failed", exc_info=True
             )
@@ -2695,7 +2695,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
         if cached_api is not None and cached_creds is not None:
             try:
                 refreshed = await asyncio.to_thread(_refresh, cached_creds, email)
-            except (RuntimeError):
+            except Exception:
                 logger.debug(
                     "[GoogleChat] cached per-user refresh raised",
                     exc_info=True,
@@ -2713,7 +2713,7 @@ class GoogleChatAdapter(BasePlatformAdapter):
             if creds is None:
                 return None
             api = await asyncio.to_thread(lambda: _build(creds))
-        except (RuntimeError):
+        except Exception:
             logger.debug(
                 "[GoogleChat] per-user creds load/build failed for %s",
                 email,

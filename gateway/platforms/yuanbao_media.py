@@ -682,5 +682,5 @@ def _basename_from_url(url: str) -> str:
     try:
         parsed = urllib.parse.urlparse(url)
         return os.path.basename(parsed.path)
-    except (OSError, urllib.error.URLError):
+    except Exception:
         return ""

@@ -334,7 +334,7 @@ class SelfImprovementEngine:
                         continue
 
                     candidates.append(other_name)
-        except (OSError):
+        except Exception:
             pass
 
         return candidates[:10]  # Limit to top 10
@@ -382,7 +382,7 @@ class SelfImprovementEngine:
             if confidences:
                 stats["avg_confidence"] = sum(confidences) / len(confidences)
 
-        except (OSError):
+        except Exception:
             pass
 
         return stats
@@ -407,7 +407,7 @@ class SelfImprovementEngine:
                             profile = self._deserialize_profile(data)
                             self._profiles_cache[skill_name] = profile
                             return profile
-            except (OSError):
+            except Exception:
                 pass
 
         # Create new profile
@@ -435,7 +435,7 @@ class SelfImprovementEngine:
                         name = data.get("skill_name", "")
                         if name:
                             profiles[name] = data
-            except (OSError):
+            except Exception:
                 pass
 
         # Update with current profile
@@ -446,7 +446,7 @@ class SelfImprovementEngine:
             with open(profiles_path, "w", encoding="utf-8") as f:
                 for name, data in profiles.items():
                     f.write(json.dumps(data) + "\n")
-        except (OSError):
+        except Exception:
             pass
 
     def _serialize_profile(self, profile: SkillProfile) -> Dict[str, Any]:
@@ -527,7 +527,7 @@ class SelfImprovementEngine:
                     confidence=imp_data.get("confidence", 0.5),
                 )
                 profile.improvements.append(improvement)
-            except (requests.RequestException, httpx.RequestError, OSError):
+            except Exception:
                 pass
 
         return profile

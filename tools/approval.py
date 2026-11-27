@@ -1160,7 +1160,7 @@ def _rewrite_resolved_user_home(command: str) -> str:
             os.path.realpath(home),
             os.environ.get("HOME", ""),
         ]
-    except (IndexError, KeyError):
+    except Exception:
         return command
     return _fold_home_prefixes(command, candidates, "~")
 
@@ -1185,7 +1185,7 @@ def _rewrite_resolved_hercules_home(command: str) -> str:
             str(home),
             str(home.resolve(strict=False)),
         ]
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
+    except Exception:
         return command
     return _fold_home_prefixes(command, candidates, "~/.hercules")
 
@@ -2707,7 +2707,7 @@ def _await_gateway_decision(
 
     try:
         from tools.environments.base import touch_activity_if_due
-    except (ImportError, ModuleNotFoundError):
+    except Exception:  # pragma: no cover
         touch_activity_if_due = None
 
     _now = time.monotonic()

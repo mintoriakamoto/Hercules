@@ -164,7 +164,7 @@ class PtyBridge:
             return False
         try:
             return bool(self._proc.isalive())
-        except (ValueError):
+        except Exception:
             return False
 
     # -- I/O --------------------------------------------------------------

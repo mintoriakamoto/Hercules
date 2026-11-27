@@ -26,7 +26,7 @@ except ImportError:
 
 try:
     from fastapi import APIRouter
-except (ImportError, ModuleNotFoundError):
+except Exception:  # Allows local unit tests without dashboard dependencies.
 
     class APIRouter:  # type: ignore
         def get(self, *_args, **_kwargs):
@@ -787,7 +787,7 @@ def load_checkpoint() -> Dict[str, Any]:
             data.setdefault("sessions", {})
             if isinstance(data.get("sessions"), dict):
                 return data
-    except (requests.RequestException, OSError):
+    except Exception:
         pass
     return {"schema_version": 1, "generated_at": 0, "sessions": {}}
 
@@ -1621,7 +1621,7 @@ def aggregate_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
                     agg["weekend_sessions"] += 1
                 if lt.tm_hour < 6 or lt.tm_hour >= 23:
                     agg["night_sessions"] += 1
-            except (requests.RequestException, OSError):
+            except Exception:
                 pass
     agg["distinct_model_count"] = len({m for m in model_names if m and m != "None"})
     agg["distinct_provider_count"] = len(provider_names)

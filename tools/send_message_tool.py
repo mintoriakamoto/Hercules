@@ -770,7 +770,7 @@ async def _send_via_adapter(
     if runner is not None:
         try:
             adapter = runner.adapters.get(platform)
-        except (requests.RequestException, httpx.RequestError, OSError):
+        except Exception:
             adapter = None
         if adapter is not None:
             try:
@@ -1907,7 +1907,7 @@ async def _send_matrix_via_adapter(
     finally:
         try:
             await adapter.disconnect()
-        except (RuntimeError):
+        except Exception:
             pass
 
 

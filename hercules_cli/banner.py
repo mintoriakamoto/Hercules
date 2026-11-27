@@ -313,7 +313,7 @@ def _git_stdout(args: list[str], *, cwd: Path, timeout: int = 5) -> Optional[str
             timeout=timeout,
             cwd=str(cwd),
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         return None
     if result.returncode != 0:
         return None
@@ -333,7 +333,7 @@ def _check_via_rev(local_rev: str) -> Optional[int]:
             text=True,
             timeout=10,
         )
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return None
     if result.returncode != 0 or not result.stdout:
         return None
@@ -375,7 +375,7 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
             timeout=10,
             cwd=str(repo_dir),
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         pass  # Offline or timeout — use stale refs, that's fine
 
     if is_shallow:
@@ -400,7 +400,7 @@ def _check_via_local_git(repo_dir: Path) -> Optional[int]:
         )
         if result.returncode == 0:
             return int(result.stdout.strip())
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         pass
     return None
 
@@ -522,7 +522,7 @@ def _git_short_hash(repo_dir: Path, rev: str) -> Optional[str]:
             timeout=5,
             cwd=str(repo_dir),
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         return None
     if result.returncode != 0:
         return None
@@ -582,7 +582,7 @@ def get_git_banner_state(repo_dir: Optional[Path] = None) -> Optional[dict]:
         )
         if result.returncode == 0:
             ahead = int((result.stdout or "0").strip() or "0")
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         ahead = 0
 
     return {"upstream": upstream, "local": local, "ahead": max(ahead, 0)}
@@ -616,7 +616,7 @@ def get_latest_release_tag(repo_dir: Optional[Path] = None) -> Optional[tuple]:
             timeout=3,
             cwd=str(repo_dir),
         )
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         _latest_release_cache = ()
         return None
 

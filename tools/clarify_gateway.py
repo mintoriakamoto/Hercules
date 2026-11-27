@@ -120,7 +120,7 @@ def wait_for_response(clarify_id: str, timeout: float) -> Optional[str]:
 
     try:
         from tools.environments.base import touch_activity_if_due
-    except (ImportError, ModuleNotFoundError):
+    except Exception:  # pragma: no cover - optional
         touch_activity_if_due = None
 
     deadline = time.monotonic() + max(timeout, 0.0)

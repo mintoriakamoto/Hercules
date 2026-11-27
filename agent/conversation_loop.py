@@ -959,7 +959,7 @@ def run_conversation(
                                 ),
                             },
                         }
-                    except (IndexError, KeyError):
+                    except Exception:
                         tc["function"]["arguments"] = _repair_tool_call_arguments(
                             tc["function"]["arguments"],
                             tc["function"].get("name", "?"),
@@ -1322,7 +1322,7 @@ def run_conversation(
                             middleware_trace=list(_llm_middleware_trace),
                             request=_request_payload,
                         )
-                except (ImportError, IndexError, KeyError, ModuleNotFoundError, OSError):
+                except Exception:
                     pass
 
                 if env_var_enabled("HERCULES_DUMP_REQUESTS"):

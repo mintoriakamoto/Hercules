@@ -740,7 +740,7 @@ def _read_distribution_meta(profile_dir: Path) -> tuple:
             data.get("version"),
             data.get("source"),
         )
-    except (ImportError, ModuleNotFoundError, OSError):
+    except Exception:
         return None, None, None
 
 
@@ -762,7 +762,7 @@ def _read_config_model(profile_dir: Path) -> tuple:
                 "provider"
             )
         return None, None
-    except (ImportError, ModuleNotFoundError, OSError):
+    except Exception:
         return None, None
 
 
@@ -903,7 +903,7 @@ def read_profile_meta(profile_dir: Path) -> dict:
 
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-    except (ImportError, ModuleNotFoundError, OSError):
+    except Exception:
         return {"description": "", "description_auto": False}
     if not isinstance(data, dict):
         return {"description": "", "description_auto": False}
@@ -937,7 +937,7 @@ def write_profile_meta(
                 loaded = yaml.safe_load(f) or {}
             if isinstance(loaded, dict):
                 existing = loaded
-        except (OSError):
+        except Exception:
             existing = {}
     if description is not None:
         existing["description"] = description.strip()
@@ -1395,7 +1395,7 @@ def _profile_bound_backend_pids(canon: str, profile_dir: Path) -> list[int]:
     """
     try:
         import psutil  # type: ignore
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     try:
@@ -1502,7 +1502,7 @@ def _stop_profile_backends(canon: str, profile_dir: Path) -> None:
 
     try:
         from gateway.status import _pid_exists, terminate_pid as _terminate_pid
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
 
     for pid in pids:
@@ -1702,7 +1702,7 @@ def delete_profile(name: str, yes: bool = False) -> Path:
         if active == canon:
             set_active_profile("default")
             print("✓ Active profile reset to default")
-    except (ValueError, TypeError):
+    except Exception:
         pass
 
     if remove_error is not None:
@@ -2322,7 +2322,7 @@ def rename_profile(old_name: str, new_name: str) -> Path:
         if get_active_profile() == old_canon:
             set_active_profile(new_canon)
             print(f"✓ Active profile updated: {new_canon}")
-    except (ValueError, TypeError):
+    except Exception:
         pass
 
     return new_dir

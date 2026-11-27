@@ -584,7 +584,7 @@ class RaftAdapter(BasePlatformAdapter):
                 profile,
                 endpoint,
             )
-        except (OSError):
+        except Exception:
             logger.exception("[raft] Failed to spawn bridge")
 
     def _stop_bridge(self) -> None:
@@ -601,7 +601,7 @@ class RaftAdapter(BasePlatformAdapter):
             logger.warning(
                 "[raft] Bridge process killed after timeout (pid=%d)", proc.pid
             )
-        except (subprocess.CalledProcessError, OSError):
+        except Exception:
             logger.exception("[raft] Error stopping bridge")
 
     async def send(
@@ -649,7 +649,7 @@ class RaftAdapter(BasePlatformAdapter):
             return web.json_response(
                 {"ok": False, "error": "payload_too_large"}, status=413
             )
-        except (OSError):
+        except Exception:
             return web.json_response({"ok": False, "error": "bad_request"}, status=400)
         if len(raw_body) > self._max_body_bytes:
             # Defense in depth: enforce the cap on the actual bytes read even

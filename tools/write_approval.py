@@ -363,7 +363,7 @@ def _prompt_inline_memory_approval(summary: str, detail: str) -> Optional[bool]:
     """
     try:
         from tools.terminal_tool import _get_approval_callback
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     callback = _get_approval_callback()
@@ -472,7 +472,7 @@ def skill_pending_diff(record: Dict[str, Any]) -> str:
     # Resolve current on-disk content for diffable actions.
     try:
         from tools.skill_manager_tool import _find_skill
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _find_skill = None  # type: ignore
 
     current = ""

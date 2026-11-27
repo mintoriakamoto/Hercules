@@ -2346,7 +2346,7 @@ def _run_single_child(
             try:
                 _summary = child.get_activity_summary()
                 child_api_calls = int(_summary.get("api_call_count", 0) or 0)
-            except (ValueError):
+            except Exception:
                 pass
             if is_timeout and child_api_calls == 0:
                 diagnostic_path = _dump_subagent_timeout_diagnostic(
@@ -2379,7 +2379,7 @@ def _run_single_child(
                         duration_seconds=duration,
                         summary="",
                     )
-                except (ValueError):
+                except Exception:
                     pass
 
             if is_timeout:
@@ -2577,13 +2577,13 @@ def _run_single_child(
         _reasoning_tokens = getattr(child, "session_reasoning_tokens", 0)
         try:
             _files_read = list(file_state.known_reads(child_task_id))[:40]
-        except (IndexError, KeyError):
+        except Exception:
             _files_read = []
         try:
             _files_written_map = file_state.writes_since(
                 "", wall_start, []
             )  # all writes since wall_start
-        except (IndexError, KeyError):
+        except Exception:
             _files_written_map = {}
         _files_written = sorted({
             p
@@ -3886,7 +3886,7 @@ def delegate_task(
                             else ""
                         ),
                     )
-                except (AttributeError):
+                except Exception:
                     pass
 
         # Fire subagent_stop hooks once per child, serialised on the parent thread.
@@ -3898,7 +3898,7 @@ def delegate_task(
         _parent_session_id = getattr(parent_agent, "session_id", None)
         try:
             from hercules_cli.plugins import invoke_hook as _invoke_hook
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _invoke_hook = None
         # Aggregate child spend here so the parent's footer/UI reflect the true
         # cost of a subagent-heavy turn.  Port of Kilo-Org/kilocode#9448.  Each

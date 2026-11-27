@@ -149,7 +149,7 @@ def _warn_config_parse_failure(
     try:
         sys.stderr.write(f"⚠️  hercules config: {msg}\n")
         sys.stderr.flush()
-    except (OSError):
+    except Exception:
         pass
 
 
@@ -4659,7 +4659,7 @@ def get_missing_skill_config_vars() -> List[Dict[str, Any]]:
             discover_all_skill_config_vars,
             SKILL_CONFIG_PREFIX,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return []
 
     try:
@@ -5625,7 +5625,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
         fixes = sanitize_env_file()
         if fixes and not quiet:
             print(f"  ✓ Repaired .env file ({fixes} corrupted entries fixed)")
-    except (ValueError, TypeError):
+    except Exception:
         pass  # best-effort; don't block migration on sanitize failure
 
     # Check config version
@@ -5687,7 +5687,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                 save_env_value("ANTHROPIC_TOKEN", "")
                 if not quiet:
                     print("  ✓ Cleared ANTHROPIC_TOKEN from .env (no longer used)")
-        except (ValueError, TypeError):
+        except Exception:
             pass
 
     # ── Version 11 → 12: migrate custom_providers list → providers dict ──
@@ -5976,13 +5976,13 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
                         try:
                             with open(manifest_file, encoding="utf-8") as _mf:
                                 manifest = fast_safe_load(_mf) or {}
-                        except (OSError):
+                        except Exception:
                             manifest = {}
                         name = manifest.get("name") or child.name
                         if name in disabled_set:
                             continue
                         grandfathered.append(name)
-            except (OSError):
+            except Exception:
                 grandfathered = []
 
             plugins_cfg["enabled"] = grandfathered
@@ -6242,7 +6242,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             from hercules_cli.mcp_security import (
                 validate_mcp_server_entry as _validate_mcp_server_entry,
             )
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             _validate_mcp_server_entry = None
         if _validate_mcp_server_entry:
             mcp_touched = False
@@ -6411,7 +6411,7 @@ def migrate_config(interactive: bool = True, quiet: bool = False) -> Dict[str, A
             config = read_raw_config()
             try:
                 from agent.skill_utils import SKILL_CONFIG_PREFIX
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 SKILL_CONFIG_PREFIX = "skills.config"
             for var in missing_skill_config:
                 default = var.get("default", "")
@@ -7474,7 +7474,7 @@ def load_env() -> Dict[str, str]:
         cache_key = (str(env_path), mtime, size)
     except FileNotFoundError:
         cache_key = (str(env_path), None, None)
-    except (ValueError):
+    except Exception:
         cache_key = None
 
     cached = _env_cache["entry"]
@@ -8180,7 +8180,7 @@ def show_config():
                     Colors.YELLOW,
                 )
             )
-    except (ValueError):
+    except Exception:
         pass
 
     # Display
@@ -8445,7 +8445,7 @@ def set_config_value(key: str, value: str):
         try:
             with open(config_path, encoding="utf-8") as f:
                 user_config = fast_safe_load(f) or {}
-        except (OSError):
+        except Exception:
             user_config = {}
 
     # Handle nested keys (e.g., "tts.provider") including numeric list
@@ -8755,7 +8755,7 @@ def _inject_platform_plugin_env_vars() -> None:
             try:
                 with open(manifest_path, "r", encoding="utf-8") as f:
                     manifest = fast_safe_load(f) or {}
-            except (OSError):
+            except Exception:
                 continue
             label = manifest.get("label") or manifest.get("name") or child.name
             # Merge required + optional env var declarations.
@@ -8790,7 +8790,7 @@ def _inject_platform_plugin_env_vars() -> None:
                     "password": is_secret,
                     "category": meta.get("category") or "messaging",
                 }
-    except (OSError, ValueError):
+    except Exception:
         pass
 
 

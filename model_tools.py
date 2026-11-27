@@ -140,7 +140,7 @@ def _run_async(coro):
                         worker_loop.run_until_complete(
                             asyncio.gather(*pending, return_exceptions=True)
                         )
-                except (RuntimeError):
+                except Exception:
                     pass
                 worker_loop.close()
 
@@ -1038,7 +1038,7 @@ def _tool_result_observer_fields(
         parsed_result = json.loads(result) if isinstance(result, str) else result
         if isinstance(parsed_result, dict) and parsed_result.get("error"):
             return "error", "tool_error", str(parsed_result.get("error"))
-    except (requests.RequestException, OSError):
+    except Exception:
         pass
     return "ok", None, None
 
@@ -1149,7 +1149,7 @@ def handle_function_call(
     _ts_mod = None
     try:
         from tools import tool_search as _ts_mod
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _ts_mod = None
 
     if _ts_mod is not None and _ts_mod.is_bridge_tool(function_name):
@@ -1176,7 +1176,7 @@ def handle_function_call(
                 )
                 or []
             )
-        except (KeyError, IndexError):
+        except Exception:
             current_defs = []
         if function_name == _ts_mod.TOOL_SEARCH_NAME:
             return _ts_mod.dispatch_tool_search(

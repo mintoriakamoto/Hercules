@@ -371,7 +371,7 @@ class PhotonAdapter(BasePlatformAdapter):
             text = raw.strip()
             try:
                 loaded = json.loads(text) if text else []
-            except (KeyError, IndexError):
+            except Exception:
                 loaded = None
             patterns = (
                 loaded
@@ -481,7 +481,7 @@ class PhotonAdapter(BasePlatformAdapter):
                     await task
                 except asyncio.CancelledError:
                     pass
-                except (RuntimeError):
+                except Exception:
                     pass
         if self._inbound_task is not None:
             self._inbound_task.cancel()
@@ -489,7 +489,7 @@ class PhotonAdapter(BasePlatformAdapter):
                 await self._inbound_task
             except asyncio.CancelledError:
                 pass
-            except (RuntimeError):
+            except Exception:
                 pass
             self._inbound_task = None
         await self._stop_sidecar()

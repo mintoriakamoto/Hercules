@@ -287,7 +287,7 @@ def _check_version_consistency(issues: list[str]) -> None:
     """
     try:
         from hercules_cli import __version__ as init_version
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
     pyproject_version = _read_pyproject_version()
     if pyproject_version is None:
@@ -323,7 +323,7 @@ def _check_s6_supervision(issues: list[str]) -> None:
             S6ServiceManager,
             detect_service_manager,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return
 
     if detect_service_manager() != "s6":
@@ -568,7 +568,7 @@ def _build_apikey_providers_list() -> list:
 
         try:
             from hercules_cli.providers import normalize_provider as _normalize_provider
-        except (ImportError, ModuleNotFoundError):
+        except Exception:  # pragma: no cover - normalization is best-effort
 
             def _normalize_provider(_name: str) -> str:
                 return (_name or "").strip().lower()
@@ -630,7 +630,7 @@ def managed_scope_check() -> None:
         from hercules_cli import managed_scope
 
         managed_dir = managed_scope.get_managed_dir()
-    except Exception:
+    except Exception:  # diagnostics must never crash
         return
     if managed_dir is None:
         return
@@ -1001,7 +1001,7 @@ def run_doctor(args):
                     normalize_provider as _normalize_catalog_provider,
                     resolve_provider_full as _resolve_provider_full,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 _compatible_custom_providers = None
                 _normalize_catalog_provider = None
                 _resolve_provider_full = None
@@ -1258,7 +1258,7 @@ def run_doctor(args):
                     issues.append(
                         "Stale root-level provider/base_url in config.yaml — run 'hercules doctor --fix'"
                     )
-        except (ImportError, ModuleNotFoundError, OSError):
+        except Exception:
             pass
 
         # Detect stale HERCULES_MAX_ITERATIONS ghost in .env shadowing
@@ -1314,7 +1314,7 @@ def run_doctor(args):
                         "Stale HERCULES_MAX_ITERATIONS in .env shadows config.yaml — "
                         "run 'hercules doctor --fix'"
                     )
-        except (ImportError, ModuleNotFoundError, OSError, ValueError):
+        except Exception:
             pass
 
         # Validate config structure (catches malformed custom_providers, etc.)
@@ -1905,7 +1905,7 @@ def run_doctor(args):
                     _get_cdp_override,
                     _using_lightpanda_engine,
                 )
-            except (ImportError, ModuleNotFoundError):
+            except Exception:
                 # If browser_tool can't even import, that's a separate bug
                 # surfaced elsewhere; don't crash doctor.
                 pass
@@ -2047,7 +2047,7 @@ def run_doctor(args):
                         f"({moderate} moderate "
                         f"{'vulnerability' if moderate == 1 else 'vulnerabilities'})",
                     )
-            except (ImportError, IndexError, KeyError, ModuleNotFoundError, OSError, ValueError, subprocess.CalledProcessError):
+            except Exception:
                 pass
 
     if _is_termux():

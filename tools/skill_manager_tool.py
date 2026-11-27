@@ -72,7 +72,7 @@ def mark_background_review_skill_read(path: Path) -> None:
 
     try:
         resolved = str(path.resolve())
-    except (ValueError):
+    except Exception:
         resolved = str(path)
     current = set(_background_review_read_paths.get())
     current.add(resolved)
@@ -82,7 +82,7 @@ def mark_background_review_skill_read(path: Path) -> None:
 def _background_review_has_read(path: Path) -> bool:
     try:
         resolved = str(path.resolve())
-    except (ValueError):
+    except Exception:
         resolved = str(path)
     return resolved in _background_review_read_paths.get()
 
@@ -602,7 +602,7 @@ def _frontmatter_description(content: str) -> str:
             parsed = yaml.safe_load(content[3 : fm_end.start() + 3])
             if isinstance(parsed, dict):
                 return str(parsed.get("description", "") or "")
-    except (ValueError):
+    except Exception:
         pass
     return ""
 
@@ -717,7 +717,7 @@ def _find_skill_in_other_profiles(name: str) -> List[Tuple[str, Path]]:
     try:
         from hercules_constants import get_default_hercules_root
         from agent.skill_utils import is_excluded_skill_path
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return matches
 
     try:
@@ -882,7 +882,7 @@ def _atomic_write_text(file_path: Path, content: str, encoding: str = "utf-8") -
         with os.fdopen(fd, "w", encoding=encoding) as f:
             f.write(content)
         atomic_replace(temp_path, file_path)
-    except (OSError):
+    except Exception:
         # Clean up temp file on error
         try:
             os.unlink(temp_path)
@@ -971,7 +971,7 @@ def _create_skill(
         if _fm_end:
             _parsed = yaml.safe_load(content[3 : _fm_end.start() + 3])
             _desc = str(_parsed.get("description", ""))[:120]
-    except (ValueError):
+    except Exception:
         pass
 
     result = {
@@ -1036,7 +1036,7 @@ def _edit_skill(name: str, content: str) -> Dict[str, Any]:
         if _fm_end:
             _parsed = yaml.safe_load(content[3 : _fm_end.start() + 3])
             _desc = str(_parsed.get("description", ""))[:120]
-    except (ValueError):
+    except Exception:
         pass
 
     return {
@@ -1421,7 +1421,7 @@ def _apply_skill_write_gate(action, name, **payload_kwargs):
 
     try:
         from tools import write_approval as wa
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None  # fail open
 
     decision = wa.evaluate_gate(wa.SKILLS)

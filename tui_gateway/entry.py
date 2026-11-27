@@ -200,7 +200,7 @@ def _log_exit(reason: str) -> None:
                 f"\n=== gateway exit · {time.strftime('%Y-%m-%d %H:%M:%S')} "
                 f"· reason={reason} ===\n"
             )
-    except (OSError, IOError):
+    except Exception:
         pass
     print(f"[gateway-exit] {reason}", file=sys.stderr, flush=True)
 

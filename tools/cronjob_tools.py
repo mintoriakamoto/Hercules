@@ -518,7 +518,7 @@ def _validate_cron_base_url(
         )
         from hercules_cli.auth import PROVIDER_REGISTRY
         from utils import base_url_host_matches, base_url_hostname
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Can't resolve provider metadata -> fail closed.
         return f"Unable to validate base_url override for provider {prov!r}; refused."
 
@@ -699,7 +699,7 @@ def _execute_job_now(job: Dict[str, Any]) -> Dict[str, Any]:
         logger.error("Failed to execute cron job %s immediately: %s", job_id, e)
         try:
             mark_job_run(job_id, False, str(e))
-        except (ValueError):
+        except Exception:
             pass
         return {"claimed": True, "success": False, "error": str(e)}
 

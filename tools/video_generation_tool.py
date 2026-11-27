@@ -530,7 +530,7 @@ def _build_dynamic_video_schema() -> Dict[str, Any]:
         caps = {}
     try:
         models = provider.list_models() or []
-    except (IndexError, KeyError):
+    except Exception:
         models = []
 
     active_model = configured_model or provider.default_model()

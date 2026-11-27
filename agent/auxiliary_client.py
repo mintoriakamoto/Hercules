@@ -2385,7 +2385,7 @@ def _try_azure_foundry(
         model_cfg = cfg.get("model") if isinstance(cfg, dict) else {}
         if not isinstance(model_cfg, dict):
             model_cfg = {}
-    except (requests.RequestException, httpx.RequestError, OSError):
+    except Exception:
         model_cfg = {}
 
     try:
@@ -5458,7 +5458,7 @@ def _main_model_supports_vision(provider: str, model: Optional[str]) -> bool:
         return True
     try:
         supports = _lookup_supports_vision(provider, model, load_config())
-    except Exception:
+    except Exception:  # pragma: no cover - defensive
         return True
     if supports is None:
         # No capability data — keep current behaviour and let the call attempt

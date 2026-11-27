@@ -68,7 +68,7 @@ def stream_diag_capture_response(
         return
     try:
         diag["http_status"] = getattr(http_response, "status_code", None)
-    except (AttributeError, IndexError, KeyError):
+    except Exception:
         pass
     try:
         headers = getattr(http_response, "headers", None) or {}
@@ -81,10 +81,10 @@ def stream_diag_capture_response(
                 if val:
                     # Truncate single-value to keep log lines bounded.
                     captured[name] = str(val)[:120]
-            except (ValueError):
+            except Exception:
                 continue
         diag["headers"] = captured
-    except (ValueError):
+    except Exception:
         pass
 
 
@@ -177,7 +177,7 @@ def log_stream_retry(
                     _headers_repr = " ".join(f"{k}={v}" for k, v in headers.items())
                 if diag.get("http_status") is not None:
                     _http_status = str(diag.get("http_status"))
-            except (ValueError):
+            except Exception:
                 pass
 
         logger.warning(
@@ -253,7 +253,7 @@ def emit_stream_drop(
             started = diag.get("started_at")
             if started is not None:
                 _suffix = f" after {max(0.0, time.time() - float(started)):.1f}s"
-        except (ValueError):
+        except Exception:
             pass
     try:
         agent._buffer_status(

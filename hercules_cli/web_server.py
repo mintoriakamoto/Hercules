@@ -185,7 +185,7 @@ def _start_desktop_cron_ticker(
 def _warm_gateway_module() -> None:
     try:
         import hercules_cli.gateway  # noqa: F401
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         pass
 
 
@@ -1137,7 +1137,7 @@ def _normalize_main_model_assignment(provider: str, model: str) -> tuple[str, st
                 if isinstance(cur_cfg, dict)
                 else ""
             )
-        except (ValueError):
+        except Exception:
             cur_provider = ""
         from hercules_cli.models import _AGGREGATOR_PROVIDERS
 
@@ -1276,7 +1276,7 @@ def _probe_gateway_health() -> tuple[bool, dict | None]:
                 if resp.status == 200:
                     body = json.loads(resp.read())
                     return True, body
-        except (OSError):
+        except Exception:
             continue
     return False, None
 
@@ -1613,7 +1613,7 @@ def _fs_git_branch(cwd: str) -> str:
             **run_kwargs,
         )
         return result.stdout.strip() if result.returncode == 0 else ""
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return ""
 
 
@@ -2676,7 +2676,7 @@ def _profile_platform_ports(
             for plat_name, plat_block in src.items():
                 if isinstance(plat_block, dict):
                     blocks.setdefault(plat_name, {}).update(plat_block)
-    except (OSError):
+    except Exception:
         blocks = {}
 
     ports: Dict[str, int] = {}
@@ -3063,7 +3063,7 @@ async def get_system_stats():
             la = getattr(psutil, "getloadavg", None)
             if la:
                 info["load_avg"] = list(la())
-        except (AttributeError, IndexError, KeyError):
+        except Exception:
             pass
         try:
             boot = psutil.boot_time()
@@ -3219,7 +3219,7 @@ def _safe_call(mod, fn_name: str, default):
     try:
         fn = getattr(mod, fn_name, None)
         return fn() if callable(fn) else default
-    except (AttributeError):
+    except Exception:
         return default
 
 
@@ -3601,7 +3601,7 @@ async def gateway_drain(request: Request):
 
     try:
         body = await request.json()
-    except (ValueError):
+    except Exception:
         body = {}
     action = str((body or {}).get("action", "drain")).strip().lower()
 
@@ -3731,7 +3731,7 @@ def _recent_upstream_commits(n: int = 20) -> List[Dict[str, Any]]:
                 "at": int(at or 0),
             })
         return rows
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         return []
 
 
@@ -3805,7 +3805,7 @@ async def check_hercules_update(force: bool = False):
                 pass
 
         behind = await asyncio.to_thread(check_for_updates)
-    except (RuntimeError):
+    except Exception:
         _log.exception("Update check failed")
         behind = None
 
@@ -4287,7 +4287,7 @@ def get_profiles_sessions(
         try:
             infos = profiles_mod.list_profiles()
             targets = [(info.name, info.path) for info in infos]
-        except (IndexError, KeyError):
+        except Exception:
             _log.exception("GET /api/profiles/sessions: list_profiles failed")
             targets = []
         if not targets:
@@ -4598,7 +4598,7 @@ def _memory_provider_manifest(name: str) -> Dict[str, Any]:
         with manifest_path.open(encoding="utf-8-sig") as handle:
             manifest = yaml.safe_load(handle) or {}
         return manifest if isinstance(manifest, dict) else {}
-    except (ImportError, ModuleNotFoundError, OSError):
+    except Exception:
         _log.debug(
             "Failed to read memory provider manifest for %s", name, exc_info=True
         )
@@ -4965,7 +4965,7 @@ def _normalize_memory_provider_schema(name: str, provider: Any) -> List[Dict[str
             raw = provider.get_config_schema()
             if isinstance(raw, list):
                 raw_schema = [field for field in raw if isinstance(field, dict)]
-        except (IndexError, KeyError):
+        except Exception:
             _log.warning(
                 "Failed to read memory provider schema for %s", name, exc_info=True
             )
@@ -5198,7 +5198,7 @@ def _save_memory_provider_native_config(
     if provider is not None and hasattr(provider, "save_config"):
         try:
             from agent.memory_provider import MemoryProvider as _BaseMemoryProvider
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             provider.save_config(values, str(get_hercules_home()))
             return
         if type(provider).save_config is not _BaseMemoryProvider.save_config:
@@ -5243,7 +5243,7 @@ def _discover_memory_provider_statuses() -> List[Dict[str, Any]]:
                 "available": bool(available),
                 "missing": False,
             }
-    except (ImportError, IndexError, KeyError, ModuleNotFoundError, ValueError):
+    except Exception:
         _log.exception("discover_memory_providers failed")
 
     cfg = load_config()
@@ -6005,7 +6005,7 @@ def _infer_provider_on_model_change(
             detect_provider_for_model,
             normalize_provider,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return "", name
 
     try:
@@ -6106,7 +6106,7 @@ def _denormalize_config_from_web(config: Dict[str, Any]) -> Dict[str, Any]:
                     "default": model_val,
                     "context_length": ctx_override,
                 }
-        except (ValueError):
+        except Exception:
             pass  # can't read disk config — just use the string form
     return config
 
@@ -6148,7 +6148,7 @@ def _catalog_provider_env_metadata() -> dict:
     """
     try:
         from hercules_cli.provider_catalog import provider_catalog
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return {}
 
     # Env vars already declared with a NON-provider category (e.g. the shared
@@ -6157,7 +6157,7 @@ def _catalog_provider_env_metadata() -> dict:
     # aliases, but its provider card uses the provider-owned COPILOT_GITHUB_TOKEN.
     try:
         from hercules_cli.config import OPTIONAL_ENV_VARS as _OPT
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         _OPT = {}
     _non_provider_keys = {
         k
@@ -6448,7 +6448,7 @@ async def validate_provider_credential(body: EnvVarUpdate, request: Request):
                 "message": "",
                 "models": _parse_model_ids(resp),
             }
-        except (httpx.HTTPStatusError, httpx.RequestError):
+        except Exception:
             return {
                 "ok": False,
                 "reachable": False,
@@ -6471,7 +6471,7 @@ async def validate_provider_credential(body: EnvVarUpdate, request: Request):
     try:
         with httpx.Client(timeout=httpx.Timeout(10.0)) as client:
             resp = client.get(url, headers=headers, params=params)
-    except (httpx.HTTPStatusError, httpx.RequestError):
+    except Exception:
         return {
             "ok": False,
             "reachable": False,
@@ -6976,7 +6976,7 @@ def _channel_managed_env_keys() -> frozenset[str]:
         for entry in _messaging_platform_catalog():
             keys.update(entry.get("env_vars", ()))
         return frozenset(keys)
-    except (IndexError, KeyError):
+    except Exception:
         _log.debug("could not build channel-managed env key set", exc_info=True)
         return frozenset()
 
@@ -7145,7 +7145,7 @@ def _messaging_platform_payload(
             enabled = bool(plat_cfg.get("enabled"))
             hc = plat_cfg.get("home_channel")
             home_channel = hc if isinstance(hc, dict) else None
-        except (ValueError):
+        except Exception:
             enabled = False
             home_channel = None
         configured = all(env_on_disk.get(key) for key in entry["required_env"])
@@ -7164,7 +7164,7 @@ def _messaging_platform_payload(
                 if platform_config and platform_config.home_channel
                 else None
             )
-        except (ValueError):
+        except Exception:
             enabled = False
             configured = all(
                 env_on_disk.get(key) or os.getenv(key, "")
@@ -7887,7 +7887,7 @@ def _telegram_onboarding_request_sync(
     except httpx.HTTPStatusError as exc:
         try:
             parsed = exc.response.json()
-        except (ValueError):
+        except Exception:
             parsed = {}
         error = str(parsed.get("error") or parsed.get("status") or "")
         detail = _telegram_onboarding_error_message(
@@ -8970,7 +8970,7 @@ def _save_anthropic_oauth_creds(
         for e in existing:
             try:
                 pool.remove_entry(getattr(e, "id", ""))
-            except (AttributeError):
+            except Exception:
                 pass
         entry = PooledCredential(
             provider="anthropic",
@@ -9430,7 +9430,7 @@ def _http_response_error_detail(resp: Any) -> str:
     """Best-effort extraction of a short provider error detail."""
     try:
         payload = resp.json()
-    except (ValueError):
+    except Exception:
         payload = None
     if isinstance(payload, dict):
         error = payload.get("error")
@@ -9720,10 +9720,10 @@ def _session_latest_descendant(session_id: str, db):
             return row.get(key)
         try:
             return row[key]
-        except (IndexError, KeyError):
+        except Exception:
             try:
                 return row[index]
-            except (IndexError, KeyError):
+            except Exception:
                 return None
 
     sid = db.resolve_session_id(session_id)
@@ -9771,7 +9771,7 @@ def _session_latest_descendant(session_id: str, db):
     def started(row):
         try:
             return float(row.get("started_at") or 0)
-        except (ValueError):
+        except Exception:
             return 0.0
 
     current = sid
@@ -9918,7 +9918,7 @@ async def get_session_stats(profile: Optional[str] = None):
             ):
                 src = str(s.get("source") or "cli")
                 by_source[src] = by_source.get(src, 0) + 1
-        except (ValueError):
+        except Exception:
             pass
         return {
             "total": total,
@@ -10435,7 +10435,7 @@ def _cron_profile_dicts() -> List[Dict[str, Any]]:
 
     try:
         return [_profile_to_dict(p) for p in profiles_mod.list_profiles()]
-    except (IndexError, KeyError):
+    except Exception:
         _log.exception(
             "Failed to list profiles for cron dashboard; falling back to directory scan"
         )
@@ -10851,7 +10851,7 @@ async def cron_fire_webhook(request: Request):
 
     try:
         body = await request.json()
-    except (ValueError):
+    except Exception:
         body = {}
     job_id = (body or {}).get("job_id") if isinstance(body, dict) else None
     if not job_id:
@@ -11236,7 +11236,7 @@ async def auth_mcp_server(name: str, profile: Optional[str] = None):
                 tools = _probe_single_server(
                     name, cfg, connect_timeout=max(_cfg_timeout, 315)
                 )
-            except (ValueError):
+            except Exception:
                 storage.restore(backup)
                 raise
             if not _oauth_tokens_present(name):
@@ -11370,7 +11370,7 @@ async def list_mcp_catalog(profile: Optional[str] = None):
     except HTTPException:
         # Unknown/invalid profile → 404, not a silently-empty catalog.
         raise
-    except (AttributeError):
+    except Exception:
         _log.exception("list_mcp_catalog failed")
 
     diagnostics = []
@@ -11379,7 +11379,7 @@ async def list_mcp_catalog(profile: Optional[str] = None):
             {"name": n, "kind": k, "message": m}
             for (n, k, m) in mcp_catalog.catalog_diagnostics()
         ]
-    except (IndexError, KeyError):
+    except Exception:
         pass
 
     return {"entries": entries, "diagnostics": diagnostics}
@@ -12609,7 +12609,7 @@ async def list_skills_hub_sources(profile: Optional[str] = None):
             if sid == "github":
                 try:
                     entry["rate_limited"] = bool(getattr(src, "is_rate_limited", False))
-                except (AttributeError, IndexError, KeyError, ValueError):
+                except Exception:
                     entry["rate_limited"] = False
             if sid == "hercules-index":
                 try:
@@ -12623,7 +12623,7 @@ async def list_skills_hub_sources(profile: Optional[str] = None):
                         featured = [
                             _skill_meta_to_payload(m) for m in src.search("", limit=12)
                         ]
-                    except (IndexError, KeyError):
+                    except Exception:
                         featured = []
             out.append(entry)
         # Tell the UI which sources are worth searching individually (for its
@@ -12940,7 +12940,7 @@ class ProfileDescribeAuto(BaseModel):
 def _profile_attr(info, name: str, default: Any = None) -> Any:
     try:
         return getattr(info, name)
-    except (AttributeError):
+    except Exception:
         return default
 
 
@@ -13206,7 +13206,7 @@ async def list_profiles_endpoint():
         loop = asyncio.get_running_loop()
         profiles = await loop.run_in_executor(None, profiles_mod.list_profiles)
         return {"profiles": [_profile_to_dict(p) for p in profiles]}
-    except (IndexError, KeyError):
+    except Exception:
         _log.exception(
             "GET /api/profiles failed; falling back to profile directory scan"
         )
@@ -13310,7 +13310,7 @@ async def create_profile_endpoint(body: ProfileCreate):
                 _hub_action_name("install", ident),
             )
             hub_installs.append({"identifier": ident, "pid": proc.pid})
-        except (IndexError, KeyError):
+        except Exception:
             _log.exception(
                 "Spawning hub-skill install %s for new profile %s failed",
                 ident,
@@ -14750,7 +14750,7 @@ async def _legacy_pump(ws: "WebSocket", bridge) -> None:
                     continue
                 try:
                     await ws.send_bytes(chunk)
-                except (RuntimeError):
+                except Exception:
                     return
         finally:
             # The child has exited (EOF) or the send side broke.  Close the
@@ -14768,11 +14768,11 @@ async def _legacy_pump(ws: "WebSocket", bridge) -> None:
             # the reap independent of that cancellation race (#54028).
             try:
                 await asyncio.to_thread(bridge.close)
-            except (RuntimeError):
+            except Exception:
                 pass
             try:
                 await ws.close()
-            except (RuntimeError):
+            except Exception:
                 pass
 
     reader_task = asyncio.create_task(pump_pty_to_ws())
@@ -15314,7 +15314,7 @@ async def _broadcast_event(app: Any, channel: str, payload: str) -> None:
     for sub in subs:
         try:
             await sub.send_text(payload)
-        except (RuntimeError):
+        except Exception:
             # Subscriber went away mid-send; the /api/events finally clause
             # will remove it from the registry on its next iteration.
             _log.warning(
@@ -17637,7 +17637,7 @@ def _maybe_open_browser(
         try:
             time.sleep(1.0)
             webbrowser.open(_open_url)
-        except (OSError):
+        except Exception:
             pass
 
     threading.Thread(target=_open, daemon=True).start()
@@ -17903,7 +17903,7 @@ def start_server(
             asyncio.set_event_loop_policy(
                 asyncio.WindowsSelectorEventLoopPolicy()  # type: ignore[attr-defined]
             )
-        except (IndexError, KeyError):
+        except Exception:
             pass
 
     if _runner is not None:

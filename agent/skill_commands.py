@@ -390,7 +390,7 @@ def scan_skill_commands() -> Dict[str, Dict[str, Any]]:
                         "skill_md_path": str(skill_md),
                         "skill_dir": str(skill_md.parent),
                     }
-                except (ValueError):
+                except Exception:
                     continue
     except (ValueError):
         pass

@@ -78,7 +78,7 @@ def _get_git_commit(project_root: Path) -> str:
             value = result.stdout.strip()
             if value:
                 return value
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         pass
 
     # Fall back to the build-time baked SHA (populated in published Docker
@@ -116,7 +116,7 @@ def _get_git_commit_date(project_root: Path) -> str:
             value = result.stdout.strip()
             if value:
                 return value
-    except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+    except Exception:
         pass
 
     return ""
@@ -183,7 +183,7 @@ def _cron_summary(hercules_home: Path) -> str:
         jobs = data.get("jobs", [])
         active = sum(1 for j in jobs if j.get("enabled", True))
         return f"{active} active / {len(jobs)} total"
-    except (OSError):
+    except Exception:
         return "(error reading)"
 
 

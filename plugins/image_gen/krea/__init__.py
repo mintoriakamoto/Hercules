@@ -191,7 +191,7 @@ def _managed_krea_gateway_ready() -> bool:
     """Cheap, offline-friendly probe for managed Krea availability."""
     try:
         from tools.managed_tool_gateway import is_managed_tool_gateway_ready
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return False
     try:
         return bool(is_managed_tool_gateway_ready("krea"))
@@ -459,7 +459,7 @@ class KreaImageGenProvider(ImageGenProvider):
                     if isinstance(body.get("error"), dict)
                     else body.get("message") or body.get("detail")
                 ) or (resp.text[:300] if resp is not None else str(exc))
-            except (requests.RequestException, OSError):
+            except Exception:
                 err_msg = resp.text[:300] if resp is not None else str(exc)
             logger.error("Krea submit failed (%d): %s", status, err_msg)
             # On a managed 4xx, surface actionable remediation mirroring the

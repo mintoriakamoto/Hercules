@@ -143,7 +143,7 @@ def _get_proxy_for_base_url(base_url: Optional[str]) -> Optional[str]:
     try:
         if urllib.request.proxy_bypass_environment(host):
             return None
-    except (OSError, urllib.error.URLError):
+    except Exception:
         pass
 
     return proxy

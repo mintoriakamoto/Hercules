@@ -687,7 +687,7 @@ def _pid_exists(pid: int) -> bool:
                 )
                 if r.returncode == 0 and r.stdout.strip().startswith("Z"):
                     return False
-            except (IndexError, KeyError, ValueError, subprocess.CalledProcessError):
+            except Exception:
                 pass
         except (IndexError, PermissionError, OSError):
             pass
@@ -796,7 +796,7 @@ def write_pid_file() -> None:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(record)
         _clear_running_pid_cache()
-    except (OSError):
+    except Exception:
         try:
             path.unlink(missing_ok=True)
         except OSError:
@@ -1110,7 +1110,7 @@ def acquire_scoped_lock(
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(record, handle)
-    except (OSError):
+    except Exception:
         try:
             lock_path.unlink(missing_ok=True)
         except OSError:

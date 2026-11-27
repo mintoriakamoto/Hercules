@@ -618,7 +618,7 @@ def _try_resolve_from_custom_pool(
             "source": f"pool:{pool_key}",
             "credential_pool": pool,
         }
-    except (AttributeError):
+    except Exception:
         return None
 
 
@@ -937,7 +937,7 @@ def canonical_custom_identity(
     if not candidate:
         try:
             candidate = str(_get_model_config().get("provider") or "").strip()
-        except (ValueError):
+        except Exception:
             candidate = ""
     if not candidate:
         candidate = os.environ.get("HERCULES_INFERENCE_PROVIDER", "").strip()

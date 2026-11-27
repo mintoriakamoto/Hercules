@@ -53,7 +53,7 @@ def _is_non_code_path(raw: str) -> bool:
     """Return True when a changed path is documentation/prose with nothing to verify."""
     try:
         p = Path(str(raw))
-    except (ValueError):
+    except Exception:
         return False
     suffix = p.suffix.lower()
     if suffix in _NON_CODE_VERIFY_EXTENSIONS:
@@ -173,7 +173,7 @@ def _candidate_cwds(paths: Iterable[str]) -> list[Path]:
             path = Path(raw).expanduser()
             candidate = path if path.is_dir() else path.parent
             resolved = str(candidate.resolve())
-        except (ValueError):
+        except Exception:
             continue
         if resolved not in seen:
             seen.add(resolved)
@@ -190,7 +190,7 @@ def _verification_snapshot(
     try:
         from agent.coding_context import project_facts_for
         from agent.verification_evidence import verification_status
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         return None
 
     first_snapshot: tuple[dict[str, Any], dict[str, Any]] | None = None

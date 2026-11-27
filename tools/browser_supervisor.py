@@ -420,7 +420,7 @@ class CDPSupervisor:
                 if ws is not None:
                     try:
                         await ws.close()
-                    except (RuntimeError):
+                    except Exception:
                         pass
 
             try:
@@ -659,7 +659,7 @@ class CDPSupervisor:
                     loop.run_until_complete(
                         asyncio.gather(*pending, return_exceptions=True)
                     )
-            except (IndexError, KeyError):
+            except Exception:
                 pass
             try:
                 loop.close()
@@ -753,7 +753,7 @@ class CDPSupervisor:
                 if ws is not None:
                     try:
                         await ws.close()
-                    except (RuntimeError):
+                    except Exception:
                         pass
 
             if self._stop_requested:
@@ -854,7 +854,7 @@ class CDPSupervisor:
                 session_id=session_id,
                 timeout=3.0,
             )
-        except (RuntimeError):
+        except Exception:
             pass
 
     async def _cdp(
@@ -1147,7 +1147,7 @@ class CDPSupervisor:
                     session_id=session_id,
                     timeout=3.0,
                 )
-            except (RuntimeError):
+            except Exception:
                 pass
             return
 

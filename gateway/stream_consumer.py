@@ -288,7 +288,7 @@ class GatewayStreamConsumer:
             result = self._on_before_finalize()
             if inspect.isawaitable(result):
                 await result
-        except (RuntimeError):
+        except Exception:
             pass
 
     async def _edit_message(
@@ -901,7 +901,7 @@ class GatewayStreamConsumer:
                             is_turn_final=False,
                         )
                     )
-                except (ValueError):
+                except Exception:
                     pass
             # Only confirm final delivery if the best-effort send above
             # actually succeeded OR if the final response was already
@@ -1080,7 +1080,7 @@ class GatewayStreamConsumer:
                         )
                         if result.success:
                             self._last_sent_text = clean_text
-                    except (RuntimeError):
+                    except Exception:
                         pass
                 self._already_sent = True
                 self._final_response_sent = True
@@ -1422,7 +1422,7 @@ class GatewayStreamConsumer:
             )
             if getattr(result, "success", False):
                 self._last_sent_text = prefix
-        except (AttributeError):
+        except Exception:
             pass  # best-effort — don't let this block the fallback path
 
     async def _send_commentary(self, text: str) -> bool:

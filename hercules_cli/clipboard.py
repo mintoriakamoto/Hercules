@@ -73,7 +73,7 @@ def _macos_has_image() -> bool:
             timeout=3,
         )
         return "«class PNGf»" in info.stdout or "«class TIFF»" in info.stdout
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return False
 
 
@@ -279,7 +279,7 @@ def _find_powershell() -> str | None:
                 return name
         except FileNotFoundError:
             continue
-        except (IndexError, KeyError, subprocess.CalledProcessError):
+        except Exception:
             continue
     return None
 
@@ -360,7 +360,7 @@ def _wayland_has_image() -> bool:
         )
     except FileNotFoundError:
         logger.debug("wl-paste not installed — Wayland clipboard unavailable")
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         pass
     return False
 
@@ -493,7 +493,7 @@ def _xclip_has_image() -> bool:
         return r.returncode == 0 and "image/png" in r.stdout
     except FileNotFoundError:
         pass
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         pass
     return False
 
@@ -513,7 +513,7 @@ def _xclip_save(dest: Path) -> bool:
     except FileNotFoundError:
         logger.debug("xclip not installed — X11 clipboard image paste unavailable")
         return False
-    except (IndexError, KeyError, subprocess.CalledProcessError):
+    except Exception:
         return False
 
     # Extract PNG data

@@ -540,7 +540,7 @@ def _path_resolution_warning(
                 f"intended (e.g. a git-worktree session writing into the main "
                 f"checkout), pass an absolute path under the workspace instead."
             )
-    except (ValueError):
+    except Exception:
         return None
 
 
@@ -699,7 +699,7 @@ def _get_hercules_config_resolved() -> str | None:
             _hercules_config_resolved = str(
                 Path(_expand_tilde("~/.hercules/config.yaml")).resolve()
             )
-        except (ValueError):
+        except Exception:
             _hercules_config_resolved = None
     return _hercules_config_resolved
 
@@ -805,7 +805,7 @@ def _check_cross_profile_path(filepath: str, task_id: str = "default") -> str | 
             get_cross_profile_warning,
             get_sandbox_mirror_warning,
         )
-    except (ImportError, ModuleNotFoundError):
+    except Exception:
         # Fail open on import error — the existing sensitive-path guard
         # plus the write_denied list still apply.
         return None
@@ -1589,7 +1589,7 @@ def read_file_tool(
         try:
             _partial = (offset > 1) or bool(result_dict.get("truncated"))
             file_state.record_read(task_id, resolved_str, partial=_partial)
-        except (ValueError):
+        except Exception:
             logger.debug("file_state.record_read failed", exc_info=True)
 
         if count >= 4:
@@ -1767,7 +1767,7 @@ def _mark_verification_stale(
         for path in paths:
             try:
                 candidate = str(Path(path).parent)
-            except (ValueError):
+            except Exception:
                 continue
             if project_facts_for(candidate):
                 cwd = candidate
@@ -1818,7 +1818,7 @@ def write_file_tool(
         # check below still runs.
         try:
             _resolved = str(_resolve_path_for_task(path, task_id))
-        except (ValueError):
+        except Exception:
             _resolved = None
 
         if _resolved is None:
@@ -1955,7 +1955,7 @@ def patch_tool(
         for _p in _paths_to_check:
             try:
                 _r = str(_resolve_path_for_task(_p, task_id))
-            except (ValueError):
+            except Exception:
                 _r = None
             if _r and _r not in _seen:
                 _resolved_paths.append(_r)
@@ -1978,7 +1978,7 @@ def patch_tool(
             for _p in _paths_to_check:
                 try:
                     _r = str(_resolve_path_for_task(_p, task_id))
-                except (ValueError):
+                except Exception:
                     _r = None
                 _path_to_resolved[_p] = _r
                 _cross = file_state.check_stale(task_id, _r) if _r else None

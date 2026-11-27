@@ -46,7 +46,7 @@ def _consume_abandoned_task(task: asyncio.Task) -> None:
         task.exception()
     except asyncio.CancelledError:
         pass
-    except (RuntimeError):
+    except Exception:
         logger.debug("Abandoned Telegram init task failed after timeout", exc_info=True)
 
 
@@ -116,7 +116,7 @@ async def _run_abandon_cleanup(on_abandon) -> None:
         result = on_abandon()
         if asyncio.iscoroutine(result) or asyncio.isfuture(result):
             await result
-    except (RuntimeError):
+    except Exception:
         logger.debug("Abandoned Telegram init cleanup failed", exc_info=True)
 
 
@@ -154,7 +154,7 @@ async def _shutdown_abandoned_app(app) -> None:
             result = shutdown()
             if asyncio.iscoroutine(result) or asyncio.isfuture(result):
                 await result
-        except (RuntimeError):
+        except Exception:
             logger.debug("Abandoned Telegram request shutdown failed", exc_info=True)
 
 
@@ -1968,7 +1968,7 @@ class TelegramAdapter(BasePlatformAdapter):
             # PTB 22.x: _request is a (get_updates, general) tuple;
             # no public accessor exists for the polling request.
             polling_req = self._app.bot._request[0]
-        except (KeyError, IndexError):
+        except Exception:
             return
         try:
             await polling_req.shutdown()
@@ -1983,7 +1983,7 @@ class TelegramAdapter(BasePlatformAdapter):
             logger.debug(
                 "[%s] Polling request pool drained before reconnect", self.name
             )
-        except (KeyError, IndexError):
+        except Exception:
             logger.debug(
                 "[%s] Polling request re-initialize failed (non-fatal)",
                 self.name,
@@ -2012,7 +2012,7 @@ class TelegramAdapter(BasePlatformAdapter):
         try:
             # PTB 22.x: _request is (get_updates_request, general_request).
             general_req = bot._request[1]
-        except (KeyError, IndexError):
+        except Exception:
             return
         async with self._get_general_request_drain_lock():
             try:
@@ -2029,7 +2029,7 @@ class TelegramAdapter(BasePlatformAdapter):
                     "[%s] General request pool drained after Telegram pool timeout",
                     self.name,
                 )
-            except (KeyError, IndexError):
+            except Exception:
                 logger.debug(
                     "[%s] General request re-initialize failed after pool timeout (non-fatal)",
                     self.name,
@@ -2223,7 +2223,7 @@ class TelegramAdapter(BasePlatformAdapter):
                         "and restart without clean stop",
                         self.name,
                     )
-        except (KeyError, IndexError):
+        except Exception:
             pass
 
         await self._drain_polling_connections()
@@ -2643,7 +2643,7 @@ class TelegramAdapter(BasePlatformAdapter):
                             "retry (likely CLOSE-WAIT socket); continuing",
                             self.name,
                         )
-            except (KeyError, IndexError):
+            except Exception:
                 pass
 
             await asyncio.sleep(RETRY_DELAY)
@@ -5308,7 +5308,7 @@ class TelegramAdapter(BasePlatformAdapter):
         """
         try:
             from hercules_cli.models import group_providers
-        except (ImportError, ModuleNotFoundError):
+        except Exception:
             group_providers = None
 
         by_slug = {p.get("slug"): p for p in providers}
@@ -5538,7 +5538,7 @@ class TelegramAdapter(BasePlatformAdapter):
 
             try:
                 provider_label = get_label(state["current_provider"])
-            except (KeyError, IndexError):
+            except Exception:
                 provider_label = state["current_provider"]
 
             await query.edit_message_text(
@@ -5743,7 +5743,7 @@ class TelegramAdapter(BasePlatformAdapter):
 
             try:
                 provider_label = get_label(state["current_provider"])
-            except (KeyError, IndexError):
+            except Exception:
                 provider_label = state["current_provider"]
 
             await query.edit_message_text(
@@ -9235,7 +9235,7 @@ class TelegramAdapter(BasePlatformAdapter):
                 return None
             text = cls._flatten_rich_blocks(rich_getter("blocks")).strip()
             return text or None
-        except (AttributeError):
+        except Exception:
             return None
 
     def _build_message_event(

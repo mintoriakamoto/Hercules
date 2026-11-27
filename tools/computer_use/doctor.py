@@ -65,7 +65,7 @@ def _sanitized_cua_env() -> Dict[str, str]:
         from tools.environments.local import _sanitize_subprocess_env
 
         return _sanitize_subprocess_env(env)
-    except (ImportError, ModuleNotFoundError, subprocess.CalledProcessError):
+    except Exception:
         return env
 
 
