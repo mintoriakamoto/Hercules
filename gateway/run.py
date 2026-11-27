@@ -2057,11 +2057,9 @@ def _credential_pool_for_provider(provider: Optional[str]):
         return _resolve_runtime_agent_kwargs_for_provider(str(provider).strip()).get(
             "credential_pool"
         )
-    except (KeyError, AttributeError, ValueError, TypeError):
-        # KeyError: provider not found in runtime config
-        # AttributeError: return value doesn't have .get()
-        # ValueError: provider format invalid
-        # TypeError: _resolve_runtime_agent_kwargs_for_provider failed
+    except Exception:
+        # Best effort: an unknown provider makes the resolver raise
+        # RuntimeError, and the caller then simply runs without a pool.
         logger.debug(
             "Failed to resolve credential pool for provider=%s",
             provider,
