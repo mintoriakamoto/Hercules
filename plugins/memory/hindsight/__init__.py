@@ -1567,7 +1567,7 @@ class HindsightMemoryProvider(MemoryProvider):
                         "uv not found. Run: pip install 'hindsight-client>=%s'",
                         _MIN_CLIENT_VERSION,
                     )
-        except (subprocess.CalledProcessError, OSError):
+        except Exception:
             pass  # packaging not available or other issue — proceed anyway
 
         self._config = _load_config()
