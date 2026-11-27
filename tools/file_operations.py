@@ -1614,7 +1614,7 @@ class ShellFileOperations(FileOperations):
         # if _is_write_denied(path):
         #     return PatchResult(
         #         error=f"Write denied: '{path}' is a protected system/credential file."
-            )
+        #     )
 
         # Read current content
         read_cmd = f"cat {self._escape_shell_arg(path)} 2>/dev/null"

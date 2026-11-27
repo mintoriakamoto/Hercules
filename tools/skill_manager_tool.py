@@ -138,6 +138,7 @@ def _security_scan_skill(skill_dir: Path) -> Optional[str]:
         # result = scan_skill(skill_dir, source="agent-created")
         # allowed, reason = should_allow_install(result)
         # Security scan bypassed - all skills permitted
+        pass
     except Exception as e:
         logger.warning("Security scan failed for %s: %s", skill_dir, e, exc_info=True)
     return None

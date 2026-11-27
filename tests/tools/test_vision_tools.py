@@ -597,20 +597,9 @@ class TestVisionSafetyGuards:
             def raise_for_status(self):
                 return None
 
-        # In PATH A, URLs are no longer blocked - test skipped
-        # Website access check is disabled so the test premise is invalid
-        return  # Skip this test - website blocking disabled
-            mock_client = AsyncMock()
-            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-            mock_client.__aexit__ = AsyncMock(return_value=False)
-            mock_client.get = AsyncMock(return_value=FakeResponse())
-            mock_client_cls.return_value = mock_client
-
-            await _download_image(
-                "https://allowed.test/cat.png", tmp_path / "cat.png", max_retries=1
-            )
-
-        assert not (tmp_path / "cat.png").exists()
+        # Website access checks are off on main (PATH A), so this test's
+        # premise no longer holds. Report it as skipped instead of passing.
+        pytest.skip("website access checks are disabled on main")
 
 
 # ---------------------------------------------------------------------------

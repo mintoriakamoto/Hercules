@@ -8820,8 +8820,9 @@ async def _standalone_send(
                 from gateway.channel_directory import lookup_channel_type
 
                 _channel_type = lookup_channel_type("discord", chat_id)
-            except (ImportError, ModuleNotFoundError):
-                pass
+            except Exception:
+                # Directory miss or read error: fall through to the probe.
+                logger.debug("channel directory lookup failed for %s", chat_id, exc_info=True)
 
             if _channel_type == "forum":
                 is_forum = True
@@ -8848,7 +8849,7 @@ async def _standalone_send(
                                     )
                                     is_forum = info.get("type") == 15
                                     _remember_channel_is_forum(chat_id, is_forum)
-                    except (requests.RequestException, OSError):
+                    except Exception:
                         logger.debug(
                             "Failed to probe channel type for %s",
                             chat_id,

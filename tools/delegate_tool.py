@@ -4424,8 +4424,10 @@ def _load_config() -> dict:
             cfg = full.get("delegation") or {}
             if isinstance(cfg, dict):
                 return cfg
-        except (ImportError, ModuleNotFoundError):
-            pass
+        except Exception:
+            # A broken or unreadable config must not take delegation down;
+            # fall back to the legacy CLI_CONFIG below.
+            logger.debug("delegation config load failed; using CLI_CONFIG", exc_info=True)
     try:
         from cli import CLI_CONFIG
 

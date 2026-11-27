@@ -404,40 +404,32 @@ def _connect():
             # we were waiting for the lock.
             if _sock is None:
                 endpoint = os.environ["HERCULES_RPC_SOCKET"]
+                if endpoint.startswith("tcp://"):
+                    # tcp://host:port  (host is always 127.0.0.1 in practice —
+                    # we only bind loopback server-side)
+                    _host_port = endpoint[len("tcp://"):]
+                    _host, _, _port = _host_port.rpartition(":")
+                    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    target = (_host or "127.0.0.1", int(_port))
+                else:
+                    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    target = endpoint
                 try:
-                    if endpoint.startswith("tcp://"):
-                        # tcp://host:port  (host is always 127.0.0.1 in practice —
-                        # we only bind loopback server-side)
-                        _host_port = endpoint[len("tcp://"):]
-                        _host, _, _port = _host_port.rpartition(":")
-                        _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        try:
-                            _sock.connect((_host or "127.0.0.1", int(_port)))
-                        except (ValueError):
-                            # BUG FIX #1: Close socket on connection failure to
-                            # prevent resource leak.
-                            try:
-                                _sock.close()
-                            except OSError:
-                                pass
-                            _sock = None
-                            raise
-                    else:
-                        _sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                        try:
-                            _sock.connect(endpoint)
-                        except (AttributeError, ValueError):
-                            # BUG FIX #1: Close socket on connection failure to
-                            # prevent resource leak.
-                            try:
-                                _sock.close()
-                            except OSError:
-                                pass
-                            _sock = None
-                            raise
-                    _sock.settimeout(300)
-                except (AttributeError, ValueError):
+                    s.connect(target)
+                    s.settimeout(300)
+                except Exception:
+                    # Close on any connection failure so the socket does not
+                    # leak, and leave _sock unset so a retry can reconnect.
+                    try:
+                        s.close()
+                    except OSError:
+                        pass
                     raise
+                # Publish only a fully connected socket. Other threads read
+                # _sock without the lock, so assigning it before connect()
+                # finished let them sendall() on an unconnected socket
+                # (ENOTCONN, errno 107) under concurrent tool calls.
+                _sock = s
     return _sock
 
 def _call(tool_name, args):
