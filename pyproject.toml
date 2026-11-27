@@ -349,7 +349,7 @@ inference-optimization = [
 # Multi-agent orchestration — autonomous agents, workflows, team coordination.
 multi-agent = [
   "autogen-agentchat==0.4.9.3",
-  "smolagents==1.4.1",
+  "smolagents==1.25.0",
   "gpt4all==2.8.2",
 ]
 all = [
