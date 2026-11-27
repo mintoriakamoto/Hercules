@@ -605,6 +605,15 @@ def _normalize_exclude_session_ids(raw: Any) -> List[str]:
     return out
 
 
+def _session_started_ts(db, session_id: str) -> Optional[int]:
+    try:
+        meta = db.get_session(session_id) or {}
+    except Exception as e:
+        logging.debug("get_session failed for %s: %s", session_id, e, exc_info=True)
+        meta = {}
+    return _coerce_started_ts(meta.get("started_at"))
+
+
 def _discover(
     db,
     query: str,
@@ -612,13 +621,31 @@ def _discover(
     limit: int,
     sort: Optional[str],
     current_session_id: str = None,
+    after_ts: Optional[int] = None,
+    before_ts: Optional[int] = None,
+    exclude_session_ids: Optional[List[str]] = None,
 ) -> str:
     """Discovery shape: FTS5 + anchored window + bookends per hit. Single call."""
     role_list = role_filter if role_filter else ["user", "assistant"]
     current_lineage_root = (
         _resolve_to_parent(db, current_session_id) if current_session_id else None
     )
+    # Excluded ids plus their lineage roots, so a child id also hides its parent chain.
+    excluded_roots: set = set()
+    for sid in exclude_session_ids or []:
+        excluded_roots.add(sid)
+        excluded_roots.add(_resolve_to_parent(db, sid) or sid)
     title_result = _title_match_result(db, query, current_lineage_root)
+    if title_result:
+        title_sid = title_result.get("session_id")
+        title_root = title_result.get("_lineage_root") or title_sid
+        title_started = _session_started_ts(db, title_root)
+        if title_started is None and title_sid:
+            title_started = _session_started_ts(db, title_sid)
+        if {title_sid, title_root} & excluded_roots or not _in_time_window(
+            title_started, after_ts, before_ts
+        ):
+            title_result = None
 
     try:
         raw_results = db.search_messages(
@@ -676,6 +703,14 @@ def _discover(
             continue
         if current_session_id and raw_sid == current_session_id:
             continue
+        if raw_sid in excluded_roots or resolved_sid in excluded_roots:
+            continue
+        if after_ts is not None or before_ts is not None:
+            started_ts = _coerce_started_ts(r.get("session_started"))
+            if started_ts is None:
+                started_ts = _session_started_ts(db, raw_sid)
+            if not _in_time_window(started_ts, after_ts, before_ts):
+                continue
         if resolved_sid not in seen_sessions:
             row = dict(r)
             row["_lineage_root"] = resolved_sid
@@ -755,6 +790,9 @@ def session_search(
     window: int = 5,
     # Discovery shape
     sort: str = None,
+    after: str = None,
+    before: str = None,
+    exclude_session_ids: Optional[List[str]] = None,
     # Cross-profile (any shape)
     profile: str = None,
 ) -> str:
@@ -861,6 +899,11 @@ def session_search(
         if candidate in ("newest", "oldest"):
             sort_norm = candidate
 
+    try:
+        after_ts, before_ts = _parse_iso_bound(after), _parse_iso_bound(before)
+    except ValueError as e:
+        return tool_error(str(e), success=False)
+
     return _discover(
         db=db,
         query=query.strip(),
@@ -868,6 +911,9 @@ def session_search(
         limit=limit,
         sort=sort_norm,
         current_session_id=current_session_id,
+        after_ts=after_ts,
+        before_ts=before_ts,
+        exclude_session_ids=_normalize_exclude_session_ids(exclude_session_ids),
     )
 
 
@@ -1014,6 +1060,32 @@ SESSION_SEARCH_SCHEMA = {
                     "behaviour) or 'tool' to search tool output only."
                 ),
             },
+            "after": {
+                "type": "string",
+                "description": (
+                    "Discovery shape only. Inclusive lower bound on session start "
+                    "time (ISO date or datetime, e.g. 2026-06-01). Use only when the "
+                    "user names a time frame. sort is a ranking bias, not a bound."
+                ),
+            },
+            "before": {
+                "type": "string",
+                "description": (
+                    "Discovery shape only. Exclusive upper bound on session start "
+                    "time (ISO date or datetime, e.g. 2026-07-01). A date-only value "
+                    "is midnight UTC that day. Use only when the user names a time "
+                    "frame."
+                ),
+            },
+            "exclude_session_ids": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "Discovery shape only. Session ids already inspected this task. "
+                    "Those sessions and their lineage are omitted so a later query "
+                    "explores instead of repeating the same hit. Cap 20."
+                ),
+            },
             "profile": {
                 "type": "string",
                 "description": (
@@ -1044,6 +1116,9 @@ registry.register(
         around_message_id=args.get("around_message_id"),
         window=args.get("window", 5),
         sort=args.get("sort"),
+        after=args.get("after"),
+        before=args.get("before"),
+        exclude_session_ids=args.get("exclude_session_ids"),
         profile=args.get("profile"),
         db=kw.get("db"),
         current_session_id=kw.get("current_session_id"),

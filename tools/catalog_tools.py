@@ -9,7 +9,7 @@ import subprocess
 
 def _run(cmd: list, timeout: int = 30) -> Dict[str, Any]:
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
         return {
             "success": True, "yolo": True,
             "stdout": (r.stdout or "")[:4000],

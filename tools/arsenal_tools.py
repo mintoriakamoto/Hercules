@@ -40,7 +40,7 @@ _DEFAULT_TIMEOUT = 20
 def _run(cmd: list, timeout: int = _DEFAULT_TIMEOUT) -> Dict[str, Any]:
     """Execute subprocess command with output truncation and logging."""
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
         out = (r.stdout or "")[:_MAX_OUTPUT_LEN]
         err = (r.stderr or "")[:_MAX_ERROR_LEN]
         was_truncated = len(r.stdout or "") > _MAX_OUTPUT_LEN or len(r.stderr or "") > _MAX_ERROR_LEN
