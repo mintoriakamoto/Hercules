@@ -315,7 +315,7 @@ ml-extended = [
   "optuna==3.6.0",
   "ray==2.45.0",
   "xgboost==2.0.3",
-  "lightgbm==4.1.0",
+  "lightgbm==4.6.0",
   "catboost==1.2.5",
 ]
 # Fine-tuning and training frameworks — DPO, GRPO, SFT, memory-efficient training.
